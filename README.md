@@ -219,7 +219,7 @@ The application uses MySQL database with the following connection details:
 - **Password**: [contact admin]
 - **Port**: 3306
 
-> **Note**: For security reasons, please contact the system administrator for the actual database password.
+> **Note**: For security reasons, please contact me for the actual database password.
 
 ## Database Structure
 
