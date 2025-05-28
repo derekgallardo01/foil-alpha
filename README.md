@@ -1,18 +1,191 @@
 # TCG Market
 
-A comprehensive trading card game (TCG) marketplace application built with Next.js and modern technologies.
+A comprehensive trading card game (TCG) marketplace application built with Next.js and modern technologies. This platform provides tools for tracking, analyzing, and trading TCG cards with real-time market data integration.
 
-## Features
+## Core Features
 
-- User authentication and authorization
+### User Management
+- Secure authentication system with NextAuth.js
+- Role-based access control (RBAC)
+- Email verification system
+- Password reset functionality
+- User profile management
 - Activity logging and audit trails
+
+### Market Tracking
 - Real-time market data scraping
-- Advanced data visualization with charts and grids
-- Email notifications
-- Cron job scheduling for automated tasks
+- Price history tracking
+- Product watchlist system
+- Advanced filtering and search capabilities
+- Price change notifications
+
+### Analytics & Visualization
+- Interactive data grids using @mui/x-data-grid
+- Chart.js integration for data visualization
+- Real-time market trend analysis
+- User activity analytics
 - Google Analytics integration
-- Secure API endpoints
-- Modern UI with Material-UI components
+
+### Admin Tools
+- User management dashboard
+- Activity monitoring
+- System configuration
+- Task scheduling
+- Email notifications management
+
+### Technical Features
+- Automated data scraping with Puppeteer/Playwright
+- Cron job scheduling for periodic tasks
+- Secure API endpoints with rate limiting
+- Email notification system
+- Activity logging and audit trails
+- Google Analytics integration
+
+## Application Components
+
+### Pages
+- **Authentication**
+  - Login
+  - Register
+  - Forgot Password
+  - Reset Password
+  - Email Verification
+
+- **User Interface**
+  - Dashboard
+  - Settings
+  - Activation Success
+  - Protected Routes
+
+- **Admin Panel**
+  - User Management
+  - Activity Logs
+  - System Configuration
+
+- **Market Features**
+  - Product Search
+  - Price History
+  - Watchlist Management
+  - Task Management
+  - Chat System
+
+### API Endpoints
+
+#### Authentication
+- `/api/auth/login`
+- `/api/auth/register`
+- `/api/auth/forgot-password`
+- `/api/auth/reset-password`
+
+#### Market Data
+- `/api/products`
+- `/api/fetchProduct`
+- `/api/price-history`
+- `/api/scrapeTarget`
+
+#### User Management
+- `/api/users`
+- `/api/watchlist`
+- `/api/visitor-count`
+
+#### Admin Features
+- `/api/admin/*`
+- `/api/tasks/*`
+- `/api/discord/*`
+
+#### System
+- `/api/protected/*`
+- `/api/test/*`
+
+## Development Setup
+
+### Database Setup
+1. For local development:
+```bash
+mysql -u dev -p
+USE visitorDB;
+```
+
+2. For remote access:
+```bash
+mysql -h 157.230.211.144 -u dev -p
+USE visitorDB;
+```
+
+### Environment Variables
+Create a `.env` file with the following variables:
+```
+# Database
+DATABASE_URL="mysql://dev:[password]@localhost:3306/visitorDB"
+
+# Authentication
+NEXTAUTH_SECRET="your-secret-key"
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Email
+EMAIL_USER="your-email"
+EMAIL_PASSWORD="your-email-password"
+
+# API Keys
+DISCORD_TOKEN="your-discord-token"
+```
+
+### Development Server
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+### Production Build
+```bash
+npm run build
+npm run start
+# or
+yarn build
+yarn start
+```
+
+## Security
+
+The application implements several security measures:
+
+- Password hashing with bcrypt
+- Secure session management with NextAuth.js
+- Rate limiting on API endpoints
+- Input validation and sanitization
+- Secure database connections
+- HTTPS proxy agent for API calls
+- Environment variable protection
+
+## Monitoring & Analytics
+
+- Google Analytics integration for user tracking
+- Activity logging system
+- Cron job monitoring
+- Error tracking and logging
+- Performance monitoring
+
+## Best Practices
+
+1. Always use environment variables for sensitive data
+2. Never commit database passwords or API keys
+3. Use HTTPS for all external API calls
+4. Regularly update dependencies
+5. Follow the project's coding standards
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Tech Stack
 
@@ -27,6 +200,26 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 - **Email**: Nodemailer
 - **Scraping**: Puppeteer, Playwright
 - **Analytics**: Google Analytics
+
+## Database Details
+
+The application uses MySQL database with the following connection details:
+
+### Local Development
+- **Host**: localhost
+- **Database**: visitorDB
+- **Username**: dev
+- **Password**: [contact admin]
+- **Port**: 3306
+
+### Remote Production
+- **Host**: 157.230.211.144
+- **Database**: visitorDB
+- **Username**: dev
+- **Password**: [contact admin]
+- **Port**: 3306
+
+> **Note**: For security reasons, please contact the system administrator for the actual database password.
 
 ## Database Structure
 
