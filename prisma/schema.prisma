@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 Int           @id @default(autoincrement())
+  email              String        @unique
+  name               String
+  role               String
+  registeredAt       DateTime
+  lastLoginAt        DateTime?
+  subscriptionStatus String
+  auditTrail         Json?
+  activities         ActivityLog[]
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "ActivityLog_userId_fkey")
+}

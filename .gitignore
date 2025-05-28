@@ -39,3 +39,42 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Next.js
+.next/
+out/
+node_modules/
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+myenv/
+
+# Sensitive files
+credentials.json
+*.log
+scrape_target.log
+
+# Python and build artifacts
+*.pyc
+__pycache__/
+screenshots/
+
+# Vercel
+.vercel
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Prisma
+prisma/migrations/
+*.sqlite
+*.sqlite-journal
+
+# Other
+get-token.js
+tsconfig.node.json
+public/dollar-sign.ico
