@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Use absolute path to credentials.json in project root
-const credentialsPath = '/var/www/my-next-app/credentials.json';
+const credentialsPath = path.join(process.cwd(), "credentials.json");
 console.log('Loading credentials from:', credentialsPath); // Debug log
 const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
 
