@@ -3,9 +3,9 @@ import ClientLayout from "./client-layout"; // We'll create this next
 
 // Export metadata for the default title
 export const metadata = {
-  title: "TCG Market",
-  description: "Welcome to TCG Market",
-
+  title: "TCG Market - The Future of Pokémon Trading",
+  description: "Join the elite network of Pokémon card traders with smart market insights. Get early access to limited-edition cards and exclusive deals.",
+  keywords: "pokemon trading, tcg market, pokemon cards, trading cards, market insights, price tracking",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
