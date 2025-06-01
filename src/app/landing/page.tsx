@@ -10,13 +10,21 @@ import {
   TextField,
   Button,
   CircularProgress,
-  Backdrop,
   Link,
+  Backdrop,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  Avatar,
+  Tooltip,
 } from "@mui/material";
+import DiscordIcon from "../components/icons/DiscordIcon";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 
 // Variants for animations
 const containerVariants = {
@@ -52,6 +60,8 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState("");
+  const [discordMembers, setDiscordMembers] = useState(5000);
+  const [discordOnline, setDiscordOnline] = useState(120);
   const router = useRouter();
 
   // Countdown timer logic
@@ -72,6 +82,19 @@ export default function LandingPage() {
     };
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000); // Update every second
+    return () => clearInterval(interval);
+  }, []);
+
+  // Discord stats simulation (in production, this would come from your API)
+  useEffect(() => {
+    const updateDiscordStats = () => {
+      setDiscordMembers(prev => prev + Math.floor(Math.random() * 5));
+      setDiscordOnline(prev => {
+        const newOnline = prev + Math.floor(Math.random() * 3) - 1;
+        return Math.max(0, Math.min(newOnline, discordMembers));
+      });
+    };
+    const interval = setInterval(updateDiscordStats, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -377,33 +400,53 @@ export default function LandingPage() {
                         <Typography variant="body2" sx={{ color: "grey.400", mt: 1 }}>
                           Don’t miss out—be part of the future of Pokémon trading!
                         </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            mt: 1,
-                            fontWeight: "bold",
-                            letterSpacing: "0.05em",
-                            color: "#96FF9B", // Solid green theme color
-                            display: "inline-block",
-                            px: 2,
-                            py: 1,
-                            borderRadius: "12px",
-                            boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)",
-                            border: "1px solid rgba(150, 255, 155, 0.3)", // Subtle border with green theme color
-                            animation: "pulse 2s ease-in-out infinite",
-                            "@keyframes pulse": {
-                              "0%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)" },
-                              "50%": { transform: "scale(1.02)", boxShadow: "0 0 10px rgba(150, 255, 155, 0.5)" },
-                              "100%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)" },
-                            },
-                            "@media (prefers-reduced-motion: reduce)": {
-                              animation: "none",
-                              boxShadow: "none",
-                            },
-                          }}
-                        >
-                          Next Pokémon drop in: {countdown}
-                        </Typography>
+                        <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+                          <Button
+                            variant="outlined"
+                            color="success"
+                            startIcon={<DiscordIcon />}
+                            sx={{
+                              bgcolor: "rgba(150, 255, 155, 0.1)",
+                              '&:hover': {
+                                bgcolor: "rgba(150, 255, 155, 0.2)",
+                              },
+                            }}
+                            onClick={() => {
+                              // In production, this would trigger Discord login
+                              console.log("Join Discord clicked");
+                            }}
+                          >
+                            Join Discord for Early Access
+                          </Button>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              mt: 1,
+                              fontWeight: "bold",
+                              letterSpacing: "0.05em",
+                              color: "#96FF9B",
+                              display: "inline-block",
+                              px: 2,
+                              py: 1,
+                              borderRadius: "12px",
+                              bgcolor: "grey.800",
+                              boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)",
+                              border: "1px solid rgba(150, 255, 155, 0.3)",
+                              animation: "pulse 2s ease-in-out infinite",
+                              "@keyframes pulse": {
+                                "0%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)" },
+                                "50%": { transform: "scale(1.02)", boxShadow: "0 0 10px rgba(150, 255, 155, 0.5)" },
+                                "100%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)" },
+                              },
+                              "@media (prefers-reduced-motion: reduce)": {
+                                animation: "none",
+                                boxShadow: "none",
+                              },
+                            }}
+                          >
+                            Next Pokémon drop in: {countdown}
+                          </Typography>
+                        </Box>
                       </Box>
                     )}
                   </form>
@@ -542,8 +585,8 @@ export default function LandingPage() {
             </Paper>
           </motion.div>
 
-          {/* Feature 2: Real-Time Alerts with Pokémon-Themed Graphic */}
-          <motion.div variants={slideInRight}>
+{/* Feature 2: Real-Time Alerts with Pokémon-Themed Graphic */}
+<motion.div variants={slideInRight}>
             <Paper
               elevation={6}
               sx={{
@@ -663,6 +706,292 @@ export default function LandingPage() {
                       </defs>
                     </svg>
                   </Box>
+                </Box>
+              </Box>
+            </Paper>
+          </motion.div>
+
+          {/* Feature 3: Community Market Insights */}
+          <motion.div variants={slideInLeft}>
+            <Paper
+              elevation={6}
+              sx={{
+                p: 4,
+                bgcolor: "grey.900",
+                backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                borderRadius: 2,
+                boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                mb: 4,
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-5px)",
+                  boxShadow: "0 0 20px rgba(150, 255, 155, 0.5)",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "flex-start", color: "text.primary" }}>
+                <Box
+                  sx={{
+                    width: { xs: "2rem", sm: "2.5rem" },
+                    height: { xs: "2rem", sm: "2.5rem" },
+                    borderRadius: "50%",
+                    bgcolor: "grey.700",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mr: { xs: 1, sm: 2 },
+                    fontSize: { xs: "1rem", sm: "1.5rem" },
+                    fontWeight: "bold",
+                    color: "white",
+                    flexShrink: 0,
+                  }}
+                >
+                  3
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: "bold",
+                      fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                      mb: 1,
+                    }}
+                  >
+                    Community Market Insights
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "grey.400",
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                      lineHeight: 1.5,
+                      mb: 2,
+                    }}
+                  >
+                    Get real-time market insights from our active community of traders
+                    and collectors. Join discussions, share tips, and stay informed
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 2, alignItems: "center", mt: 2 }}>
+                    <Tooltip title="Active Channels">
+                      <Chip
+                        label="#market-insights"
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          bgcolor: "rgba(150, 255, 155, 0.1)",
+                          color: "success.main",
+                          borderColor: "rgba(150, 255, 155, 0.2)",
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Trading Volume">
+                      <Chip
+                        label="Daily Volume"
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          bgcolor: "rgba(150, 255, 155, 0.1)",
+                          color: "success.main",
+                          borderColor: "rgba(150, 255, 155, 0.2)",
+                        }}
+                      />
+                    </Tooltip>
+                  </Box>
+                </Box>
+              </Box>
+            </Paper>
+          </motion.div>
+
+          {/* Feature 4: Discord Bot Integration */}
+          <motion.div variants={slideInRight}>
+            <Paper
+              elevation={6}
+              sx={{
+                p: 4,
+                bgcolor: "grey.900",
+                backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                borderRadius: 2,
+                boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                mb: 4,
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-5px)",
+                  boxShadow: "0 0 20px rgba(150, 255, 155, 0.5)",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "flex-start", color: "text.primary" }}>
+                <Box
+                  sx={{
+                    width: { xs: "2rem", sm: "2.5rem" },
+                    height: { xs: "2rem", sm: "2.5rem" },
+                    borderRadius: "50%",
+                    bgcolor: "grey.700",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mr: { xs: 1, sm: 2 },
+                    fontSize: { xs: "1rem", sm: "1.5rem" },
+                    fontWeight: "bold",
+                    color: "white",
+                    flexShrink: 0,
+                  }}
+                >
+                  4
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: "bold",
+                      fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                      mb: 1,
+                    }}
+                  >
+                    Discord Bot Integration
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "grey.400",
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                      lineHeight: 1.5,
+                      mb: 2,
+                    }}
+                  >
+                    Get instant price alerts, market trends, and trading insights 
+                    directly in your Discord server with our powerful bot integration
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 2, alignItems: "center", mt: 2 }}>
+                    <Tooltip title="Bot Features">
+                      <Chip
+                        label="Price Alerts"
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          bgcolor: "rgba(150, 255, 155, 0.1)",
+                          color: "success.main",
+                          borderColor: "rgba(150, 255, 155, 0.2)",
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Market Data">
+                      <Chip
+                        label="Market Stats"
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          bgcolor: "rgba(150, 255, 155, 0.1)",
+                          color: "success.main",
+                          borderColor: "rgba(150, 255, 155, 0.2)",
+                        }}
+                      />
+                    </Tooltip>
+                  </Box>
+                </Box>
+              </Box>
+            </Paper>
+          </motion.div>
+
+          {/* Feature 5: Discord Integration */}
+          <motion.div variants={slideInRight}>
+            <Paper
+              elevation={6}
+              sx={{
+                p: 4,
+                bgcolor: "grey.900",
+                backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                borderRadius: 2,
+                boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                mb: 4,
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-5px)",
+                  boxShadow: "0 0 20px rgba(150, 255, 155, 0.5)",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "flex-start", color: "text.primary" }}>
+                <Box
+                  sx={{
+                    width: { xs: "2rem", sm: "2.5rem" },
+                    height: { xs: "2.5rem", sm: "3rem" },
+                    borderRadius: "50%",
+                    bgcolor: "grey.700",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mr: { xs: 1, sm: 2 },
+                    fontSize: { xs: "1rem", sm: "1.5rem" },
+                    fontWeight: "bold",
+                    color: "white",
+                    flexShrink: 0,
+                  }}
+                >
+                  <DiscordIcon sx={{ width: "1.5rem", height: "1.5rem" }} />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: "bold",
+                      fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                      mb: 1,
+                    }}
+                  >
+                    Discord Integration
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "grey.400",
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                      lineHeight: 1.5,
+                      mb: 2,
+                    }}
+                  >
+                    Join our vibrant Discord community for real-time market insights, 
+                    exclusive deals, and instant notifications
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 2, alignItems: "center", mt: 2 }}>
+                    <Chip
+                      label={`${discordMembers} Members`}
+                      variant="outlined"
+                      color="success"
+                      size="small"
+                      sx={{
+                        bgcolor: "rgba(150, 255, 155, 0.1)",
+                        color: "success.main",
+                        borderColor: "rgba(150, 255, 155, 0.2)",
+                      }}
+                    />
+                    <Chip
+                      label={`${discordOnline} Online`}
+                      variant="outlined"
+                      color="success"
+                      size="small"
+                      sx={{
+                        bgcolor: "rgba(150, 255, 155, 0.1)",
+                        color: "success.main",
+                        borderColor: "rgba(150, 255, 155, 0.2)",
+                      }}
+                    />
+                  </Box>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    fullWidth
+                    sx={{
+                      mt: 2,
+                      bgcolor: "success.main",
+                      '&:hover': {
+                        bgcolor: "success.dark",
+                        transform: "translateY(-2px)",
+                      },
+                    }}
+                    href="https://discord.gg/your-invite-code"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Join Discord
+                  </Button>
                 </Box>
               </Box>
             </Paper>
