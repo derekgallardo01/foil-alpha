@@ -28,3 +28,13 @@ model ActivityLog {
 
   @@index([userId], map: "ActivityLog_userId_fkey")
 }
+
+model Waitlist {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  created_at DateTime @default(now()) @map("created_at")
+  status    String   @default("PENDING")
+  source    String   @default("WEBSITE")
+  metadata  Json?
+}

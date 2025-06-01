@@ -12,19 +12,14 @@ import {
   CircularProgress,
   Link,
   Backdrop,
-  Grid,
-  Card,
-  CardContent,
-  CardMedia,
   Chip,
-  Avatar,
   Tooltip,
 } from "@mui/material";
 import DiscordIcon from "../components/icons/DiscordIcon";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import "react-toastify/dist/ReactToastify.css";
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 
 // Variants for animations
 const containerVariants = {
@@ -88,19 +83,38 @@ export default function LandingPage() {
   // Discord stats simulation (in production, this would come from your API)
   useEffect(() => {
     const updateDiscordStats = () => {
-      setDiscordMembers(prev => prev + Math.floor(Math.random() * 5));
-      setDiscordOnline(prev => {
+      setDiscordMembers((prev) => prev + Math.floor(Math.random() * 5));
+      setDiscordOnline((prev) => {
         const newOnline = prev + Math.floor(Math.random() * 3) - 1;
         return Math.max(0, Math.min(newOnline, discordMembers));
       });
     };
     const interval = setInterval(updateDiscordStats, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [discordMembers]);
+
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent multiple submissions
     setLoading(true);
+  
+    // Client-side validation
+    if (!formData.name.trim()) {
+      toast.error("Please enter your full name", { position: "top-right" });
+      setLoading(false);
+      return;
+    }
+    if (!validateEmail(formData.email)) {
+      toast.error("Please enter a valid email address", { position: "top-right" });
+      setLoading(false);
+      return;
+    }
+  
     try {
       const response = await fetch("/api/subscribe", {
         method: "POST",
@@ -109,19 +123,22 @@ export default function LandingPage() {
         },
         body: JSON.stringify(formData),
       });
-
+  
+      const data = await response.json();
+  
       if (!response.ok) {
-        throw new Error("Failed to subscribe");
+        throw new Error(data.error || "Failed to subscribe");
       }
-
-      await response.json();
+  
       setSuccess(true);
       setFormData({ name: "", email: "" });
+      toast.success("Successfully joined the waitlist!", { position: "top-right" });
       setTimeout(() => {
-        router.push("/");
-      }, 3000);
-    } catch (error) {
+        setSuccess(false); // Reset success state
+      }, 5000);
+    } catch (error: any) {
       console.error("Error submitting form:", error);
+      toast.error(error.message, { position: "top-right" }); // Show specific error message
     } finally {
       setLoading(false);
     }
@@ -153,7 +170,8 @@ export default function LandingPage() {
           left: 0,
           width: "100%",
           height: "100%",
-          background: "radial-gradient(circle, rgba(150, 255, 155, 0.1) 1px, transparent 1px), radial-gradient(circle, rgba(239, 83, 80, 0.2) 2px, transparent 2px)", // Use red.400 for accessibility
+          background:
+            "radial-gradient(circle, rgba(150, 255, 155, 0.1) 1px, transparent 1px), radial-gradient(circle, rgba(239, 83, 80, 0.2) 2px, transparent 2px)",
           backgroundSize: "20px 20px, 30px 30px",
           backgroundPosition: "0 0, 15px 15px",
           opacity: 0.3,
@@ -171,13 +189,17 @@ export default function LandingPage() {
         },
       }}
     >
-      <ToastContainer position="top-right" />
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
       <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
         <CircularProgress color="inherit" />
       </Backdrop>
 
       <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
-        <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
           <motion.div initial={{ rotateY: 180 }} animate={{ rotateY: 0 }} transition={{ duration: 0.6 }}>
             <Paper
               elevation={6}
@@ -197,14 +219,25 @@ export default function LandingPage() {
                   width: 20,
                   height: 20,
                   borderRadius: "50%",
-                  background: "radial-gradient(circle, #fff 40%, red.500 40%, red.500 60%, grey.900 60%, grey.900 70%, grey.50 70%)",
-                  boxShadow: "0 0 5px rgba(239, 83, 80, 0.3)", // Softer shadow with red.400
+                  background:
+                    "radial-gradient(circle, #fff 40%, red.500 40%, red.500 60%, grey.900 60%, grey.900 70%, grey.50 70%)",
+                  boxShadow: "0 0 5px rgba(239, 83, 80, 0.3)",
                 },
               }}
             >
               <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                  <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market Logo" width={200} height={100} priority />
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                >
+                  <Image
+                    src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
+                    alt="TCG Market Logo"
+                    width={200}
+                    height={100}
+                    priority
+                  />
                 </motion.div>
               </Box>
               <Box sx={{ width: "100%" }}>
@@ -340,49 +373,50 @@ export default function LandingPage() {
                         )}
                       </Button>
                     </motion.div>
-                    {success ? (
-                      <motion.div
-                        variants={itemVariants}
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200, damping: 10 }}
-                      >
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            textAlign: "center",
-                            color: "success.main",
-                            mt: 2,
-                            p: 2,
-                            bgcolor: "success.light",
-                            borderRadius: 1,
-                            position: "relative",
-                            overflow: "hidden",
+                    {success && (
+                    <motion.div
+                      variants={itemVariants}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                    >
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          textAlign: "center",
+                          color: "white", // Changed from success.main to white
+                          mt: 2,
+                          p: 2,
+                          bgcolor: "success.light",
+                          borderRadius: 1,
+                          position: "relative",
+                          overflow: "hidden",
+                          "&:before": {
+                            content: '""',
+                            position: "absolute",
+                            top: "-50%",
+                            left: "-50%",
+                            width: "200%",
+                            height: "200%",
+                            background: "radial-gradient(circle, rgba(150, 255, 155, 0.5) 0%, transparent 70%)",
+                            animation: "confetti 1s ease-out",
+                          },
+                          "@keyframes confetti": {
+                            "0%": { transform: "scale(0)", opacity: 1 },
+                            "100%": { transform: "scale(1)", opacity: 0 },
+                          },
+                          "@media (prefers-reduced-motion: reduce)": {
                             "&:before": {
-                              content: '""',
-                              position: "absolute",
-                              top: "-50%",
-                              left: "-50%",
-                              width: "200%",
-                              height: "200%",
-                              background: "radial-gradient(circle, rgba(150, 255, 155, 0.5) 0%, transparent 70%)",
-                              animation: "confetti 1s ease-out",
+                              animation: "none",
                             },
-                            "@keyframes confetti": {
-                              "0%": { transform: "scale(0)", opacity: 1 },
-                              "100%": { transform: "scale(1)", opacity: 0 },
-                            },
-                            "@media (prefers-reduced-motion: reduce)": {
-                              "&:before": {
-                                animation: "none",
-                              },
-                            },
-                          }}
-                        >
-                          Thank you! You've been added to the waitlist.
-                        </Typography>
-                      </motion.div>
-                    ) : (
+                          },
+                        }}
+                      >
+                        Thank you! You've been added to the waitlist.
+                      </Typography>
+                    </motion.div>
+                  )}
+                    {!success && (
                       <Box sx={{ textAlign: "center", mt: 2 }}>
                         <Typography
                           variant="h6"
@@ -400,19 +434,18 @@ export default function LandingPage() {
                         <Typography variant="body2" sx={{ color: "grey.400", mt: 1 }}>
                           Don’t miss out—be part of the future of Pokémon trading!
                         </Typography>
-                        <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+                        <Box sx={{ display: "flex", gap: 2, mt: 2, justifyContent: "center" }}>
                           <Button
                             variant="outlined"
                             color="success"
                             startIcon={<DiscordIcon />}
                             sx={{
                               bgcolor: "rgba(150, 255, 155, 0.1)",
-                              '&:hover': {
+                              "&:hover": {
                                 bgcolor: "rgba(150, 255, 155, 0.2)",
                               },
                             }}
                             onClick={() => {
-                              // In production, this would trigger Discord login
                               console.log("Join Discord clicked");
                             }}
                           >
@@ -543,7 +576,14 @@ export default function LandingPage() {
                         <line x1="110" y1="0" x2="110" y2="80" stroke="#96FF9B" strokeWidth="0.5" />
                       </g>
                       <defs>
-                        <linearGradient id="lineGradient" x1="10" y1="70" x2="130" y2="30" gradientUnits="userSpaceOnUse">
+                        <linearGradient
+                          id="lineGradient"
+                          x1="10"
+                          y1="70"
+                          x2="130"
+                          y2="30"
+                          gradientUnits="userSpaceOnUse"
+                        >
                           <stop offset="0%" stopColor="#96FF9B" stopOpacity="0.3" />
                           <stop offset="50%" stopColor="#96FF9B" stopOpacity="1" />
                           <stop offset="100%" stopColor="#96FF9B" stopOpacity="0.3" />
@@ -585,8 +625,8 @@ export default function LandingPage() {
             </Paper>
           </motion.div>
 
-{/* Feature 2: Real-Time Alerts with Pokémon-Themed Graphic */}
-<motion.div variants={slideInRight}>
+          {/* Feature 2: Real-Time Alerts with Pokémon-Themed Graphic */}
+          <motion.div variants={slideInRight}>
             <Paper
               elevation={6}
               sx={{
@@ -661,7 +701,14 @@ export default function LandingPage() {
                     >
                       <circle cx="50" cy="50" r="40" fill="url(#pokeBallGradient)" filter="url(#glow)" />
                       <defs>
-                        <linearGradient id="pokeBallGradient" x1="50" y1="10" x2="50" y2="90" gradientUnits="userSpaceOnUse">
+                        <linearGradient
+                          id="pokeBallGradient"
+                          x1="50"
+                          y1="10"
+                          x2="50"
+                          y2="90"
+                          gradientUnits="userSpaceOnUse"
+                        >
                           <stop offset="0%" stopColor="#ff0000" />
                           <stop offset="48%" stopColor="#ff0000" />
                           <stop offset="50%" stopColor="#000" />
@@ -678,7 +725,12 @@ export default function LandingPage() {
                         filter="url(#glow)"
                       />
                       <g opacity="0.8">
-                        <path d="M30 20 A30 30 0 0 1 40 10" stroke="#96FF9B" strokeWidth="1" filter="url(#glow)">
+                        <path
+                          d="M30 20 A30 30 0 0 1 40 10"
+                          stroke="#96FF9B"
+                          strokeWidth="1"
+                          filter="url(#glow)"
+                        >
                           <animate
                             attributeName="opacity"
                             values="0.8;0.4;0.8"
@@ -686,7 +738,12 @@ export default function LandingPage() {
                             repeatCount="indefinite"
                           />
                         </path>
-                        <path d="M70 80 A30 30 0 0 0 60 90" stroke="#96FF9B" strokeWidth="1" filter="url(#glow)">
+                        <path
+                          d="M70 80 A30 30 0 0 0 60 90"
+                          stroke="#96FF9B"
+                          strokeWidth="1"
+                          filter="url(#glow)"
+                        >
                           <animate
                             attributeName="opacity"
                             values="0.8;0.4;0.8"
@@ -767,8 +824,8 @@ export default function LandingPage() {
                       mb: 2,
                     }}
                   >
-                    Get real-time market insights from our active community of traders
-                    and collectors. Join discussions, share tips, and stay informed
+                    Get real-time market insights from our active community of traders and collectors. Join
+                    discussions, share tips, and stay informed
                   </Typography>
                   <Box sx={{ display: "flex", gap: 2, alignItems: "center", mt: 2 }}>
                     <Tooltip title="Active Channels">
@@ -857,8 +914,8 @@ export default function LandingPage() {
                       mb: 2,
                     }}
                   >
-                    Get instant price alerts, market trends, and trading insights 
-                    directly in your Discord server with our powerful bot integration
+                    Get instant price alerts, market trends, and trading insights directly in your Discord
+                    server with our powerful bot integration
                   </Typography>
                   <Box sx={{ display: "flex", gap: 2, alignItems: "center", mt: 2 }}>
                     <Tooltip title="Bot Features">
@@ -947,8 +1004,8 @@ export default function LandingPage() {
                       mb: 2,
                     }}
                   >
-                    Join our vibrant Discord community for real-time market insights, 
-                    exclusive deals, and instant notifications
+                    Join our vibrant Discord community for real-time market insights, exclusive deals, and
+                    instant notifications
                   </Typography>
                   <Box sx={{ display: "flex", gap: 2, alignItems: "center", mt: 2 }}>
                     <Chip
@@ -981,7 +1038,7 @@ export default function LandingPage() {
                     sx={{
                       mt: 2,
                       bgcolor: "success.main",
-                      '&:hover': {
+                      "&:hover": {
                         bgcolor: "success.dark",
                         transform: "translateY(-2px)",
                       },
@@ -1003,11 +1060,17 @@ export default function LandingPage() {
       <Box sx={{ textAlign: "center", py: 2, bgcolor: "grey.800", width: "100%", mt: "auto" }}>
         <Typography variant="body2" sx={{ color: "grey.400" }}>
           © 2025 TCG Market. All rights reserved.{" "}
-          <Link href="/privacy" sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}>
+          <Link
+            href="/privacy"
+            sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+          >
             Privacy Policy
           </Link>{" "}
           |{" "}
-          <Link href="/about" sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}>
+          <Link
+            href="/about"
+            sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+          >
             Learn More
           </Link>
         </Typography>
