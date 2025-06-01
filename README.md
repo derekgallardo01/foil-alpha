@@ -18,6 +18,7 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 - Product watchlist system
 - Advanced filtering and search capabilities
 - Price change notifications
+- Waitlist management with detailed user metadata
 
 ### Analytics & Visualization
 - Interactive data grids using @mui/x-data-grid
@@ -87,6 +88,17 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 - `/api/users`
 - `/api/watchlist`
 - `/api/visitor-count`
+
+#### Waitlist Management
+- `/api/subscribe`: Handles waitlist signups with:
+  - Input validation (name and email required)
+  - Server-side email validation
+  - IP address tracking
+  - Timezone detection
+  - Detailed metadata collection (browser, OS, device info)
+  - Email notifications for new signups
+  - Duplicate entry handling
+  - Comprehensive logging
 
 #### Admin Features
 - `/api/admin/*`
@@ -227,6 +239,17 @@ The application uses MySQL with Prisma ORM. The main models include:
 
 - **User**: Stores user information, roles, and subscription status
 - **ActivityLog**: Tracks user activities and actions
+- **Waitlist**: Manages waitlist entries with:
+  - User information (name, email)
+  - Status tracking (PENDING)
+  - Source information (WEBSITE)
+  - Metadata including:
+    - Signup timestamp
+    - IP address
+    - Timezone
+    - Browser details (name, version)
+    - OS details (name, version)
+    - Device information (type, model)
 
 ## Getting Started
 
