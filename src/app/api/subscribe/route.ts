@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { sendEmail } from "../../lib/email";
 import mailchimp from "@mailchimp/mailchimp_marketing";
+import { GoogleSheets } from "../../lib/google-sheets";
 
 const prisma = new PrismaClient();
 
-// Initialize Mailchimp client
 mailchimp.setConfig({
   apiKey: process.env.MAILCHIMP_API_KEY,
-  server: process.env.MAILCHIMP_API_KEY?.split("-")[1], // Extract server prefix (e.g., us16)
+  server: process.env.MAILCHIMP_API_KEY?.split("-")[1],
 });
+
+const googleSheets = new GoogleSheets();
 
 interface WaitlistMetadata {
   source: string;
@@ -28,39 +30,42 @@ interface WaitlistMetadata {
 
 export async function POST(request: Request) {
   const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+  let signupEmail = "unknown";
   try {
     const { name, email } = await request.json();
-    const signupEmail = email; // Store email for consistent use
+    signupEmail = email;
 
-    // Log signup attempt
     console.log(`[${timestamp}] Signup attempt: email=${signupEmail}, name=${name}`);
+
+    // Validate environment variables
+    if (!process.env.MAILCHIMP_API_KEY || !process.env.MAILCHIMP_LIST_ID) {
+      console.error(`[${timestamp}] Missing environment variables`, {
+        MAILCHIMP_API_KEY: !!process.env.MAILCHIMP_API_KEY,
+        MAILCHIMP_LIST_ID: !!process.env.MAILCHIMP_LIST_ID,
+      });
+      throw new Error("Mailchimp configuration missing");
+    }
 
     // Validate input
     if (!name || !signupEmail) {
-      console.log(`[${timestamp}] Validation failed: Missing name or email - email=${signupEmail || "unknown"}, name=${name || "unknown"}`);
-      return NextResponse.json(
-        { error: "Name and email are required" },
-        { status: 400 }
-      );
+      console.log(`[${timestamp}] Validation failed: Missing name or email`);
+      return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
     }
 
-    // Server-side email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(signupEmail)) {
-      console.log(`[${timestamp}] Validation failed: Invalid email format - email=${signupEmail}`);
-      return NextResponse.json(
-        { error: "Invalid email address" },
-        { status: 400 }
-      );
+      console.log(`[${timestamp}] Validation failed: Invalid email format`);
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    // Get client IP address
-    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || request.headers.get("x-client-ip") || "unknown";
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      request.headers.get("x-client-ip") ||
+      "unknown";
 
-    // Get timezone information
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    // Format signup time with timezone
     const signupTime = new Date().toLocaleString("en-US", {
       timeZone: timezone,
       year: "numeric",
@@ -72,7 +77,6 @@ export async function POST(request: Request) {
       timeZoneName: "short",
     });
 
-    // Browser and device information (placeholders for server-side)
     const browserDetails = {
       name: "Unknown Browser",
       version: "Unknown Version",
@@ -82,7 +86,6 @@ export async function POST(request: Request) {
       deviceModel: "Unknown Model",
     };
 
-    // Check if email already exists in waitlist
     const existingWaitlist = await prisma.waitlist.findUnique({ where: { email: signupEmail } });
 
     let waitlistEntry;
@@ -92,7 +95,7 @@ export async function POST(request: Request) {
         where: { email: signupEmail },
         data: {
           name,
-          status: "PENDING",
+          status: "SUBSCRIBED",
           source: "WEBSITE",
           metadata: {
             source: "landing_page",
@@ -104,14 +107,33 @@ export async function POST(request: Request) {
           },
         },
       });
-      console.log(`[${timestamp}] No email notification sent for existing user: email=${signupEmail}`);
+
+      try {
+        await googleSheets.updateEntry({
+          id: waitlistEntry.id,
+          email: signupEmail,
+          name,
+          status: "SUBSCRIBED",
+          created_at: waitlistEntry.createdAt || new Date(),
+          source: "WEBSITE",
+          metadata: waitlistEntry.metadata,
+        });
+        console.log(`[${timestamp}] Successfully updated Google Sheets for email=${signupEmail}`);
+      } catch (sheetsError) {
+        console.error(`[${timestamp}] Failed to update Google Sheets:`, {
+          message: sheetsError.message,
+          stack: sheetsError.stack,
+        });
+      }
+
+      console.log(`[${timestamp}] No email notification sent for existing user`);
     } else {
       console.log(`[${timestamp}] Creating new waitlist entry for email=${signupEmail}`);
       waitlistEntry = await prisma.waitlist.create({
         data: {
           email: signupEmail,
           name,
-          status: "PENDING",
+          status: "SUBSCRIBED",
           source: "WEBSITE",
           metadata: {
             source: "landing_page",
@@ -123,14 +145,8 @@ export async function POST(request: Request) {
         },
       });
 
-      console.log(`[${timestamp}] Attempting to send email notification to derekgallardo01@gmail.com for email=${signupEmail}`);
       let mailchimpStatus = "Failed";
       try {
-        // Add user to Mailchimp list
-        if (!process.env.MAILCHIMP_LIST_ID) {
-          console.error(`[${timestamp}] MAILCHIMP_LIST_ID is not set in environment variables`);
-          throw new Error("MAILCHIMP_LIST_ID is not set");
-        }
         await mailchimp.lists.addListMember(process.env.MAILCHIMP_LIST_ID, {
           email_address: signupEmail,
           status: "subscribed",
@@ -147,17 +163,15 @@ export async function POST(request: Request) {
         mailchimpStatus = "Success";
         console.log(`[${timestamp}] Successfully added ${signupEmail} to Mailchimp list`);
       } catch (mailchimpError) {
-        console.error(`[${timestamp}] Failed to add to Mailchimp list for email=${signupEmail}:`, {
+        console.error(`[${timestamp}] Failed to add to Mailchimp list:`, {
           message: mailchimpError.message,
           stack: mailchimpError.stack,
-          response: mailchimpError.response?.data || mailchimpError.response?.body,
-          code: mailchimpError.code,
+          response: mailchimpError.response?.data,
         });
       }
 
       try {
-        // Send email notification with Mailchimp status
-        await sendEmail("derekgallardo01@gmail.com", "New TCG Market Waitlist Signup", `
+        const emailContent = `
           <h2>New Waitlist Signup</h2>
           <p><strong>Name:</strong> ${name}</p>
           <p><strong>Email:</strong> ${signupEmail}</p>
@@ -170,19 +184,40 @@ export async function POST(request: Request) {
           <p><strong>Device:</strong> ${browserDetails.device} ${browserDetails.deviceModel}</p>
           <p><strong>Mailchimp Status:</strong> ${mailchimpStatus}</p>
           <p><strong>Status:</strong> New Signup</p>
-        `);
-        console.log(`[${timestamp}] Email notification sent successfully to derekgallardo01@gmail.com for email=${signupEmail}`);
+        `;
+        console.log(`[${timestamp}] Sending email to derekgallardo01@gmail.com`);
+        await sendEmail("derekgallardo01@gmail.com", "New TCG Market Waitlist Signup", emailContent);
+        console.log(`[${timestamp}] Email notification sent successfully`);
       } catch (emailError) {
-        console.error(`[${timestamp}] Failed to send email notification to derekgallardo01@gmail.com for email=${signupEmail}:`, {
+        console.error(`[${timestamp}] Failed to send email notification:`, {
           message: emailError.message,
           stack: emailError.stack,
           response: emailError.response?.data,
           code: emailError.code,
         });
+        // Continue processing even if email fails
+      }
+
+      try {
+        await googleSheets.addEntry({
+          id: waitlistEntry.id,
+          email: signupEmail,
+          name,
+          status: "SUBSCRIBED",
+          created_at: waitlistEntry.createdAt || new Date(),
+          source: "WEBSITE",
+          metadata: waitlistEntry.metadata,
+        });
+        console.log(`[${timestamp}] Successfully added to Google Sheets`);
+      } catch (sheetsError) {
+        console.error(`[${timestamp}] Failed to sync with Google Sheets:`, {
+          message: sheetsError.message,
+          stack: sheetsError.stack,
+        });
       }
     }
 
-    console.log(`[${timestamp}] Signup completed successfully: email=${signupEmail}, id=${waitlistEntry.id}`);
+    console.log(`[${timestamp}] Signup completed successfully: id=${waitlistEntry.id}`);
     return NextResponse.json({
       success: true,
       message: existingWaitlist ? "Waitlist entry updated successfully" : "Successfully added to waitlist",
@@ -193,16 +228,12 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error(`[${timestamp}] Signup failed for email=${signupEmail || "unknown"}:`, {
+    console.error(`[${timestamp}] Signup failed for email=${signupEmail}:`, {
       message: error.message,
       stack: error.stack,
       response: error.response?.data,
-      code: error.code,
     });
-    return NextResponse.json(
-      { error: "Failed to process waitlist signup" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process waitlist signup" }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

@@ -7,26 +7,20 @@ export default withAuth(
     // Get the pathname of the request
     const { pathname } = request.nextUrl;
 
-    // Check if we're in production
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    // In production, only allow the landing page and API routes
-    if (isProduction) {
-      // Allow API routes
-      if (pathname.startsWith('/api/')) return NextResponse.next();
-      
-      // Allow static assets
-      if (pathname.startsWith('/_next/')) return NextResponse.next();
-      
-      // Allow the landing page
-      if (pathname === '/' || pathname === '/landing') return NextResponse.next();
-      
-      // Redirect all other routes to the landing page
-      return NextResponse.redirect(new URL('/landing', request.url));
-    }
-
-    // In development, allow all routes through NextAuth
-    return NextResponse.next();
+    // Allow API routes
+    if (pathname.startsWith('/api/')) return NextResponse.next();
+    
+    // Allow static assets
+    if (pathname.startsWith('/_next/')) return NextResponse.next();
+    
+    // Allow only the specific admin waitlist route
+    if (pathname === '/admin/waitlist-signups') return NextResponse.next();
+    
+    // Allow the landing page
+    if (pathname === '/' || pathname === '/landing') return NextResponse.next();
+    
+    // Redirect all other routes to the landing page
+    return NextResponse.redirect(new URL('/landing', request.url));
   },
   {
     callbacks: {

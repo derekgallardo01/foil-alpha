@@ -26,7 +26,12 @@ export default function WaitlistSignupsPage() {
 
   const fetchWaitlistEntries = async () => {
     try {
-      const response = await fetch('/api/admin/waitlist');
+      const response = await fetch('/api/admin/waitlist', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch waitlist entries");
@@ -34,7 +39,7 @@ export default function WaitlistSignupsPage() {
       setWaitlistEntries(data.entries);
     } catch (error) {
       console.error("Error fetching waitlist entries:", error);
-      toast.error("Failed to fetch waitlist entries");
+      toast.error("Failed to fetch waitlist entries. Please try again later.");
     } finally {
       setLoading(false);
     }
