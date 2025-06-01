@@ -99,15 +99,28 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
   - Email notifications for new signups
   - Duplicate entry handling
   - Comprehensive logging
+  - Mailchimp integration for automatic newsletter subscription
+  - Success/failure status tracking for newsletter subscriptions
 
 #### Admin Features
-- `/api/admin/*`
-- `/api/tasks/*`
-- `/api/discord/*`
+- `/api/admin/*`: Protected routes for admin functionality
+- `/api/admin/waitlist`: API endpoint for managing waitlist entries
+- `/api/tasks/*`: Task management endpoints
+- `/api/discord/*`: Discord integration endpoints
 
 #### System
-- `/api/protected/*`
-- `/api/test/*`
+- `/api/protected/*`: Protected API endpoints
+- `/api/test/*`: Test endpoints
+
+## Production Configuration
+
+### Middleware Configuration
+The application includes middleware for production environment that:
+- Only allows the landing page (`/` or `/landing`) in production
+- Redirects all other routes to the landing page
+- Maintains API access for waitlist functionality
+- Allows admin routes in development mode only
+- Maintains NextAuth authentication for admin routes in development
 
 ## Development Setup
 
