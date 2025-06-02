@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -52,7 +53,7 @@ interface FormData {
   email: string;
 }
 
-export default function LandingPage() {
+export default function WaitlistPage() {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",

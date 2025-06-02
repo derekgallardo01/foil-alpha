@@ -56,7 +56,7 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 ## Development Timeline
 
 ### Completed Features
-- Landing page with waitlist signup form
+- Waitlist page with signup form
 - Waitlist confirmation emails with TCG Market logo
 - Google Sheets integration for waitlist tracking
 - Mailchimp integration for email list management
@@ -453,8 +453,8 @@ await prisma.waitlist.createMany({
 
 ### Middleware Configuration
 The application includes middleware for production environment that:
-- Only allows the landing page (`/` or `/landing`) in production
-- Redirects all other routes to the landing page
+- Only allows the waitlist page (`/` or `/waitlist`) in production
+- Redirects all other routes to the waitlist page
 - Maintains API access for waitlist functionality
 - Allows admin routes in development mode only
 - Maintains NextAuth authentication for admin routes in development
