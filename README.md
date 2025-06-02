@@ -42,13 +42,30 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 - Activity logging and audit trails
 - Google Analytics integration
 
+## Recent Changes
+
+- Added waitlist confirmation email with TCG Market logo and improved styling
+- Updated launch date to June 2026
+- Enhanced logging for waitlist submissions and email confirmations
+- Improved error handling and user feedback
+- Removed temporary Discord integration features
+- Added proper email sending for both new and existing users system
+- Activity logging and audit trails
+- Google Analytics integration
+
 ## Development Timeline
 
 ### Completed Features
-- ✅ Landing page with waitlist signup
-- ✅ Mailchimp integration for newsletter subscription
-- ✅ Admin page for managing waitlist entries
-- ✅ Production middleware configuration
+- Landing page with waitlist signup form
+- Waitlist confirmation emails with TCG Market logo
+- Google Sheets integration for waitlist tracking
+- Mailchimp integration for email list management
+- OAuth2 authentication for protected routes
+- Responsive design with Material-UI
+- Framer Motion animations
+- Toast notifications for user feedback
+- Detailed logging for waitlist submissions and email confirmations
+- Real-time communication infrastructure (WebSocket/SSE)
 
 ### Current Development
 - ✅ Google Sheets Integration
@@ -74,6 +91,11 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 - 📋 Automated cleanup scripts
 - 📋 Status update scripts
 - 📋 Integration with Google Sheets
+
+#### Discord Integration
+- 📋 Discord button and integration card temporarily commented out
+- 📋 Discord bot integration text updated to reference "our Discord server"
+- 📋 Note: Uncomment Discord-related features when integration is ready
 
 ### Future Development
 #### Pokémon Card Auction & Trading System

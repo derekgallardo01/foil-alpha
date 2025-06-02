@@ -28,14 +28,27 @@ interface WaitlistMetadata {
   };
 }
 
+interface EmailData {
+  subject: string;
+  body: string;
+}
+
+interface RequestBody {
+  name: string;
+  email: string;
+  emailData?: EmailData;
+}
+
 export async function POST(request: Request) {
   const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
   let signupEmail = "unknown";
   try {
-    const { name, email } = await request.json();
+    const body: RequestBody = await request.json();
+    const { name, email, emailData } = body;
     signupEmail = email;
 
     console.log(`[${timestamp}] Signup attempt: email=${signupEmail}, name=${name}`);
+    console.log(`[${timestamp}] Email data received:`, emailData ? 'Yes' : 'No');
 
     // Validate environment variables
     if (!process.env.MAILCHIMP_API_KEY || !process.env.MAILCHIMP_LIST_ID) {
@@ -94,30 +107,38 @@ export async function POST(request: Request) {
       waitlistEntry = await prisma.waitlist.update({
         where: { email: signupEmail },
         data: {
-          name,
+          name: name,
           status: "SUBSCRIBED",
           source: "WEBSITE",
           metadata: {
-            source: "landing_page",
-            timestamp: new Date().toISOString(),
+            ...existingWaitlist.metadata,
             updated: true,
-            ip_address: ip,
             timezone,
-            browser: browserDetails,
+            timestamp: signupTime,
+            ip_address: ip,
           },
         },
       });
 
       try {
-        await googleSheets.updateEntry({
-          id: waitlistEntry.id,
-          email: signupEmail,
-          name,
-          status: "SUBSCRIBED",
-          created_at: waitlistEntry.createdAt || new Date(),
-          source: "WEBSITE",
-          metadata: waitlistEntry.metadata,
-        });
+        console.log(`[${timestamp}] Updating Google Sheets entry for email=${signupEmail}`);
+        await googleSheets.updateEntry(
+          existingWaitlist.id.toString(),
+          {
+            email: signupEmail,
+            name: name,
+            status: "SUBSCRIBED",
+            source: "WEBSITE",
+            created_at: existingWaitlist.created_at,
+            metadata: {
+              ...existingWaitlist.metadata,
+              updated: true,
+              timezone,
+              timestamp: signupTime,
+              ip_address: ip,
+            },
+          }
+        );
         console.log(`[${timestamp}] Successfully updated Google Sheets for email=${signupEmail}`);
       } catch (sheetsError) {
         console.error(`[${timestamp}] Failed to update Google Sheets:`, {
@@ -126,24 +147,53 @@ export async function POST(request: Request) {
         });
       }
 
-      console.log(`[${timestamp}] No email notification sent for existing user`);
+      if (emailData) {
+        try {
+          console.log(`[${timestamp}] Sending confirmation email to ${email}`);
+          await sendEmail(email, emailData.subject, emailData.body);
+          console.log(`[${timestamp}] Confirmation email sent successfully to ${email}`);
+        } catch (error) {
+          console.error(`[${timestamp}] Failed to send confirmation email:`, error as Error);
+        }
+      } else {
+        console.log(`[${timestamp}] No email data provided for ${email}`);
+      }
+
+      console.log(`[${timestamp}] Signup completed successfully: id=${existingWaitlist.id}`);
+      console.log(`[${timestamp}] Final state:`, {
+        email: signupEmail,
+        status: 'updated',
+        timestamp: new Date().toISOString()
+      });
     } else {
       console.log(`[${timestamp}] Creating new waitlist entry for email=${signupEmail}`);
       waitlistEntry = await prisma.waitlist.create({
         data: {
-          email: signupEmail,
           name,
+          email,
           status: "SUBSCRIBED",
           source: "WEBSITE",
           metadata: {
             source: "landing_page",
-            timestamp: new Date().toISOString(),
-            ip_address: ip,
-            timezone,
             browser: browserDetails,
+            timezone,
+            timestamp,
+            ip_address: ip,
           },
         },
       });
+
+      if (emailData) {
+        try {
+          console.log(`[${timestamp}] Sending confirmation email to ${email}`);
+          await sendEmail(email, emailData.subject, emailData.body);
+          console.log(`[${timestamp}] Confirmation email sent successfully to ${email}`);
+        } catch (error) {
+          console.error(`[${timestamp}] Failed to send confirmation email:`, error as Error);
+        }
+      } else {
+        console.log(`[${timestamp}] No email data provided for ${email}`);
+      }
 
       let mailchimpStatus = "Failed";
       try {
@@ -215,9 +265,15 @@ export async function POST(request: Request) {
           stack: sheetsError.stack,
         });
       }
+
+      console.log(`[${timestamp}] Signup completed successfully: id=${waitlistEntry.id}`);
+      console.log(`[${timestamp}] Final state:`, {
+        email: signupEmail,
+        status: 'new',
+        timestamp: new Date().toISOString()
+      });
     }
 
-    console.log(`[${timestamp}] Signup completed successfully: id=${waitlistEntry.id}`);
     return NextResponse.json({
       success: true,
       message: existingWaitlist ? "Waitlist entry updated successfully" : "Successfully added to waitlist",
