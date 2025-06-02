@@ -166,6 +166,39 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 #### Real-Time Features
 - WebSocket/SSE integration
 - Real-time price updates
+
+## Database Management
+
+### Backup Scripts
+The project includes several backup scripts for managing the database:
+
+1. **MySQL Database Backup**
+   - Run `powershell -ExecutionPolicy Bypass -File backups/mysql-backup-simple.ps1` to create a full MySQL database backup
+   - Backup files are stored in the `backups/` directory with timestamps
+   - Backup files are plain SQL dumps that can be restored using MySQL
+
+2. **Waitlist Backup**
+   - Run `node backups/backup-db.mjs` to create a JSON backup of the waitlist entries
+   - Backup files are stored in the `backups/` directory with timestamps
+   - Contains all waitlist entries with their metadata
+
+### Backup Location
+All backup files are stored in the `backups/` directory with filenames that include timestamps for easy reference.
+
+### Restore Instructions
+To restore the MySQL database from a backup:
+```bash
+mysql -u derek -p visitorDB < backups/mysql-backup-YYYY-MM-DD_HH-MM-SS.sql
+```
+
+To restore the waitlist from a backup:
+```javascript
+// Use the Prisma client to insert the backup data
+const prisma = new PrismaClient();
+await prisma.waitlist.createMany({
+  data: JSON.parse(backupData)
+});
+```
 - Trade notifications
 - Market activity tracking
 - Price alerts
