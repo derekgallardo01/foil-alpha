@@ -1,7 +1,7 @@
 // src/app/api/admin/users/[id]/activity/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { verify } from "jsonwebtoken";
-import { prisma } from "@/lib/prisma"; // Adjust path to your Prisma client
+import prisma from '@/app/lib/prisma'; // Adjust path to your Prisma client
 
 // Define the activity log entry type (matches client-side expectation)
 interface ActivityLogEntry {
@@ -19,7 +19,7 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   try {
     const decoded = verify(token, process.env.JWT_SECRET || "your-secret-key") as { role: string };
     return decoded.role === "admin";
-  } catch (err) {
+  } catch (_) {
     return false;
   }
 }
