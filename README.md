@@ -12,6 +12,74 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
 - User profile management
 - Activity logging and audit trails
 
+## APIs and Third-Party Services
+
+### Core APIs
+- **Google Cloud Platform**
+  - Google Cloud Local Auth
+  - Google APIs (general services)
+  - Google Authentication Library
+  - Google Analytics
+  - Google Sheets
+
+- **Mailchimp**
+  - Mailchimp Marketing API
+
+- **NextAuth.js**
+  - Authentication API
+
+- **Chart.js**
+  - Data visualization API
+
+- **Particle.js**
+  - Visual effects API
+
+- **MySQL**
+  - Database API
+
+- **Axios**
+  - HTTP client API
+
+### Third-Party Services
+- **Authentication & Security**
+  - NextAuth.js
+  - Google OAuth2
+  - bcrypt (password hashing)
+
+- **Email Services**
+  - Nodemailer
+  - Mailchimp
+  - Google Gmail API
+
+- **Data Visualization**
+  - Chart.js
+  - Material-UI Data Grid
+
+- **Web Scraping & Automation**
+  - Playwright
+  - Puppeteer
+  - Selenium WebDriver
+  - Cheerio
+
+- **Database**
+  - Prisma ORM
+  - MySQL
+
+- **Frontend Framework**
+  - Next.js
+  - React
+  - Material-UI
+  - Framer Motion
+  - React Toastify
+
+### Development Tools
+- **TypeScript**
+- **ESLint**
+- **Tailwind CSS**
+- **PostCSS**
+
+This section provides a comprehensive overview of all external services and APIs that the application relies on for its functionality.
+
 ### Market Tracking
 - Real-time market data scraping
 - Price history tracking
