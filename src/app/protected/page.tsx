@@ -2,10 +2,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-interface SessionUser {
-  email: string;
-  name: string;
-}
 
 const ProtectedPage = async () => {
   // Get the session directly without needing authOptions import

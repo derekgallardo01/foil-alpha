@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getDbConnection } from "../../../lib/db";
 
+// Define the type for the user row
+interface UserRow {
+  verification_code: string | null;
+  is_verified: boolean;
+}
+
 export async function POST(req: Request) {
   const { email, code } = await req.json();
 
@@ -13,7 +19,7 @@ export async function POST(req: Request) {
 
   try {
     // Check user and code
-    const [rows]: [any[], any] = await connection.execute(
+    const [rows]: [UserRow[], unknown] = await connection.execute(
       "SELECT verification_code, is_verified FROM users WHERE email = ?",
       [email]
     );

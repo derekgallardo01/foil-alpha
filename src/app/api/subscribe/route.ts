@@ -13,20 +13,7 @@ mailchimp.setConfig({
 
 const googleSheets = new GoogleSheets();
 
-interface WaitlistMetadata {
-  source: string;
-  timestamp: string;
-  ip_address: string;
-  timezone: string;
-  browser: {
-    name: string;
-    version: string;
-    os: string;
-    osVersion: string;
-    device: string;
-    deviceModel: string;
-  };
-}
+
 
 interface EmailData {
   subject: string;

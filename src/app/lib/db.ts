@@ -1,4 +1,3 @@
-// src/app/lib/db.ts
 import { createPool, Pool, RowDataPacket, ResultSetHeader, PoolConnection } from "mysql2/promise";
 import * as dotenv from "dotenv";
 
@@ -86,9 +85,12 @@ export const getDbConnection = async (): Promise<Pool> => {
   return pool;
 };
 
+// Define allowed query parameter types
+type QueryParam = string | number | boolean | null | undefined | Buffer | Date;
+
 export const executeQuery = async <T extends RowDataPacket[] | ResultSetHeader[]>(
   query: string,
-  params: any[] = []
+  params: QueryParam[] = []
 ): Promise<T> => {
   const db = await getDbConnection();
   try {

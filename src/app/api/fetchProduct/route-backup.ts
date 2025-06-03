@@ -15,9 +15,7 @@ async function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function getRandomProxy(proxiesArray) {
-  return proxiesArray[Math.floor(Math.random() * proxiesArray.length)];
-}
+
 
 function parseProxy(proxyUrl) {
   const match = proxyUrl.match(/http:\/\/([^:]+):([^@]+)@([^:]+):(\d+)/);
@@ -132,7 +130,7 @@ export async function GET() {
       ];
       await page.setCookie(...cookies);
 
-      let networkData = {};
+      const networkData = {};
       await page.setRequestInterception(true);
       page.on('request', request => request.continue());
       page.on('response', async (response) => {
@@ -142,7 +140,10 @@ export async function GET() {
             const json = await response.json();
             networkData[url] = json;
             console.log(`Captured response from ${url}:`, JSON.stringify(json).substring(0, 300));
-          } catch (e) {}
+          } catch {
+            // Remove unused 'e' parameter, or add error handling if needed
+            console.log(`Failed to parse JSON response from ${url}`);
+          }
         }
       });
 

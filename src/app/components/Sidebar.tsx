@@ -1,6 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import Image from "next/image"; // Import Image from next/image
 import {
   Drawer,
   List,
@@ -50,10 +51,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             alignItems: "center",
           }}
         >
-          <img
+          <Image
             src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
             alt="Logo"
-            style={{ height: "40px" }}
+            width={120} // Specify width (adjust as needed)
+            height={40} // Specify height to match previous style
+            priority // Optional: prioritize loading for LCP
           />
           <IconButton onClick={toggleSidebar}>
             <MenuIcon />
@@ -62,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
         {/* Sidebar Links */}
         <List>
-        <ListItem component="div" onClick={() => handleNavigation("/dashboard")}>
+          <ListItem component="div" onClick={() => handleNavigation("/dashboard")}>
             <ListItemIcon>
               <HomeIcon />
             </ListItemIcon>
@@ -76,30 +79,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             <ListItemText primary="Tasks" />
           </ListItem>
 
-  {/* Settings ListItem */}
-        <ListItem
-          component="div"
-          onClick={() => handleNavigation("/settings")}
-        >
-          <ListItemIcon>
-            <SettingsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Settings" />
-        </ListItem>
+          <ListItem component="div" onClick={() => handleNavigation("/settings")}>
+            <ListItemIcon>
+              <SettingsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Settings" />
+          </ListItem>
 
-        <ListItem
-          component="div"
-          onClick={() => handleNavigation("/chat")}
-        >
-          <ListItemIcon>
-            <ChatIcon />
-          </ListItemIcon>
-          <ListItemText primary="Chat" />
-        </ListItem>
+          <ListItem component="div" onClick={() => handleNavigation("/chat")}>
+            <ListItemIcon>
+              <ChatIcon />
+            </ListItemIcon>
+            <ListItemText primary="Chat" />
+          </ListItem>
 
           <ListItem
             component="div"
-            onClick={() => signOut({ callbackUrl: "/login" })} // Add redirect here
+            onClick={() => signOut({ callbackUrl: "/login" })}
           >
             <ListItemIcon>
               <LogoutIcon />

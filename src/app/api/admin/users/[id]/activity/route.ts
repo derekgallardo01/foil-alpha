@@ -1,9 +1,9 @@
 // src/app/api/admin/users/[id]/activity/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { verify } from "jsonwebtoken";
-import prisma from '@/app/lib/prisma'; // Adjust path to your Prisma client
+import { prisma } from '@/app/lib/prisma';
 
-// Define the activity log entry type (matches client-side expectation)
+// Define the activity log entry type
 interface ActivityLogEntry {
   id: number;
   userId: number;
@@ -19,13 +19,20 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   try {
     const decoded = verify(token, process.env.JWT_SECRET || "your-secret-key") as { role: string };
     return decoded.role === "admin";
-  } catch (_) {
+  } catch {
     return false;
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const userId = parseInt(params.id, 10);
+// Define the type for params with Promise
+interface RouteParams {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  const userId = parseInt((await params).id, 10);
 
   // Verify admin access
   if (!(await verifyAdmin(req))) {
@@ -37,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const activities = await prisma.activityLog.findMany({
       where: { userId },
       orderBy: { timestamp: "desc" },
-      take: 50, // Limit to 50 entries for performance
+      take: 50,
     });
 
     // Map to match client-expected format

@@ -3,11 +3,10 @@ import { promisify } from 'util';
 
 const execPromise = promisify(exec);
 
-export async function POST(req) {
+export async function POST() {
   console.time('api-scrape-target');
   try {
     console.log('🚀 Starting scrape process...');
-    // Use virtual env Python and await result for debugging
     const command = '/var/www/my-next-app/myenv/bin/python3 /var/www/my-next-app/scrape_target.py';
     const { stdout, stderr } = await execPromise(command);
     

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Watchlist from "../components/Watchlist";
@@ -12,20 +12,12 @@ import {
   Box,
   IconButton,
 } from "@mui/material";
+import Image from "next/image";
 import Sidebar from "../components/Sidebar";
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-}
 
 const Dashboard = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -36,26 +28,7 @@ const Dashboard = () => {
     }
   }, [status, router]);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("/api/users");
-        if (!response.ok) {
-          throw new Error("Failed to fetch users");
-        }
-        const data: User[] = await response.json();
-        setUsers(data);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
-
-  if (status === "loading" || loadingUsers) {
+  if (status === "loading") {
     return <Typography>Loading...</Typography>;
   }
 
@@ -70,14 +43,19 @@ const Dashboard = () => {
         <IconButton onClick={toggleSidebar}>
           <MenuIcon />
         </IconButton>
-        <img src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" style={{ height: "60px" }} />
+        <Image
+          src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
+          alt="Logo"
+          height={60}
+          width={150} // Adjust based on logo's aspect ratio
+        />
       </Box>
 
       <Watchlist />
 
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          {/*<TaskManagement /> */}
+          <TaskManagement />
         </Grid>
       </Grid>
     </Container>

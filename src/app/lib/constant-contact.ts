@@ -1,5 +1,7 @@
 import axios from 'axios';
 import qs from 'qs';
+import { createInterface } from 'readline'; // Use ES module import for readline
+import { URL } from 'url'; // Import URL for parsing
 
 const CLIENT_ID = process.env.CONSTANT_CONTACT_CLIENT_ID;
 const CLIENT_SECRET = process.env.CONSTANT_CONTACT_CLIENT_SECRET;
@@ -30,22 +32,22 @@ async function getAccessToken(): Promise<string> {
   }
 
   try {
-    // Get authorization URL
+    // Get authorization URL using REDIRECT_URI
     const authUrl = `https://authz.constantcontact.com/oauth2/default/v1/authorize?${qs.stringify({
       client_id: CLIENT_ID,
       response_type: 'code',
-      redirect_uri: 'http://localhost:3000/auth/constantcontact/callback',
+      redirect_uri: REDIRECT_URI, // Use REDIRECT_URI constant
       scope: 'contact_data offline_access',
-      state: 'test_state'
+      state: 'test_state',
     })}`;
 
     console.log('Please visit this URL to authorize:');
     console.log(authUrl);
 
     // Wait for user input
-    const readline = require('readline').createInterface({
+    const readline = createInterface({
       input: process.stdin,
-      output: process.stdout
+      output: process.stdout,
     });
 
     console.log('\nAfter authorizing, you will be redirected to localhost:3000');
@@ -59,7 +61,7 @@ async function getAccessToken(): Promise<string> {
     });
 
     // Extract authorization code from URL
-    const parsedUrl = new URL(authorizationCode as string);
+    const parsedUrl = new URL(authorizationCode);
     const code = parsedUrl.searchParams.get('code');
     if (!code) {
       throw new Error('No authorization code found in URL');
@@ -70,22 +72,22 @@ async function getAccessToken(): Promise<string> {
       TOKEN_URL,
       qs.stringify({
         grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: 'http://localhost:3000/auth/constantcontact/callback',
+        code,
+        redirect_uri: REDIRECT_URI, // Use REDIRECT_URI constant
         client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET
+        client_secret: CLIENT_SECRET,
       }),
       {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       }
     );
 
     cachedToken = {
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
-      expires_in: Math.floor(Date.now() / 1000) + response.data.expires_in - 300 // Subtract 5 minutes for safety
+      expires_in: Math.floor(Date.now() / 1000) + response.data.expires_in - 300, // Subtract 5 minutes for safety
     };
 
     return cachedToken.access_token;
@@ -98,7 +100,7 @@ async function getAccessToken(): Promise<string> {
 export const addContactToWaitlist = async (email: string, name: string) => {
   try {
     const accessToken = await getAccessToken();
-    
+
     const [firstName, lastName] = name.split(' ');
     const contactData: ContactData = {
       email_address: email,
@@ -106,7 +108,7 @@ export const addContactToWaitlist = async (email: string, name: string) => {
       last_name: lastName || '',
       create_source: 'Website Waitlist',
       permission_to_send: 'implicit',
-      status: 'ACTIVE'
+      status: 'ACTIVE',
     };
 
     const response = await axios.post(
@@ -114,14 +116,14 @@ export const addContactToWaitlist = async (email: string, name: string) => {
       contactData,
       {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'x-api-key': CLIENT_ID
+          Accept: 'application/json',
+          'x-api-key': CLIENT_ID,
         },
         params: {
-          'api-key': CLIENT_ID
-        }
+          'api-key': CLIENT_ID,
+        },
       }
     );
 

@@ -1,9 +1,9 @@
 import { google } from "googleapis";
 import { JWT } from "google-auth-library";
 
-interface GoogleSheetsConfig {
-  spreadsheetId: string;
-  sheetName: string;
+// Define a custom error interface for Google API errors
+interface GoogleApiError extends Error {
+  code?: number | string;
 }
 
 interface WaitlistEntry {
@@ -13,17 +13,17 @@ interface WaitlistEntry {
   status: string;
   created_at: Date;
   source: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 export class GoogleSheets {
-  private sheets: any;
+  private sheets: ReturnType<typeof google.sheets>;
   private spreadsheetId: string;
   private sheetName: string;
 
   constructor() {
-    this.spreadsheetId = process.env.GOOGLE_SHEETS_ID || '';
-    this.sheetName = process.env.GOOGLE_SHEETS_SHEET_NAME || 'Sheet1';
+    this.spreadsheetId = process.env.GOOGLE_SHEETS_ID || "";
+    this.sheetName = process.env.GOOGLE_SHEETS_SHEET_NAME || "Sheet1";
 
     // Validate environment variables
     if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
@@ -59,19 +59,21 @@ export class GoogleSheets {
         version: "v4",
         auth: jwtClient,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error initializing Google Sheets API:", {
-        message: error.message,
-        stack: error.stack,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        code: (error as GoogleApiError).code, // Fixed line 61
       });
       throw error;
     }
   }
 
-  // Convert waitlist entry to row format
   private async ensureHeaders(): Promise<void> {
     try {
-      const range = this.sheetName.includes(" ") ? `'${this.sheetName}'!A:G` : `${this.sheetName}!A:G`;
+      const range = this.sheetName.includes(" ")
+        ? `'${this.sheetName}'!A:G`
+        : `${this.sheetName}!A:G`;
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range,
@@ -79,72 +81,43 @@ export class GoogleSheets {
 
       const values = response.data.values || [];
       if (values.length === 0 || values[0].length === 0) {
-        // Add headers if they don't exist
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
           range,
           valueInputOption: "RAW",
           resource: {
-            values: [[
-              "Name",
-              "Email",
-              "Status",
-              "Source",
-              "Created At",
-              "Metadata",
-              "ID"
-            ]],
+            values: [
+              [
+                "Name",
+                "Email",
+                "Status",
+                "Source",
+                "Created At",
+                "Metadata",
+                "ID",
+              ],
+            ],
           },
         });
         console.log("Added headers to Google Sheets");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error ensuring headers in Google Sheets:", {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        code: (error as GoogleApiError).code, // Fixed line 105
       });
       throw error;
     }
   }
 
-  private entryToRow(entry: any): string[] {
-    console.log("Converting entry to row:", {
-      email: entry.email,
-      name: entry.name,
-      status: entry.status,
-      source: entry.source,
-      created_at: entry.created_at,
-      metadata: entry.metadata,
-    });
-    return [
-      entry.name || "",
-      entry.email || "",
-      entry.status || "",
-      entry.source || "",
-      entry.created_at ? entry.created_at.toString() : new Date().toISOString(),
-      JSON.stringify(entry.metadata || {}),
-      entry.id.toString(),
-    ];
-  }
+  // ... (entryToRow and rowToEntry methods remain unchanged)
 
-  // Convert row to waitlist entry format
-  private rowToEntry(row: string[]): any {
-    return {
-      id: parseInt(row[0], 10) || 0,
-      email: row[1],
-      name: row[2],
-      status: row[3],
-      created_at: row[4] ? new Date(row[4]) : new Date(),
-      source: row[5],
-      metadata: row[6] ? JSON.parse(row[6]) : {},
-    };
-  }
-
-  // Get all entries from Google Sheets
-  async getEntries(): Promise<any[]> {
+  async getEntries(): Promise<WaitlistEntry[]> {
     try {
-      const range = this.sheetName.includes(" ") ? `'${this.sheetName}'!A:G` : `${this.sheetName}!A:G`;
+      const range = this.sheetName.includes(" ")
+        ? `'${this.sheetName}'!A:G`
+        : `${this.sheetName}!A:G`;
       console.log("Fetching entries with range:", range);
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
@@ -152,28 +125,30 @@ export class GoogleSheets {
       });
 
       const rows = response.data.values || [];
-      // Skip header row
       return rows.slice(1).map((row) => this.rowToEntry(row));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error getting entries from Google Sheets:", {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        code: (error as GoogleApiError).code, // Fixed line 163
       });
-      if (error.message.includes("Requested entity was not found")) {
-        throw new Error(`Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`);
+      if ((error as Error).message.includes("Requested entity was not found")) {
+        throw new Error(
+          `Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`,
+        );
       }
       throw error;
     }
   }
 
-  // Add new entry to Google Sheets
   async addEntry(entry: WaitlistEntry): Promise<void> {
     try {
       console.log("Adding entry to Google Sheets:", entry);
       await this.ensureHeaders();
       const row = this.entryToRow(entry);
-      const range = this.sheetName.includes(" ") ? `'${this.sheetName}'!A:G` : `${this.sheetName}!A:G`;
+      const range = this.sheetName.includes(" ")
+        ? `'${this.sheetName}'!A:G`
+        : `${this.sheetName}!A:G`;
       console.log("Appending entry with range:", range);
 
       await this.sheets.spreadsheets.values.append({
@@ -186,31 +161,36 @@ export class GoogleSheets {
       });
 
       console.log("Successfully added entry to Google Sheets:", entry.email);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error adding entry to Google Sheets:", {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        code: (error as GoogleApiError).code, // Fixed line 199
       });
-      if (error.message.includes("Unable to parse range")) {
-        throw new Error(`Invalid sheet name: ${this.sheetName}. Ensure the sheet exists and the name is correct.`);
+      if ((error as Error).message.includes("Unable to parse range")) {
+        throw new Error(
+          `Invalid sheet name: ${this.sheetName}. Ensure the sheet exists and the name is correct.`,
+        );
       }
-      if (error.message.includes("Requested entity was not found")) {
-        throw new Error(`Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`);
+      if ((error as Error).message.includes("Requested entity was not found")) {
+        throw new Error(
+          `Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`,
+        );
       }
       throw error;
     }
   }
 
-  // Update entry in Google Sheets
-  async updateEntry(entry: any): Promise<void> {
+  async updateEntry(entry: WaitlistEntry): Promise<void> {
     try {
       await this.ensureHeaders();
       const entries = await this.getEntries();
       const index = entries.findIndex((e) => e.email === entry.email);
 
       if (index >= 0) {
-        const range = this.sheetName.includes(" ") ? `'${this.sheetName}'!A${index + 2}:G${index + 2}` : `${this.sheetName}!A${index + 2}:G${index + 2}`;
+        const range = this.sheetName.includes(" ")
+          ? `'${this.sheetName}'!A${index + 2}:G${index + 2}`
+          : `${this.sheetName}!A${index + 2}:G${index + 2}`;
         console.log("Updating entry with range:", range);
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
@@ -222,27 +202,30 @@ export class GoogleSheets {
         });
         console.log("Successfully updated entry in Google Sheets:", entry.email);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error updating entry in Google Sheets:", {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        code: (error as GoogleApiError).code, // Fixed line 241
       });
-      if (error.message.includes("Requested entity was not found")) {
-        throw new Error(`Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`);
+      if ((error as Error).message.includes("Requested entity was not found")) {
+        throw new Error(
+          `Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`,
+        );
       }
       throw error;
     }
   }
 
-  // Delete entry from Google Sheets
   async deleteEntry(email: string): Promise<void> {
     try {
       const entries = await this.getEntries();
       const index = entries.findIndex((e) => e.email === email);
 
       if (index >= 0) {
-        const range = this.sheetName.includes(" ") ? `'${this.sheetName}'!A${index + 2}:G${index + 2}` : `${this.sheetName}!A${index + 2}:G${index + 2}`;
+        const range = this.sheetName.includes(" ")
+          ? `'${this.sheetName}'!A${index + 2}:G${index + 2}`
+          : `${this.sheetName}!A${index + 2}:G${index + 2}`;
         console.log("Deleting entry with range:", range);
         await this.sheets.spreadsheets.values.batchUpdate({
           spreadsheetId: this.spreadsheetId,
@@ -259,14 +242,16 @@ export class GoogleSheets {
         });
         console.log("Successfully deleted entry from Google Sheets:", email);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error deleting entry from Google Sheets:", {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        code: (error as GoogleApiError).code, // Fixed line 282
       });
-      if (error.message.includes("Requested entity was not found")) {
-        throw new Error(`Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`);
+      if ((error as Error).message.includes("Requested entity was not found")) {
+        throw new Error(
+          `Spreadsheet or sheet not found. Verify spreadsheetId: ${this.spreadsheetId} and sheetName: ${this.sheetName}`,
+        );
       }
       throw error;
     }

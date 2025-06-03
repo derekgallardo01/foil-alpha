@@ -3,6 +3,16 @@ import bcrypt from "bcryptjs";
 import { getDbConnection } from "../../../lib/db";
 import { sendEmail } from "../../../lib/email";
 
+// Define the User type based on your database schema
+interface User {
+  id?: number;
+  email: string;
+  password: string;
+  name: string;
+  is_verified: number;
+  verification_code: string;
+}
+
 export async function POST(req: Request) {
   const { email, password, name } = await req.json();
 
@@ -26,7 +36,7 @@ export async function POST(req: Request) {
 
   try {
     // Check for existing email
-    const [rows]: [any[], any] = await connection.execute("SELECT * FROM users WHERE email = ?", [email]);
+    const [rows]: [User[], unknown] = await connection.execute("SELECT * FROM users WHERE email = ?", [email]);
     if (rows.length > 0) {
       return NextResponse.json({ message: "Email is already registered." }, { status: 400 });
     }

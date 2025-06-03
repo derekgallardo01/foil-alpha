@@ -1,4 +1,3 @@
-// src/app/api/fetchProduct/route.js
 import { Builder, By, until } from 'selenium-webdriver';
 import { Options } from 'selenium-webdriver/chrome';
 import { ServiceBuilder } from 'selenium-webdriver/chrome';
@@ -17,10 +16,6 @@ const proxies = [
 
 async function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function getRandomProxy(proxiesArray) {
-  return proxiesArray[Math.floor(Math.random() * proxiesArray.length)];
 }
 
 function parseProxy(proxyUrl) {
@@ -108,7 +103,7 @@ export async function GET() {
       '--disable-dev-shm-usage',
       '--headless=new',
       '--disable-gpu',
-      '--window-size=1920,1080', // Larger window for better rendering
+      '--window-size=1920,1080',
       '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--disable-blink-features=AutomationControlled',
       '--disable-infobars',
@@ -123,7 +118,6 @@ export async function GET() {
       .setChromeOptions(chromeOptions)
       .build();
 
-    // Enhanced stealth
     await driver.executeScript(`
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
@@ -132,7 +126,6 @@ export async function GET() {
       Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 4 });
       Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
       window.chrome = { runtime: {} };
-      // Spoof canvas fingerprint
       const getContext = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function(type) {
         const ctx = getContext.apply(this, arguments);
@@ -151,7 +144,6 @@ export async function GET() {
     const { username, password } = parseProxy(workingProxy);
     await driver.executeScript(`
       window.proxyAuth = { username: '${username}', password: '${password}' };
-      // Simulate human-like behavior
       setTimeout(() => {
         window.scrollTo(0, Math.random() * 500);
       }, 2000);

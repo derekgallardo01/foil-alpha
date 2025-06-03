@@ -198,7 +198,7 @@ export default function LoginClient() {
             </Button>
             </form>
             <Typography variant="body2" sx={{ mt: 2, textAlign: "center", color: "text.secondary" }}>
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" underline="hover" sx={{ color: "primary.main", cursor: "pointer" }}>
                 Register
             </Link>

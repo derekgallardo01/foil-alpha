@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 
-// Define a mock list of tasks
-let tasks = [
+const initialTasks = [
   { id: uuidv4(), title: 'Complete project report', description: 'Finish the quarterly report for the project.', completed: false },
   { id: uuidv4(), title: 'Call client', description: 'Follow up with the client regarding the proposal.', completed: true },
   { id: uuidv4(), title: 'Review pull requests', description: 'Review the pull requests from the development team.', completed: false },
 ];
 
-// Handler function to get the tasks
+// Use a mutable reference to store tasks
+let tasks = initialTasks;
+
 export async function GET() {
   try {
     return NextResponse.json(tasks);
@@ -18,7 +19,6 @@ export async function GET() {
   }
 }
 
-// Handler function to create a new task
 export async function POST(request: Request) {
   try {
     const newTask = await request.json();
@@ -27,8 +27,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid task data' }, { status: 400 });
     }
 
-    const taskWithId = { id: uuidv4(), ...newTask };  // Generate ID for new task
-    tasks.push(taskWithId);  // Add the new task with a unique ID
+    const taskWithId = { id: uuidv4(), ...newTask };
+    tasks = [...tasks, taskWithId]; // Create new array instead of push
     return NextResponse.json({ message: 'Task added successfully', task: taskWithId });
   } catch (error) {
     console.error('Failed to add task:', error);
@@ -36,7 +36,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Handler function to delete a task by its ID
 export async function DELETE(request: Request) {
   try {
     const url = new URL(request.url);
@@ -53,7 +52,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    tasks.splice(taskIndex, 1); // Remove the task
+    tasks = tasks.filter((_, index) => index !== taskIndex); // Create new array instead of splice
     console.log(`Deleted task with ID: ${taskId}`);
     return NextResponse.json({ message: 'Task deleted successfully' });
   } catch (error) {
@@ -62,7 +61,6 @@ export async function DELETE(request: Request) {
   }
 }
 
-// Handler function to update a task's completion status
 export async function PATCH(request: Request) {
   try {
     const url = new URL(request.url);
@@ -79,27 +77,24 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    const task = tasks[taskIndex];
     const updateData = await request.json();
+    const updatedTask = {
+      ...tasks[taskIndex],
+      ...(updateData.title !== undefined && { title: updateData.title }),
+      ...(updateData.description !== undefined && { description: updateData.description }),
+      ...(updateData.completed !== undefined && { completed: updateData.completed }),
+    };
 
-    // Update task fields if provided in the request
-    if (updateData.title !== undefined) {
-      task.title = updateData.title;
-    }
+    tasks = [
+      ...tasks.slice(0, taskIndex),
+      updatedTask,
+      ...tasks.slice(taskIndex + 1),
+    ]; // Create new array with updated task
 
-    if (updateData.description !== undefined) {
-      task.description = updateData.description;
-    }
-
-    if (updateData.completed !== undefined) {
-      task.completed = updateData.completed;
-    }
-
-    console.log(`Updated task with ID: ${taskId}`, task);
-    return NextResponse.json({ message: 'Task updated successfully', task });
+    console.log(`Updated task with ID: ${taskId}`, updatedTask);
+    return NextResponse.json({ message: 'Task updated successfully', task: updatedTask });
   } catch (error) {
     console.error('Failed to update task:', error);
     return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
   }
 }
-

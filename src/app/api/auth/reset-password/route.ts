@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getDbConnection } from "../../../lib/db";
 
+// Define the type for the token row
+interface TokenRow {
+  email: string;
+}
+
 export async function POST(req: NextRequest) {
   const connection = await getDbConnection();
 
@@ -12,7 +17,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Token and password are required" }, { status: 400 });
     }
 
-    const [tokens]: [any[], any] = await connection.execute(
+    // Specify the type for the query result
+    const [tokens]: [TokenRow[], unknown] = await connection.execute(
       "SELECT email FROM reset_tokens WHERE token = ? AND expires > NOW()",
       [token]
     );

@@ -119,47 +119,67 @@ export async function DELETE(req: NextRequest) {
 // Update a watchlist item (PUT) - Corrected to handle ID from URL path
 // Update a watchlist item (PUT) - Corrected to return the updated item
 export async function PUT(req: NextRequest) {
-    const db = await getDbConnection();
+  const db = await getDbConnection();
 
-    try {
-        const url = new URL(req.url);
-        const id = url.searchParams.get('id');
-        const { stock_quantity, stock_status } = await req.json(); // Include stock_status
+  try {
+    const url = new URL(req.url);
+    const id = url.searchParams.get('id');
+    const { stock_quantity, stock_status } = await req.json(); // Include stock_status
 
-        //... (validation – same as before)
-
-        // Perform the update operation (using a more flexible approach)
-        let updateQuery = "UPDATE watchlist SET stock_quantity =?";
-        const updateParams = [stock_quantity];
-
-        if (stock_status!== undefined) { // Add stock_status update if provided
-            updateQuery += ", stock_status =?";
-            updateParams.push(stock_status);
-        }
-        updateQuery += " WHERE id =?";
-        updateParams.push(id);
-
-         const result = await db.query(updateQuery, updateParams);
-
-        if (result.affectedRows === 0) {
-            return handleError('Item not found or no changes made', 404);
-        }
-
-        // Fetch the updated item
-        const [updatedItem] = await db.query("SELECT * FROM watchlist WHERE id =?", [id]);
-
-
-        if (!updatedItem || updatedItem.length === 0) {
-            console.error("Failed to retrieve updated item after update.");
-            return handleError("Failed to retrieve updated item", 500);
-        }
-
-        // Corrected line: return the first item in the array
-        return NextResponse.json({ newItem: updatedItem });
-
-    } catch (error) {
-        //... (error handling – same as before)
+    // Validation
+    if (!id) {
+      console.warn('Item ID is missing in PUT request.');
+      return handleError('Item ID is required', 400);
     }
+
+    if (isNaN(Number(id))) {
+      console.warn('Invalid item ID:', id);
+      return handleError('Invalid item ID', 400);
+    }
+
+    if (stock_quantity === undefined) {
+      console.warn('Missing stock_quantity in PUT request.');
+      return handleError('Stock quantity is required', 400);
+    }
+
+    if (isNaN(Number(stock_quantity))) {
+      console.warn('Invalid stock_quantity:', stock_quantity);
+      return handleError('Stock quantity must be a valid number', 400);
+    }
+
+    // Perform the update operation (using a more flexible approach)
+    let updateQuery = "UPDATE watchlist SET stock_quantity = ?";
+    const updateParams = [stock_quantity];
+
+    if (stock_status !== undefined) {
+      // Add stock_status update if provided
+      updateQuery += ", stock_status = ?";
+      updateParams.push(stock_status);
+    }
+    updateQuery += " WHERE id = ?";
+    updateParams.push(id);
+
+    const [result] = await db.query(updateQuery, updateParams);
+
+    if (result.affectedRows === 0) {
+      console.warn('Item not found with ID:', id);
+      return handleError('Item not found or no changes made', 404);
+    }
+
+    // Fetch the updated item
+    const [updatedItem] = await db.query("SELECT * FROM watchlist WHERE id = ?", [id]);
+
+    if (!updatedItem || updatedItem.length === 0) {
+      console.error('Failed to retrieve updated item after update for ID:', id);
+      return handleError('Failed to retrieve updated item', 500);
+    }
+
+    // Return the first item in the array
+    return NextResponse.json({ newItem: updatedItem[0] });
+  } catch (error) {
+    console.error('Error updating watchlist item:', error.message, error.stack);
+    return handleError('Error updating watchlist item', 500);
+  }
 }
 
 

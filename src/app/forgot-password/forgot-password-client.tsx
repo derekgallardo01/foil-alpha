@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+
 import {
   Box,
   TextField,
@@ -52,7 +52,7 @@ export default function ForgotPasswordClient() {
   const [error, setError] = useState<string | null>(null);
   const [isNetworkError, setIsNetworkError] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const router = useRouter();
+
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

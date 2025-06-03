@@ -14,6 +14,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from "@mui/material/styles";
 import he from "he";
 import axios from "axios";
+import Image from "next/image"; // Import Next.js Image component
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -24,6 +25,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  TooltipItem, // Import TooltipItem for typing
 } from 'chart.js';
 
 // Register ChartJS components
@@ -129,7 +131,7 @@ const Watchlist = () => {
   const getPriceChartData = (history: PriceHistory[]) => {
     const dates = Array.from(new Set(history.map(item => new Date(item.recorded_at).toLocaleDateString()))).sort();
 
-    const retailers = ['Target', 'Walmart', 'BestBuy', 'GameStop', 'Barnes & Noble']; // Added Barnes & Noble
+    const retailers = ['Target', 'Walmart', 'BestBuy', 'GameStop', 'Barnes & Noble'];
     const datasets = retailers.map(retailer => {
       const prices = dates.map(date => {
         const entry = history.find(
@@ -144,11 +146,11 @@ const Watchlist = () => {
         borderColor: retailer === 'Target' ? '#96ff9b' : 
                     retailer === 'Walmart' ? '#ffcc00' : 
                     retailer === 'BestBuy' ? '#ff4444' : 
-                    retailer === 'GameStop' ? '#00bcd4' : '#9c27b0', // Purple for Barnes & Noble
+                    retailer === 'GameStop' ? '#00bcd4' : '#9c27b0',
         backgroundColor: retailer === 'Target' ? 'rgba(150, 255, 155, 0.2)' : 
                         retailer === 'Walmart' ? 'rgba(255, 204, 0, 0.2)' : 
                         retailer === 'BestBuy' ? 'rgba(255, 68, 68, 0.2)' : 
-                        retailer === 'GameStop' ? 'rgba(0, 188, 212, 0.2)' : 'rgba(156, 39, 176, 0.2)', // Purple for Barnes & Noble
+                        retailer === 'GameStop' ? 'rgba(0, 188, 212, 0.2)' : 'rgba(156, 39, 176, 0.2)',
         fill: false,
         tension: 0.1,
         hidden: prices.every(price => price === null),
@@ -189,7 +191,7 @@ const Watchlist = () => {
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => `${context.dataset.label}: $${context.parsed.y.toFixed(2)}`
+          label: (context: TooltipItem<'line'>) => `${context.dataset.label}: $${context.parsed.y.toFixed(2)}`
         }
       }
     }
@@ -241,7 +243,7 @@ const Watchlist = () => {
             const walmartTrend = getPriceTrend(productPriceHistory, 'Walmart');
             const bestbuyTrend = getPriceTrend(productPriceHistory, 'BestBuy');
             const gamestopTrend = getPriceTrend(productPriceHistory, 'GameStop');
-            const barnesNobleTrend = getPriceTrend(productPriceHistory, 'Barnes & Noble'); // Added Barnes & Noble
+            const barnesNobleTrend = getPriceTrend(productPriceHistory, 'Barnes & Noble');
 
             // Get the latest price for each retailer
             const latestTargetPriceEntry = productPriceHistory
@@ -257,14 +259,14 @@ const Watchlist = () => {
               .filter(item => item.retailer === 'GameStop')
               .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
             const latestBarnesNoblePriceEntry = productPriceHistory
-              .filter(item => item.retailer === 'Barnes & Noble') // Added Barnes & Noble
+              .filter(item => item.retailer === 'Barnes & Noble')
               .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
 
             const latestTargetPrice = latestTargetPriceEntry ? latestTargetPriceEntry.price : 'N/A';
             const latestWalmartPrice = latestWalmartPriceEntry ? latestWalmartPriceEntry.price : 'N/A';
             const latestBestbuyPrice = latestBestbuyPriceEntry ? latestBestbuyPriceEntry.price : 'N/A';
             const latestGamestopPrice = latestGamestopPriceEntry ? latestGamestopPriceEntry.price : 'N/A';
-            const latestBarnesNoblePrice = latestBarnesNoblePriceEntry ? latestBarnesNoblePriceEntry.price : 'N/A'; // Added Barnes & Noble
+            const latestBarnesNoblePrice = latestBarnesNoblePriceEntry ? latestBarnesNoblePriceEntry.price : 'N/A';
 
             return (
               <div
@@ -284,8 +286,9 @@ const Watchlist = () => {
                   {he.decode(product.title)}
                 </Typography>
                 <a href={product.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "200px" }}>
-                  <img
-                    width="200"
+                  <Image
+                    width={200}
+                    height={200} // Add height for proper aspect ratio
                     src={product.image}
                     alt={product.title}
                     style={{

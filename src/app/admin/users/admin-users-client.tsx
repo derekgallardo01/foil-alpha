@@ -24,7 +24,6 @@ import {
   Checkbox,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import Image from "next/image";
@@ -35,6 +34,7 @@ import { GoogleAnalytics } from "nextjs-google-analytics";
 import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
 import Sidebar from "../../components/Sidebar";
+import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 // Animation variants
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
@@ -63,7 +63,7 @@ export default function AdminUsersClient() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-
+  
   const { data: session, status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -78,8 +78,7 @@ export default function AdminUsersClient() {
   const [selected, setSelected] = useState<number[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
   const [activityLogUser, setActivityLogUser] = useState<User | null>(null);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [activityLogLoading, setActivityLogLoading] = useState<boolean>(false);
@@ -96,7 +95,7 @@ export default function AdminUsersClient() {
     subscriptionStatus: true,
   });
   const currentAdmin = session?.user?.name || "AdminUser";
-  const editDialogRef = useRef<HTMLDialogElement>(null);
+  const editDialogRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
 
   // Role-Based Access Control (RBAC)
@@ -132,9 +131,10 @@ export default function AdminUsersClient() {
       setFetchAttempts((prev) => prev + 1);
       setTimeout(() => setFetchAttempts(0), cooldown);
       toast.success("Users loaded successfully!", { autoClose: 2000 });
-    } catch (err: any) {
-      setError(err.message || "Failed to load users.");
-      toast.error(err.message || "Failed to load users.");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load users.";
+      setError(errorMessage);
+      toast.error(errorMessage);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -164,8 +164,9 @@ export default function AdminUsersClient() {
       if (!response.ok) throw new Error("Failed to fetch activity log");
       const data = await response.json();
       setActivityLog(data);
-    } catch (err) {
-      toast.error("Error fetching activity log");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Error fetching activity log";
+      toast.error(errorMessage);
       setActivityLog([]);
     } finally {
       setActivityLogLoading(false);
@@ -180,7 +181,7 @@ export default function AdminUsersClient() {
   }), [users]);
 
   // Debounced Search
-  const debouncedSetSearchQuery = useCallback(debounce((value: string) => setSearchQuery(value), 300), []);
+  const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
 
   const filteredUsers = useMemo(() => {
     let result = [...users];
@@ -239,7 +240,7 @@ export default function AdminUsersClient() {
             headerName: "Registered At",
             width: 180,
             sortable: true,
-            renderCell: (params) => (
+            renderCell: (params: GridRenderCellParams<User>) => (
               <Typography>
                 {params.row.registeredAt ? new Date(params.row.registeredAt).toLocaleString() : "Never"}
               </Typography>
@@ -254,7 +255,7 @@ export default function AdminUsersClient() {
             headerName: "Last Login",
             width: 180,
             sortable: true,
-            renderCell: (params) => (
+            renderCell: (params: GridRenderCellParams<User>) => (
               <Typography>
                 {params.row.lastLoginAt ? new Date(params.row.lastLoginAt).toLocaleString() : "Never"}
               </Typography>
@@ -268,14 +269,14 @@ export default function AdminUsersClient() {
       headerName: "Actions",
       width: 200,
       sortable: false,
-      renderCell: (params) => (
+      renderCell: (params: GridRenderCellParams<User>) => (
         <>
           <Button
             variant="outlined"
             size="small"
             onClick={() => handleEditUser(params.row)}
             sx={{ mr: 1 }}
-            disabled={rowLoading[params.id] || actionLoading}
+            disabled={rowLoading[Number(params.id)] || actionLoading}
             aria-label={`Edit user ${params.row.name}`}
           >
             Edit
@@ -285,7 +286,7 @@ export default function AdminUsersClient() {
             size="small"
             onClick={() => handleViewActivityLog(params.row)}
             sx={{ mr: 1 }}
-            disabled={rowLoading[params.id] || actionLoading}
+            disabled={rowLoading[Number(params.id)] || actionLoading}
             aria-label={`View activity log for ${params.row.name}`}
           >
             <VisibilityIcon />
@@ -293,7 +294,7 @@ export default function AdminUsersClient() {
           <IconButton
             color="error"
             onClick={() => handleDeleteUser(params.id as number)}
-            disabled={rowLoading[params.id] || actionLoading}
+            disabled={rowLoading[Number(params.id)] || actionLoading}
             sx={{
               border: "1px solid red",
               borderRadius: "4px",
@@ -303,7 +304,7 @@ export default function AdminUsersClient() {
             title="Delete User"
             aria-label={`Delete user ${params.row.name}`}
           >
-            {rowLoading[params.id] ? <CircularProgress size={20} /> : <DeleteIcon />}
+            {rowLoading[Number(params.id)] ? <CircularProgress size={20} /> : <DeleteIcon />}
           </IconButton>
         </>
       ),
@@ -337,8 +338,9 @@ export default function AdminUsersClient() {
           );
           setSelected([]);
           toast.success("Selected users deleted successfully!");
-        } catch (err) {
-          toast.error("Error deleting users");
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : "Error deleting users";
+          toast.error(errorMessage);
         } finally {
           setActionLoading(false);
         }
@@ -377,8 +379,9 @@ export default function AdminUsersClient() {
           );
           setSelected([]);
           toast.success("Selected users updated successfully!");
-        } catch (err) {
-          toast.error("Error updating users");
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : "Error updating users";
+          toast.error(errorMessage);
         } finally {
           setActionLoading(false);
         }
@@ -421,8 +424,9 @@ export default function AdminUsersClient() {
           );
           setSelected([]);
           toast.success("Selected users' subscription status updated successfully!");
-        } catch (err) {
-          toast.error("Error updating subscription status");
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : "Error updating subscription status";
+          toast.error(errorMessage);
         } finally {
           setActionLoading(false);
         }
@@ -453,6 +457,7 @@ export default function AdminUsersClient() {
 
   // Input Validation
   const isValidDate = (date: string) => !isNaN(new Date(date).getTime());
+
   const handleSaveUser = async () => {
     if (!editUser || !session) return;
 
@@ -507,8 +512,9 @@ export default function AdminUsersClient() {
           setEditUser(null);
           setValidationErrors({});
           toast.success(`User ${method === "POST" ? "added" : "updated"} successfully!`);
-        } catch (err: any) {
-          toast.error(err.message || `Error ${sanitizedUser.id === 0 ? "adding" : "updating"} user`);
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : `Error ${sanitizedUser.id === 0 ? "adding" : "updating"} user`;
+          toast.error(errorMessage);
         } finally {
           setActionLoading(false);
         }
@@ -539,8 +545,9 @@ export default function AdminUsersClient() {
           );
           setSelected((prev) => prev.filter((id) => id !== userId));
           toast.success("User deleted successfully!");
-        } catch (err) {
-          toast.error("Error deleting user");
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : "Error deleting user";
+          toast.error(errorMessage);
         } finally {
           setRowLoading((prev) => ({ ...prev, [userId]: false }));
         }
@@ -589,7 +596,7 @@ export default function AdminUsersClient() {
       </Backdrop>
 
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
         <IconButton onClick={toggleSidebar}>
           <MenuIcon />
         </IconButton>
@@ -761,39 +768,32 @@ export default function AdminUsersClient() {
               {/* Virtualized Table */}
               <motion.div variants={itemVariants}>
                 <Box sx={{ height: 400, width: "100%", overflow: "auto" }}>
-                  <DataGrid
-                    rows={filteredUsers}
-                    columns={columns}
-                    pageSize={rowsPerPage}
-                    rowsPerPageOptions={[5, 10, 25]}
-                    checkboxSelection
-                    onSelectionModelChange={(newSelection) => {
-                      const selectedIds = newSelection.map((id) => Number(id));
-                      console.log("Selected IDs:", selectedIds);
-                      setSelected(selectedIds);
-                    }}
-                    pagination
-                    page={page}
-                    onPageChange={(newPage) => {
-                      setPage(newPage);
-                      setSelected([]);
-                    }}
-                    onPageSizeChange={(newPageSize) => {
-                      setRowsPerPage(newPageSize);
-                      setPage(0);
-                      setSelected([]);
-                    }}
-                    disableSelectionOnClick
-                    sx={{
-                      color: "text.secondary",
-                      "& .MuiDataGrid-columnHeaders": { bgcolor: "grey.800" },
-                      "& .MuiDataGrid-virtualScroller": { bgcolor: "grey.900" },
-                      "& .MuiDataGrid-footerContainer": { bgcolor: "grey.900" },
-                      "& .MuiDataGrid-row": { "&:hover": { bgcolor: "grey.800" } },
-                      "& .MuiDataGrid-cell": { borderColor: "grey.800" },
-                      backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
-                    }}
-                  />
+                <DataGrid
+                rows={filteredUsers}
+                columns={columns}
+                paginationModel={paginationModel}
+                onPaginationModelChange={(newModel) => {
+                  setPaginationModel(newModel);
+                  setSelected([]);
+                }}
+                pageSizeOptions={[5, 10, 25]}
+                checkboxSelection
+                onRowSelectionModelChange={(newSelection) => {
+                  const selectedIds = newSelection.map((id) => Number(id));
+                  console.log("Selected IDs:", selectedIds);
+                  setSelected(selectedIds);
+                }}
+                disableRowSelectionOnClick
+                sx={{
+                  color: "text.secondary",
+                  "& .MuiDataGrid-columnHeaders": { bgcolor: "grey.800" },
+                  "& .MuiDataGrid-virtualScroller": { bgcolor: "grey.900" },
+                  "& .MuiDataGrid-footerContainer": { bgcolor: "grey.900" },
+                  "& .MuiDataGrid-row": { "&:hover": { bgcolor: "grey.800" } },
+                  "& .MuiDataGrid-cell": { borderColor: "grey.800" },
+                  backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                }}
+              />
                 </Box>
               </motion.div>
 

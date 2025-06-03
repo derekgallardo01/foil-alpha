@@ -2,7 +2,6 @@
 
 import React from "react";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import {
   Box,
   Container,
@@ -16,7 +15,6 @@ import {
   Chip,
   Tooltip,
 } from "@mui/material";
-import DiscordIcon from "../components/icons/DiscordIcon";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import "react-toastify/dist/ReactToastify.css";
@@ -63,7 +61,6 @@ export default function WaitlistPage() {
   const [countdown, setCountdown] = useState("");
   const [discordMembers, setDiscordMembers] = useState(5000);
   const [discordOnline, setDiscordOnline] = useState(120);
-  const router = useRouter();
 
   // Countdown timer logic
   useEffect(() => {
@@ -142,14 +139,14 @@ export default function WaitlistPage() {
                 </div>
                 <p style="color:rgb(0, 0, 0); margin-bottom: 20px;">
                   Dear ${formData.name},<br><br>
-                  Thank you for joining our waitlist! We're thrilled to have you on board as we prepare to revolutionize Pokémon trading.<br><br>
+                  Thank you for joining our waitlist! We’re thrilled to have you on board as we prepare to revolutionize Pokémon trading.<br><br>
                   
-                  <strong>What's Next?</strong><br>
+                  <strong>What’s Next?</strong><br>
                   1. Stay tuned for exclusive early access updates<br>
                   2. Follow us on Discord for community insights<br>
-                  3. Get ready for our launch in June 2026<br><br>
+                  3. Get ready for our launch in June 2025<br><br>
                   
-                  We'll keep you updated on our progress and notify you when your access is ready.<br><br>
+                  We’ll keep you updated on our progress and notify you when your access is ready.<br><br>
                   
                   Best regards,<br>
                   The TCG Market Team
@@ -455,7 +452,7 @@ export default function WaitlistPage() {
                               },
                             }}
                           >
-                            Thank you! You've been added to the waitlist.
+                            Thank you! You’ve been added to the waitlist.
                           </Typography>
                         </motion.div>
                       )}
@@ -476,6 +473,9 @@ export default function WaitlistPage() {
                           </Typography>
                           <Typography variant="body2" sx={{ color: "grey.400", mt: 1 }}>
                             Don’t miss out—be part of the future of Pokémon trading!
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: "grey.400", mt: 1 }}>
+                            Join our community of {discordMembers} members, with {discordOnline} online now!
                           </Typography>
                           <Box sx={{ display: "flex", gap: 2, mt: 2, justifyContent: "center" }}>
                             <Typography

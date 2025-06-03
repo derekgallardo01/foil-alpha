@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Box,
@@ -61,7 +60,6 @@ interface ActivityLogEntry {
 }
 
 export default function AdminUsersClient() {
-  const router = useRouter();
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -111,10 +109,11 @@ export default function AdminUsersClient() {
       setUsers(data);
       setLastFetchTime(now);
       toast.success("Users loaded successfully!", { autoClose: 2000, toastId: "fetch-success" });
-    } catch (err: any) {
-      console.error("Fetch error:", err);
-      setError(err.message || "Failed to load users. Please try again.");
-      toast.error(err.message || "Failed to load users.");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to load users. Please try again.";
+      console.error("Fetch error:", error);
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -133,7 +132,7 @@ export default function AdminUsersClient() {
       if (!response.ok) throw new Error("Failed to fetch activity log");
       const data = await response.json();
       setActivityLog(data);
-    } catch (err) {
+    } catch {
       toast.error("Error fetching activity log");
       setActivityLog([]);
     }
@@ -213,7 +212,7 @@ export default function AdminUsersClient() {
         );
         setSelected([]);
         toast.success("Selected users deleted successfully!");
-      } catch (err) {
+      } catch {
         toast.error("Error deleting users");
       } finally {
         setActionLoading(false);
@@ -250,7 +249,7 @@ export default function AdminUsersClient() {
         );
         setSelected([]);
         toast.success("Selected users updated successfully!");
-      } catch (err) {
+      } catch {
         toast.error("Error updating users");
       } finally {
         setActionLoading(false);
@@ -326,8 +325,9 @@ export default function AdminUsersClient() {
         setEditUser(null);
         setValidationErrors({});
         toast.success(`User ${method === "POST" ? "added" : "updated"} successfully!`);
-      } catch (err: any) {
-        toast.error(err.message || `Error ${editUser.id === 0 ? "adding" : "updating"} user`);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : `Error ${editUser.id === 0 ? "adding" : "updating"} user`;
+        toast.error(message);
       } finally {
         setActionLoading(false);
       }
@@ -352,7 +352,7 @@ export default function AdminUsersClient() {
           ).filter((user) => user.id !== userId)
         );
         toast.success("User deleted successfully!");
-      } catch (err) {
+      } catch {
         toast.error("Error deleting user");
       } finally {
         setActionLoading(false);
@@ -551,41 +551,69 @@ export default function AdminUsersClient() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {paginatedUsers.map((user) => (
-                          <motion.tr
-                            key={user.id}
-                            variants={itemVariants}
-                            style={{ display: "table-row" }}
-                            sx={{ "&:hover": { bgcolor: "grey.800" }, ...(selected.includes(user.id) && { bgcolor: "grey.700" }) }}
-                          >
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                checked={selected.includes(user.id)}
-                                onChange={() => handleSelect(user.id)}
-                                sx={{ color: "text.secondary" }}
-                              />
-                            </TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>{user.id}</TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>{user.name}</TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>{user.email}</TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>{user.role}</TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>{new Date(user.registeredAt).toLocaleString()}</TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "Never"}</TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>{user.subscriptionStatus}</TableCell>
-                            <TableCell sx={{ color: "text.secondary" }}>
-                              <Button variant="outlined" size="small" onClick={() => handleEditUser(user)} sx={{ mr: 1 }} disabled={actionLoading}>
-                                Edit
-                              </Button>
-                              <Button variant="outlined" size="small" onClick={() => handleViewActivityLog(user)} sx={{ mr: 1 }} disabled={actionLoading}>
-                                <VisibilityIcon />
-                              </Button>
-                              <Button variant="outlined" color="error" size="small" onClick={() => handleDeleteUser(user.id)} disabled={actionLoading}>
-                                Delete
-                              </Button>
-                            </TableCell>
-                          </motion.tr>
-                        ))}
-                      </TableBody>
+                      {paginatedUsers.map((user) => (
+                        <TableRow
+                          key={user.id}
+                          sx={{
+                            "&:hover": { bgcolor: "grey.800" },
+                            ...(selected.includes(user.id) && { bgcolor: "grey.700" }),
+                          }}
+                          component={motion.tr}
+                          variants={itemVariants}
+                          style={{ display: "table-row" }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selected.includes(user.id)}
+                              onChange={() => handleSelect(user.id)}
+                              sx={{ color: "text.secondary" }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>{user.id}</TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>{user.name}</TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>{user.email}</TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>{user.role}</TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>
+                            {new Date(user.registeredAt).toLocaleString()}
+                          </TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>
+                            {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "Never"}
+                          </TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>
+                            {user.subscriptionStatus}
+                          </TableCell>
+                          <TableCell sx={{ color: "text.secondary" }}>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleEditUser(user)}
+                              sx={{ mr: 1 }}
+                              disabled={actionLoading}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleViewActivityLog(user)}
+                              sx={{ mr: 1 }}
+                              disabled={actionLoading}
+                            >
+                              <VisibilityIcon />
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              onClick={() => handleDeleteUser(user.id)}
+                              disabled={actionLoading}
+                            >
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
                     </Table>
                   </TableContainer>
                   <TablePagination
@@ -614,7 +642,7 @@ export default function AdminUsersClient() {
       </Container>
 
       <Dialog open={!!editUser} onClose={() => setEditUser(null)}>
-        <DialogTitle>{editUser?.id === 0 ? "Add User" : "Edit User"}</DialogTitle>
+        <DialogTitle>{editUser?.id === 0 ? "Add Prelim" : "Edit User"}</DialogTitle>
         <DialogContent>
           {editUser && (
             <Box sx={{ mt: 2 }}>

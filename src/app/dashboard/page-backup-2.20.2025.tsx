@@ -1,9 +1,9 @@
 'use client';
-import React, { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation"; // Correct import
-import Watchlist from '../components/Watchlist'; // Adjust the path as needed
-
+import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Watchlist from '../components/Watchlist';
+import Image from 'next/image'; // Import Image from next/image
 
 import {
   Container,
@@ -23,100 +23,63 @@ import {
   Checkbox,
   IconButton,
   Paper,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const Dashboard = () => {
-  const { data: session, status } = useSession(); // Use the useSession hook to manage the session
-  const router = useRouter(); // Using useRouter in client-side component
-  const [users, setUsers] = useState<User[]>([]); // State to store the list of users
-  const [loadingUsers, setLoadingUsers] = useState(true); // State to manage loading for users
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState({ title: "", description: "" });
-  const [editingTask, setEditingTask] = useState(null); // Track the task currently being edited
-  const [editedTask, setEditedTask] = useState({ title: "", description: "" });
-  const [isModalOpen, setModalOpen] = useState(false);
-
-  interface User {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-  }
+  const [newTask, setNewTask] = useState({ title: '', description: '' });
+  const [editingTask, setEditingTask] = useState(null);
+  const [editedTask, setEditedTask] = useState({ title: '', description: '' });
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin"); // Redirect to sign-in if the user is not authenticated
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
     }
   }, [status, router]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("/api/users"); // Correct endpoint for fetching users
-        if (!response.ok) {
-          throw new Error("Failed to fetch users");
-        }
-        const data: User[] = await response.json();
-        setUsers(data); // Set the users in the state
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      } finally {
-        setLoadingUsers(false); // Set loading to false after fetching
-      }
-    };
-
-    fetchUsers();
-  }, []); // Fetch users only once when the component mounts
-
-  useEffect(() => {
     const fetchTasks = async () => {
-      const response = await fetch("/api/tasks");
+      const response = await fetch('/api/tasks');
       const data = await response.json();
       setTasks(data);
     };
     fetchTasks();
-  }, []); // Empty dependency array means this runs only once on mount
+  }, []);
 
-  if (status === "loading" || loadingUsers) {
-    return <Typography>Loading...</Typography>; // Display a loading state while session and users are being fetched
+  if (status === 'loading') {
+    return <Typography>Loading...</Typography>;
   }
 
   if (!session) {
-    return null; // If there's no session, don't render the page (redirects will handle this)
+    return null;
   }
-
-  const isAdmin = session.user.role === "admin";
-  const isUser = session.user.role === "user";
-
-  // Function to capitalize the first letter of the name
-  const capitalizeName = (name: string) => {
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-  };
 
   const handleAddTask = async (title, description) => {
     try {
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description }),
       });
       const result = await response.json();
       if (result.task) {
-        // Update the state with the new task
-        setTasks((prevTasks) => [...prevTasks, result.task]);  // Add new task to the list
-        setNewTask({ title: "", description: "" });  // Reset form fields
+        setTasks((prevTasks) => [...prevTasks, result.task]);
+        setNewTask({ title: '', description: '' });
       } else {
-        console.error("Failed to add task:", result.error);
+        console.error('Failed to add task:', result.error);
       }
     } catch (error) {
-      console.error("Error adding task:", error);
+      console.error('Error adding task:', error);
     }
   };
+
   const handleEditTask = (task) => {
-    setEditingTask(task); // Set task to be edited
-    setEditedTask({ title: task.title, description: task.description }); // Pre-fill form
+    setEditingTask(task);
+    setEditedTask({ title: task.title, description: task.description });
   };
 
   const handleSaveEdit = async () => {
@@ -126,12 +89,12 @@ const Dashboard = () => {
 
     try {
       const response = await fetch(`/api/tasks?id=${editingTask.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedTaskData),
       });
 
-      if (!response.ok) throw new Error("Failed to update task");
+      if (!response.ok) throw new Error('Failed to update task');
 
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
@@ -139,41 +102,41 @@ const Dashboard = () => {
         )
       );
 
-      setEditingTask(null); // Reset editing state
-      setEditedTask({ title: "", description: "" }); // Reset form fields
+      setEditingTask(null);
+      setEditedTask({ title: '', description: '' });
     } catch (error) {
-      console.error("Error updating task:", error);
+      console.error('Error updating task:', error);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingTask(null);
-    setEditedTask({ title: "", description: "" });
+    setEditedTask({ title: '', description: '' });
   };
 
   const handleDeleteTask = async (taskId) => {
     try {
       const response = await fetch(`/api/tasks?id=${taskId}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error("Failed to delete task");
+      if (!response.ok) throw new Error('Failed to delete task');
 
-      setTasks(tasks.filter((task) => task.id !== taskId)); // Remove task from state
+      setTasks(tasks.filter((task) => task.id !== taskId));
     } catch (error) {
-      console.error("Error deleting task:", error);
+      console.error('Error deleting task:', error);
     }
   };
 
   const handleTaskCompletionToggle = async (taskId, currentStatus) => {
     try {
       const response = await fetch(`/api/tasks?id=${taskId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: !currentStatus }),
       });
 
-      if (!response.ok) throw new Error("Failed to update task status");
+      if (!response.ok) throw new Error('Failed to update task status');
 
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
@@ -181,17 +144,20 @@ const Dashboard = () => {
         )
       );
     } catch (error) {
-      console.error("Error toggling task completion:", error);
+      console.error('Error toggling task completion:', error);
     }
   };
 
   return (
-   
     <Container>
-       
       {/* App Logo */}
-      <Box sx={{ display: "flex", justifyContent: "center", my: 3 }}>
-        <img src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="App Logo" style={{ height: "60px" }} />
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+        <Image
+          src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
+          alt="App Logo"
+          width={180} // Adjust based on desired display size
+          height={60}
+        />
       </Box>
 
       <Watchlist />
@@ -201,8 +167,10 @@ const Dashboard = () => {
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h5" gutterBottom>Tasks</Typography>
-              <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+              <Typography variant="h5" gutterBottom>
+                Tasks
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
                 <TextField
                   label="Task Title"
                   value={newTask.title}
@@ -215,7 +183,11 @@ const Dashboard = () => {
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                   fullWidth
                 />
-                <Button variant="contained" color="primary" onClick={() => handleAddTask(newTask.title, newTask.description)}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => handleAddTask(newTask.title, newTask.description)}
+                >
                   Add Task
                 </Button>
               </Box>
@@ -295,9 +267,10 @@ const Dashboard = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h5" gutterBottom>Account Settings</Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {/* Add relevant content for Account Settings */}
+              <Typography variant="h5" gutterBottom>
+                Account Settings
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <TextField label="Username" variant="outlined" fullWidth />
                 <TextField label="Email" variant="outlined" fullWidth />
                 <Button variant="contained" color="primary">
@@ -312,9 +285,10 @@ const Dashboard = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h5" gutterBottom>Notifications</Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {/* Add relevant content for Notifications */}
+              <Typography variant="h5" gutterBottom>
+                Notifications
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <TextField label="Email" variant="outlined" fullWidth />
                 <Button variant="contained" color="primary">
                   Update Email

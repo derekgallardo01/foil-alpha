@@ -1,6 +1,5 @@
 // api/products/route.ts
-import { PoolConnection } from 'mysql2/promise';
-import { NextRequest } from 'next/server';
+
 import { executeQuery } from '../../lib/db';
 
 interface ProductRow {
@@ -29,7 +28,7 @@ interface ProductResponse {
   release_date: string | null; // Added release_date
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     console.log('Fetching products from database...');
     

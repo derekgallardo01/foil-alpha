@@ -1,15 +1,11 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { PrismaClient } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config({ path: path.join(process.cwd(), '.env') });
-
-// Initialize Prisma client
-const prisma = new PrismaClient();
 
 interface Credentials {
   web: {
@@ -40,11 +36,6 @@ interface CustomError extends Error {
 // Validate environment and credentials
 const credentialsPath = path.join(process.cwd(), 'credentials.json');
 const tokenPath = path.join(process.cwd(), 'token.json');
-
-const SCOPES = [
-  'https://www.googleapis.com/auth/gmail.send',
-  'https://www.googleapis.com/auth/gmail.readonly',
-];
 
 let credentials: Credentials;
 let tokens: Token;

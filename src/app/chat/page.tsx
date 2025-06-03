@@ -12,10 +12,11 @@ import {
   IconButton,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import Image from "next/image"; // Import Image from next/image
 import Sidebar from "../components/Sidebar";
 
 export default function ChatPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession(); // Destructure only status
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState(null);
@@ -124,10 +125,12 @@ export default function ChatPage() {
               <IconButton onClick={toggleSidebar} sx={{ color: "#fff" }}>
                 <MenuIcon />
               </IconButton>
-              <img
+              <Image
                 src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
                 alt="Logo"
-                style={{ height: "60px" }}
+                width={60}
+                height={60}
+                style={{ objectFit: "contain" }}
               />
             </Box>
             <Typography variant="h4" sx={{ mb: 2, color: "#fff" }}>

@@ -50,7 +50,7 @@ export default function VerifyEmailClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code: code.trim() }),
       });
-
+    
       if (response.ok) {
         toast.success("Email verified successfully!", { autoClose: 2000 });
         router.push("/activation-success");
@@ -59,7 +59,7 @@ export default function VerifyEmailClient() {
         setError(data.message || "Invalid verification code.");
         toast.error(data.message || "Verification failed.");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
       toast.error("An unexpected error occurred.");
     } finally {

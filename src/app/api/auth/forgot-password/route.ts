@@ -3,6 +3,14 @@ import { getDbConnection } from "../../../lib/db";
 import crypto from "crypto";
 import { sendEmail } from "../../../lib/email";
 
+// Define the User interface
+interface User {
+  id: number;
+  email: string;
+  password: string;
+  // Add other fields as needed
+}
+
 export async function POST(req: NextRequest) {
   const connection = await getDbConnection();
 
@@ -13,7 +21,7 @@ export async function POST(req: NextRequest) {
     }
 
     const sanitizedEmail = email.trim().toLowerCase();
-    const [users]: [any[], any] = await connection.execute("SELECT * FROM users WHERE email = ?", [sanitizedEmail]);
+    const [users]: [User[], unknown] = await connection.execute("SELECT * FROM users WHERE email = ?", [sanitizedEmail]);
     if (users.length === 0) {
       return NextResponse.json(
         { message: "If an account exists, a password reset link has been sent to your email." },

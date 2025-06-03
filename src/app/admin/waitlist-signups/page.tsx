@@ -20,17 +20,28 @@ import { Delete as DeleteIcon } from "@mui/icons-material";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
 
+// Define the WaitlistEntry interface
+interface WaitlistEntry {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+  source: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+}
+
 export default function WaitlistSignupsPage() {
-  const [waitlistEntries, setWaitlistEntries] = useState<any[]>([]);
+  const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchWaitlistEntries = async () => {
     try {
-      const response = await fetch('/api/admin/waitlist', {
-        method: 'GET',
+      const response = await fetch("/api/admin/waitlist", {
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
-        }
+          "Content-Type": "application/json",
+        },
       });
       const data = await response.json();
       if (!response.ok) {
@@ -49,10 +60,10 @@ export default function WaitlistSignupsPage() {
     if (!confirm("Are you sure you want to delete this entry?")) return;
 
     try {
-      const response = await fetch('/api/admin/waitlist', {
-        method: 'DELETE',
+      const response = await fetch("/api/admin/waitlist", {
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ id }),
       });
@@ -177,8 +188,14 @@ export default function WaitlistSignupsPage() {
                             px: 1,
                             py: 0.5,
                             borderRadius: 1,
-                            bgcolor: entry.status === "PENDING" ? "rgba(255, 193, 7, 0.1)" : "rgba(76, 175, 80, 0.1)",
-                            color: entry.status === "PENDING" ? "rgba(255, 193, 7, 1)" : "rgba(76, 175, 80, 1)",
+                            bgcolor:
+                              entry.status === "PENDING"
+                                ? "rgba(255, 193, 7, 0.1)"
+                                : "rgba(76, 175, 80, 0.1)",
+                            color:
+                              entry.status === "PENDING"
+                                ? "rgba(255, 193, 7, 1)"
+                                : "rgba(76, 175, 80, 1)",
                           }}
                         >
                           {entry.status}

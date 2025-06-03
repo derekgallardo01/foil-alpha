@@ -1,26 +1,19 @@
 'use client';
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import TaskManagement from "../components/TaskManagement";
-import { Container, Typography, Box } from "@mui/material";
+import { Container, Typography, Box, IconButton } from "@mui/material";
 import Sidebar from "../components/Sidebar";
-import {
-    Grid,
-    Card,
-    CardContent,
-    TextField,
-    Button,
-    IconButton,
-  } from "@mui/material";
-  import MenuIcon from "@mui/icons-material/Menu";
+import MenuIcon from "@mui/icons-material/Menu";
+import Image from "next/image";
 
 const TasksPage = () => {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // Move useState inside the component
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen); // Move toggleSidebar inside the component
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   if (status === "loading") {
     return <Typography>Loading...</Typography>;
@@ -34,12 +27,18 @@ const TasksPage = () => {
   return (
     <Container sx={{ marginTop: 4, marginBottom: 4 }}>
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-            {/* Top Bar with Menu Button */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
+      {/* Top Bar with Menu Button */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
         <IconButton onClick={toggleSidebar}>
           <MenuIcon />
         </IconButton>
-        <img src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" style={{ height: "60px" }} />
+        <Image
+          src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
+          alt="Logo"
+          width={120} // Adjust based on your needs
+          height={60} // Matches the original height
+          style={{ height: "60px", width: "auto" }}
+        />
       </Box>
       <Box sx={{ my: 3 }}>
         <Typography variant="h4" gutterBottom>

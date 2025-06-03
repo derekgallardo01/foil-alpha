@@ -11,10 +11,18 @@ model User {
   id                 Int           @id @default(autoincrement())
   email              String        @unique
   name               String
-  role               String
-  registeredAt       DateTime
+  password           String?
+  role               String        @default("user")
+  registeredAt       DateTime      @default(now())
   lastLoginAt        DateTime?
-  subscriptionStatus String
+  subscriptionStatus String        @default("inactive")
+  isVerified         Boolean       @default(false)
+  verificationCode   String?
+  discordAccessToken String?
+  discordRefreshToken String?
+  googleAccessToken  String?
+  googleRefreshToken String?
+  googleScopes       String?
   auditTrail         Json?
   activities         ActivityLog[]
 }

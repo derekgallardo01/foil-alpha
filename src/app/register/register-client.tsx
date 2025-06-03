@@ -11,7 +11,6 @@ import {
   Link,
   Container,
   Paper,
-  Checkbox,
   Backdrop,
   IconButton,
   InputAdornment,

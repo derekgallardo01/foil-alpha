@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getDbConnection } from '../../lib/db';
 
-export async function GET(req) {
+export async function GET() {
   try {
     const pool = await getDbConnection(); // Get the connection pool
     const connection = await pool.getConnection(); // Get a connection from the pool
@@ -18,6 +18,6 @@ export async function GET(req) {
     return NextResponse.json({ count: rows[0]?.count || 0 });  // Make sure to handle cases where the count is not available
   } catch (error) {
     console.error('Error fetching visitor count:', error);
-    return NextResponse.error().status(500).send('Internal Server Error');
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

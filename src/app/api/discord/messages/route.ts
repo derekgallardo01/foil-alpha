@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const channelId = "1350526438972850276";
 const botToken = process.env.DISCORD_BOT_TOKEN;
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   if (!botToken) {
     console.error("Bot token not configured");
     return NextResponse.json({ error: "Bot token not configured" }, { status: 500 });
