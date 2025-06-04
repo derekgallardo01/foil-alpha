@@ -3,8 +3,8 @@ import { getDbConnection } from "../../../../lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import type { RowDataPacket } from "mysql2/promise";
+import type { Session } from "next-auth"; // Import Session type
 
-// Define the expected user row type, extending RowDataPacket
 interface UserRow extends RowDataPacket {
   id: string;
   name: string;
@@ -16,7 +16,7 @@ interface UserRow extends RowDataPacket {
 }
 
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions) as Session | null; // Type assertion
   if (!session || session.user.role !== "admin") {
     return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
   }
@@ -29,6 +29,9 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
   try {
     const { name, email, role, subscriptionStatus } = await req.json();
+    if (!name || !email || !role || !subscriptionStatus) {
+      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+    }
 
     await dbConnection.execute(
       "UPDATE users SET name = ?, email = ?, role = ?, subscriptionStatus = ? WHERE id = ?",

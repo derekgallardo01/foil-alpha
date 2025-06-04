@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth';
+import NextAuth, { AuthOptions } from 'next-auth'; // Add AuthOptions import
 import CredentialsProvider from 'next-auth/providers/credentials';
 import DiscordProvider, { DiscordProfile } from 'next-auth/providers/discord';
 import GoogleProvider from 'next-auth/providers/google';
