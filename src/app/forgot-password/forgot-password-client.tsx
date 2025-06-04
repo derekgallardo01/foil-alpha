@@ -53,9 +53,8 @@ export default function ForgotPasswordClient() {
   const [isNetworkError, setIsNetworkError] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setMessage(null);
     setError(null);
     setIsNetworkError(false);
@@ -78,10 +77,6 @@ export default function ForgotPasswordClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
-
-      if (!response) {
-        throw new Error("No response from server");
-      }
 
       if (response.ok) {
         handleSuccess();
@@ -214,7 +209,7 @@ export default function ForgotPasswordClient() {
                           {isNetworkError && (
                             <Button
                               size="small"
-                              onClick={() => handleSubmit({ preventDefault: () => {} } as FormEvent)}
+                              onClick={() => handleSubmit()}
                               sx={{ ml: 1 }}
                             >
                               Retry
@@ -237,7 +232,7 @@ export default function ForgotPasswordClient() {
                         fullWidth
                         variant="contained"
                         sx={{ mt: 3, bgcolor: "#96ff9b", color: "grey.900" }}
-                        disabled={loading || !!message} // Disable after success
+                        disabled={loading || !!message}
                         aria-label="Send Reset Link"
                       >
                         {loading ? <CircularProgress size={24} color="inherit" /> : "Send Reset Link"}

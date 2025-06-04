@@ -1,11 +1,16 @@
 import { sendEmail } from './email';
 
+interface EmailError extends Error {
+  response?: {
+    data?: unknown;
+  };
+}
+
 async function testEmail() {
   try {
-    // Log start of test
     console.log('Starting test-email.ts');
     console.log('Environment variables:', {
-      GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN ? 'SET' : 'NOT SET'
+      GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN ? 'SET' : 'NOT SET',
     });
 
     const to = 'derekgallardo01@gmail.com';
@@ -19,18 +24,19 @@ async function testEmail() {
 
     console.log('Attempting to send test email using email.ts...');
     console.log('Email details:', { to, subject });
-    
+
     const result = await sendEmail(to, subject, content);
     console.log('Email sent successfully!');
     console.log('Email response:', result);
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
     console.error('Error sending test email:', {
-      message: error.message,
-      stack: error.stack,
-      response: error.response?.data
+      message: err.message,
+      stack: err.stack,
+      response: (err as EmailError).response?.data, // Use defined interface
     });
-    throw error;
+    throw err;
   }
 }
 

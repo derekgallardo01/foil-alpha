@@ -31,7 +31,6 @@ interface AuthError extends Error {
   code?: string;
 }
 
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -77,7 +76,7 @@ export default function LoginClient() {
       if (passwordRef.current) {
         passwordRef.current.focus();
       }
-      router.replace("/login", undefined, { shallow: true });
+      router.replace("/login", { scroll: false });
       return;
     }
 
@@ -92,18 +91,17 @@ export default function LoginClient() {
     }
   }, [searchParams, router]);
 
-  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const performLogin = async () => {
     setError(null);
     setIsNetworkError(false);
 
     const validationError = validateForm(email, password);
     if (validationError) {
       setError(validationError);
-      gaEvent("login_attempt", { 
-        category: "Login", 
-        label: `Validation Failed - ${validationError}`, 
-        value: 0 
+      gaEvent("login_attempt", {
+        category: "Login",
+        label: `Validation Failed - ${validationError}`,
+        value: 0,
       });
       return;
     }
@@ -123,7 +121,7 @@ export default function LoginClient() {
       if (result.error) {
         throw Object.assign(new Error(result.error), {
           status: result.status,
-          code: result.error
+          code: result.error,
         }) as AuthError;
       }
 
@@ -137,15 +135,22 @@ export default function LoginClient() {
     }
   };
 
+  const handleLogin = async (event?: FormEvent<HTMLFormElement>) => {
+    if (event) {
+      event.preventDefault();
+    }
+    await performLogin();
+  };
+
   const handleSocialLogin = async (provider: "discord" | "google") => {
     try {
       setLoading(true);
       setError(null);
       setIsNetworkError(false);
 
-      const result = await signIn(provider, { 
+      const result = await signIn(provider, {
         callbackUrl: "/dashboard",
-        redirect: false 
+        redirect: false,
       }) as SignInResponse;
 
       if (!result) {
@@ -155,14 +160,14 @@ export default function LoginClient() {
       if (result.error) {
         throw Object.assign(new Error(result.error), {
           status: result.status,
-          code: result.error
+          code: result.error,
         }) as AuthError;
       }
 
-      gaEvent("login_attempt", { 
-        category: "Social Login", 
-        label: `Success - ${provider}`, 
-        value: 1 
+      gaEvent("login_attempt", {
+        category: "Social Login",
+        label: `Success - ${provider}`,
+        value: 1,
       });
       router.push("/dashboard");
     } catch (err) {
@@ -181,10 +186,10 @@ export default function LoginClient() {
       localStorage.removeItem("rememberMe");
     }
     toast.success("Logged in successfully!", { autoClose: 2000 });
-    gaEvent("login_attempt", { 
-      category: "Login", 
-      label: "Success", 
-      value: 1 
+    gaEvent("login_attempt", {
+      category: "Login",
+      label: "Success",
+      value: 1,
     });
     router.push("/dashboard");
   };
@@ -206,10 +211,10 @@ export default function LoginClient() {
     }
 
     setError(errorMessage);
-    gaEvent("login_attempt", { 
-      category: "Login", 
-      label: eventLabel.join(" - "), 
-      value: 0 
+    gaEvent("login_attempt", {
+      category: "Login",
+      label: eventLabel.join(" - "),
+      value: 0,
     });
   };
 
@@ -230,10 +235,10 @@ export default function LoginClient() {
     }
 
     setError(errorMessage);
-    gaEvent("login_attempt", { 
-      category: "Social Login", 
-      label: eventLabel.join(" - "), 
-      value: 0 
+    gaEvent("login_attempt", {
+      category: "Social Login",
+      label: eventLabel.join(" - "),
+      value: 0,
     });
   };
 
@@ -363,7 +368,7 @@ export default function LoginClient() {
                           {isNetworkError && (
                             <Button 
                               size="small" 
-                              onClick={() => handleLogin({ preventDefault: () => {} } as FormEvent)}
+                              onClick={performLogin}
                               sx={{ ml: 1 }}
                             >
                               Retry

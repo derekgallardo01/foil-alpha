@@ -1,5 +1,6 @@
 import { createPool, Pool, RowDataPacket, ResultSetHeader, PoolConnection } from "mysql2/promise";
 import * as dotenv from "dotenv";
+import { EventEmitter } from "events";
 
 // Load environment variables
 dotenv.config();
@@ -30,10 +31,10 @@ const createPoolConnection = (): Pool => {
     user: process.env.MYSQL_USER!,
     password: process.env.MYSQL_PASSWORD!,
     database: process.env.MYSQL_DATABASE!,
-    connectionLimit: 5, // Reduced to avoid overwhelming DB in serverless
+    connectionLimit: 5,
     waitForConnections: true,
     queueLimit: 100,
-    idleTimeout: 30000, // 30 seconds idle timeout
+    idleTimeout: 30000,
   };
 
   console.log("Creating database connection pool...");
@@ -42,9 +43,10 @@ const createPoolConnection = (): Pool => {
 
   const newPool = createPool(config);
 
-  newPool.on("error", (err) => {
+  // Type assertion to EventEmitter for error event
+  (newPool as unknown as EventEmitter).on("error", (err: Error) => {
     console.error("Database pool error:", err);
-    pool = null; // Reset pool on fatal error
+    pool = null;
   });
 
   newPool.on("connection", () => {
@@ -55,7 +57,7 @@ const createPoolConnection = (): Pool => {
 };
 
 export const getDbConnection = async (): Promise<Pool> => {
-  if (!pool || pool["_closed"]) {
+  if (!pool) {
     pool = createPoolConnection();
     let connection: PoolConnection | null = null;
     try {
@@ -74,9 +76,9 @@ export const getDbConnection = async (): Promise<Pool> => {
       }
     }
   }
-  // Verify pool is still usable before returning
+  // Verify pool is still usable
   try {
-    await pool.query("SELECT 1"); // Simple test query
+    await pool.query("SELECT 1");
   } catch (error) {
     console.error("Pool is unusable, reinitializing:", error);
     pool = null;
@@ -99,7 +101,7 @@ export const executeQuery = async <T extends RowDataPacket[] | ResultSetHeader[]
   } catch (error) {
     console.error("Error executing query:", error);
     if (error instanceof Error && error.message.includes("Pool is closed")) {
-      pool = null; // Reset pool
+      pool = null;
       return executeQuery(query, params); // Retry once
     }
     throw error;
@@ -108,10 +110,16 @@ export const executeQuery = async <T extends RowDataPacket[] | ResultSetHeader[]
 
 // Graceful shutdown handlers
 const shutdown = async () => {
-  if (pool && !pool["_closed"]) {
-    await pool.end();
-    console.log("Database connection pool closed");
-    pool = null;
+  if (pool) {
+    try {
+      await pool.query("SELECT 1"); // Check if pool is still active
+      await pool.end();
+      console.log("Database connection pool closed");
+    } catch (error) {
+      console.error("Error during pool shutdown:", error);
+    } finally {
+      pool = null;
+    }
   }
 };
 

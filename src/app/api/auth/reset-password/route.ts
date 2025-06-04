@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getDbConnection } from "../../../lib/db";
+import { RowDataPacket, ResultSetHeader } from "mysql2/promise"; // Import ResultSetHeader
 
 // Define the type for the token row
-interface TokenRow {
+interface TokenRow extends RowDataPacket {
   email: string;
 }
 
@@ -17,11 +18,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Token and password are required" }, { status: 400 });
     }
 
-    // Specify the type for the query result
-    const [tokens]: [TokenRow[], unknown] = await connection.execute(
+    // Execute the query and type the result
+    const [tokens] = await connection.execute<TokenRow[]>(
       "SELECT email FROM reset_tokens WHERE token = ? AND expires > NOW()",
       [token]
     );
+
     if (tokens.length === 0) {
       return NextResponse.json({ message: "Invalid or expired token" }, { status: 400 });
     }
@@ -29,7 +31,8 @@ export async function POST(req: NextRequest) {
     const email = tokens[0].email;
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const [updateResult] = await connection.execute(
+    // Type the UPDATE query result as ResultSetHeader
+    const [updateResult] = await connection.execute<ResultSetHeader>(
       "UPDATE users SET password = ? WHERE email = ?",
       [hashedPassword, email]
     );

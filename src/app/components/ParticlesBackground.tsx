@@ -1,20 +1,21 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Engine } from 'tsparticles-engine'; // Import types from tsparticles-engine
+import { Engine, tsParticles } from '@tsparticles/engine';
+import { loadSlim } from '@tsparticles/slim';
 
-const Particles = dynamic(() => import('react-tsparticles'), {
+const Particles = dynamic(() => import('@tsparticles/react'), {
   ssr: false,
 });
 
 const ParticlesBackground = () => {
-  const particlesInit = useCallback(async (engine: Engine) => {
-    await tsParticles.load('tsparticles', engine); // Initialize particles with container ID
-  }, []);
-
-  const particlesLoaded = useCallback(async () => {
-    // Removed unused container parameter
+  // Initialize particles engine once
+  useEffect(() => {
+    const initParticles = async () => {
+      await loadSlim(tsParticles as Engine);
+    };
+    initParticles();
   }, []);
 
   const particlesOptions = {
@@ -30,16 +31,20 @@ const ParticlesBackground = () => {
         direction: 'none',
       },
     },
-  };
+  } as const;
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0, zIndex: -1 }}>
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        loaded={particlesLoaded}
-        options={particlesOptions}
-      />
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        zIndex: -1,
+      }}
+    >
+      <Particles id="tsparticles" options={particlesOptions} />
     </div>
   );
 };

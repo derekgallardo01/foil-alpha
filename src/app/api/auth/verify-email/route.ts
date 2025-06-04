@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getDbConnection } from "../../../lib/db";
+import { RowDataPacket } from "mysql2/promise"; // Import RowDataPacket
 
 // Define the type for the user row
-interface UserRow {
+interface UserRow extends RowDataPacket {
   verification_code: string | null;
   is_verified: boolean;
 }

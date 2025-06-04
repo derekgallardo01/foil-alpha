@@ -285,7 +285,7 @@ export default function RegisterClient() {
                           {isNetworkError && (
                             <Button
                               size="small"
-                              onClick={() => handleRegister({ preventDefault: () => {} } as FormEvent)}
+                              onClick={() => handleRegister({ preventDefault: () => {} } as FormEvent<HTMLFormElement>)}
                               sx={{ ml: 1 }}
                             >
                               Retry

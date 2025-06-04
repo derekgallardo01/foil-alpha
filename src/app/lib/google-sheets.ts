@@ -63,7 +63,7 @@ export class GoogleSheets {
       console.error("Error initializing Google Sheets API:", {
         message: (error as Error).message,
         stack: (error as Error).stack,
-        code: (error as GoogleApiError).code, // Fixed line 61
+        code: (error as GoogleApiError).code,
       });
       throw error;
     }
@@ -85,7 +85,7 @@ export class GoogleSheets {
           spreadsheetId: this.spreadsheetId,
           range,
           valueInputOption: "RAW",
-          resource: {
+          requestBody: {
             values: [
               [
                 "Name",
@@ -105,13 +105,35 @@ export class GoogleSheets {
       console.error("Error ensuring headers in Google Sheets:", {
         message: (error as Error).message,
         stack: (error as Error).stack,
-        code: (error as GoogleApiError).code, // Fixed line 105
+        code: (error as GoogleApiError).code,
       });
       throw error;
     }
   }
 
-  // ... (entryToRow and rowToEntry methods remain unchanged)
+  private entryToRow(entry: WaitlistEntry): string[] {
+    return [
+      entry.name,
+      entry.email,
+      entry.status,
+      entry.source,
+      entry.created_at.toISOString(),
+      JSON.stringify(entry.metadata),
+      entry.id.toString(),
+    ];
+  }
+
+  private rowToEntry(row: string[]): WaitlistEntry {
+    return {
+      name: row[0] || "",
+      email: row[1] || "",
+      status: row[2] || "",
+      source: row[3] || "",
+      created_at: row[4] ? new Date(row[4]) : new Date(),
+      metadata: row[5] ? JSON.parse(row[5]) : {},
+      id: row[6] ? parseInt(row[6], 10) : 0,
+    };
+  }
 
   async getEntries(): Promise<WaitlistEntry[]> {
     try {
@@ -130,7 +152,7 @@ export class GoogleSheets {
       console.error("Error getting entries from Google Sheets:", {
         message: (error as Error).message,
         stack: (error as Error).stack,
-        code: (error as GoogleApiError).code, // Fixed line 163
+        code: (error as GoogleApiError).code,
       });
       if ((error as Error).message.includes("Requested entity was not found")) {
         throw new Error(
@@ -155,7 +177,7 @@ export class GoogleSheets {
         spreadsheetId: this.spreadsheetId,
         range,
         valueInputOption: "RAW",
-        resource: {
+        requestBody: {
           values: [row],
         },
       });
@@ -165,7 +187,7 @@ export class GoogleSheets {
       console.error("Error adding entry to Google Sheets:", {
         message: (error as Error).message,
         stack: (error as Error).stack,
-        code: (error as GoogleApiError).code, // Fixed line 199
+        code: (error as GoogleApiError).code,
       });
       if ((error as Error).message.includes("Unable to parse range")) {
         throw new Error(
@@ -196,7 +218,7 @@ export class GoogleSheets {
           spreadsheetId: this.spreadsheetId,
           range,
           valueInputOption: "RAW",
-          resource: {
+          requestBody: {
             values: [this.entryToRow(entry)],
           },
         });
@@ -206,7 +228,7 @@ export class GoogleSheets {
       console.error("Error updating entry in Google Sheets:", {
         message: (error as Error).message,
         stack: (error as Error).stack,
-        code: (error as GoogleApiError).code, // Fixed line 241
+        code: (error as GoogleApiError).code,
       });
       if ((error as Error).message.includes("Requested entity was not found")) {
         throw new Error(
@@ -229,12 +251,10 @@ export class GoogleSheets {
         console.log("Deleting entry with range:", range);
         await this.sheets.spreadsheets.values.batchUpdate({
           spreadsheetId: this.spreadsheetId,
-          resource: {
-            valueInputOption: "RAW",
+          requestBody: {
             data: [
               {
                 range,
-                majorDimension: "ROWS",
                 values: [["", "", "", "", "", "", ""]],
               },
             ],
@@ -246,7 +266,7 @@ export class GoogleSheets {
       console.error("Error deleting entry from Google Sheets:", {
         message: (error as Error).message,
         stack: (error as Error).stack,
-        code: (error as GoogleApiError).code, // Fixed line 282
+        code: (error as GoogleApiError).code,
       });
       if ((error as Error).message.includes("Requested entity was not found")) {
         throw new Error(

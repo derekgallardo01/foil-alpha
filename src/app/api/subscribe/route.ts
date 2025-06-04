@@ -13,8 +13,6 @@ mailchimp.setConfig({
 
 const googleSheets = new GoogleSheets();
 
-
-
 interface EmailData {
   subject: string;
   body: string;
@@ -26,9 +24,19 @@ interface RequestBody {
   emailData?: EmailData;
 }
 
+interface ErrorWithResponse extends Error {
+  response?: { data?: unknown };
+  code?: string;
+}
+
+function isErrorWithResponse(error: unknown): error is ErrorWithResponse {
+  return typeof error === "object" && error !== null && "message" in error;
+}
+
 export async function POST(request: Request) {
   const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
   let signupEmail = "unknown";
+
   try {
     const body: RequestBody = await request.json();
     const { name, email, emailData } = body;
@@ -37,7 +45,6 @@ export async function POST(request: Request) {
     console.log(`[${timestamp}] Signup attempt: email=${signupEmail}, name=${name}`);
     console.log(`[${timestamp}] Email data received:`, emailData ? 'Yes' : 'No');
 
-    // Validate environment variables
     if (!process.env.MAILCHIMP_API_KEY || !process.env.MAILCHIMP_LIST_ID) {
       console.error(`[${timestamp}] Missing environment variables`, {
         MAILCHIMP_API_KEY: !!process.env.MAILCHIMP_API_KEY,
@@ -46,7 +53,6 @@ export async function POST(request: Request) {
       throw new Error("Mailchimp configuration missing");
     }
 
-    // Validate input
     if (!name || !signupEmail) {
       console.log(`[${timestamp}] Validation failed: Missing name or email`);
       return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
@@ -94,11 +100,13 @@ export async function POST(request: Request) {
       waitlistEntry = await prisma.waitlist.update({
         where: { email: signupEmail },
         data: {
-          name: name,
+          name,
           status: "SUBSCRIBED",
           source: "WEBSITE",
           metadata: {
-            ...existingWaitlist.metadata,
+            ...(typeof existingWaitlist.metadata === "object" && existingWaitlist.metadata !== null
+              ? existingWaitlist.metadata
+              : {}),
             updated: true,
             timezone,
             timestamp: signupTime,
@@ -109,28 +117,28 @@ export async function POST(request: Request) {
 
       try {
         console.log(`[${timestamp}] Updating Google Sheets entry for email=${signupEmail}`);
-        await googleSheets.updateEntry(
-          existingWaitlist.id.toString(),
-          {
-            email: signupEmail,
-            name: name,
-            status: "SUBSCRIBED",
-            source: "WEBSITE",
-            created_at: existingWaitlist.created_at,
-            metadata: {
-              ...existingWaitlist.metadata,
-              updated: true,
-              timezone,
-              timestamp: signupTime,
-              ip_address: ip,
-            },
-          }
-        );
+        await googleSheets.updateEntry({
+          id: existingWaitlist.id,
+          email: signupEmail,
+          name,
+          status: "SUBSCRIBED",
+          source: "WEBSITE",
+          created_at: existingWaitlist.created_at,
+          metadata: {
+            ...(typeof existingWaitlist.metadata === "object" && existingWaitlist.metadata !== null
+              ? existingWaitlist.metadata
+              : {}),
+            updated: true,
+            timezone,
+            timestamp: signupTime,
+            ip_address: ip,
+          },
+        });
         console.log(`[${timestamp}] Successfully updated Google Sheets for email=${signupEmail}`);
       } catch (sheetsError) {
         console.error(`[${timestamp}] Failed to update Google Sheets:`, {
-          message: sheetsError.message,
-          stack: sheetsError.stack,
+          message: isErrorWithResponse(sheetsError) ? sheetsError.message : String(sheetsError),
+          stack: isErrorWithResponse(sheetsError) ? sheetsError.stack : undefined,
         });
       }
 
@@ -150,14 +158,14 @@ export async function POST(request: Request) {
       console.log(`[${timestamp}] Final state:`, {
         email: signupEmail,
         status: 'updated',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } else {
       console.log(`[${timestamp}] Creating new waitlist entry for email=${signupEmail}`);
       waitlistEntry = await prisma.waitlist.create({
         data: {
           name,
-          email,
+          email: signupEmail,
           status: "SUBSCRIBED",
           source: "WEBSITE",
           metadata: {
@@ -201,9 +209,9 @@ export async function POST(request: Request) {
         console.log(`[${timestamp}] Successfully added ${signupEmail} to Mailchimp list`);
       } catch (mailchimpError) {
         console.error(`[${timestamp}] Failed to add to Mailchimp list:`, {
-          message: mailchimpError.message,
-          stack: mailchimpError.stack,
-          response: mailchimpError.response?.data,
+          message: isErrorWithResponse(mailchimpError) ? mailchimpError.message : String(mailchimpError),
+          stack: isErrorWithResponse(mailchimpError) ? mailchimpError.stack : undefined,
+          response: isErrorWithResponse(mailchimpError) ? mailchimpError.response?.data : undefined,
         });
       }
 
@@ -227,12 +235,11 @@ export async function POST(request: Request) {
         console.log(`[${timestamp}] Email notification sent successfully`);
       } catch (emailError) {
         console.error(`[${timestamp}] Failed to send email notification:`, {
-          message: emailError.message,
-          stack: emailError.stack,
-          response: emailError.response?.data,
-          code: emailError.code,
+          message: isErrorWithResponse(emailError) ? emailError.message : String(emailError),
+          stack: isErrorWithResponse(emailError) ? emailError.stack : undefined,
+          response: isErrorWithResponse(emailError) ? emailError.response?.data : undefined,
+          code: isErrorWithResponse(emailError) ? emailError.code : undefined,
         });
-        // Continue processing even if email fails
       }
 
       try {
@@ -241,15 +248,17 @@ export async function POST(request: Request) {
           email: signupEmail,
           name,
           status: "SUBSCRIBED",
-          created_at: waitlistEntry.createdAt || new Date(),
+          created_at: waitlistEntry.created_at || new Date(),
           source: "WEBSITE",
-          metadata: waitlistEntry.metadata,
-        });
+          metadata: typeof waitlistEntry.metadata === 'object' && waitlistEntry.metadata !== null
+          ? waitlistEntry.metadata as Record<string, unknown>
+          : {},
+      });
         console.log(`[${timestamp}] Successfully added to Google Sheets`);
       } catch (sheetsError) {
         console.error(`[${timestamp}] Failed to sync with Google Sheets:`, {
-          message: sheetsError.message,
-          stack: sheetsError.stack,
+          message: isErrorWithResponse(sheetsError) ? sheetsError.message : String(sheetsError),
+          stack: isErrorWithResponse(sheetsError) ? sheetsError.stack : undefined,
         });
       }
 
@@ -257,7 +266,7 @@ export async function POST(request: Request) {
       console.log(`[${timestamp}] Final state:`, {
         email: signupEmail,
         status: 'new',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -266,15 +275,15 @@ export async function POST(request: Request) {
       message: existingWaitlist ? "Waitlist entry updated successfully" : "Successfully added to waitlist",
       data: {
         id: waitlistEntry.id,
-        created_at: waitlistEntry.createdAt,
+        created_at: waitlistEntry.created_at,
         metadata: waitlistEntry.metadata,
       },
     });
   } catch (error) {
     console.error(`[${timestamp}] Signup failed for email=${signupEmail}:`, {
-      message: error.message,
-      stack: error.stack,
-      response: error.response?.data,
+      message: isErrorWithResponse(error) ? error.message : String(error),
+      stack: isErrorWithResponse(error) ? error.stack : undefined,
+      response: isErrorWithResponse(error) ? error.response?.data : undefined,
     });
     return NextResponse.json({ error: "Failed to process waitlist signup" }, { status: 500 });
   } finally {

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react"; // Add useState to the import
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Watchlist from "../components/Watchlist";

@@ -11,6 +11,10 @@ declare module "next-auth" {
       subscriptionStatus: string;
       isVerified: boolean;
     };
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpires?: number;
+    googleScopes?: string;
   }
 
   interface User extends DefaultUser {
@@ -27,5 +31,9 @@ declare module "next-auth/jwt" {
     role: string;
     subscriptionStatus: string;
     isVerified: boolean;
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpires?: number;
+    googleScopes?: string;
   }
 }

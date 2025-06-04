@@ -1,8 +1,7 @@
-// api/products/route.ts
-
 import { executeQuery } from '../../lib/db';
+import { RowDataPacket } from 'mysql2';
 
-interface ProductRow {
+interface ProductRow extends RowDataPacket {
   product_id: string;
   retailer: string;
   title: string;
@@ -12,7 +11,7 @@ interface ProductRow {
   stock_status: string;
   price: number | null;
   recorded_at: Date | null;
-  release_date: Date | null; // Added release_date
+  release_date: Date | null;
 }
 
 interface ProductResponse {
@@ -25,7 +24,7 @@ interface ProductResponse {
   stockStatus: string;
   price: string;
   recorded_at: string | null;
-  release_date: string | null; // Added release_date
+  release_date: string | null;
 }
 
 export async function GET() {
@@ -41,7 +40,7 @@ export async function GET() {
         p.image, 
         p.screenshot, 
         p.stock_status,
-        p.release_date,  -- Added release_date
+        p.release_date,
         ph.price,
         ph.recorded_at
       FROM products p
@@ -68,7 +67,7 @@ export async function GET() {
       stockStatus: row.stock_status,
       price: row.price !== null ? `$${Number(row.price).toFixed(2)}` : 'Price not found',
       recorded_at: row.recorded_at ? row.recorded_at.toISOString() : null,
-      release_date: row.release_date ? row.release_date.toISOString() : null, // Added release_date
+      release_date: row.release_date ? row.release_date.toISOString() : null,
     }));
 
     return new Response(JSON.stringify(products), {

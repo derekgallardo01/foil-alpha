@@ -56,8 +56,7 @@ export default function ResetPasswordClient() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitForm = async () => {
     setMessage(null);
     setError(null);
     setIsNetworkError(false);
@@ -99,6 +98,11 @@ export default function ResetPasswordClient() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await submitForm();
   };
 
   const handleSuccess = () => {
@@ -199,7 +203,7 @@ export default function ResetPasswordClient() {
                         variant="outlined"
                         InputLabelProps={{ style: { color: "text.secondary" } }}
                         sx={{ input: { color: "text.primary" } }}
-                        disabled={loading || !!message} // Disable after success
+                        disabled={loading || !!message}
                         aria-label="New Password"
                         autoComplete="new-password"
                         inputProps={{ "aria-describedby": error ? "password-error" : undefined }}
@@ -217,7 +221,7 @@ export default function ResetPasswordClient() {
                         variant="outlined"
                         InputLabelProps={{ style: { color: "text.secondary" } }}
                         sx={{ input: { color: "text.primary" } }}
-                        disabled={loading || !!message} // Disable after success
+                        disabled={loading || !!message}
                         aria-label="Confirm Password"
                         autoComplete="new-password"
                         inputProps={{ "aria-describedby": error ? "password-error" : undefined }}
@@ -236,7 +240,7 @@ export default function ResetPasswordClient() {
                           {isNetworkError && (
                             <Button
                               size="small"
-                              onClick={() => handleSubmit({ preventDefault: () => {} } as FormEvent)}
+                              onClick={submitForm}
                               sx={{ ml: 1 }}
                             >
                               Retry
@@ -259,7 +263,7 @@ export default function ResetPasswordClient() {
                         fullWidth
                         variant="contained"
                         sx={{ mt: 3, bgcolor: "#96ff9b", color: "grey.900" }}
-                        disabled={loading || !!message} // Disable after success
+                        disabled={loading || !!message}
                         aria-label="Reset Password"
                       >
                         {loading ? <CircularProgress size={24} color="inherit" /> : "Reset Password"}

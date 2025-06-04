@@ -62,13 +62,13 @@ const ManualWatchlist: React.FC<ManualWatchlistProps> = ({
 
   const handleAddItem = async () => {
     const parsedPrice = parseFloat(newItem.price);
-    const parsedStockQuantity = newItem.stock_quantity === "" ? 0 : parseInt(newItem.stock_quantity.toString());
-
+    const parsedStockQuantity = Number.isFinite(newItem.stock_quantity) ? newItem.stock_quantity : 0;
+  
     if (isNaN(parsedPrice) || isNaN(parsedStockQuantity)) {
       alert("Please enter valid numbers for price and stock quantity.");
       return;
     }
-
+  
     try {
       const response = await fetch("/api/watchlist", {
         method: "POST",
@@ -83,10 +83,10 @@ const ManualWatchlist: React.FC<ManualWatchlistProps> = ({
           user_id: 1,
         }),
       });
-
+  
       if (!response.ok) throw new Error(`Failed to add item: ${response.statusText}`);
       const addedItem = await response.json();
-
+  
       if (addedItem && addedItem.newItem && addedItem.newItem.id) {
         setWatchlist((prevList) => [...prevList, addedItem.newItem]);
         setSnackbarMessage("Item added successfully to your watchlist!");

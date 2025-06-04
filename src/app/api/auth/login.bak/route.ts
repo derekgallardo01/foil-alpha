@@ -3,23 +3,27 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getDbConnection } from "../../../lib/db"; // Adjust the path to your db connection logic
+import type { RowDataPacket } from "mysql2/promise"; // Import RowDataPacket for typing
+
+interface User extends RowDataPacket {
+  id: number;
+  email: string;
+  name: string;
+  password: string;
+}
 
 export async function POST(req: Request) {
-  // Log the start of the login request
   console.log("Login request received");
 
-  // Get email and password from the request body
   const { email, password } = await req.json();
-  console.log("Email received:", email); // Log the email received in the request
-  console.log("Password received:", password); // Log the password received (make sure this is safe to log in production)
+  console.log("Email received:", email);
+  console.log("Password received:", password);
 
-  // Validate input
   if (!email || !password) {
     console.log("Missing email or password");
     return NextResponse.json({ message: "Email and password are required." }, { status: 400 });
   }
 
-  // Get database connection
   let connection;
   try {
     connection = await getDbConnection();
@@ -29,10 +33,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Fetch user from the database by email
+    // Fetch user from the database by email with explicit typing
     console.log("Fetching user from DB by email:", email);
-    const [rows] = await connection.execute("SELECT * FROM users WHERE email = ?", [email]);
-    console.log("User fetched from DB:", rows); // Log the user data (ensure this doesn't contain sensitive info)
+    const [rows] = await connection.execute<User[]>("SELECT * FROM users WHERE email = ?", [email]);
+    console.log("User fetched from DB:", rows);
 
     // Check if user exists
     if (rows.length === 0) {
@@ -41,19 +45,18 @@ export async function POST(req: Request) {
     }
 
     const user = rows[0];
-    console.log("User found in DB:", user); // Log the user details (excluding sensitive info like password)
+    console.log("User found in DB:", user);
 
-    // Compare the hashed password with the one in the database
+    // Compare the hashed password
     console.log("Comparing passwords...");
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log("Password validation result:", isPasswordValid); // Log if the password is valid
+    console.log("Password validation result:", isPasswordValid);
 
     if (!isPasswordValid) {
       console.log("Invalid password for email:", email);
       return NextResponse.json({ message: "Invalid password" }, { status: 403 });
     }
 
-    // Successful login - you can add session management or token here
     console.log("Login successful for email:", email);
     return NextResponse.json(
       { message: "Login successful", user: { id: user.id, email: user.email, name: user.name } },
@@ -63,7 +66,6 @@ export async function POST(req: Request) {
     console.error("An error occurred during the login process:", error);
     return NextResponse.json({ message: "An error occurred while logging in." }, { status: 500 });
   } finally {
-    // Ensure the database connection is always closed
     if (connection) {
       await connection.end();
       console.log("Database connection closed");

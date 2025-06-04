@@ -1,49 +1,71 @@
-import { Builder, By, until } from 'selenium-webdriver';
+
+import { Builder, By, until, WebDriver } from 'selenium-webdriver';
 import { Options } from 'selenium-webdriver/chrome';
 import { ServiceBuilder } from 'selenium-webdriver/chrome';
 import fs from 'fs/promises';
 import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
-process.env.WEBDRIVER_CHROME_DRIVER = '/usr/bin/chromedriver';
+// Update for Windows environment; adjust path as needed
+process.env.WEBDRIVER_CHROME_DRIVER = 'C:/chromedriver/chromedriver.exe';
 
-const productCache = {};
+interface ProductData {
+  title: string;
+  image: string;
+  price: string;
+  stockStatus: string;
+  isAvailable: boolean;
+  notifyMessage: string;
+  url?: string;
+  retailer?: string;
+  message?: string;
+  error?: string;
+}
+
+const productCache: { [key: string]: ProductData } = {};
 const proxies = [
   "http://pokemondealer:ZFT2ZBZ7PXw72jgwFJBByu6U~@168.151.202.243:20000",
   "http://pokemondealer:ZFT2ZBZ7PXw72jgwFJBByu6U~@188.42.21.191:20000",
   "http://pokemondealer:ZFT2ZBZ7PXw72jgwFJBByu6U~@188.42.21.90:20000"
 ];
 
-async function wait(ms) {
+interface Proxy {
+  username: string;
+  password: string;
+  host: string;
+  port: string;
+}
+
+async function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function parseProxy(proxyUrl) {
+function parseProxy(proxyUrl: string): Proxy {
   const match = proxyUrl.match(/http:\/\/([^:]+):([^@]+)@([^:]+):(\d+)/);
   if (!match) throw new Error(`Invalid proxy format: ${proxyUrl}`);
   const [, username, password, host, port] = match;
   return { username, password, host, port };
 }
 
-function getRetailerName(url) {
+function getRetailerName(url: string): string {
   try {
     const domain = new URL(url).hostname.replace('www.', '').split('.')[0];
-    const retailerMap = { 'target': 'Target', 'bestbuy': 'Best Buy' };
+    const retailerMap: { [key: string]: string } = { 'target': 'Target', 'bestbuy': 'Best Buy' };
     return retailerMap[domain.toLowerCase()] || domain.charAt(0).toUpperCase() + domain.slice(1);
   } catch (error) {
-    console.error('Error parsing retailer from URL:', error.message);
+    console.error('Error parsing retailer from URL:', (error as Error).message);
     return 'Unknown Retailer';
   }
 }
 
-async function testProxy(proxy) {
+async function testProxy(proxy: string): Promise<boolean> {
   const { host, port, username, password } = parseProxy(proxy);
   const agent = new HttpsProxyAgent(`http://${username}:${password}@${host}:${port}`);
   const response = await fetch('https://www.target.com', { agent }).catch(() => null);
   return response?.status === 200;
 }
 
-async function scrapeWithRetry(driver, url, retries = 3) {
+async function scrapeWithRetry(driver: WebDriver, url: string, retries: number = 3): Promise<boolean> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await driver.get(url);
@@ -53,14 +75,15 @@ async function scrapeWithRetry(driver, url, retries = 3) {
       );
       return true;
     } catch (error) {
-      console.log(`Attempt ${attempt}/${retries} failed for ${url}: ${error.message}`);
+      console.log(`Attempt ${attempt}/${retries} failed for ${url}: ${(error as Error).message}`);
       if (attempt === retries) throw error;
       await wait(2000 * attempt);
     }
   }
+  return false;
 }
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   const productUrls = [
     "https://www.target.com/p/2025-pokemon-scarlet-violet-s8-5-poster-collection/-/A-93803457",
     "https://www.target.com/p/2024-pok-scarlet-violet-s8-5-elite-trainer-box/-/A-93954435",
@@ -72,8 +95,8 @@ export async function GET() {
     "https://www.target.com/p/pok-233-mon-trading-card-game-scarlet-38-violet-151-collection-zapdos-ex/-/A-88897898"
   ];
 
-  let driver;
-  let workingProxy = null;
+  let driver: WebDriver | null = null;
+  let workingProxy: string | null = null;
 
   try {
     for (const proxy of proxies) {
@@ -86,13 +109,16 @@ export async function GET() {
     if (!workingProxy) throw new Error('No working proxies found');
 
     const chromedriverPath = process.env.WEBDRIVER_CHROME_DRIVER;
+    if (!chromedriverPath) {
+      throw new Error('WEBDRIVER_CHROME_DRIVER environment variable is not set');
+    }
     console.log('Using chromedriver at:', chromedriverPath);
 
     try {
       await fs.access(chromedriverPath, fs.constants.X_OK);
       console.log('Chromedriver binary is accessible and executable');
     } catch (err) {
-      throw new Error(`Chromedriver at ${chromedriverPath} not accessible: ${err.message}`);
+      throw new Error(`Chromedriver at ${chromedriverPath} not accessible: ${(err as Error).message}`);
     }
 
     const service = new ServiceBuilder(chromedriverPath);
@@ -104,7 +130,7 @@ export async function GET() {
       '--headless=new',
       '--disable-gpu',
       '--window-size=1920,1080',
-      '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--disable-blink-features=AutomationControlled',
       '--disable-infobars',
       '--disable-extensions',
@@ -122,7 +148,7 @@ export async function GET() {
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
       Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-      Object.defineProperty(navigator, 'platform', { get: () => 'Linux x86_64' });
+      Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
       Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 4 });
       Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
       window.chrome = { runtime: {} };
@@ -142,36 +168,41 @@ export async function GET() {
     `);
 
     const { username, password } = parseProxy(workingProxy);
-    await driver.executeScript(`
-      window.proxyAuth = { username: '${username}', password: '${password}' };
-      setTimeout(() => {
-        window.scrollTo(0, Math.random() * 500);
-      }, 2000);
-    `);
+    try {
+      await driver.executeScript(`
+        window.proxyAuth = { username: '${username}', password: '${password}' };
+        setTimeout(() => {
+          window.scrollTo(0, Math.random() * 500);
+        }, 2000);
+      `);
+    } catch (error) {
+      console.error('Error setting proxy authentication:', (error as Error).message);
+      throw new Error('Failed to configure proxy authentication');
+    }
 
-    const scrapeProduct = async (productUrl, index) => {
+    const scrapeProduct = async (productUrl: string, index: number): Promise<ProductData> => {
       if (productCache[productUrl]) {
         console.log('Serving from cache...', productUrl);
         return productCache[productUrl];
       }
 
       try {
-        await scrapeWithRetry(driver, productUrl);
+        await scrapeWithRetry(driver!, productUrl);
         await wait(10000);
 
-        await driver.actions()
+        await driver!.actions()
           .move({ x: Math.floor(Math.random() * 1000), y: Math.floor(Math.random() * 600) })
           .perform();
-        await driver.executeScript('window.scrollBy(0, Math.random() * 500);');
+        await driver!.executeScript('window.scrollBy(0, Math.random() * 500);');
 
-        const screenshot = await driver.takeScreenshot();
+        const screenshot = await driver!.takeScreenshot();
         await fs.writeFile(`screenshot-${index}.png`, screenshot, 'base64');
         console.log(`Screenshot saved for ${productUrl} at ${process.cwd()}/screenshot-${index}.png`);
 
-        const pageTitle = await driver.getTitle();
+        const pageTitle = await driver!.getTitle();
         console.log(`Page title for ${productUrl}: ${pageTitle}`);
 
-        const debugElements = await driver.executeScript(`
+        const debugElements = await driver!.executeScript(`
           const priceEls = Array.from(document.querySelectorAll('[data-test="product-price"], [data-test="current-price"], .price, [class*="price"]'))
             .map(el => ({ selector: el.getAttribute('data-test') || el.className || el.tagName, text: el.innerText.trim() }));
           const stockEls = Array.from(document.querySelectorAll('[data-test="shipping-text"], .stock, [class*="stock"], [class*="availability"]'))
@@ -180,7 +211,7 @@ export async function GET() {
         `);
         console.log(`Debug elements for ${productUrl}:`, JSON.stringify(debugElements, null, 2));
 
-        const productData = await driver.executeScript(`
+        const productData: ProductData = await driver!.executeScript(`
           const title = document.querySelector('h1[data-test="product-title"]')?.innerText.trim() ||
                         document.querySelector('h1')?.innerText.trim() || 'Title not found';
           const image = document.querySelector('img[alt="product image"]')?.getAttribute('src') ||
@@ -214,7 +245,7 @@ export async function GET() {
             const apiUrl = `https://redsky.target.com/redsky_aggregations/v1/web/pdp_client_v1?key=9f36aeafbe60771e321a7cc95a78140772ab3e96&tcin=${tcin}&pricing_store_id=1865&is_bot=false&zip=07047&state=NJ`;
             const response = await fetch(apiUrl, {
               headers: {
-                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'application/json',
                 'Referer': 'https://www.target.com/',
               },
@@ -226,28 +257,35 @@ export async function GET() {
             }
             if (data?.data?.product?.fulfillment?.store_options?.[0]?.availability_status) {
               productData.stockStatus = data.data.product.fulfillment.store_options[0].availability_status === 'IN_STOCK' ? 'In stock' : 'Out of stock';
+              productData.isAvailable = productData.stockStatus === 'In stock';
             }
           }
         }
 
         const retailer = getRetailerName(productUrl);
-        const productWithUrl = { ...productData, url: productUrl, retailer };
+        const productWithUrl: ProductData = { ...productData, url: productUrl, retailer };
         productCache[productUrl] = productWithUrl;
         return productWithUrl;
       } catch (scrapeError) {
-        console.error(`Final error scraping ${productUrl}:`, scrapeError.message);
-        const html = await driver.getPageSource();
+        console.error(`Final error scraping ${productUrl}:`, (scrapeError as Error).message);
+        const html = await driver!.getPageSource();
         await fs.writeFile(`error-${index}.html`, html);
         return {
           message: `Error scraping product: ${productUrl}`,
-          error: scrapeError.message,
+          error: (scrapeError as Error).message,
           url: productUrl,
           retailer: getRetailerName(productUrl),
+          title: 'Error',
+          image: 'Error',
+          price: 'Error',
+          stockStatus: 'Error',
+          isAvailable: false,
+          notifyMessage: 'Error'
         };
       }
     };
 
-    const allProductData = [];
+    const allProductData: ProductData[] = [];
     for (let i = 0; i < productUrls.length; i++) {
       allProductData.push(await scrapeProduct(productUrls[i], i));
       await wait(2000);
@@ -259,8 +297,8 @@ export async function GET() {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Critical error in scraping process:', error.message);
-    return new Response(JSON.stringify({ error: 'Server error', details: error.message }), {
+    console.error('Critical error in scraping process:', (error as Error).message);
+    return new Response(JSON.stringify({ error: 'Server error', details: (error as Error).message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

@@ -25,6 +25,8 @@ model User {
   googleScopes       String?
   auditTrail         Json?
   activities         ActivityLog[]
+  accounts           Account[]
+  sessions           Session[]
 }
 
 model ActivityLog {
@@ -34,7 +36,7 @@ model ActivityLog {
   timestamp DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId], map: "ActivityLog_userId_fkey")
+  @@index([userId]) // Removed map: "ActivityLog_userId_fkey"
 }
 
 model Waitlist {
@@ -45,4 +47,69 @@ model Waitlist {
   status    String   @default("PENDING")
   source    String   @default("WEBSITE")
   metadata  Json?
+}
+
+model PriceHistory {
+  id        Int      @id @default(autoincrement())
+  productId Int?
+  price     Float
+  retailer  String
+  timestamp DateTime @default(now())
+  product   Product? @relation(fields: [productId], references: [id])
+
+  @@index([productId], map: "PriceHistory_productId_fkey")
+}
+
+model Product {
+  id            Int            @id @default(autoincrement())
+  name          String
+  description   String?
+  price         Float
+  createdAt     DateTime       @default(now())
+  priceHistory  PriceHistory[]
+}
+
+model ResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId]) // Removed map: "Account_userId_fkey"
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId]) // Removed map: "Session_userId_fkey"
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

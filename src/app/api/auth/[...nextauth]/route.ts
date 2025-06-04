@@ -1,12 +1,14 @@
-import NextAuth, { AuthOptions } from 'next-auth';
+import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import DiscordProvider from 'next-auth/providers/discord';
+import DiscordProvider, { DiscordProfile } from 'next-auth/providers/discord';
 import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { getDbConnection } from '../../../lib/db';
 import { sendEmail } from '../../../lib/email';
+import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
+import { Session } from 'next-auth';
+import { JWT } from 'next-auth/jwt';
 
-// Define interface for user data from the database
 interface User {
   id: number;
   name: string;
@@ -38,13 +40,22 @@ export const authOptions: AuthOptions = {
 
         const pool = await getDbConnection();
         try {
-          const [rows]: [User[], unknown] = await pool.execute(
+          const [rows]: [RowDataPacket[], unknown] = await pool.execute(
             'SELECT id, name, email, password, role, subscriptionStatus, is_verified FROM users WHERE email = ?',
             [email]
           );
           if (rows.length === 0) return null;
 
-          const user = rows[0];
+          const user: User = {
+            id: rows[0].id,
+            name: rows[0].name,
+            email: rows[0].email,
+            password: rows[0].password,
+            role: rows[0].role,
+            subscriptionStatus: rows[0].subscriptionStatus,
+            is_verified: !!rows[0].is_verified,
+          };
+
           if (!user.is_verified) throw new Error('Please verify your email first.');
 
           const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -96,16 +107,17 @@ export const authOptions: AuthOptions = {
         const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
         if (account?.provider === 'discord') {
-          const [rows]: [User[], unknown] = await pool.execute(
-            'SELECT id, name, email, role, subscriptionStatus, discord_access_token, is_verified FROM users WHERE email = ?',
+          const discordProfile = profile as DiscordProfile;
+          const [rows]: [RowDataPacket[], unknown] = await pool.execute(
+            'SELECT id, name, email, password, role, subscriptionStatus, discord_access_token, is_verified, verification_code FROM users WHERE email = ?',
             [user.email]
           );
           if (rows.length === 0) {
-            const [result] = await pool.execute(
+            const [result]: [ResultSetHeader, unknown] = await pool.execute(
               'INSERT INTO users (email, name, password, role, subscriptionStatus, discord_access_token, discord_refresh_token, last_login_at, is_verified, verification_code) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)',
               [
                 user.email,
-                profile?.username || user.name || 'Discord User',
+                discordProfile.username || user.name || 'Discord User',
                 'discord-user',
                 'user',
                 'inactive',
@@ -126,7 +138,17 @@ export const authOptions: AuthOptions = {
             `;
             await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
           } else {
-            const dbUser = rows[0];
+            const dbUser: User = {
+              id: rows[0].id,
+              name: rows[0].name,
+              email: rows[0].email,
+              password: rows[0].password,
+              role: rows[0].role,
+              subscriptionStatus: rows[0].subscriptionStatus,
+              is_verified: !!rows[0].is_verified,
+              discord_access_token: rows[0].discord_access_token,
+              verification_code: rows[0].verification_code,
+            };
             user.id = dbUser.id.toString();
             user.name = dbUser.name;
             user.role = dbUser.role;
@@ -165,12 +187,12 @@ export const authOptions: AuthOptions = {
           const grantedScopes = account.scope ? account.scope.split(' ') : [];
           console.log('Granted scopes for Google:', grantedScopes);
 
-          const [rows]: [User[], unknown] = await pool.execute(
-            'SELECT id, name, email, role, subscriptionStatus, google_access_token, is_verified FROM users WHERE email = ?',
+          const [rows]: [RowDataPacket[], unknown] = await pool.execute(
+            'SELECT id, name, email, password, role, subscriptionStatus, google_access_token, is_verified, verification_code FROM users WHERE email = ?',
             [user.email]
           );
           if (rows.length === 0) {
-            const [result] = await pool.execute(
+            const [result]: [ResultSetHeader, unknown] = await pool.execute(
               'INSERT INTO users (email, name, password, role, subscriptionStatus, google_access_token, google_refresh_token, google_scopes, last_login_at, is_verified, verification_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)',
               [
                 user.email || profile?.email,
@@ -196,7 +218,17 @@ export const authOptions: AuthOptions = {
             `;
             await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
           } else {
-            const dbUser = rows[0];
+            const dbUser: User = {
+              id: rows[0].id,
+              name: rows[0].name,
+              email: rows[0].email,
+              password: rows[0].password,
+              role: rows[0].role,
+              subscriptionStatus: rows[0].subscriptionStatus,
+              is_verified: !!rows[0].is_verified,
+              google_access_token: rows[0].google_access_token,
+              verification_code: rows[0].verification_code,
+            };
             user.id = dbUser.id.toString();
             user.name = dbUser.name || (grantedScopes.includes('profile') ? profile?.name : 'Google User');
             user.role = dbUser.role;
@@ -229,7 +261,7 @@ export const authOptions: AuthOptions = {
           if (!account.refresh_token) console.warn('No refresh_token received from Google for:', user.email);
         }
 
-        const [userRows]: [User[], unknown] = await pool.execute(
+        const [userRows]: [RowDataPacket[], unknown] = await pool.execute(
           'SELECT is_verified FROM users WHERE email = ?',
           [user.email]
         );
@@ -257,7 +289,7 @@ export const authOptions: AuthOptions = {
         if (account.provider === 'discord') {
           token.accessToken = account.access_token;
           token.refreshToken = account.refresh_token;
-          token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : null;
+          token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : undefined;
         } else if (account.provider === 'google') {
           token.accessToken = account.access_token;
           token.refreshToken = account.refresh_token;
@@ -267,7 +299,7 @@ export const authOptions: AuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (token) {
         session.user = session.user || {};
         session.user.id = token.id;
@@ -286,4 +318,6 @@ export const authOptions: AuthOptions = {
   },
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };

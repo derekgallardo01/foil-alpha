@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbConnection } from "../../../lib/db";
 import crypto from "crypto";
 import { sendEmail } from "../../../lib/email";
+import { RowDataPacket } from "mysql2/promise"; // Import RowDataPacket for correct typing
 
 // Define the User interface
-interface User {
+interface User extends RowDataPacket {
   id: number;
   email: string;
   password: string;
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const sanitizedEmail = email.trim().toLowerCase();
+    // Use User[] as the type for the first element, since RowDataPacket extends the row type
     const [users]: [User[], unknown] = await connection.execute("SELECT * FROM users WHERE email = ?", [sanitizedEmail]);
     if (users.length === 0) {
       return NextResponse.json(

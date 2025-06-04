@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import testEmail from '../../lib/test-email';
 
-// Define a custom error interface to avoid using `any`
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// Define a custom error interface
 interface CustomError extends Error {
   response?: {
     data?: unknown;
@@ -28,31 +27,42 @@ export async function GET() {
       message: 'Email sent successfully',
       data: result,
     });
-  } catch (error: CustomError) {
+  } catch (error: unknown) {
+    // Initialize customError with fallback values
+    let customError: CustomError;
+
+    if (error instanceof Error) {
+      // Extend the Error object to include CustomError properties
+      customError = error as CustomError;
+    } else {
+      // Handle non-Error cases (e.g., string, object, etc.)
+      customError = new Error('Unknown error') as CustomError;
+    }
+
     console.error('Error in test-email route:', {
-      message: error.message,
-      stack: error.stack,
-      response: error.response?.data,
+      message: customError.message,
+      stack: customError.stack,
+      response: customError.response?.data, // Safe access with optional chaining
     });
 
     console.error('Full error object:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      response: error.response,
-      code: error.code,
-      config: error.config,
+      name: customError.name,
+      message: customError.message,
+      stack: customError.stack,
+      response: customError.response, // Safe, as it's optional in CustomError
+      code: customError.code, // Safe, as it's optional in CustomError
+      config: customError.config, // Safe, as it's optional in CustomError
     });
 
-    console.error('Error string:', String(error));
+    console.error('Error string:', String(customError));
 
     return NextResponse.json(
       {
         error: 'Failed to send test email',
         details: {
-          message: error.message,
-          stack: error.stack,
-          response: error.response?.data,
+          message: customError.message,
+          stack: customError.stack,
+          response: customError.response?.data, // Safe access with optional chaining
         },
       },
       { status: 500 }

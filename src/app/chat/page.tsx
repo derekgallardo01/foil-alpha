@@ -12,14 +12,24 @@ import {
   IconButton,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import Image from "next/image"; // Import Image from next/image
+import Image from "next/image";
 import Sidebar from "../components/Sidebar";
 
+// Define the Message interface
+interface Message {
+  id: string;
+  content?: string;
+  author?: { username: string };
+  type?: number;
+  attachments?: unknown[];
+  embeds?: unknown[];
+}
+
 export default function ChatPage() {
-  const { status } = useSession(); // Destructure only status
-  const [messages, setMessages] = useState([]);
+  const { status } = useSession();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -45,7 +55,8 @@ export default function ChatPage() {
           setMessages(data);
         }
       } catch (err) {
-        setError("Failed to parse message stream: " + err.message);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError("Failed to parse message stream: " + errorMessage);
       }
     };
 
@@ -72,7 +83,8 @@ export default function ChatPage() {
       const data = await res.json();
       setMessages(data);
     } catch (err) {
-      setError(err.message);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
       setMessages([]);
     }
   };
@@ -93,13 +105,14 @@ export default function ChatPage() {
       await res.json();
       setInput("");
     } catch (err) {
-      setError(err.message);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
@@ -160,8 +173,8 @@ export default function ChatPage() {
                   let displayText = msg.content;
                   if (!displayText) {
                     if (msg.type === 7) displayText = "[User joined]";
-                    else if (msg.attachments?.length > 0) displayText = "[Attachment]";
-                    else if (msg.embeds?.length > 0) displayText = "[Embed]";
+                    else if (msg.attachments && msg.attachments.length > 0) displayText = "[Attachment]";
+                    else if (msg.embeds && msg.embeds.length > 0) displayText = "[Embed]";
                     else displayText = "[No text]";
                   }
                   return (

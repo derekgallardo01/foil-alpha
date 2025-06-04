@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection } from '../../../lib/db';
+import { ResultSetHeader } from 'mysql2/promise';
 
 // Helper function to handle errors
 const handleError = (message: string, status: number) => {
-  console.error(message);  // Log error message for debugging
+  console.error(message); // Log error message for debugging
   return NextResponse.json({ message }, { status });
 };
 
@@ -27,20 +28,26 @@ export async function DELETE(req: NextRequest) {
       return handleError('Invalid item ID', 400);
     }
 
-    // Perform the DELETE query
-    const result = await db.query("DELETE FROM watchlist WHERE id = ?", [id]);
+    // Perform the DELETE query with explicit typing
+    const [result] = await db.query<ResultSetHeader>("DELETE FROM watchlist WHERE id = ?", [id]);
 
     if (result.affectedRows === 0) {
       return handleError('Item not found', 404); // No item found with that ID
     }
 
     return NextResponse.json({ message: "Item deleted" });
-  } catch (error) {
-    console.error('Failed to delete item:', error);
+  } catch (error: unknown) {
+    // Type guard to safely access error properties
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    console.error('Failed to delete item:', err.message, err.stack);
     return handleError('Failed to delete item', 500);
+  } finally {
+    // Ensure connection is released if not using a pool
+    if ('end' in db) await db.end();
   }
 }
 
+// Update a watchlist item (PUT)
 export async function PUT(req: NextRequest) {
   const db = await getDbConnection();
 
@@ -52,9 +59,13 @@ export async function PUT(req: NextRequest) {
     const id = pathSegments[pathSegments.length - 1]; // Extract ID from the URL path
     console.log('Extracted Item ID:', id);
 
-    // Extract the `stock_status` from the request body
-    const { stock_status } = await req.json();
-    console.log('Request body for PUT:', { stock_status });
+    // Extract and validate the request body
+    const body = await req.json();
+    if (!body || typeof body !== 'object') {
+      console.warn('Invalid request body:', body);
+      return handleError('Invalid request body', 400);
+    }
+    const { stock_status } = body;
 
     // Validate the `id` and `stock_status`
     if (!id) {
@@ -72,8 +83,8 @@ export async function PUT(req: NextRequest) {
       return handleError('Valid stock_status (in_stock/no_stock) is required', 400);
     }
 
-    // Perform the update operation for stock_status (and optionally stock_quantity)
-    const result = await db.query(
+    // Perform the update operation with explicit typing
+    const [result] = await db.query<ResultSetHeader>(
       "UPDATE watchlist SET stock_status = ? WHERE id = ?",
       [stock_status, id]
     );
@@ -85,8 +96,13 @@ export async function PUT(req: NextRequest) {
     }
 
     return NextResponse.json({ message: "Stock status updated successfully" });
-  } catch (error) {
-    console.error('Error updating watchlist item:', error.message, error.stack);
+  } catch (error: unknown) {
+    // Type guard to safely access error properties
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    console.error('Error updating watchlist item:', err.message, err.stack);
     return handleError('Failed to update item', 500);
+  } finally {
+    // Ensure connection is released if not using a pool
+    if ('end' in db) await db.end();
   }
 }
