@@ -7,110 +7,99 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Maps to existing 'users' table (the one with Derek's data)
 model User {
-  id                 Int           @id @default(autoincrement())
-  email              String        @unique
-  name               String
-  password           String?
-  role               String        @default("user")
-  registeredAt       DateTime      @default(now())
-  lastLoginAt        DateTime?
-  subscriptionStatus String        @default("inactive")
-  isVerified         Boolean       @default(false)
-  verificationCode   String?
-  discordAccessToken String?
-  discordRefreshToken String?
-  googleAccessToken  String?
-  googleRefreshToken String?
-  googleScopes       String?
-  auditTrail         Json?
-  activities         ActivityLog[]
-  accounts           Account[]
-  sessions           Session[]
+  id                     Int       @id @default(autoincrement())
+  email                  String    @unique
+  name                   String
+  password               String
+  role                   String    @default("user")
+  subscriptionStatus     String    @default("inactive") @map("subscriptionStatus")
+  last_login_at          DateTime? @map("last_login_at")
+  discord_access_token   String?   @map("discord_access_token")
+  discord_refresh_token  String?   @map("discord_refresh_token")
+  google_access_token    String?   @map("google_access_token")
+  google_refresh_token   String?   @map("google_refresh_token")
+  google_scopes          String?   @map("google_scopes")
+  registeredAt           DateTime  @default(now()) @map("registeredAt")
+  is_verified            Boolean   @default(false) @map("is_verified")
+  verification_code      String?   @map("verification_code")
+
+  // Relations
+  activities             ActivityLog[]
+  watchlist              Watchlist[]
+
+  @@map("users")  // Maps to the 'users' table with data
 }
 
+// Maps to existing 'products' table
+model Product {
+  product_id   Int      @id @default(autoincrement()) @map("product_id")
+  retailer     String
+  title        String
+  url          String
+  image        String?
+  screenshot   String?
+  stock_status String   @map("stock_status")
+  release_date DateTime? @map("release_date")
+
+  // Relations
+  priceHistory PriceHistory[]
+
+  @@map("products")  // Maps to the 'products' table
+}
+
+// Maps to existing 'pricehistory' table
+model PriceHistory {
+  id          Int      @id @default(autoincrement())
+  product_id  Int      @map("product_id")
+  retailer    String
+  price       Decimal  @db.Decimal(10, 2)
+  recorded_at DateTime @default(now()) @map("recorded_at")
+
+  // Relations
+  product     Product  @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
+
+  @@map("pricehistory")  // Maps to the 'pricehistory' table
+}
+
+// Maps to existing 'watchlist' table
+model Watchlist {
+  id              Int      @id @default(autoincrement())
+  retailer_name   String   @map("retailer_name")
+  product_url     String?  @map("product_url")
+  product_title   String   @map("product_title")
+  price           Decimal  @db.Decimal(10, 2)
+  stock_quantity  Int?     @map("stock_quantity")
+  stock_status    String?  @map("stock_status")
+  user_id         Int      @map("user_id")
+
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("watchlist")  // Maps to the 'watchlist' table
+}
+
+// Maps to existing 'waitlist' table
+model Waitlist {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  name       String
+  created_at DateTime @default(now()) @map("created_at")
+  status     String   @default("PENDING")
+  source     String   @default("WEBSITE")
+  metadata   Json?
+
+  @@map("waitlist")  // Maps to the 'waitlist' table
+}
+
+// Maps to existing 'activitylog' table
 model ActivityLog {
   id        Int      @id @default(autoincrement())
-  userId    Int
+  userId    Int      @map("userId")
   action    String
   timestamp DateTime @default(now())
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId]) // Removed map: "ActivityLog_userId_fkey"
-}
-
-model Waitlist {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String
-  created_at DateTime @default(now()) @map("created_at")
-  status    String   @default("PENDING")
-  source    String   @default("WEBSITE")
-  metadata  Json?
-  @@map("waitlist")
-}
-
-model PriceHistory {
-  id        Int      @id @default(autoincrement())
-  productId Int?
-  price     Float
-  retailer  String
-  timestamp DateTime @default(now())
-  product   Product? @relation(fields: [productId], references: [id])
-
-  @@index([productId], map: "PriceHistory_productId_fkey")
-}
-
-model Product {
-  id            Int            @id @default(autoincrement())
-  name          String
-  description   String?
-  price         Float
-  createdAt     DateTime       @default(now())
-  priceHistory  PriceHistory[]
-}
-
-model ResetToken {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique
-  userId    Int
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            Int
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId]) // Removed map: "Account_userId_fkey"
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       Int
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId]) // Removed map: "Session_userId_fkey"
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  @@map("activitylog")  // Maps to the 'activitylog' table
 }
