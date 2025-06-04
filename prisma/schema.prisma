@@ -47,6 +47,7 @@ model Waitlist {
   status    String   @default("PENDING")
   source    String   @default("WEBSITE")
   metadata  Json?
+  @@map("waitlist")
 }
 
 model PriceHistory {
