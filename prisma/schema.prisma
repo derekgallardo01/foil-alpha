@@ -7,16 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Maps to existing 'users' table (the one with Derek's data)
+// Maps to existing 'users' table
 model User {
   id                     Int       @id @default(autoincrement())
   email                  String    @unique
   name                   String
-<<<<<<< HEAD
   password               String?
-=======
-  password               String
->>>>>>> ce78a6a530b97344642c29afa3bdb3534ba7311c
   role                   String    @default("user")
   subscriptionStatus     String    @default("inactive") @map("subscriptionStatus")
   last_login_at          DateTime? @map("last_login_at")
@@ -28,16 +24,16 @@ model User {
   registeredAt           DateTime  @default(now()) @map("registeredAt")
   is_verified            Boolean   @default(false) @map("is_verified")
   verification_code      String?   @map("verification_code")
-<<<<<<< HEAD
   auditTrail             Json?
   activities             ActivityLog[]
   watchlist              Watchlist[]
   accounts               Account[]
   sessions               Session[]
-  resetTokens            ResetToken[] // Added to fix relation
+  resetTokens            ResetToken[]
   @@map("users")
 }
 
+// Maps to existing 'products' table
 model Product {
   product_id   Int      @id @default(autoincrement()) @map("product_id")
   retailer     String
@@ -51,6 +47,7 @@ model Product {
   @@map("products")
 }
 
+// Maps to existing 'pricehistory' table
 model PriceHistory {
   id          Int      @id @default(autoincrement())
   product_id  Int      @map("product_id")
@@ -62,6 +59,7 @@ model PriceHistory {
   @@map("pricehistory")
 }
 
+// Maps to existing 'watchlist' table
 model Watchlist {
   id              Int      @id @default(autoincrement())
   retailer_name   String   @map("retailer_name")
@@ -76,72 +74,6 @@ model Watchlist {
   @@map("watchlist")
 }
 
-model Waitlist {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
-  name       String
-  created_at DateTime @default(now()) @map("created_at")
-  status     String   @default("PENDING")
-  source     String   @default("WEBSITE")
-  metadata   Json?
-  @@map("waitlist")
-=======
-
-  // Relations
-  activities             ActivityLog[]
-  watchlist              Watchlist[]
-
-  @@map("users")  // Maps to the 'users' table with data
->>>>>>> ce78a6a530b97344642c29afa3bdb3534ba7311c
-}
-
-// Maps to existing 'products' table
-model Product {
-  product_id   Int      @id @default(autoincrement()) @map("product_id")
-  retailer     String
-  title        String
-  url          String
-  image        String?
-  screenshot   String?
-  stock_status String   @map("stock_status")
-  release_date DateTime? @map("release_date")
-
-  // Relations
-  priceHistory PriceHistory[]
-
-  @@map("products")  // Maps to the 'products' table
-}
-
-// Maps to existing 'pricehistory' table
-model PriceHistory {
-  id          Int      @id @default(autoincrement())
-  product_id  Int      @map("product_id")
-  retailer    String
-  price       Decimal  @db.Decimal(10, 2)
-  recorded_at DateTime @default(now()) @map("recorded_at")
-
-  // Relations
-  product     Product  @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
-
-  @@map("pricehistory")  // Maps to the 'pricehistory' table
-}
-
-// Maps to existing 'watchlist' table
-model Watchlist {
-  id              Int      @id @default(autoincrement())
-  retailer_name   String   @map("retailer_name")
-  product_url     String?  @map("product_url")
-  product_title   String   @map("product_title")
-  price           Decimal  @db.Decimal(10, 2)
-  stock_quantity  Int?     @map("stock_quantity")
-  stock_status    String?  @map("stock_status")
-  user_id         Int      @map("user_id")
-
-  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@map("watchlist")  // Maps to the 'watchlist' table
-}
-
 // Maps to existing 'waitlist' table
 model Waitlist {
   id         Int      @id @default(autoincrement())
@@ -151,8 +83,7 @@ model Waitlist {
   status     String   @default("PENDING")
   source     String   @default("WEBSITE")
   metadata   Json?
-
-  @@map("waitlist")  // Maps to the 'waitlist' table
+  @@map("waitlist")
 }
 
 // Maps to existing 'activitylog' table
@@ -161,13 +92,12 @@ model ActivityLog {
   userId    Int      @map("userId")
   action    String
   timestamp DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-<<<<<<< HEAD
   @@index([userId])
   @@map("activitylog")
 }
 
+// Maps to existing 'resettoken' table
 model ResetToken {
   id        Int      @id @default(autoincrement())
   token     String   @unique
@@ -178,6 +108,7 @@ model ResetToken {
   @@index([userId])
 }
 
+// Maps to existing 'account' table
 model Account {
   id                String  @id @default(cuid())
   userId            Int
@@ -196,6 +127,7 @@ model Account {
   @@index([userId])
 }
 
+// Maps to existing 'session' table
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -205,13 +137,10 @@ model Session {
   @@index([userId])
 }
 
+// Maps to existing 'verificationtoken' table
 model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
   @@unique([identifier, token])
-=======
-
-  @@map("activitylog")  // Maps to the 'activitylog' table
->>>>>>> ce78a6a530b97344642c29afa3bdb3534ba7311c
 }
