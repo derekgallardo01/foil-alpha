@@ -88,6 +88,7 @@ model Waitlist {
   id         Int      @id @default(autoincrement())
   email      String   @unique
   name       String
+  phone_number String?
   created_at DateTime @default(now()) @map("created_at")
   status     String   @default("PENDING")
   source     String   @default("WEBSITE")

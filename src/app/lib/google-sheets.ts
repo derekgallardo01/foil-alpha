@@ -14,6 +14,7 @@ interface WaitlistEntry {
   created_at: Date;
   source: string;
   metadata: Record<string, unknown>;
+  phone_number?: string | null; // Added phone_number
 }
 
 export class GoogleSheets {
@@ -72,34 +73,34 @@ export class GoogleSheets {
   private async ensureHeaders(): Promise<void> {
     try {
       const range = this.sheetName.includes(" ")
-        ? `'${this.sheetName}'!A:G`
-        : `${this.sheetName}!A:G`;
+        ? `'${this.sheetName}'!A1:H1`
+        : `${this.sheetName}!A1:H1`; // Updated to A:H
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range,
       });
 
       const values = response.data.values || [];
-      if (values.length === 0 || values[0].length === 0) {
+      const expectedHeaders = [
+        "Name",
+        "Email",
+        "Status",
+        "Source",
+        "Created At",
+        "Metadata",
+        "ID",
+        "Phone Number", // Added Phone Number
+      ];
+      if (values.length === 0 || JSON.stringify(values[0]) !== JSON.stringify(expectedHeaders)) {
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
           range,
           valueInputOption: "RAW",
           requestBody: {
-            values: [
-              [
-                "Name",
-                "Email",
-                "Status",
-                "Source",
-                "Created At",
-                "Metadata",
-                "ID",
-              ],
-            ],
+            values: [expectedHeaders],
           },
         });
-        console.log("Added headers to Google Sheets");
+        console.log("Added/updated headers in Google Sheets to include Phone Number");
       }
     } catch (error: unknown) {
       console.error("Error ensuring headers in Google Sheets:", {
@@ -120,6 +121,7 @@ export class GoogleSheets {
       entry.created_at.toISOString(),
       JSON.stringify(entry.metadata),
       entry.id.toString(),
+      entry.phone_number || "", // Write phone_number to column H
     ];
   }
 
@@ -132,14 +134,15 @@ export class GoogleSheets {
       created_at: row[4] ? new Date(row[4]) : new Date(),
       metadata: row[5] ? JSON.parse(row[5]) : {},
       id: row[6] ? parseInt(row[6], 10) : 0,
+      phone_number: row[7] || null, // Read phone_number from column H
     };
   }
 
   async getEntries(): Promise<WaitlistEntry[]> {
     try {
       const range = this.sheetName.includes(" ")
-        ? `'${this.sheetName}'!A:G`
-        : `${this.sheetName}!A:G`;
+        ? `'${this.sheetName}'!A:H`
+        : `${this.sheetName}!A:H`; // Updated to A:H
       console.log("Fetching entries with range:", range);
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
@@ -169,8 +172,8 @@ export class GoogleSheets {
       await this.ensureHeaders();
       const row = this.entryToRow(entry);
       const range = this.sheetName.includes(" ")
-        ? `'${this.sheetName}'!A:G`
-        : `${this.sheetName}!A:G`;
+        ? `'${this.sheetName}'!A:H`
+        : `${this.sheetName}!A:H`; // Updated to A:H
       console.log("Appending entry with range:", range);
 
       await this.sheets.spreadsheets.values.append({
@@ -211,8 +214,8 @@ export class GoogleSheets {
 
       if (index >= 0) {
         const range = this.sheetName.includes(" ")
-          ? `'${this.sheetName}'!A${index + 2}:G${index + 2}`
-          : `${this.sheetName}!A${index + 2}:G${index + 2}`;
+          ? `'${this.sheetName}'!A${index + 2}:H${index + 2}`
+          : `${this.sheetName}!A${index + 2}:H${index + 2}`; // Updated to A:H
         console.log("Updating entry with range:", range);
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
@@ -246,8 +249,8 @@ export class GoogleSheets {
 
       if (index >= 0) {
         const range = this.sheetName.includes(" ")
-          ? `'${this.sheetName}'!A${index + 2}:G${index + 2}`
-          : `${this.sheetName}!A${index + 2}:G${index + 2}`;
+          ? `'${this.sheetName}'!A${index + 2}:H${index + 2}`
+          : `${this.sheetName}!A${index + 2}:H${index + 2}`; // Updated to A:H
         console.log("Deleting entry with range:", range);
         await this.sheets.spreadsheets.values.batchUpdate({
           spreadsheetId: this.spreadsheetId,
@@ -255,7 +258,7 @@ export class GoogleSheets {
             data: [
               {
                 range,
-                values: [["", "", "", "", "", "", ""]],
+                values: [["", "", "", "", "", "", "", ""]], // Updated to 8 columns
               },
             ],
           },
