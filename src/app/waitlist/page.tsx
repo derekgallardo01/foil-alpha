@@ -49,12 +49,14 @@ const slideInRight = {
 interface FormData {
   name: string;
   email: string;
+  phone_number?: string;
 }
 
 export default function WaitlistPage() {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
+    phone_number: "",
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -101,6 +103,12 @@ export default function WaitlistPage() {
     return re.test(email);
   }, []);
 
+  const validatePhoneNumber = useCallback((phone: string): boolean => {
+    if (!phone) return true; // Phone number is optional
+    const re = /^\+?[1-9]\d{1,14}$/;
+    return re.test(phone);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (loading) return;
@@ -117,9 +125,16 @@ export default function WaitlistPage() {
       setLoading(false);
       return;
     }
+    if (!validatePhoneNumber(formData.phone_number || "")) {
+      toast.error("Please enter a valid phone number in E.164 format (e.g., +12345678900)", {
+        position: "top-right",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
-      console.log('[Client] Starting waitlist submission for:', formData.email);
+      console.log("[Client] Starting waitlist submission for:", formData.email);
       const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: {
@@ -128,6 +143,7 @@ export default function WaitlistPage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          phone_number: formData.phone_number || undefined, // Send undefined if empty to match backend
           emailData: {
             subject: "Welcome to TCG Market! Your Waitlist Confirmation",
             body: `
@@ -140,11 +156,15 @@ export default function WaitlistPage() {
                 <p style="color:rgb(0, 0, 0); margin-bottom: 20px;">
                   Dear ${formData.name},<br><br>
                   Thank you for joining our waitlist! We’re thrilled to have you on board as we prepare to revolutionize Pokémon trading.<br><br>
-                  
+                  ${
+                    formData.phone_number
+                      ? `We’ve noted your phone number (${formData.phone_number}) for additional updates.<br><br>`
+                      : ""
+                  }
                   <strong>What’s Next?</strong><br>
                   1. Stay tuned for exclusive early access updates<br>
                   2. Follow us on Discord for community insights<br>
-                  3. Get ready for our launch in June 2025<br><br>
+                  3. Get ready for our launch in June 2026<br><br>
                   
                   We’ll keep you updated on our progress and notify you when your access is ready.<br><br>
                   
@@ -152,32 +172,32 @@ export default function WaitlistPage() {
                   The TCG Market Team
                 </p>
               </div>
-            `
-          }
+            `,
+          },
         }),
       });
-      
-      console.log('[Client] API response received');
+
+      console.log("[Client] API response received");
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('[Client] API request failed:', data.error || "Failed to subscribe");
+        console.error("[Client] API request failed:", data.error || "Failed to subscribe");
         throw new Error(data.error || "Failed to subscribe");
       }
 
       setSuccess(true);
-      setFormData({ name: "", email: "" });
+      setFormData({ name: "", email: "", phone_number: "" });
       toast.success("Successfully joined the waitlist!", { position: "top-right" });
-      console.log('[Client] Waitlist submission successful for:', formData.email);
+      console.log("[Client] Waitlist submission successful for:", formData.email);
       setTimeout(() => {
         setSuccess(false);
       }, 5000);
     } catch (error: unknown) {
-      console.error('[Client] Error submitting form:', error);
+      console.error("[Client] Error submitting form:", error);
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
       toast.error(errorMessage, { position: "top-right" });
     } finally {
-      console.log('[Client] Waitlist submission process completed');
+      console.log("[Client] Waitlist submission process completed");
       setLoading(false);
     }
   };
@@ -361,6 +381,36 @@ export default function WaitlistPage() {
                             },
                           }}
                           inputProps={{ "aria-label": "Email Address" }}
+                        />
+                      </motion.div>
+                      <motion.div variants={bounceVariants}>
+                        <TextField
+                          label="Phone Number (Optional)"
+                          type="tel"
+                          fullWidth
+                          margin="normal"
+                          value={formData.phone_number || ""}
+                          onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: "grey.400" } }}
+                          sx={{
+                            input: { color: "text.primary" },
+                            "& .MuiOutlinedInput-root": {
+                              "& fieldset": {
+                                borderColor: "rgba(255, 255, 255, 0.2)",
+                              },
+                              "&:hover fieldset": {
+                                borderColor: "rgba(255, 255, 255, 0.4)",
+                                boxShadow: "0 0 8px rgba(150, 255, 155, 0.3)",
+                              },
+                              "&.Mui-focused fieldset": {
+                                borderColor: "blue.500",
+                                boxShadow: "0 0 12px rgba(150, 255, 155, 0.5)",
+                              },
+                            },
+                          }}
+                          inputProps={{ "aria-label": "Phone Number" }}
+                          helperText="e.g., +12345678900"
                         />
                       </motion.div>
                       <motion.div variants={bounceVariants}>

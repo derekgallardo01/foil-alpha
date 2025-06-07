@@ -3,13 +3,17 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { sendEmail } from "../../lib/email";
 import mailchimp from "@mailchimp/mailchimp_marketing";
 import { GoogleSheets } from "../../lib/google-sheets";
+import twilio from "twilio";
 
 const prisma = new PrismaClient();
 
 mailchimp.setConfig({
-  apiKey: process.env.MAILCHIMP_API_KEY,
-  server: process.env.MAILCHIMP_API_KEY?.split("-")[1] || "",
+  apiKey: process.env.MAILCHIMP_API_KEY!,
+  server: process.env.MAILCHIMP_API_KEY!.split("-")[1],
 });
+
+// Initialize Twilio client
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const googleSheets = new GoogleSheets();
 
@@ -21,6 +25,7 @@ interface EmailData {
 interface RequestBody {
   name: string;
   email: string;
+  phone_number?: string;
   emailData?: EmailData;
 }
 
@@ -31,6 +36,57 @@ interface ErrorWithResponse extends Error {
 
 function isErrorWithResponse(error: unknown): error is ErrorWithResponse {
   return typeof error === "object" && error !== null && "message" in error;
+}
+
+// Define types for Prisma operations
+type InputJsonValue = string | number | boolean | null | InputJsonValue[] | { [key: string]: InputJsonValue };
+
+interface BrowserDetails {
+  name: string;
+  version: string;
+  os: string;
+  osVersion: string;
+  device: string;
+  deviceModel: string;
+}
+
+interface Metadata {
+  updated?: boolean;
+  timezone?: string;
+  timestamp?: string;
+  ip_address?: string;
+  source?: string;
+  browser?: BrowserDetails & { [key: string]: InputJsonValue };
+  [key: string]: InputJsonValue | undefined;
+}
+
+interface WaitlistCreateData {
+  name: string;
+  email: string;
+  phone_number?: string | null;
+  status: string;
+  source: string;
+  metadata: Metadata;
+}
+
+interface WaitlistUpdateData {
+  name: string;
+  phone_number?: string | null;
+  status: string;
+  source: string;
+  metadata: Metadata;
+}
+
+// WaitlistEntry type for GoogleSheets
+interface WaitlistEntry {
+  id: number;
+  email: string;
+  name: string;
+  phone_number?: string | null;
+  status: string;
+  source: string;
+  created_at: Date;
+  metadata: Metadata;
 }
 
 export async function POST(request: Request) {
@@ -44,6 +100,9 @@ export async function POST(request: Request) {
       "MAILCHIMP_LIST_ID",
       "GOOGLE_SERVICE_ACCOUNT_EMAIL",
       "DATABASE_URL",
+      "TWILIO_ACCOUNT_SID",
+      "TWILIO_AUTH_TOKEN",
+      "TWILIO_PHONE_NUMBER",
     ];
     const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
     if (missingEnvVars.length > 0) {
@@ -52,7 +111,7 @@ export async function POST(request: Request) {
     }
 
     const body: RequestBody = await request.json();
-    const { name, email, emailData } = body;
+    const { name, email, phone_number, emailData } = body;
     signupEmail = email;
 
     console.log(`[${timestamp}] Signup attempt: email=${signupEmail}, name=${name}`);
@@ -61,6 +120,15 @@ export async function POST(request: Request) {
     if (!name || !signupEmail) {
       console.log(`[${timestamp}] Validation failed: Missing name or email`);
       return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
+    }
+
+    // Validate phone number format if provided
+    if (phone_number && !/^\+?[1-9]\d{1,14}$/.test(phone_number)) {
+      console.log(`[${timestamp}] Validation failed: Invalid phone number format`);
+      return NextResponse.json(
+        { error: "Invalid phone number format. Please use E.164 format (e.g., +12345678900)" },
+        { status: 400 }
+      );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -88,8 +156,8 @@ export async function POST(request: Request) {
       timeZoneName: "short",
     });
 
-    // Placeholder browser details (replace with actual detection if needed)
-    const browserDetails = {
+    // Placeholder browser details
+    const browserDetails: BrowserDetails = {
       name: "Unknown Browser",
       version: "Unknown Version",
       os: "Unknown OS",
@@ -108,6 +176,7 @@ export async function POST(request: Request) {
           where: { email: signupEmail },
           data: {
             name,
+            phone_number: phone_number || existingWaitlist.phone_number,
             status: "SUBSCRIBED",
             source: "WEBSITE",
             metadata: {
@@ -119,15 +188,16 @@ export async function POST(request: Request) {
               timestamp: signupTime,
               ip_address: ip,
             },
-          },
+          } as WaitlistUpdateData,
         });
 
         try {
           console.log(`[${timestamp}] Updating Google Sheets entry for email=${signupEmail}`);
           await googleSheets.updateEntry({
-            id: existingWaitlist.id,
+            id: Number(existingWaitlist.id),
             email: signupEmail,
             name,
+            phone_number: phone_number || existingWaitlist.phone_number,
             status: "SUBSCRIBED",
             source: "WEBSITE",
             created_at: existingWaitlist.created_at,
@@ -140,7 +210,7 @@ export async function POST(request: Request) {
               timestamp: signupTime,
               ip_address: ip,
             },
-          });
+          } as WaitlistEntry);
           console.log(`[${timestamp}] Successfully updated Google Sheets for email=${signupEmail}`);
         } catch (sheetsError) {
           console.error(`[${timestamp}] Failed to update Google Sheets:`, {
@@ -161,6 +231,48 @@ export async function POST(request: Request) {
           console.log(`[${timestamp}] No email data provided for ${signupEmail}`);
         }
 
+        // Send Twilio SMS if phone_number is provided
+        if (phone_number) {
+          try {
+            console.log(`[${timestamp}] Sending SMS to ${phone_number}`);
+            await twilioClient.messages.create({
+              body: `Hi ${name}, thanks for joining the TCG Market waitlist! Stay tuned for updates on our June 2026 launch. - TCG Market Team`,
+              from: process.env.TWILIO_PHONE_NUMBER!,
+              to: phone_number,
+            });
+            console.log(`[${timestamp}] SMS sent successfully to ${phone_number}`);
+          } catch (twilioError) {
+            console.error(`[${timestamp}] Failed to send SMS:`, {
+              message: isErrorWithResponse(twilioError) ? twilioError.message : String(twilioError),
+              stack: isErrorWithResponse(twilioError) ? twilioError.stack : undefined,
+              code: isErrorWithResponse(twilioError) ? twilioError.code : undefined,
+            });
+          }
+        }
+
+        // Update Mailchimp contact if phone_number is provided
+        if (phone_number) {
+          try {
+            console.log(`[${timestamp}] Updating Mailchimp contact for email=${signupEmail}`);
+            await mailchimp.lists.updateListMember(
+              process.env.MAILCHIMP_LIST_ID!,
+              signupEmail.toLowerCase(), // Mailchimp uses lowercase email as member ID
+              {
+                merge_fields: {
+                  PHONE: phone_number,
+                },
+              },
+            );
+            console.log(`[${timestamp}] Successfully updated Mailchimp contact for email=${signupEmail}`);
+          } catch (mailchimpError) {
+            console.error(`[${timestamp}] Failed to update Mailchimp contact:`, {
+              message: isErrorWithResponse(mailchimpError) ? mailchimpError.message : String(mailchimpError),
+              stack: isErrorWithResponse(mailchimpError) ? mailchimpError.stack : undefined,
+              response: isErrorWithResponse(mailchimpError) ? mailchimpError.response?.data : undefined,
+            });
+          }
+        }
+
         console.log(`[${timestamp}] Signup completed successfully: id=${existingWaitlist.id}`);
       } else {
         console.log(`[${timestamp}] Creating new waitlist entry for email=${signupEmail}`);
@@ -168,6 +280,7 @@ export async function POST(request: Request) {
           data: {
             name,
             email: signupEmail,
+            phone_number: phone_number || null,
             status: "SUBSCRIBED",
             source: "WEBSITE",
             metadata: {
@@ -177,7 +290,7 @@ export async function POST(request: Request) {
               timestamp,
               ip_address: ip,
             },
-          },
+          } as WaitlistCreateData,
         });
 
         if (emailData) {
@@ -190,6 +303,25 @@ export async function POST(request: Request) {
           }
         } else {
           console.log(`[${timestamp}] No email data provided for ${signupEmail}`);
+        }
+
+        // Send Twilio SMS if phone_number is provided
+        if (phone_number) {
+          try {
+            console.log(`[${timestamp}] Sending SMS to ${phone_number}`);
+            await twilioClient.messages.create({
+              body: `Hi ${name}, thanks for joining the TCG Market waitlist! Stay tuned for updates on our June 2026 launch. - TCG Market Team`,
+              from: process.env.TWILIO_PHONE_NUMBER!,
+              to: phone_number,
+            });
+            console.log(`[${timestamp}] SMS sent successfully to ${phone_number}`);
+          } catch (twilioError) {
+            console.error(`[${timestamp}] Failed to send SMS:`, {
+              message: isErrorWithResponse(twilioError) ? twilioError.message : String(twilioError),
+              stack: isErrorWithResponse(twilioError) ? twilioError.stack : undefined,
+              code: isErrorWithResponse(twilioError) ? twilioError.code : undefined,
+            });
+          }
         }
 
         let mailchimpStatus = "Failed";
@@ -205,6 +337,7 @@ export async function POST(request: Request) {
               DEVICE: `${browserDetails.device} ${browserDetails.deviceModel}`,
               BROWSER: `${browserDetails.name} ${browserDetails.version}`,
               OS: `${browserDetails.os} ${browserDetails.osVersion}`,
+              PHONE: phone_number || "", // Add phone_number to merge_fields
             },
           });
           mailchimpStatus = "Success";
@@ -222,6 +355,7 @@ export async function POST(request: Request) {
             <h2>New Waitlist Signup</h2>
             <p><strong>Name:</strong> ${name}</p>
             <p><strong>Email:</strong> ${signupEmail}</p>
+            <p><strong>Phone Number:</strong> ${phone_number || "None"}</p>
             <p><strong>Source:</strong> Landing Page</p>
             <p><strong>Signup Time:</strong> ${signupTime}</p>
             <p><strong>Timezone:</strong> ${timezone}</p>
@@ -246,16 +380,17 @@ export async function POST(request: Request) {
 
         try {
           await googleSheets.addEntry({
-            id: waitlistEntry.id,
+            id: Number(waitlistEntry.id),
             email: signupEmail,
             name,
+            phone_number: phone_number || null,
             status: "SUBSCRIBED",
             created_at: waitlistEntry.created_at || new Date(),
             source: "WEBSITE",
-            metadata: typeof waitlistEntry.metadata === "object" && waitlistEntry.metadata !== null
-              ? waitlistEntry.metadata as Record<string, unknown>
-              : {},
-          });
+            metadata: (typeof waitlistEntry.metadata === "object" && waitlistEntry.metadata !== null
+              ? waitlistEntry.metadata
+              : {}) as Metadata,
+          } as WaitlistEntry);
           console.log(`[${timestamp}] Successfully added to Google Sheets`);
         } catch (sheetsError) {
           console.error(`[${timestamp}] Failed to sync with Google Sheets:`, {
