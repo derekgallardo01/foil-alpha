@@ -20,7 +20,7 @@ export function middleware(request: NextRequest) {
     if (pathname === '/' || pathname === '/waitlist') return NextResponse.next();
     
     // Redirect all other routes to the waitlist page
-    return NextResponse.redirect(new URL('/waitlist', request.url));
+   // return NextResponse.redirect(new URL('/waitlist', request.url));
   }
 
   // In development, allow all routes
