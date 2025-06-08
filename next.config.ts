@@ -4,6 +4,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "target.scene7.com",
+        pathname: "/**", // Allows all paths under this hostname
+      },
+      {
+        protocol: "https",
         hostname: "i.ibb.co",
         pathname: "/**", // Allows all paths under this hostname
       },
