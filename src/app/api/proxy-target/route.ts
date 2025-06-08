@@ -1,3 +1,4 @@
+
 // File: app/api/proxy-target/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
@@ -82,8 +83,11 @@ export async function GET(req: Request) {
     const now = new Date();
 
     try {
+      // Debug: Log available Prisma models
+      console.log('Prisma models:', Object.keys(prisma));
+
       // Ensure product exists
-      await prisma.products.upsert({
+      await prisma.product.upsert({
         where: { tcin },
         update: {
           title: 'Pokémon Trading Card Game: Scarlet & Violet—Prismatic Evolutions Super-Premium Collection',
@@ -102,11 +106,11 @@ export async function GET(req: Request) {
       });
 
       // Save stock check to pricehistory
-      await prisma.pricehistory.create({
+      await prisma.priceHistory.create({
         data: {
           product_id: productId,
           retailer: 'Target',
-          price: 89.99, // Placeholder; fetch actual price if available
+          price: 89.99, // Placeholder; update if Target API provides price
           recorded_at: now,
           stock_status: fulfillment.store_options?.[0]?.order_pickup?.availability_status || 'UNKNOWN',
           store_quantity: fulfillment.store_options?.[0]?.location_available_to_promise_quantity || 0,
@@ -121,8 +125,10 @@ export async function GET(req: Request) {
     } catch (dbError) {
       console.error('Database: Failed to save stock data', {
         error: dbError instanceof Error ? dbError.message : 'Unknown error',
+        stack: dbError instanceof Error ? dbError.stack : undefined,
         timestamp: new Date().toISOString(),
       });
+      // Continue with response even if DB save fails
     }
 
     return NextResponse.json(data);
