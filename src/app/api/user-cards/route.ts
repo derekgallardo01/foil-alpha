@@ -5,7 +5,10 @@ import { prisma } from '../../lib/prisma';
 
 // GET /api/user-cards - Get user's card collection
 export async function GET(request: NextRequest) {
+    console.log('🔍 User-cards API called');
     try {
+
+        // const user = { id: 1, email: 'admin@test.com', name: 'Admin User' }; //temp
         const session = await getServerSession();
 
         if (!session?.user?.email) {

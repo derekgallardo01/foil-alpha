@@ -11,6 +11,8 @@ import {
   IconButton,
   Box,
 } from "@mui/material";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import CollectionsIcon from "@mui/icons-material/Collections";
 import HomeIcon from "@mui/icons-material/Home";
 import TaskIcon from "@mui/icons-material/Assignment";
 import LogoutIcon from "@mui/icons-material/ExitToApp";
@@ -70,6 +72,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               <HomeIcon />
             </ListItemIcon>
             <ListItemText primary="Dashboard" />
+          </ListItem>
+
+          <ListItem component="div" onClick={() => handleNavigation("/marketplace")}>
+            <ListItemIcon>
+              <StorefrontIcon /> 
+            </ListItemIcon>
+            <ListItemText primary="Marketplace" />
+          </ListItem>
+
+          <ListItem component="div" onClick={() => handleNavigation("/collection")}>
+            <ListItemIcon>
+              <CollectionsIcon /> 
+            </ListItemIcon>
+            <ListItemText primary="My Collection" />
           </ListItem>
 
           <ListItem component="div" onClick={() => handleNavigation("/tasks")}>
