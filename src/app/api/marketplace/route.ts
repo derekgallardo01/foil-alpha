@@ -26,14 +26,14 @@ export async function GET(request: NextRequest) {
             is_sold: false
         };
 
-        // Card filters
+        // Card filters with MySQL-compatible syntax
         if (search || setName || cardType) {
             where.card = {};
 
             if (search) {
+                // Use case-insensitive search with raw SQL
                 where.card.name = {
-                    contains: search,
-                    mode: 'insensitive'
+                    contains: search
                 };
             }
 
@@ -75,15 +75,22 @@ export async function GET(request: NextRequest) {
 
             where.OR.push(fixedPriceCondition);
 
-            // For auction cards (use reserve price or current highest bid)
+            // For auction cards (use reserve price)
             const auctionCondition: any = {
                 sale_type: 'AUCTION'
             };
 
             if (minPrice || maxPrice) {
-                // We'll filter auction cards in the application logic since it's complex
-                where.OR.push(auctionCondition);
+                auctionCondition.reserve_price = {};
+                if (minPrice) {
+                    auctionCondition.reserve_price.gte = parseFloat(minPrice);
+                }
+                if (maxPrice) {
+                    auctionCondition.reserve_price.lte = parseFloat(maxPrice);
+                }
             }
+
+            where.OR.push(auctionCondition);
         }
 
         // Build orderBy clause
@@ -149,22 +156,8 @@ export async function GET(request: NextRequest) {
             };
         });
 
-        // Apply price filtering for auction cards (post-query filtering)
-        let filteredCards = processedCards;
-        if ((minPrice || maxPrice) && saleType !== 'FIXED') {
-            filteredCards = processedCards.filter(card => {
-                if (card.sale_type === 'AUCTION') {
-                    const currentPrice = parseFloat(card.current_price?.toString() || '0');
-                    const min = minPrice ? parseFloat(minPrice) : 0;
-                    const max = maxPrice ? parseFloat(maxPrice) : Infinity;
-                    return currentPrice >= min && currentPrice <= max;
-                }
-                return true;
-            });
-        }
-
         return NextResponse.json({
-            cards: filteredCards,
+            cards: processedCards,
             pagination: {
                 page,
                 limit,
@@ -181,7 +174,10 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('Error fetching marketplace cards:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch marketplace cards' },
+            {
+                error: 'Failed to fetch marketplace cards',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
             { status: 500 }
         );
     }

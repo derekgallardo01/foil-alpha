@@ -24,7 +24,7 @@ model User {
   registeredAt           DateTime  @default(now()) @map("registeredAt")
   is_verified            Boolean   @default(false) @map("is_verified")
   verification_code      String?   @map("verification_code")
-  auditTrail             Json?
+  
   
   // Existing relations
   activities             ActivityLog[]
