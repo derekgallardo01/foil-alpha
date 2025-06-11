@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import BiddingModal from '../components/BiddingModal';
+import PurchaseModal from '../components/PurchaseModal';
 import {
     Container,
     Typography,
@@ -60,6 +62,7 @@ interface UserCard {
     bid_count: number;
     time_left_ms: number | null;
     is_auction_active: boolean;
+    notes: string | null;  // Added this missing property
     bids: Array<{
         id: number;
         amount: number;
@@ -94,6 +97,10 @@ export default function MarketplacePage() {
     const [selectedSet, setSelectedSet] = useState('');
     const [selectedType, setSelectedType] = useState('');
     const [selectedSaleType, setSelectedSaleType] = useState('');
+    const [biddingModalOpen, setBiddingModalOpen] = useState(false);
+    const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+    const [selectedCardForBidding, setSelectedCardForBidding] = useState<UserCard | null>(null);
+    const [selectedCardForPurchase, setSelectedCardForPurchase] = useState<UserCard | null>(null);
     const [availableFilters, setAvailableFilters] = useState<{
         available_sets: string[];
         available_types: string[];
@@ -159,6 +166,34 @@ export default function MarketplacePage() {
         if (days > 0) return `${days}d ${hours}h`;
         if (hours > 0) return `${hours}h ${minutes}m`;
         return `${minutes}m`;
+    };
+
+    const openBiddingModal = (userCard: UserCard) => {
+        setSelectedCardForBidding(userCard);
+        setBiddingModalOpen(true);
+    };
+
+    const closeBiddingModal = () => {
+        setBiddingModalOpen(false);
+        setSelectedCardForBidding(null);
+    };
+
+    const openPurchaseModal = (userCard: UserCard) => {
+        setSelectedCardForPurchase(userCard);
+        setPurchaseModalOpen(true);
+    };
+
+    const closePurchaseModal = () => {
+        setPurchaseModalOpen(false);
+        setSelectedCardForPurchase(null);
+    };
+
+    const handleBidPlaced = () => {
+        fetchCards();
+    };
+
+    const handlePurchaseComplete = () => {
+        fetchCards();
     };
 
     const getRarityColor = (rarity: string) => {
@@ -382,7 +417,11 @@ export default function MarketplacePage() {
                                                         <Typography variant="h6" color="primary.main">
                                                             {formatPrice(userCard.fixed_price)}
                                                         </Typography>
-                                                        <Button variant="contained" size="small">
+                                                        <Button
+                                                            variant="contained"
+                                                            size="small"
+                                                            onClick={() => openPurchaseModal(userCard)}
+                                                        >
                                                             Buy Now
                                                         </Button>
                                                     </Box>
@@ -424,6 +463,7 @@ export default function MarketplacePage() {
                                                                 color="secondary"
                                                                 size="small"
                                                                 disabled={!userCard.is_auction_active}
+                                                                onClick={() => openBiddingModal(userCard)}
                                                             >
                                                                 Place Bid
                                                             </Button>
@@ -439,6 +479,22 @@ export default function MarketplacePage() {
                     )}
                 </>
             )}
+
+            {/* Bidding Modal */}
+            <BiddingModal
+                open={biddingModalOpen}
+                onClose={closeBiddingModal}
+                userCard={selectedCardForBidding}
+                onBidPlaced={handleBidPlaced}
+            />
+
+            {/* Purchase Modal */}
+            <PurchaseModal
+                open={purchaseModalOpen}
+                onClose={closePurchaseModal}
+                userCard={selectedCardForPurchase}
+                onPurchaseComplete={handlePurchaseComplete}
+            />
         </Container>
     );
 }
