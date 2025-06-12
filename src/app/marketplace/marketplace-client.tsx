@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import Image from 'next/image';
 import Sidebar from '../components/Sidebar';
+import AuctionNotifications from '../components/AuctionNotifications';
 
 interface Card {
     id: number;
@@ -237,6 +238,8 @@ export default function MarketplacePage() {
                     height={60}
                     priority
                 />
+                {/* Add the notification component */}
+                <AuctionNotifications userId={1} />
             </Box>
 
             {/* Page Title */}
