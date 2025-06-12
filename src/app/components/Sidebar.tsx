@@ -19,6 +19,8 @@ import LogoutIcon from "@mui/icons-material/ExitToApp";
 import MenuIcon from "@mui/icons-material/Menu";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChatIcon from "@mui/icons-material/Chat";
+import StyleIcon from "@mui/icons-material/Style";
+import BusinessIcon from "@mui/icons-material/Business";
 
 // Define prop types
 interface SidebarProps {
@@ -67,6 +69,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
         {/* Sidebar Links */}
         <List>
+
+          <ListItem component="div" onClick={() => handleNavigation("/admin/listings")}>
+            <ListItemIcon>
+              <BusinessIcon />
+            </ListItemIcon>
+            <ListItemText primary="Marketplace Listings" />
+          </ListItem>
+
+          <ListItem component="div" onClick={() => handleNavigation("/admin/cards")}>
+            <ListItemIcon>
+              <StyleIcon />
+            </ListItemIcon>
+            <ListItemText primary="Manage Cards" />
+          </ListItem>
+
           <ListItem component="div" onClick={() => handleNavigation("/dashboard")}>
             <ListItemIcon>
               <HomeIcon />
