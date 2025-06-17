@@ -128,10 +128,10 @@ export async function POST(req: Request) {
         email,
         password: hashedPassword,
         name,
-        is_verified: devVerificationStatus.is_verified, // Auto-verify in dev mode
+        is_verified: 1, // Auto-verify in dev mode
         verification_code: verificationCode,
         role: "user", // Default role from schema
-        subscriptionStatus: "inactive" // Default subscription status
+        subscriptionStatus: "active" // Default subscription status
       }
     });
 

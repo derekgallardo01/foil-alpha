@@ -224,231 +224,164 @@
 //         return [];
 //     }
 // }
-
-// src/app/api/marketplace/route.ts
+// src/app/api/marketplace/route.ts - Ultra simplified version
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { prisma } from '../../lib/prisma';
 
-// GET /api/marketplace - Get cards available for purchase
+// GET /api/marketplace - Get cards for sale
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const search = searchParams.get('search') || '';
-        const set = searchParams.get('set') || '';
-        const type = searchParams.get('type') || '';
-        const saleType = searchParams.get('saleType') || '';
-        const condition = searchParams.get('condition') || '';
-        const minPrice = searchParams.get('minPrice');
-        const maxPrice = searchParams.get('maxPrice');
-        const sortBy = searchParams.get('sortBy') || 'created_at';
-        const sortOrder = searchParams.get('sortOrder') || 'desc';
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '20');
+        const search = searchParams.get('search') || '';
+        const saleType = searchParams.get('sale_type') || '';
+        const condition = searchParams.get('condition') || '';
 
         const skip = (page - 1) * limit;
 
-        // Build where clause for filtering
+        // Build basic where clause
         const where: any = {
             is_for_sale: true,
             is_sold: false,
-            OR: [
-                // Fixed price cards
-                {
-                    sale_type: 'FIXED',
-                    fixed_price: { gt: 0 }
-                },
-                // Active auctions
-                {
-                    sale_type: 'AUCTION',
-                    auction_end: { gt: new Date() },
-                    reserve_price: { gt: 0 }
-                }
-            ]
         };
 
-        // Search filter
-        if (search) {
-            where.card = {
-                name: { contains: search, mode: 'insensitive' }
-            };
-        }
-
-        // Set filter
-        if (set) {
-            where.card = {
-                ...where.card,
-                set_name: set
-            };
-        }
-
-        // Type filter
-        if (type) {
-            where.card = {
-                ...where.card,
-                card_type: type
-            };
-        }
-
-        // Sale type filter
         if (saleType) {
             where.sale_type = saleType;
-            // Adjust OR condition based on sale type
-            if (saleType === 'FIXED') {
-                where.OR = [{ sale_type: 'FIXED', fixed_price: { gt: 0 } }];
-            } else if (saleType === 'AUCTION') {
-                where.OR = [{
-                    sale_type: 'AUCTION',
-                    auction_end: { gt: new Date() },
-                    reserve_price: { gt: 0 }
-                }];
-            }
         }
 
-        // Condition filter
         if (condition) {
             where.condition = condition;
         }
 
-        // Price filters
-        if (minPrice || maxPrice) {
-            const priceFilter: any = {};
-            if (minPrice) priceFilter.gte = parseFloat(minPrice);
-            if (maxPrice) priceFilter.lte = parseFloat(maxPrice);
-
-            // Apply to both fixed_price and reserve_price
-            where.OR = where.OR.map((condition: any) => ({
-                ...condition,
-                ...(condition.sale_type === 'FIXED' ? { fixed_price: priceFilter } : { reserve_price: priceFilter })
-            }));
+        // Active auctions only
+        if (saleType === 'AUCTION') {
+            where.auction_end = {
+                gt: new Date()
+            };
         }
 
-        // Build orderBy clause
-        let orderBy: any = {};
-        switch (sortBy) {
-            case 'price_low_high':
-                orderBy = [
-                    { fixed_price: 'asc' },
-                    { reserve_price: 'asc' }
-                ];
-                break;
-            case 'price_high_low':
-                orderBy = [
-                    { fixed_price: 'desc' },
-                    { reserve_price: 'desc' }
-                ];
-                break;
-            case 'ending_soon':
-                orderBy = { auction_end: 'asc' };
-                break;
-            case 'newest':
-                orderBy = { created_at: 'desc' };
-                break;
-            case 'card_name':
-                orderBy = { card: { name: sortOrder as 'asc' | 'desc' } };
-                break;
-            default:
-                orderBy = { created_at: 'desc' };
-        }
-
-        // Get cards and total count
+        // Get user cards that are for sale (no includes)
         const [userCards, totalCount] = await Promise.all([
             prisma.userCard.findMany({
                 where,
                 skip,
                 take: limit,
-                orderBy,
-                include: {
-                    card: true,
-                    owner: {
-                        select: { id: true, name: true }
-                    },
-                    bids: {
-                        where: { is_active: true },
-                        orderBy: { amount: 'desc' },
-                        include: {
-                            bidder: {
-                                select: { id: true, name: true }
-                            }
-                        }
-                    }
+                orderBy: {
+                    created_at: 'desc'
                 }
             }),
             prisma.userCard.count({ where })
         ]);
 
-        // Calculate current prices and time left for auctions
-        const cardsWithCalculatedData = userCards.map(userCard => {
-            const currentTime = new Date().getTime();
-            const auctionEndTime = userCard.auction_end ? new Date(userCard.auction_end).getTime() : null;
-            const timeLeftMs = auctionEndTime ? Math.max(0, auctionEndTime - currentTime) : null;
-            const isAuctionActive = timeLeftMs ? timeLeftMs > 0 : false;
+        // Build listings array step by step
+        const listings = [];
 
-            // Get highest bid
-            const currentHighestBid = userCard.bids.length > 0
-                ? Math.max(...userCard.bids.map(bid => Number(bid.amount)))
-                : null;
+        for (const userCard of userCards) {
+            try {
+                // Get card details
+                const card = await prisma.card.findUnique({
+                    where: { id: userCard.card_id }
+                });
 
-            // Calculate current price based on sale type
-            let currentPrice = 0;
-            if (userCard.sale_type === 'FIXED') {
-                currentPrice = Number(userCard.fixed_price) || 0;
-            } else if (userCard.sale_type === 'AUCTION') {
-                currentPrice = currentHighestBid || Number(userCard.reserve_price) || 0;
+                if (!card) continue;
+
+                // Apply search filter
+                if (search && !card.name.toLowerCase().includes(search.toLowerCase())) {
+                    continue;
+                }
+
+                // Get owner details
+                const owner = await prisma.user.findUnique({
+                    where: { id: userCard.owner_id }
+                });
+
+                if (!owner) continue;
+
+                // Get bid count for auctions (simple count, no includes)
+                const bidCount = userCard.sale_type === 'AUCTION' ?
+                    await prisma.bid.count({
+                        where: {
+                            user_card_id: userCard.id,
+                            is_active: true
+                        }
+                    }) : 0;
+
+                // Get highest bid amount for auctions
+                let highestBid = null;
+                if (userCard.sale_type === 'AUCTION') {
+                    const topBid = await prisma.bid.findFirst({
+                        where: {
+                            user_card_id: userCard.id,
+                            is_active: true
+                        },
+                        orderBy: { amount: 'desc' }
+                    });
+                    highestBid = topBid ? Number(topBid.amount) : null;
+                }
+
+                // Calculate current price
+                const current_price = userCard.sale_type === 'FIXED'
+                    ? Number(userCard.fixed_price || 0)
+                    : (highestBid || Number(userCard.reserve_price || 0));
+
+                // Calculate time remaining for auctions
+                const time_remaining = userCard.sale_type === 'AUCTION' && userCard.auction_end
+                    ? Math.max(0, new Date(userCard.auction_end).getTime() - Date.now())
+                    : null;
+
+                // Build listing object
+                const listing = {
+                    id: userCard.id,
+                    card: {
+                        id: card.id,
+                        name: card.name,
+                        set_name: card.set_name,
+                        set_number: card.set_number,
+                        rarity: card.rarity,
+                        card_type: card.card_type,
+                        image_url: card.image_url,
+                        small_image_url: card.small_image_url
+                    },
+                    owner: {
+                        id: owner.id,
+                        name: owner.name
+                    },
+                    condition: userCard.condition,
+                    sale_type: userCard.sale_type,
+                    fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
+                    reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
+                    auction_end: userCard.auction_end,
+                    current_price,
+                    highest_bid: highestBid,
+                    bid_count: bidCount,
+                    time_remaining,
+                    notes: userCard.notes
+                };
+
+                listings.push(listing);
+
+            } catch (error) {
+                console.error('Error processing listing:', error);
+                // Continue with next listing if one fails
+                continue;
             }
-
-            return {
-                ...userCard,
-                current_price: currentPrice,
-                current_highest_bid: currentHighestBid,
-                bid_count: userCard.bids.length,
-                time_left_ms: timeLeftMs,
-                is_auction_active: isAuctionActive
-            };
-        });
-
-        // Get filter options for frontend
-        const [availableSets, availableTypes, availableConditions] = await Promise.all([
-            prisma.card.findMany({
-                distinct: ['set_name'],
-                select: { set_name: true },
-                orderBy: { set_name: 'asc' }
-            }),
-            prisma.card.findMany({
-                distinct: ['card_type'],
-                select: { card_type: true },
-                orderBy: { card_type: 'asc' }
-            }),
-            prisma.userCard.findMany({
-                where: { is_for_sale: true, is_sold: false },
-                distinct: ['condition'],
-                select: { condition: true },
-                orderBy: { condition: 'asc' }
-            })
-        ]);
+        }
 
         return NextResponse.json({
-            cards: cardsWithCalculatedData,
+            listings,
             pagination: {
                 page,
                 limit,
                 total: totalCount,
                 totalPages: Math.ceil(totalCount / limit)
-            },
-            filters: {
-                available_sets: availableSets.map(s => s.set_name),
-                available_types: availableTypes.map(t => t.card_type),
-                available_conditions: availableConditions.map(c => c.condition)
             }
         });
 
     } catch (error) {
-        console.error('Error fetching marketplace cards:', error);
+        console.error('Error fetching marketplace:', error);
         return NextResponse.json(
-            {
-                error: 'Failed to fetch marketplace cards',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            },
+            { error: 'Failed to fetch marketplace listings' },
             { status: 500 }
         );
     }

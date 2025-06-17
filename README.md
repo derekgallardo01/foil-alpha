@@ -769,6 +769,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 
 
+
+```
+
 ```
 tcg-market
 ├─ .eslintrc.json
@@ -777,6 +780,8 @@ tcg-market
 │  ├─ mysql-backup-2025-06-01_21-01-00.sql
 │  ├─ mysql-backup-simple.ps1
 │  └─ waitlist-backup-2025-06-02T00-58-56-965Z.json
+├─ check-data.js
+├─ check-login.js
 ├─ debug-test.js
 ├─ eslint.config.mjs
 ├─ next.config.ts
@@ -795,6 +800,7 @@ tcg-market
 │  └─ window.svg
 ├─ pvtkey.json
 ├─ README.md
+├─ reset-test-user.js
 ├─ scrape_target.py
 ├─ scripts
 │  ├─ callback-server.js
@@ -809,6 +815,7 @@ tcg-market
 │  ├─ test-oauth-flow.js
 │  ├─ test-waitlist-signup.js
 │  └─ update-waitlist-status.js
+├─ seed-dev-user.js
 ├─ src
 │  ├─ app
 │  │  ├─ activation-success
@@ -826,7 +833,9 @@ tcg-market
 │  │  │  │  ├─ admin-users-client.tsx
 │  │  │  │  ├─ page.tsx
 │  │  │  │  └─ types.ts
-│  │  │  └─ waitlist-signups
+│  │  │  ├─ waitlist-signups
+│  │  │  │  └─ page.tsx
+│  │  │  └─ wallet-test
 │  │  │     └─ page.tsx
 │  │  ├─ api
 │  │  │  ├─ admin
@@ -871,8 +880,12 @@ tcg-market
 │  │  │  ├─ fetchProduct
 │  │  │  │  └─ route.ts
 │  │  │  ├─ marketplace
+│  │  │  │  ├─ purchase
+│  │  │  │  │  └─ route.ts
 │  │  │  │  └─ route.ts
 │  │  │  ├─ price-history
+│  │  │  │  └─ route.ts
+│  │  │  ├─ process-auctions
 │  │  │  │  └─ route.ts
 │  │  │  ├─ products
 │  │  │  │  └─ route.ts
@@ -889,6 +902,14 @@ tcg-market
 │  │  │  │  └─ route.ts
 │  │  │  ├─ transactions
 │  │  │  │  └─ route.ts
+│  │  │  ├─ user
+│  │  │  │  ├─ collection
+│  │  │  │  │  ├─ route.ts
+│  │  │  │  │  └─ [id]
+│  │  │  │  │     └─ sell
+│  │  │  │  │        └─ route.ts
+│  │  │  │  └─ wallet
+│  │  │  │     └─ route.ts
 │  │  │  ├─ user-cards
 │  │  │  │  ├─ route.ts
 │  │  │  │  └─ [id]
@@ -910,8 +931,11 @@ tcg-market
 │  │  │  ├─ collection-client.tsx
 │  │  │  └─ page.tsx
 │  │  ├─ components
+│  │  │  ├─ AuctionNotifications.tsx
 │  │  │  ├─ BiddingModal.tsx
 │  │  │  ├─ CountdownTimer.tsx
+│  │  │  ├─ DevLogin.tsx
+│  │  │  ├─ DevUserSwitcher.tsx
 │  │  │  ├─ DynamicBackground.tsx
 │  │  │  ├─ icons
 │  │  │  │  └─ DiscordIcon.tsx
@@ -921,6 +945,7 @@ tcg-market
 │  │  │  ├─ Settings.tsx
 │  │  │  ├─ Sidebar.tsx
 │  │  │  ├─ TaskManagement.tsx
+│  │  │  ├─ TransactionTracker.tsx
 │  │  │  ├─ VisitorCount.tsx
 │  │  │  └─ Watchlist.tsx
 │  │  ├─ dashboard
@@ -931,9 +956,12 @@ tcg-market
 │  │  ├─ globals.css
 │  │  ├─ layout.tsx
 │  │  ├─ lib
+│  │  │  ├─ api-client.ts
 │  │  │  ├─ constant-contact.ts
 │  │  │  ├─ db.ts
+│  │  │  ├─ dev-auth.ts
 │  │  │  ├─ dev-bypass.ts
+│  │  │  ├─ dev-user.ts
 │  │  │  ├─ email-backup.ts
 │  │  │  ├─ email.ts
 │  │  │  ├─ email.ts.backup
@@ -977,8 +1005,11 @@ tcg-market
 │  └─ middleware.ts
 ├─ t
 ├─ tailwind.config.ts
+├─ test-api.js
 ├─ test-connection.js
 ├─ test-gmail.js
+├─ test-prisma.js
+├─ test-wallet.js
 ├─ token.json
 ├─ tsconfig.json
 ├─ types

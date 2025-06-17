@@ -1,9 +1,8 @@
+// src/app/marketplace/marketplace-client.tsx - Fixed version
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import BiddingModal from '../components/BiddingModal';
-import PurchaseModal from '../components/PurchaseModal';
 import {
     Container,
     Typography,
@@ -36,7 +35,6 @@ import {
 } from '@mui/icons-material';
 import Image from 'next/image';
 import Sidebar from '../components/Sidebar';
-import AuctionNotifications from '../components/AuctionNotifications';
 
 interface Card {
     id: number;
@@ -59,36 +57,24 @@ interface UserCard {
     reserve_price: number | null;
     auction_end: string | null;
     current_price: number;
-    current_highest_bid: number | null;
+    highest_bid: number | null;
     bid_count: number;
-    time_left_ms: number | null;
-    is_auction_active: boolean;
-    notes: string | null;  // Added this missing property
-    bids: Array<{
-        id: number;
-        amount: number;
-        bidder: { id: number; name: string };
-        created_at: string;
-    }>;
+    time_remaining: number | null;
+    notes: string | null;
 }
 
 interface MarketplaceResponse {
-    cards: UserCard[];
+    listings: UserCard[];
     pagination: {
         page: number;
         limit: number;
         total: number;
         totalPages: number;
     };
-    filters: {
-        available_sets: string[];
-        available_types: string[];
-        available_conditions: string[];
-    };
 }
 
 export default function MarketplacePage() {
-    const { status } = useSession();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
     const [cards, setCards] = useState<UserCard[]>([]);
@@ -98,31 +84,26 @@ export default function MarketplacePage() {
     const [selectedSet, setSelectedSet] = useState('');
     const [selectedType, setSelectedType] = useState('');
     const [selectedSaleType, setSelectedSaleType] = useState('');
-    const [biddingModalOpen, setBiddingModalOpen] = useState(false);
-    const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
-    const [selectedCardForBidding, setSelectedCardForBidding] = useState<UserCard | null>(null);
     const [selectedCardForPurchase, setSelectedCardForPurchase] = useState<UserCard | null>(null);
-    const [availableFilters, setAvailableFilters] = useState<{
-        available_sets: string[];
-        available_types: string[];
-        available_conditions: string[];
-    }>({
-        available_sets: [],
-        available_types: [],
-        available_conditions: []
-    });
+    const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+    const [purchasing, setPurchasing] = useState(false);
+
+    // Extract unique sets and types from cards for filters
+    const availableSets = Array.from(new Set(cards.map(card => card.card.set_name))).sort();
+    const availableTypes = Array.from(new Set(cards.map(card => card.card.card_type))).sort();
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     const fetchCards = async () => {
         try {
             setLoading(true);
+            setError(null);
             const params = new URLSearchParams();
 
             if (searchTerm) params.append('search', searchTerm);
             if (selectedSet) params.append('set', selectedSet);
             if (selectedType) params.append('type', selectedType);
-            if (selectedSaleType) params.append('saleType', selectedSaleType);
+            if (selectedSaleType) params.append('sale_type', selectedSaleType);
 
             const response = await fetch(`/api/marketplace?${params.toString()}`);
 
@@ -131,9 +112,10 @@ export default function MarketplacePage() {
             }
 
             const data: MarketplaceResponse = await response.json();
-            setCards(data.cards);
-            setAvailableFilters(data.filters);
+            console.log('Marketplace data:', data); // Debug log
+            setCards(data.listings || []);
         } catch (err) {
+            console.error('Marketplace fetch error:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setLoading(false);
@@ -142,7 +124,7 @@ export default function MarketplacePage() {
 
     useEffect(() => {
         if (status === 'unauthenticated') {
-            router.push('/auth/signin');
+            router.push('/login');
         }
     }, [status, router]);
 
@@ -169,32 +151,43 @@ export default function MarketplacePage() {
         return `${minutes}m`;
     };
 
-    const openBiddingModal = (userCard: UserCard) => {
-        setSelectedCardForBidding(userCard);
-        setBiddingModalOpen(true);
-    };
+    const handlePurchase = async (userCard: UserCard) => {
+        if (!session?.user?.id) {
+            alert('Please login to purchase cards');
+            return;
+        }
 
-    const closeBiddingModal = () => {
-        setBiddingModalOpen(false);
-        setSelectedCardForBidding(null);
-    };
+        if (userCard.owner.id === parseInt(session.user.id)) {
+            alert('You cannot buy your own card');
+            return;
+        }
 
-    const openPurchaseModal = (userCard: UserCard) => {
-        setSelectedCardForPurchase(userCard);
-        setPurchaseModalOpen(true);
-    };
+        setPurchasing(true);
+        try {
+            const response = await fetch('/api/marketplace/purchase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_card_id: userCard.id
+                })
+            });
 
-    const closePurchaseModal = () => {
-        setPurchaseModalOpen(false);
-        setSelectedCardForPurchase(null);
-    };
+            const data = await response.json();
 
-    const handleBidPlaced = () => {
-        fetchCards();
-    };
-
-    const handlePurchaseComplete = () => {
-        fetchCards();
+            if (response.ok) {
+                alert(`Successfully purchased ${data.card_name} for $${data.purchase_price}!`);
+                fetchCards(); // Refresh the marketplace
+            } else {
+                alert(data.error || 'Failed to purchase card');
+            }
+        } catch (error) {
+            console.error('Purchase error:', error);
+            alert('Failed to purchase card');
+        } finally {
+            setPurchasing(false);
+        }
     };
 
     const getRarityColor = (rarity: string) => {
@@ -238,8 +231,11 @@ export default function MarketplacePage() {
                     height={60}
                     priority
                 />
-                {/* Add the notification component */}
-                <AuctionNotifications userId={1} />
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ mr: 2 }}>
+                        Welcome, {session?.user?.name}
+                    </Typography>
+                </Box>
             </Box>
 
             {/* Page Title */}
@@ -285,7 +281,7 @@ export default function MarketplacePage() {
                                 onChange={(e) => setSelectedSet(e.target.value as string)}
                             >
                                 <MenuItem value="">All Sets</MenuItem>
-                                {availableFilters.available_sets.map(set => (
+                                {availableSets.map(set => (
                                     <MenuItem key={set} value={set}>{set}</MenuItem>
                                 ))}
                             </Select>
@@ -301,7 +297,7 @@ export default function MarketplacePage() {
                                 onChange={(e) => setSelectedType(e.target.value as string)}
                             >
                                 <MenuItem value="">All Types</MenuItem>
-                                {availableFilters.available_types.map(type => (
+                                {availableTypes.map(type => (
                                     <MenuItem key={type} value={type}>{type}</MenuItem>
                                 ))}
                             </Select>
@@ -345,6 +341,9 @@ export default function MarketplacePage() {
                             <Typography variant="h6" color="text.secondary">
                                 No cards found matching your criteria
                             </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                Try adjusting your search or filters
+                            </Typography>
                         </Paper>
                     ) : (
                         <Grid container spacing={3}>
@@ -356,7 +355,7 @@ export default function MarketplacePage() {
                                             <CardMedia
                                                 component="img"
                                                 height="200"
-                                                image={userCard.card.image_url || userCard.card.small_image_url || '/placeholder-card.png'}
+                                                image={userCard.card.small_image_url || userCard.card.image_url || '/placeholder-card.png'}
                                                 alt={userCard.card.name}
                                                 sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
                                                 onError={(e) => {
@@ -423,9 +422,10 @@ export default function MarketplacePage() {
                                                         <Button
                                                             variant="contained"
                                                             size="small"
-                                                            onClick={() => openPurchaseModal(userCard)}
+                                                            onClick={() => handlePurchase(userCard)}
+                                                            disabled={purchasing || userCard.owner.id === parseInt(session?.user?.id || '0')}
                                                         >
-                                                            Buy Now
+                                                            {purchasing ? <CircularProgress size={20} /> : 'Buy Now'}
                                                         </Button>
                                                     </Box>
                                                 ) : (
@@ -435,11 +435,11 @@ export default function MarketplacePage() {
                                                                 Current Bid:
                                                             </Typography>
                                                             <Typography variant="subtitle1" color="primary.main">
-                                                                {formatPrice(userCard.current_highest_bid || userCard.reserve_price)}
+                                                                {formatPrice(userCard.highest_bid || userCard.reserve_price)}
                                                             </Typography>
                                                         </Box>
 
-                                                        {userCard.time_left_ms && userCard.time_left_ms > 0 ? (
+                                                        {userCard.time_remaining && userCard.time_remaining > 0 ? (
                                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                                                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                                     <ClockIcon sx={{ fontSize: 16, mr: 0.5 }} />
@@ -448,7 +448,7 @@ export default function MarketplacePage() {
                                                                     </Typography>
                                                                 </Box>
                                                                 <Typography variant="body2" color="error.main">
-                                                                    {formatTimeLeft(userCard.time_left_ms)}
+                                                                    {formatTimeLeft(userCard.time_remaining)}
                                                                 </Typography>
                                                             </Box>
                                                         ) : (
@@ -465,8 +465,7 @@ export default function MarketplacePage() {
                                                                 variant="contained"
                                                                 color="secondary"
                                                                 size="small"
-                                                                disabled={!userCard.is_auction_active}
-                                                                onClick={() => openBiddingModal(userCard)}
+                                                                disabled={!userCard.time_remaining || userCard.time_remaining <= 0}
                                                             >
                                                                 Place Bid
                                                             </Button>
@@ -482,22 +481,6 @@ export default function MarketplacePage() {
                     )}
                 </>
             )}
-
-            {/* Bidding Modal */}
-            <BiddingModal
-                open={biddingModalOpen}
-                onClose={closeBiddingModal}
-                userCard={selectedCardForBidding}
-                onBidPlaced={handleBidPlaced}
-            />
-
-            {/* Purchase Modal */}
-            <PurchaseModal
-                open={purchaseModalOpen}
-                onClose={closePurchaseModal}
-                userCard={selectedCardForPurchase}
-                onPurchaseComplete={handlePurchaseComplete}
-            />
         </Container>
     );
 }

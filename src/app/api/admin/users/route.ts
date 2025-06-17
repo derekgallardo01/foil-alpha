@@ -1,63 +1,185 @@
+// src/app/api/admin/users/route.ts - Simplified version that will work
 import { NextResponse } from "next/server";
-import { getDbConnection } from "../../../lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import type { OkPacket, RowDataPacket } from "mysql2/promise";
-import bcrypt from "bcryptjs"; // Import bcrypt for password hashing
-import type { Session } from "next-auth"; // Import Session type
+import { prisma } from "../../../lib/prisma";
+import bcrypt from "bcryptjs";
+import type { Session } from "next-auth";
 
-// Define the User type for the SELECT query result
-interface User extends RowDataPacket {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  registeredAt: Date;
-  lastLoginAt: Date | null;
-  subscriptionStatus: string;
+// GET /api/admin/users - List all users (simplified)
+export async function GET(req: Request) {
+  try {
+    const session = await getServerSession(authOptions) as Session | null;
+
+    console.log("Session:", session); // Debug log
+
+    if (!session || session.user.role !== "admin") {
+      console.log("Unauthorized access attempt"); // Debug log
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+    }
+
+    console.log("Fetching users from database..."); // Debug log
+
+    // Try simple query first
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        registeredAt: true,
+        last_login_at: true,
+        subscriptionStatus: true,
+      },
+      orderBy: {
+        registeredAt: 'desc'
+      }
+    });
+
+    console.log("Found users:", users.length); // Debug log
+
+    // Try to get wallet info for each user
+    const usersWithWallets = await Promise.all(
+      users.map(async (user) => {
+        try {
+          const wallet = await prisma.userWallet.findUnique({
+            where: { user_id: user.id }
+          });
+
+          return {
+            ...user,
+            balance: wallet ? Number(wallet.balance) : 0,
+            frozen_balance: wallet ? Number(wallet.frozen_balance) : 0,
+            available_balance: wallet ? Number(wallet.balance) - Number(wallet.frozen_balance) : 0,
+            cardCount: 0, // TODO: Count cards
+            purchaseCount: 0, // TODO: Count purchases
+            saleCount: 0, // TODO: Count sales
+          };
+        } catch (walletError) {
+          console.error("Error fetching wallet for user", user.id, walletError);
+          return {
+            ...user,
+            balance: 0,
+            frozen_balance: 0,
+            available_balance: 0,
+            cardCount: 0,
+            purchaseCount: 0,
+            saleCount: 0,
+          };
+        }
+      })
+    );
+
+    console.log("Returning users with wallet data"); // Debug log
+    return NextResponse.json(usersWithWallets);
+
+  } catch (error) {
+    console.error("Error in GET /api/admin/users:", error);
+    return NextResponse.json({
+      message: "Error fetching users",
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
+  }
 }
 
+// POST /api/admin/users - Create new user (simplified)
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions) as Session | null; // Type assertion
-  if (!session || session.user.role !== "admin") {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-  }
-
-  const dbConnection = await getDbConnection();
-  if (!dbConnection) {
-    return NextResponse.json({ message: "Failed to connect to the database" }, { status: 500 });
-  }
-
   try {
-    const { name, email, role, subscriptionStatus, password } = await req.json();
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+    }
+
+    const { name, email, role, subscriptionStatus, password, initialBalance = 0 } = await req.json();
 
     // Validate required fields
     if (!name || !email || !role || !subscriptionStatus || !password) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
+    // Check if email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return NextResponse.json({ message: "Email already exists" }, { status: 400 });
+    }
+
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const [insertResult]: [OkPacket, unknown] = await dbConnection.execute(
-      "INSERT INTO users (name, email, role, subscriptionStatus, password, registeredAt, is_verified) VALUES (?, ?, ?, ?, ?, NOW(), ?)",
-      [name, email, role, subscriptionStatus, hashedPassword, false] // Set is_verified to false
-    );
+    // Create user with wallet in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          role,
+          subscriptionStatus,
+          password: hashedPassword,
+          is_verified: 0
+        }
+      });
 
-    const [selectResult]: [User[], unknown] = await dbConnection.execute<User[]>(
-      "SELECT id, name, email, role, registeredAt, last_login_at AS lastLoginAt, subscriptionStatus FROM users WHERE id = ?",
-      [insertResult.insertId]
-    );
+      // Create wallet
+      const wallet = await tx.userWallet.create({
+        data: {
+          user_id: newUser.id,
+          balance: Number(initialBalance),
+          frozen_balance: 0.00
+        }
+      });
 
-    if (!selectResult[0]) {
-      return NextResponse.json({ message: "User not found after creation" }, { status: 500 });
-    }
+      // Create initial wallet transaction if there's an initial balance
+      if (initialBalance > 0) {
+        await tx.walletTransaction.create({
+          data: {
+            user_id: newUser.id,
+            transaction_type: 'INITIAL_DEPOSIT',
+            amount: Number(initialBalance),
+            balance_before: 0.00,
+            balance_after: Number(initialBalance),
+            description: `Initial deposit by admin: ${session.user.name}`,
+            reference_type: 'ADMIN_DEPOSIT',
+            admin_id: parseInt(session.user.id)
+          }
+        });
+      } else {
+        // Create setup transaction
+        await tx.walletTransaction.create({
+          data: {
+            user_id: newUser.id,
+            transaction_type: 'WALLET_SETUP',
+            amount: 0.00,
+            balance_before: 0.00,
+            balance_after: 0.00,
+            description: 'Wallet created during user registration',
+            reference_type: 'SYSTEM_SETUP'
+          }
+        });
+      }
 
-    return NextResponse.json(selectResult[0], { status: 201 });
+      return { user: newUser, wallet };
+    });
+
+    return NextResponse.json({
+      id: result.user.id,
+      name: result.user.name,
+      email: result.user.email,
+      role: result.user.role,
+      registeredAt: result.user.registeredAt,
+      lastLoginAt: result.user.last_login_at,
+      subscriptionStatus: result.user.subscriptionStatus,
+      balance: Number(result.wallet.balance),
+      frozen_balance: Number(result.wallet.frozen_balance)
+    }, { status: 201 });
+
   } catch (error) {
     console.error("Error adding user:", error);
-    return NextResponse.json({ message: `Error adding user: ${(error as Error).message}` }, { status: 500 });
-  } finally {
-    await dbConnection.end();
+    return NextResponse.json({
+      message: `Error adding user: ${(error as Error).message}`
+    }, { status: 500 });
   }
 }

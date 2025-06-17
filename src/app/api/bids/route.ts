@@ -1,476 +1,311 @@
-// // src/app/api/bids/route.ts
-// import { NextRequest, NextResponse } from 'next/server';
-// import { getServerSession } from 'next-auth';
-// import { prisma } from '../../lib/prisma';
-
-// // GET /api/bids - Get user's bids or bids on user's cards
-// export async function GET(request: NextRequest) {
-//     try {
-//         const session = await getServerSession();
-
-//         if (!session?.user?.email) {
-//             return NextResponse.json(
-//                 { error: 'Authentication required' },
-//                 { status: 401 }
-//             );
-//         }
-
-//         const user = await prisma.user.findUnique({
-//             where: { email: session.user.email }
-//         });
-
-//         if (!user) {
-//             return NextResponse.json(
-//                 { error: 'User not found' },
-//                 { status: 404 }
-//             );
-//         }
-
-//         const { searchParams } = new URL(request.url);
-//         const type = searchParams.get('type') || 'my_bids'; // 'my_bids' or 'on_my_cards'
-//         const page = parseInt(searchParams.get('page') || '1');
-//         const limit = parseInt(searchParams.get('limit') || '20');
-
-//         const skip = (page - 1) * limit;
-
-//         let bids;
-//         let totalCount;
-
-//         if (type === 'my_bids') {
-//             // Get bids placed by this user
-//             [bids, totalCount] = await Promise.all([
-//                 prisma.bid.findMany({
-//                     where: {
-//                         bidder_id: user.id,
-//                         is_active: true
-//                     },
-//                     skip,
-//                     take: limit,
-//                     orderBy: { created_at: 'desc' },
-//                     include: {
-//                         userCard: {
-//                             include: {
-//                                 card: true,
-//                                 owner: {
-//                                     select: { id: true, name: true }
-//                                 }
-//                             }
-//                         }
-//                     }
-//                 }),
-//                 prisma.bid.count({
-//                     where: {
-//                         bidder_id: user.id,
-//                         is_active: true
-//                     }
-//                 })
-//             ]);
-//         } else {
-//             // Get bids on this user's cards
-//             [bids, totalCount] = await Promise.all([
-//                 prisma.bid.findMany({
-//                     where: {
-//                         userCard: {
-//                             owner_id: user.id
-//                         },
-//                         is_active: true
-//                     },
-//                     skip,
-//                     take: limit,
-//                     orderBy: { created_at: 'desc' },
-//                     include: {
-//                         bidder: {
-//                             select: { id: true, name: true }
-//                         },
-//                         userCard: {
-//                             include: {
-//                                 card: true
-//                             }
-//                         }
-//                     }
-//                 }),
-//                 prisma.bid.count({
-//                     where: {
-//                         userCard: {
-//                             owner_id: user.id
-//                         },
-//                         is_active: true
-//                     }
-//                 })
-//             ]);
-//         }
-
-//         return NextResponse.json({
-//             bids,
-//             pagination: {
-//                 page,
-//                 limit,
-//                 total: totalCount,
-//                 totalPages: Math.ceil(totalCount / limit)
-//             }
-//         });
-
-//     } catch (error) {
-//         console.error('Error fetching bids:', error);
-//         return NextResponse.json(
-//             { error: 'Failed to fetch bids' },
-//             { status: 500 }
-//         );
-//     }
-// }
-
-// // POST /api/bids - Place a new bid
-// export async function POST(request: NextRequest) {
-//     try {
-//         const session = await getServerSession();
-
-//         if (!session?.user?.email) {
-//             return NextResponse.json(
-//                 { error: 'Authentication required' },
-//                 { status: 401 }
-//             );
-//         }
-
-//         const user = await prisma.user.findUnique({
-//             where: { email: session.user.email }
-//         });
-
-//         if (!user) {
-//             return NextResponse.json(
-//                 { error: 'User not found' },
-//                 { status: 404 }
-//             );
-//         }
-
-//         const body = await request.json();
-//         const { user_card_id, amount } = body;
-
-//         if (!user_card_id || !amount) {
-//             return NextResponse.json(
-//                 { error: 'user_card_id and amount are required' },
-//                 { status: 400 }
-//             );
-//         }
-
-//         const bidAmount = parseFloat(amount);
-//         if (bidAmount <= 0) {
-//             return NextResponse.json(
-//                 { error: 'Bid amount must be greater than 0' },
-//                 { status: 400 }
-//             );
-//         }
-
-//         // Get the card being bid on
-//         const userCard = await prisma.userCard.findUnique({
-//             where: { id: user_card_id },
-//             include: {
-//                 owner: true,
-//                 bids: {
-//                     where: { is_active: true },
-//                     orderBy: { amount: 'desc' },
-//                     take: 1
-//                 }
-//             }
-//         });
-
-//         if (!userCard) {
-//             return NextResponse.json(
-//                 { error: 'Card not found' },
-//                 { status: 404 }
-//             );
-//         }
-
-//         // Validation checks
-//         if (userCard.owner_id === user.id) {
-//             return NextResponse.json(
-//                 { error: 'Cannot bid on your own card' },
-//                 { status: 400 }
-//             );
-//         }
-
-//         if (!userCard.is_for_sale || userCard.sale_type !== 'AUCTION') {
-//             return NextResponse.json(
-//                 { error: 'Card is not available for auction' },
-//                 { status: 400 }
-//             );
-//         }
-
-//         if (userCard.is_sold) {
-//             return NextResponse.json(
-//                 { error: 'Card has already been sold' },
-//                 { status: 400 }
-//             );
-//         }
-
-//         if (userCard.auction_end && new Date() > userCard.auction_end) {
-//             return NextResponse.json(
-//                 { error: 'Auction has ended' },
-//                 { status: 400 }
-//             );
-//         }
-
-//         // Check minimum bid requirements
-//         const currentHighestBid = userCard.bids[0];
-//         const minimumBid = currentHighestBid
-//             ? parseFloat(currentHighestBid.amount.toString()) + 0.50 // Minimum increment of $0.50
-//             : (userCard.reserve_price ? parseFloat(userCard.reserve_price.toString()) : 0.01);
-
-//         if (bidAmount < minimumBid) {
-//             return NextResponse.json(
-//                 {
-//                     error: `Bid must be at least $${minimumBid.toFixed(2)}`,
-//                     minimum_bid: minimumBid
-//                 },
-//                 { status: 400 }
-//             );
-//         }
-
-//         // Check if user already has an active bid on this card
-//         const existingBid = await prisma.bid.findFirst({
-//             where: {
-//                 user_card_id,
-//                 bidder_id: user.id,
-//                 is_active: true
-//             }
-//         });
-
-//         // Create the transaction
-//         const result = await prisma.$transaction(async (tx) => {
-//             // Deactivate user's previous bid on this card if exists
-//             if (existingBid) {
-//                 await tx.bid.update({
-//                     where: { id: existingBid.id },
-//                     data: { is_active: false }
-//                 });
-//             }
-
-//             // Create new bid
-//             const newBid = await tx.bid.create({
-//                 data: {
-//                     user_card_id,
-//                     bidder_id: user.id,
-//                     amount: bidAmount
-//                 },
-//                 include: {
-//                     bidder: {
-//                         select: { id: true, name: true }
-//                     },
-//                     userCard: {
-//                         include: {
-//                             card: true,
-//                             owner: {
-//                                 select: { id: true, name: true }
-//                             }
-//                         }
-//                     }
-//                 }
-//             });
-
-//             return newBid;
-//         });
-
-//         return NextResponse.json(result, { status: 201 });
-
-//     } catch (error) {
-//         console.error('Error placing bid:', error);
-//         return NextResponse.json(
-//             { error: 'Failed to place bid' },
-//             { status: 500 }
-//         );
-//     }
-// }
-
-// src/app/api/bids/route.ts
+// src/app/api/bids/route.ts - Enhanced with wallet frozen balance
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '../../lib/prisma';
 
-// POST /api/bids - Place a bid on an auction
-export async function POST(request: NextRequest) {
+// GET /api/bids - Get bids for a card or user's bids
+export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                { error: 'Authentication required' },
-                { status: 401 }
-            );
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Get user
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email }
+        const { searchParams } = new URL(request.url);
+        const userCardId = searchParams.get('user_card_id');
+        const userId = searchParams.get('user_id');
+
+        let where: any = {};
+
+        if (userCardId) {
+            where.user_card_id = parseInt(userCardId);
+        } else if (userId) {
+            where.bidder_id = parseInt(userId);
+        } else {
+            where.bidder_id = parseInt(session.user.id);
+        }
+
+        const bids = await prisma.bid.findMany({
+            where,
+            include: {
+                userCard: {
+                    include: {
+                        card: true,
+                        owner: {
+                            select: { id: true, name: true, email: true }
+                        }
+                    }
+                },
+                bidder: {
+                    select: { id: true, name: true, email: true }
+                }
+            },
+            orderBy: { created_at: 'desc' }
         });
 
-        if (!user) {
-            return NextResponse.json(
-                { error: 'User not found' },
-                { status: 404 }
-            );
+        return NextResponse.json(bids.map(bid => ({
+            id: bid.id,
+            user_card_id: bid.user_card_id,
+            bidder: bid.bidder,
+            amount: Number(bid.amount),
+            is_active: bid.is_active,
+            created_at: bid.created_at,
+            card: {
+                id: bid.userCard.card.id,
+                name: bid.userCard.card.name,
+                set_name: bid.userCard.card.set_name,
+                image_url: bid.userCard.card.image_url
+            },
+            owner: bid.userCard.owner,
+            auction_end: bid.userCard.auction_end,
+            current_highest_bid: Number(bid.amount)
+        })));
+
+    } catch (error) {
+        console.error('Error fetching bids:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch bids' },
+            { status: 500 }
+        );
+    }
+}
+
+// POST /api/bids - Place a new bid with frozen balance
+export async function POST(request: NextRequest) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const bidderId = parseInt(session.user.id);
         const body = await request.json();
         const { user_card_id, amount } = body;
 
-        if (!user_card_id || !amount) {
-            return NextResponse.json(
-                { error: 'user_card_id and amount are required' },
-                { status: 400 }
-            );
+        if (!user_card_id || !amount || amount <= 0) {
+            return NextResponse.json({
+                error: 'user_card_id and positive amount are required'
+            }, { status: 400 });
         }
 
-        const bidAmount = parseFloat(amount);
-        if (bidAmount <= 0) {
-            return NextResponse.json(
-                { error: 'Bid amount must be positive' },
-                { status: 400 }
-            );
-        }
+        const bidAmount = Number(amount);
 
         // Get the card being bid on
         const userCard = await prisma.userCard.findUnique({
             where: { id: user_card_id },
             include: {
                 card: true,
-                owner: { select: { id: true, name: true } },
-                bids: {
-                    where: { is_active: true },
-                    orderBy: { amount: 'desc' },
-                    take: 1
+                owner: {
+                    select: { id: true, name: true }
                 }
             }
         });
 
         if (!userCard) {
-            return NextResponse.json(
-                { error: 'Card not found' },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: 'Card not found' }, { status: 404 });
         }
 
         // Validation checks
-        if (userCard.owner_id === user.id) {
-            return NextResponse.json(
-                { error: 'Cannot bid on your own card' },
-                { status: 400 }
-            );
+        if (userCard.owner_id === bidderId) {
+            return NextResponse.json({ error: 'Cannot bid on your own card' }, { status: 400 });
         }
 
         if (!userCard.is_for_sale || userCard.sale_type !== 'AUCTION') {
-            return NextResponse.json(
-                { error: 'Card is not available for auction' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Card is not available for auction' }, { status: 400 });
         }
 
         if (userCard.is_sold) {
-            return NextResponse.json(
-                { error: 'Card has already been sold' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Card has already been sold' }, { status: 400 });
         }
 
-        // Check if auction is still active
-        const currentTime = new Date();
-        if (!userCard.auction_end || userCard.auction_end <= currentTime) {
-            return NextResponse.json(
-                { error: 'Auction has ended' },
-                { status: 400 }
-            );
+        if (userCard.auction_end && new Date() > userCard.auction_end) {
+            return NextResponse.json({ error: 'Auction has ended' }, { status: 400 });
         }
 
-        // Check bid amount constraints
+        // Check if bid meets minimum requirements
         const reservePrice = Number(userCard.reserve_price) || 0;
-        const currentHighestBid = userCard.bids.length > 0 ? Number(userCard.bids[0].amount) : 0;
-        const minimumBid = Math.max(reservePrice, currentHighestBid + 0.01); // At least $0.01 higher
-
-        if (bidAmount < minimumBid) {
-            return NextResponse.json(
-                {
-                    error: `Bid must be at least $${minimumBid.toFixed(2)}`,
-                    minimum_bid: minimumBid
-                },
-                { status: 400 }
-            );
+        if (bidAmount < reservePrice) {
+            return NextResponse.json({
+                error: `Bid must be at least $${reservePrice.toFixed(2)} (reserve price)`
+            }, { status: 400 });
         }
 
-        // Check if user already has an active bid (update or create new)
-        const existingBid = await prisma.bid.findFirst({
+        // Get current highest bid
+        const currentHighestBid = await prisma.bid.findFirst({
             where: {
                 user_card_id,
-                bidder_id: user.id,
                 is_active: true
-            }
+            },
+            orderBy: { amount: 'desc' }
         });
 
-        let bid;
-        if (existingBid) {
-            // Update existing bid
-            bid = await prisma.bid.update({
-                where: { id: existingBid.id },
-                data: {
-                    amount: bidAmount,
-                    created_at: new Date() // Update timestamp
-                },
-                include: {
-                    bidder: { select: { id: true, name: true } },
-                    userCard: {
-                        include: {
-                            card: true,
-                            owner: { select: { id: true, name: true } }
+        if (currentHighestBid && bidAmount <= Number(currentHighestBid.amount)) {
+            return NextResponse.json({
+                error: `Bid must be higher than current highest bid of $${Number(currentHighestBid.amount).toFixed(2)}`
+            }, { status: 400 });
+        }
+
+        // Get bidder's wallet
+        const bidderWallet = await prisma.userWallet.findUnique({
+            where: { user_id: bidderId }
+        });
+
+        if (!bidderWallet) {
+            return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+        }
+
+        const availableBalance = Number(bidderWallet.balance) - Number(bidderWallet.frozen_balance);
+        if (availableBalance < bidAmount) {
+            return NextResponse.json({
+                error: `Insufficient available balance. Available: $${availableBalance.toFixed(2)}, Required: $${bidAmount.toFixed(2)}`
+            }, { status: 400 });
+        }
+
+        // Execute the bidding transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. If there's a previous highest bid from this user, unfreeze that amount first
+            const previousBidFromUser = await tx.bid.findFirst({
+                where: {
+                    user_card_id,
+                    bidder_id: bidderId,
+                    is_active: true
+                }
+            });
+
+            let amountToFreeze = bidAmount;
+
+            if (previousBidFromUser) {
+                // Unfreeze previous bid amount
+                const previousAmount = Number(previousBidFromUser.amount);
+                await tx.userWallet.update({
+                    where: { user_id: bidderId },
+                    data: {
+                        frozen_balance: {
+                            decrement: previousAmount
                         }
+                    }
+                });
+
+                // Calculate net amount to freeze (difference)
+                amountToFreeze = bidAmount - previousAmount;
+
+                // Deactivate previous bid
+                await tx.bid.update({
+                    where: { id: previousBidFromUser.id },
+                    data: { is_active: false }
+                });
+
+                // Record unfreeze transaction
+                await tx.walletTransaction.create({
+                    data: {
+                        user_id: bidderId,
+                        transaction_type: 'UNFREEZE_FUNDS',
+                        amount: previousAmount,
+                        balance_before: Number(bidderWallet.balance),
+                        balance_after: Number(bidderWallet.balance),
+                        description: `Unfreeze previous bid for ${userCard.card.name}`,
+                        reference_id: previousBidFromUser.id,
+                        reference_type: 'BID_REPLACED'
+                    }
+                });
+            }
+
+            // 2. If there's a previous highest bid from another user, unfreeze their amount
+            if (currentHighestBid && currentHighestBid.bidder_id !== bidderId) {
+                const previousBidderWallet = await tx.userWallet.findUnique({
+                    where: { user_id: currentHighestBid.bidder_id }
+                });
+
+                if (previousBidderWallet) {
+                    const previousAmount = Number(currentHighestBid.amount);
+
+                    await tx.userWallet.update({
+                        where: { user_id: currentHighestBid.bidder_id },
+                        data: {
+                            frozen_balance: {
+                                decrement: previousAmount
+                            }
+                        }
+                    });
+
+                    // Deactivate previous highest bid
+                    await tx.bid.update({
+                        where: { id: currentHighestBid.id },
+                        data: { is_active: false }
+                    });
+
+                    // Record unfreeze transaction for previous bidder
+                    await tx.walletTransaction.create({
+                        data: {
+                            user_id: currentHighestBid.bidder_id,
+                            transaction_type: 'UNFREEZE_FUNDS',
+                            amount: previousAmount,
+                            balance_before: Number(previousBidderWallet.balance),
+                            balance_after: Number(previousBidderWallet.balance),
+                            description: `Bid outbid on ${userCard.card.name}`,
+                            reference_id: currentHighestBid.id,
+                            reference_type: 'BID_OUTBID'
+                        }
+                    });
+                }
+            }
+
+            // 3. Freeze the new bid amount
+            const updatedWallet = await tx.userWallet.update({
+                where: { user_id: bidderId },
+                data: {
+                    frozen_balance: {
+                        increment: bidAmount
                     }
                 }
             });
-        } else {
-            // Create new bid
-            bid = await prisma.bid.create({
+
+            // 4. Create the new bid
+            const newBid = await tx.bid.create({
                 data: {
                     user_card_id,
-                    bidder_id: user.id,
-                    amount: bidAmount
-                },
-                include: {
-                    bidder: { select: { id: true, name: true } },
-                    userCard: {
-                        include: {
-                            card: true,
-                            owner: { select: { id: true, name: true } }
-                        }
-                    }
+                    bidder_id: bidderId,
+                    amount: bidAmount,
+                    is_active: true
                 }
             });
-        }
 
-        // Auto-extend auction if bid placed in last 5 minutes
-        const timeUntilEnd = userCard.auction_end.getTime() - currentTime.getTime();
-        const fiveMinutesMs = 5 * 60 * 1000;
-
-        if (timeUntilEnd <= fiveMinutesMs) {
-            const newEndTime = new Date(currentTime.getTime() + fiveMinutesMs);
-            await prisma.userCard.update({
-                where: { id: user_card_id },
-                data: { auction_end: newEndTime }
+            // 5. Record freeze transaction
+            await tx.walletTransaction.create({
+                data: {
+                    user_id: bidderId,
+                    transaction_type: 'FREEZE_FUNDS',
+                    amount: bidAmount,
+                    balance_before: Number(bidderWallet.balance),
+                    balance_after: Number(bidderWallet.balance),
+                    description: `Bid placed on ${userCard.card.name}`,
+                    reference_id: newBid.id,
+                    reference_type: 'BID_PLACED'
+                }
             });
-        }
 
-        // Create history entry
-        await prisma.cardHistory.create({
-            data: {
-                user_card_id,
-                from_user_id: user.id,
-                to_user_id: userCard.owner_id,
-                transaction_type: 'BID',
-                price: bidAmount,
-                notes: `Bid placed: $${bidAmount.toFixed(2)}`
-            }
+            return {
+                bid: newBid,
+                wallet: updatedWallet
+            };
         });
 
         return NextResponse.json({
-            bid,
-            message: 'Bid placed successfully',
-            auction_extended: timeUntilEnd <= fiveMinutesMs
-        }, { status: 201 });
+            success: true,
+            bid: {
+                id: result.bid.id,
+                user_card_id,
+                amount: bidAmount,
+                card_name: userCard.card.name,
+                created_at: result.bid.created_at
+            },
+            wallet: {
+                balance: Number(result.wallet.balance),
+                frozen_balance: Number(result.wallet.frozen_balance),
+                available_balance: Number(result.wallet.balance) - Number(result.wallet.frozen_balance)
+            }
+        });
 
     } catch (error) {
         console.error('Error placing bid:', error);
@@ -484,111 +319,110 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// GET /api/bids - Get user's bidding history
-export async function GET(request: NextRequest) {
+// DELETE /api/bids - Cancel a bid (unfreeze funds)
+export async function DELETE(request: NextRequest) {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                { error: 'Authentication required' },
-                { status: 401 }
-            );
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Get user
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email }
-        });
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'User not found' },
-                { status: 404 }
-            );
-        }
-
+        const userId = parseInt(session.user.id);
         const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '20');
-        const active = searchParams.get('active') === 'true';
+        const bidId = searchParams.get('bid_id');
 
-        const skip = (page - 1) * limit;
-
-        // Build where clause
-        const where: any = {
-            bidder_id: user.id
-        };
-
-        if (active) {
-            where.is_active = true;
-            where.userCard = {
-                auction_end: { gt: new Date() },
-                is_sold: false
-            };
+        if (!bidId) {
+            return NextResponse.json({ error: 'bid_id is required' }, { status: 400 });
         }
 
-        // Get user's bids
-        const [bids, totalCount] = await Promise.all([
-            prisma.bid.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { created_at: 'desc' },
-                include: {
-                    userCard: {
-                        include: {
-                            card: true,
-                            owner: { select: { id: true, name: true } },
-                            bids: {
-                                where: { is_active: true },
-                                orderBy: { amount: 'desc' },
-                                take: 1
-                            }
-                        }
+        const bid = await prisma.bid.findUnique({
+            where: { id: parseInt(bidId) },
+            include: {
+                userCard: {
+                    include: {
+                        card: true
                     }
                 }
-            }),
-            prisma.bid.count({ where })
-        ]);
+            }
+        });
 
-        // Add status information to each bid
-        const bidsWithStatus = bids.map(bid => {
-            const userCard = bid.userCard;
-            const isAuctionActive = userCard.auction_end && userCard.auction_end > new Date();
-            const isHighestBid = userCard.bids.length > 0 && userCard.bids[0].amount === bid.amount;
-            const auctionEnded = userCard.auction_end && userCard.auction_end <= new Date();
+        if (!bid) {
+            return NextResponse.json({ error: 'Bid not found' }, { status: 404 });
+        }
 
-            let status = 'ACTIVE';
-            if (!bid.is_active) status = 'CANCELLED';
-            else if (auctionEnded && isHighestBid) status = 'WON';
-            else if (auctionEnded && !isHighestBid) status = 'LOST';
-            else if (!isHighestBid) status = 'OUTBID';
+        if (bid.bidder_id !== userId) {
+            return NextResponse.json({ error: 'Can only cancel your own bids' }, { status: 403 });
+        }
 
-            return {
-                ...bid,
-                status,
-                is_highest_bid: isHighestBid,
-                is_auction_active: isAuctionActive,
-                time_left_ms: isAuctionActive ? userCard.auction_end!.getTime() - new Date().getTime() : 0
-            };
+        if (!bid.is_active) {
+            return NextResponse.json({ error: 'Bid is not active' }, { status: 400 });
+        }
+
+        // Check if auction has ended
+        if (bid.userCard.auction_end && new Date() > bid.userCard.auction_end) {
+            return NextResponse.json({ error: 'Cannot cancel bid after auction has ended' }, { status: 400 });
+        }
+
+        // Get wallet
+        const wallet = await prisma.userWallet.findUnique({
+            where: { user_id: userId }
+        });
+
+        if (!wallet) {
+            return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+        }
+
+        // Cancel bid and unfreeze funds
+        const result = await prisma.$transaction(async (tx) => {
+            // Deactivate bid
+            await tx.bid.update({
+                where: { id: parseInt(bidId) },
+                data: { is_active: false }
+            });
+
+            // Unfreeze funds
+            const updatedWallet = await tx.userWallet.update({
+                where: { user_id: userId },
+                data: {
+                    frozen_balance: {
+                        decrement: Number(bid.amount)
+                    }
+                }
+            });
+
+            // Record transaction
+            await tx.walletTransaction.create({
+                data: {
+                    user_id: userId,
+                    transaction_type: 'UNFREEZE_FUNDS',
+                    amount: Number(bid.amount),
+                    balance_before: Number(wallet.balance),
+                    balance_after: Number(wallet.balance),
+                    description: `Bid cancelled on ${bid.userCard.card.name}`,
+                    reference_id: parseInt(bidId),
+                    reference_type: 'BID_CANCELLED'
+                }
+            });
+
+            return updatedWallet;
         });
 
         return NextResponse.json({
-            bids: bidsWithStatus,
-            pagination: {
-                page,
-                limit,
-                total: totalCount,
-                totalPages: Math.ceil(totalCount / limit)
+            success: true,
+            message: 'Bid cancelled successfully',
+            unfrozen_amount: Number(bid.amount),
+            wallet: {
+                balance: Number(result.balance),
+                frozen_balance: Number(result.frozen_balance),
+                available_balance: Number(result.balance) - Number(result.frozen_balance)
             }
         });
 
     } catch (error) {
-        console.error('Error fetching bids:', error);
+        console.error('Error cancelling bid:', error);
         return NextResponse.json(
             {
-                error: 'Failed to fetch bids',
+                error: 'Failed to cancel bid',
                 details: error instanceof Error ? error.message : 'Unknown error'
             },
             { status: 500 }
