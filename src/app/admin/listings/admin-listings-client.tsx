@@ -24,8 +24,6 @@ import {
     Checkbox,
     Grid,
     Card,
-    CardContent,
-    CardMedia,
     Chip,
     InputLabel,
     FormControl,
@@ -43,7 +41,6 @@ import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
-import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
 import Sidebar from "../../components/Sidebar";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
@@ -100,7 +97,7 @@ interface ListingsResponse {
 export default function AdminListingsClient() {
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+    const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
 
     const { data: session, status } = useSession();
     const [listings, setListings] = useState<Listing[]>([]);
@@ -109,7 +106,6 @@ export default function AdminListingsClient() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [createListingOpen, setCreateListingOpen] = useState<boolean>(false);
-    const [editListing, setEditListing] = useState<Listing | null>(null);
     const [actionLoading, setActionLoading] = useState<boolean>(false);
     const [rowLoading, setRowLoading] = useState<{ [key: number]: boolean }>({});
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
@@ -137,7 +133,6 @@ export default function AdminListingsClient() {
         bids: true,
         created_at: true,
     });
-    const currentAdmin = session?.user?.name || "AdminUser";
     const createDialogRef = useRef<HTMLDivElement>(null);
     const hasFetchedRef = useRef(false);
 
@@ -167,7 +162,14 @@ export default function AdminListingsClient() {
                 },
             });
 
-            if (!response.ok) throw new Error("Failed to fetch listings");
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error("Unauthorized access. Please log in again.");
+                } else if (response.status === 500) {
+                    throw new Error("Server error. Please try again later.");
+                }
+                throw new Error("Failed to fetch listings");
+            }
 
             const data: ListingsResponse = await response.json();
             setListings(data.listings || []);
@@ -195,12 +197,21 @@ export default function AdminListingsClient() {
                 },
             });
 
-            if (!response.ok) throw new Error("Failed to fetch cards");
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error("Unauthorized access. Please log in again.");
+                } else if (response.status === 500) {
+                    throw new Error("Server error. Please try again later.");
+                }
+                throw new Error("Failed to fetch cards");
+            }
 
             const data = await response.json();
             setAllCards(data.cards || []);
         } catch (err: unknown) {
-            console.error('Error fetching cards:', err);
+            const errorMessage = err instanceof Error ? err.message : "Error fetching cards";
+            console.error(errorMessage);
+            toast.error(errorMessage);
         }
     }, [session]);
 
@@ -224,12 +235,12 @@ export default function AdminListingsClient() {
     // Debounced Search
     const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
 
-    const formatPrice = (price: number | null) => {
+    const formatPrice = useCallback((price: number | null) => {
         if (!price) return 'N/A';
         return `$${Number(price).toFixed(2)}`;
-    };
+    }, []);
 
-    const formatTimeLeft = (timeLeftMs: number | null) => {
+    const formatTimeLeft = useCallback((timeLeftMs: number | null) => {
         if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
 
         const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
@@ -239,24 +250,45 @@ export default function AdminListingsClient() {
         if (days > 0) return `${days}d ${hours}h`;
         if (hours > 0) return `${hours}h ${minutes}m`;
         return `${minutes}m`;
-    };
+    }, []);
 
-    const getStatusColor = (listing: Listing) => {
+    const getStatusColor = useCallback((listing: Listing) => {
         if (listing.is_sold) return 'success';
         if (!listing.is_for_sale) return 'default';
         if (listing.sale_type === 'AUCTION' && !listing.is_auction_active) return 'error';
         return 'primary';
-    };
+    }, []);
 
-    const getStatusText = (listing: Listing) => {
+    const getStatusText = useCallback((listing: Listing) => {
         if (listing.is_sold) return 'Sold';
         if (!listing.is_for_sale) return 'Inactive';
         if (listing.sale_type === 'AUCTION' && !listing.is_auction_active) return 'Auction Ended';
         return 'Active';
-    };
+    }, []);
+
+    // Moved handleEditListing and handleDeleteListing before columns
+    const handleEditListing = useCallback(() => {
+        toast.info("Edit listing functionality to be implemented");
+    }, []);
+
+    const handleDeleteListing = useCallback(async (listingId: number) => {
+        if (!session) return;
+
+        setRowLoading((prev) => ({ ...prev, [listingId]: true }));
+        try {
+            setListings((prev) => prev.filter((listing) => listing.id !== listingId));
+            setSelected((prev) => prev.filter((id) => id !== listingId));
+            toast.success("Listing removed successfully!");
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Error removing listing";
+            toast.error(errorMessage);
+        } finally {
+            setRowLoading((prev) => ({ ...prev, [listingId]: false }));
+        }
+    }, [session]);
 
     // Table Columns
-    const columns: GridColDef[] = [
+    const columns = useMemo<GridColDef[]>(() => [
         ...(visibleColumns.id ? [{ field: "id", headerName: "ID", width: 70, sortable: true }] : []),
         ...(visibleColumns.card_name ? [{
             field: "card_name",
@@ -266,10 +298,12 @@ export default function AdminListingsClient() {
             renderCell: (params: GridRenderCellParams<Listing>) => (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     {params.row.card.small_image_url && (
-                        <img
+                        <Image
                             src={params.row.card.small_image_url}
                             alt={params.row.card.name}
-                            style={{ width: 30, height: 42, marginRight: 8, borderRadius: 4 }}
+                            width={30}
+                            height={42}
+                            style={{ marginRight: 8, borderRadius: 4 }}
                             onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                             }}
@@ -374,20 +408,21 @@ export default function AdminListingsClient() {
                 <Box>
                     <IconButton
                         size="small"
-                        onClick={() => handleEditListing(params.row)}
+                        onClick={() => handleEditListing()}
                         disabled={rowLoading[Number(params.id)] || actionLoading}
                         sx={{ mr: 1 }}
+                        aria-label="Edit listing"
                     >
                         <EditIcon />
                     </IconButton>
                     <IconButton
                         size="small"
                         onClick={() => {
-                            // View listing details
                             toast.info("View listing details functionality to be implemented");
                         }}
                         disabled={rowLoading[Number(params.id)] || actionLoading}
                         sx={{ mr: 1 }}
+                        aria-label="View listing details"
                     >
                         <VisibilityIcon />
                     </IconButton>
@@ -396,15 +431,16 @@ export default function AdminListingsClient() {
                         color="error"
                         onClick={() => handleDeleteListing(params.id as number)}
                         disabled={rowLoading[Number(params.id)] || actionLoading}
+                        aria-label="Delete listing"
                     >
                         {rowLoading[Number(params.id)] ? <CircularProgress size={20} /> : <DeleteIcon />}
                     </IconButton>
                 </Box>
             ),
         },
-    ];
+    ], [visibleColumns, formatPrice, getStatusText, getStatusColor, formatTimeLeft, rowLoading, actionLoading, handleEditListing, handleDeleteListing]);
 
-    const handleCreateListing = () => {
+    const handleCreateListing = useCallback(() => {
         setNewListing({
             card_id: '',
             condition: 'NM',
@@ -418,9 +454,9 @@ export default function AdminListingsClient() {
         setValidationErrors({});
         setCreateListingOpen(true);
         setTimeout(() => createDialogRef.current?.focus(), 0);
-    };
+    }, []);
 
-    const handleSaveListing = async () => {
+    const handleSaveListing = useCallback(async () => {
         if (!session) return;
 
         // Validation
@@ -451,11 +487,16 @@ export default function AdminListingsClient() {
                 body: JSON.stringify(newListing),
             });
 
-            if (!response.ok) throw new Error('Failed to create listing');
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error("Unauthorized access. Please log in again.");
+                } else if (response.status === 500) {
+                    throw new Error("Server error. Please try again later.");
+                }
+                throw new Error('Failed to create listing');
+            }
 
             const result = await response.json();
-
-            // Add new listings to the state
             setListings((prev) => [...result.listings, ...prev]);
             setCreateListingOpen(false);
             setValidationErrors({});
@@ -466,31 +507,7 @@ export default function AdminListingsClient() {
         } finally {
             setActionLoading(false);
         }
-    };
-
-    const handleEditListing = (listing: Listing) => {
-        setEditListing(listing);
-        // Edit functionality to be implemented
-        toast.info("Edit listing functionality to be implemented");
-    };
-
-    const handleDeleteListing = async (listingId: number) => {
-        if (!session) return;
-
-        setRowLoading((prev) => ({ ...prev, [listingId]: true }));
-        try {
-            // For now, just remove from state
-            // In a real implementation, you'd call DELETE /api/admin/listings/[id]
-            setListings((prev) => prev.filter((listing) => listing.id !== listingId));
-            setSelected((prev) => prev.filter((id) => id !== listingId));
-            toast.success("Listing removed successfully!");
-        } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Error removing listing";
-            toast.error(errorMessage);
-        } finally {
-            setRowLoading((prev) => ({ ...prev, [listingId]: false }));
-        }
-    };
+    }, [session, newListing]);
 
     return (
         <Box
@@ -518,7 +535,7 @@ export default function AdminListingsClient() {
 
             <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
-                <IconButton onClick={toggleSidebar}>
+                <IconButton onClick={toggleSidebar} aria-label="Toggle sidebar">
                     <MenuIcon />
                 </IconButton>
             </Box>
@@ -671,6 +688,7 @@ export default function AdminListingsClient() {
                                                 toast.info("Bulk operations to be implemented");
                                             }}
                                             disabled={actionLoading}
+                                            aria-label="Delete selected listings"
                                         >
                                             <DeleteIcon />
                                         </IconButton>
@@ -748,10 +766,12 @@ export default function AdminListingsClient() {
                                 renderOption={(props, option) => (
                                     <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center' }}>
                                         {option.small_image_url && (
-                                            <img
+                                            <Image
                                                 src={option.small_image_url}
                                                 alt={option.name}
-                                                style={{ width: 30, height: 42, marginRight: 8, borderRadius: 4 }}
+                                                width={30}
+                                                height={42}
+                                                style={{ marginRight: 8, borderRadius: 4 }}
                                                 onError={(e) => {
                                                     e.currentTarget.style.display = 'none';
                                                 }}
@@ -874,10 +894,12 @@ export default function AdminListingsClient() {
                                     {(() => {
                                         const selectedCard = allCards.find(card => card.id.toString() === newListing.card_id);
                                         return selectedCard && selectedCard.image_url ? (
-                                            <img
+                                            <Image
                                                 src={selectedCard.image_url}
                                                 alt="Card preview"
-                                                style={{ maxWidth: 200, maxHeight: 280, objectFit: 'contain' }}
+                                                width={200}
+                                                height={280}
+                                                style={{ objectFit: 'contain' }}
                                                 onError={(e) => {
                                                     e.currentTarget.style.display = 'none';
                                                 }}

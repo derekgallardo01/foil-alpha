@@ -1,7 +1,6 @@
-// src/app/admin/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -23,7 +22,6 @@ import {
 } from "@mui/material";
 import {
     Menu as MenuIcon,
-    TrendingUp,
     People,
     AccountBalanceWallet,
     Store,
@@ -70,6 +68,14 @@ interface RecentActivity {
     timestamp: string;
 }
 
+interface User {
+    subscriptionStatus?: string;
+    balance?: number;
+    frozen_balance?: number;
+    cardCount?: number;
+    saleCount?: number;
+}
+
 export default function AdminDashboard() {
     const router = useRouter();
     const { data: session, status } = useSession();
@@ -99,7 +105,7 @@ export default function AdminDashboard() {
     }, [status, session, router]);
 
     // Fetch dashboard data
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         try {
             setLoading(true);
 
@@ -111,18 +117,18 @@ export default function AdminDashboard() {
             });
 
             if (!usersResponse.ok) throw new Error("Failed to fetch users");
-            const users = await usersResponse.json();
+            const users: User[] = await usersResponse.json();
 
             // Calculate stats from users data
             const newStats: DashboardStats = {
                 totalUsers: users.length,
-                activeUsers: users.filter((u: any) => u.subscriptionStatus === 'active').length,
-                totalBalance: users.reduce((sum: number, u: any) => sum + (u.balance || 0), 0),
-                frozenBalance: users.reduce((sum: number, u: any) => sum + (u.frozen_balance || 0), 0),
-                totalCards: users.reduce((sum: number, u: any) => sum + (u.cardCount || 0), 0),
+                activeUsers: users.filter((u) => u.subscriptionStatus === 'active').length,
+                totalBalance: users.reduce((sum, u) => sum + (u.balance || 0), 0),
+                frozenBalance: users.reduce((sum, u) => sum + (u.frozen_balance || 0), 0),
+                totalCards: users.reduce((sum, u) => sum + (u.cardCount || 0), 0),
                 activeListings: 0, // TODO: Fetch from listings API
                 activeAuctions: 0, // TODO: Fetch from auctions API
-                totalSales: users.reduce((sum: number, u: any) => sum + (u.saleCount || 0), 0),
+                totalSales: users.reduce((sum, u) => sum + (u.saleCount || 0), 0),
                 monthlyRevenue: 0, // TODO: Calculate from transactions
                 pendingTransactions: 0, // TODO: Fetch from transactions API
             };
@@ -165,13 +171,13 @@ export default function AdminDashboard() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [session]);
 
     useEffect(() => {
         if (status === "authenticated" && session?.user?.role === "admin") {
             fetchDashboardData();
         }
-    }, [status, session]);
+    }, [status, session, fetchDashboardData]);
 
     const statCards = [
         {
@@ -235,7 +241,7 @@ export default function AdminDashboard() {
         }
     };
 
-    const getActivityColor = (type: RecentActivity['type']) => {
+    const getActivityColor = (type: RecentActivity['type']): 'primary' | 'success' | 'info' | 'warning' | 'default' => {
         switch (type) {
             case 'user_registered': return 'primary';
             case 'wallet_deposit': return 'success';
@@ -377,7 +383,7 @@ export default function AdminDashboard() {
                                                             <Chip
                                                                 label={activity.type.replace('_', ' ')}
                                                                 size="small"
-                                                                color={getActivityColor(activity.type) as any}
+                                                                color={getActivityColor(activity.type)}
                                                             />
                                                         </Box>
                                                     }

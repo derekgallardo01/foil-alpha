@@ -46,6 +46,7 @@ model User {
 model Product {
   product_id    Int       @id @default(autoincrement()) @map("product_id")
   retailer      String    @db.VarChar(255)
+  tcin          String    @unique
   title         String    @db.VarChar(255)
   url           String    @db.VarChar(255)
   image         String?   @db.VarChar(255)

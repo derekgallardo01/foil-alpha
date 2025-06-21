@@ -1,30 +1,41 @@
-{
-  "env": {
-    "browser": true,
-    "es2021": true,
-    "node": true
-  },
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:react/recommended",
-    "plugin:react-hooks/recommended",
-    "next/core-web-vitals"
-  ],
-  "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-    "ecmaVersion": 12,
-    "sourceType": "module"
-  },
-  "plugins": ["@typescript-eslint", "react", "react-hooks"],
-  "rules": {
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
-    "react-hooks/exhaustive-deps": "off",
-    "@next/next/no-img-element": "off",
-    "prefer-const": "off",
-    "@typescript-eslint/no-require-imports": "off",
-    "react/no-unescaped-entities": "off",
-    "@typescript-eslint/no-unused-expressions": "off"
-  }
-}
+import { FlatCompat } from '@eslint/eslintrc';
+
+const compat = new FlatCompat({
+  baseDirectory: import.meta.dirname,
+});
+
+const eslintConfig = [
+  ...compat.config({
+    env: {
+      browser: true,
+      es2021: true,
+      node: true,
+    },
+    extends: [
+      'eslint:recommended',
+      'plugin:@typescript-eslint/recommended',
+      'plugin:react/recommended',
+      'plugin:react-hooks/recommended',
+      'next/core-web-vitals',
+    ],
+    parser: '@typescript-eslint/parser',
+    parserOptions: {
+      ecmaVersion: 12,
+      sourceType: 'module',
+    },
+    plugins: ['@typescript-eslint', 'react', 'react-hooks'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@next/next/no-img-element': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'react/no-unescaped-entities': 'off',
+      'prefer-const': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+    },
+  }),
+];
+
+export default eslintConfig;

@@ -18,12 +18,10 @@ import {
   DialogActions,
   Select,
   MenuItem,
-  Toolbar,
   IconButton,
   FormControlLabel,
   Checkbox,
   Chip,
-  Divider,
   Grid,
   Card,
   CardContent,
@@ -44,7 +42,6 @@ import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
-import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
 import AdminSidebar from "../../components/AdminSidebar";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
@@ -91,7 +88,7 @@ interface ActivityLogEntry {
 
 interface WalletOperationData {
   user_id: number;
-  operation: 'ADD_MONEY' | 'DEDUCT_MONEY' | 'FREEZE_FUNDS' | 'UNFREEZE_FUNDS';
+  operation: "ADD_MONEY" | "DEDUCT_MONEY" | "FREEZE_FUNDS" | "UNFREEZE_FUNDS";
   amount: number;
   description: string;
 }
@@ -104,7 +101,6 @@ export default function AdminUsersClient() {
   const { data: session, status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [editUser, setEditUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
@@ -112,7 +108,6 @@ export default function AdminUsersClient() {
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const [fetchAttempts, setFetchAttempts] = useState<number>(0);
-  const [selected, setSelected] = useState<number[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
@@ -128,9 +123,9 @@ export default function AdminUsersClient() {
   const [selectedUserForWallet, setSelectedUserForWallet] = useState<User | null>(null);
   const [walletOperation, setWalletOperation] = useState<WalletOperationData>({
     user_id: 0,
-    operation: 'ADD_MONEY',
+    operation: "ADD_MONEY",
     amount: 0,
-    description: ''
+    description: "",
   });
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [walletLoading, setWalletLoading] = useState<boolean>(false);
@@ -146,7 +141,6 @@ export default function AdminUsersClient() {
     lastLoginAt: false,
     subscriptionStatus: true,
   });
-  const currentAdmin = session?.user?.name || "AdminUser";
   const editDialogRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
 
@@ -172,7 +166,7 @@ export default function AdminUsersClient() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         },
       });
       if (!response.ok) throw new Error("Failed to fetch users");
@@ -185,7 +179,6 @@ export default function AdminUsersClient() {
       toast.success("Users loaded successfully!", { autoClose: 2000 });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load users.";
-      setError(errorMessage);
       toast.error(errorMessage);
       setUsers([]);
     } finally {
@@ -213,18 +206,19 @@ export default function AdminUsersClient() {
     }
 
     setWalletLoading(true);
+    setActionLoading(true);
     try {
       const response = await fetch("/api/admin/wallet", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({
           user_id: selectedUserForWallet.id,
           operation,
           amount,
-          description: description || `Admin ${operation.toLowerCase().replace('_', ' ')}`
+          description: description || `Admin ${operation.toLowerCase().replace("_", " ")}`,
         }),
       });
 
@@ -236,43 +230,49 @@ export default function AdminUsersClient() {
       const result = await response.json();
 
       // Update user in the list
-      setUsers(prev => prev.map(user =>
-        user.id === selectedUserForWallet.id
-          ? {
-            ...user,
-            balance: result.wallet.balance,
-            frozen_balance: result.wallet.frozen_balance,
-            available_balance: result.wallet.available_balance
-          }
-          : user
-      ));
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === selectedUserForWallet.id
+            ? {
+                ...user,
+                balance: result.wallet.balance,
+                frozen_balance: result.wallet.frozen_balance,
+                available_balance: result.wallet.available_balance,
+              }
+            : user
+        )
+      );
 
       // Update selected user
-      setSelectedUserForWallet(prev => prev ? {
-        ...prev,
-        balance: result.wallet.balance,
-        frozen_balance: result.wallet.frozen_balance,
-        available_balance: result.wallet.available_balance
-      } : null);
+      setSelectedUserForWallet((prev) =>
+        prev
+          ? {
+              ...prev,
+              balance: result.wallet.balance,
+              frozen_balance: result.wallet.frozen_balance,
+              available_balance: result.wallet.available_balance,
+            }
+          : null
+      );
 
       // Reset form
       setWalletOperation({
         user_id: selectedUserForWallet.id,
-        operation: 'ADD_MONEY',
+        operation: "ADD_MONEY",
         amount: 0,
-        description: ''
+        description: "",
       });
 
       // Refresh wallet transactions
       fetchWalletTransactions(selectedUserForWallet.id);
 
-      toast.success(`${operation.replace('_', ' ').toLowerCase()} completed successfully!`);
-
+      toast.success(`${operation.replace("_", " ").toLowerCase()} completed successfully!`);
     } catch (error) {
       console.error("Wallet operation error:", error);
       toast.error(error instanceof Error ? error.message : "Wallet operation failed");
     } finally {
       setWalletLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -285,7 +285,7 @@ export default function AdminUsersClient() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         },
       });
 
@@ -293,7 +293,6 @@ export default function AdminUsersClient() {
 
       const data = await response.json();
       setWalletTransactions(data.recent_transactions || []);
-
     } catch (error) {
       console.error("Error fetching wallet transactions:", error);
       setWalletTransactions([]);
@@ -305,46 +304,52 @@ export default function AdminUsersClient() {
     setSelectedUserForWallet(user);
     setWalletOperation({
       user_id: user.id,
-      operation: 'ADD_MONEY',
+      operation: "ADD_MONEY",
       amount: 0,
-      description: ''
+      description: "",
     });
     setWalletDialogOpen(true);
     fetchWalletTransactions(user.id);
   };
 
   // Lazy Loading Activity Log
-  const fetchActivityLog = useCallback(async (userId: number) => {
-    if (!session) return;
-    setActivityLogLoading(true);
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/activity`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch activity log");
-      const data = await response.json();
-      setActivityLog(data);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Error fetching activity log";
-      toast.error(errorMessage);
-      setActivityLog([]);
-    } finally {
-      setActivityLogLoading(false);
-    }
-  }, [session]);
+  const fetchActivityLog = useCallback(
+    async (userId: number) => {
+      if (!session) return;
+      setActivityLogLoading(true);
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/activity`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+        if (!response.ok) throw new Error("Failed to fetch activity log");
+        const data = await response.json();
+        setActivityLog(data);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Error fetching activity log";
+        toast.error(errorMessage);
+        setActivityLog([]);
+      } finally {
+        setActivityLogLoading(false);
+      }
+    },
+    [session]
+  );
 
   // User Stats Dashboard
-  const stats = useMemo(() => ({
-    total: users.length,
-    active: users.filter((u) => u.subscriptionStatus === "active").length,
-    admins: users.filter((u) => u.role === "admin").length,
-    totalBalance: users.reduce((sum, u) => sum + (u.balance || 0), 0),
-    totalFrozen: users.reduce((sum, u) => sum + (u.frozen_balance || 0), 0),
-  }), [users]);
+  const stats = useMemo(
+    () => ({
+      total: users.length,
+      active: users.filter((u) => u.subscriptionStatus === "active").length,
+      admins: users.filter((u) => u.role === "admin").length,
+      totalBalance: users.reduce((sum, u) => sum + (u.balance || 0), 0),
+      totalFrozen: users.reduce((sum, u) => sum + (u.frozen_balance || 0), 0),
+    }),
+    [users]
+  );
 
   // Debounced Search
   const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
@@ -378,8 +383,8 @@ export default function AdminUsersClient() {
         .map((key) => {
           if (key === "registeredAt") return user.registeredAt ? new Date(user.registeredAt).toLocaleString() : "Never";
           if (key === "lastLoginAt") return user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "Never";
-          if (key === "balance") return `$${user.balance?.toFixed(2) || '0.00'}`;
-          if (key === "available_balance") return `$${user.available_balance?.toFixed(2) || '0.00'}`;
+          if (key === "balance") return `$${user.balance?.toFixed(2) || "0.00"}`;
+          if (key === "available_balance") return `$${user.available_balance?.toFixed(2) || "0.00"}`;
           return user[key as keyof User] || "";
         })
         .join(",")
@@ -399,61 +404,69 @@ export default function AdminUsersClient() {
     ...(visibleColumns.name ? [{ field: "name", headerName: "Name", width: 130, sortable: true }] : []),
     ...(visibleColumns.email ? [{ field: "email", headerName: "Email", width: 200, sortable: true }] : []),
     ...(visibleColumns.role ? [{ field: "role", headerName: "Role", width: 100, sortable: true }] : []),
-    ...(visibleColumns.balance ? [{
-      field: "balance",
-      headerName: "Balance",
-      width: 120,
-      sortable: true,
-      renderCell: (params: GridRenderCellParams<User>) => (
-        <Chip
-          label={`$${params.row.balance?.toFixed(2) || '0.00'}`}
-          color={Number(params.row.balance) > 0 ? "success" : "default"}
-          size="small"
-        />
-      ),
-    }] : []),
-    ...(visibleColumns.available_balance ? [{
-      field: "available_balance",
-      headerName: "Available",
-      width: 120,
-      sortable: true,
-      renderCell: (params: GridRenderCellParams<User>) => (
-        <Chip
-          label={`$${params.row.available_balance?.toFixed(2) || '0.00'}`}
-          color={Number(params.row.available_balance) > 0 ? "primary" : "default"}
-          size="small"
-        />
-      ),
-    }] : []),
+    ...(visibleColumns.balance
+      ? [
+          {
+            field: "balance",
+            headerName: "Balance",
+            width: 120,
+            sortable: true,
+            renderCell: (params: GridRenderCellParams<User>) => (
+              <Chip
+                label={`$${params.row.balance?.toFixed(2) || "0.00"}`}
+                color={Number(params.row.balance) > 0 ? "success" : "default"}
+                size="small"
+              />
+            ),
+          },
+        ]
+      : []),
+    ...(visibleColumns.available_balance
+      ? [
+          {
+            field: "available_balance",
+            headerName: "Available",
+            width: 120,
+            sortable: true,
+            renderCell: (params: GridRenderCellParams<User>) => (
+              <Chip
+                label={`$${params.row.available_balance?.toFixed(2) || "0.00"}`}
+                color={Number(params.row.available_balance) > 0 ? "primary" : "default"}
+                size="small"
+              />
+            ),
+          },
+        ]
+      : []),
     ...(visibleColumns.registeredAt
       ? [
-        {
-          field: "registeredAt",
-          headerName: "Registered At",
-          width: 180,
-          sortable: true,
-          renderCell: (params: GridRenderCellParams<User>) => (
-            <Typography>
-              {params.row.registeredAt ? new Date(params.row.registeredAt).toLocaleString() : "Never"}
-            </Typography>
-          ),
-        },
-      ]
+          {
+            field: "registeredAt",
+            headerName: "Registered At",
+            width: 180,
+            sortable: true,
+            renderCell: (params: GridRenderCellParams<User>) => (
+              <Typography>
+                {params.row.registeredAt ? new Date(params.row.registeredAt).toLocaleString() : "Never"}
+              </Typography>
+            ),
+          },
+        ]
       : []),
     ...(visibleColumns.lastLoginAt
       ? [
-        {
-          field: "lastLoginAt",
-          headerName: "Last Login",
-          width: 180,
-          sortable: true,
-          renderCell: (params: GridRenderCellParams<User>) => (
-            <Typography>
-              {params.row.lastLoginAt ? new Date(params.row.lastLoginAt).toLocaleString() : "Never"}
-            </Typography>
-          ),
-        },
-      ]
+          {
+            field: "lastLoginAt",
+            headerName: "Last Login",
+            width: 180,
+            sortable: true,
+            renderCell: (params: GridRenderCellParams<User>) => (
+              <Typography>
+                {params.row.lastLoginAt ? new Date(params.row.lastLoginAt).toLocaleString() : "Never"}
+              </Typography>
+            ),
+          },
+        ]
       : []),
     ...(visibleColumns.subscriptionStatus ? [{ field: "subscriptionStatus", headerName: "Subscription", width: 120, sortable: true }] : []),
     {
@@ -462,7 +475,7 @@ export default function AdminUsersClient() {
       width: 280,
       sortable: false,
       renderCell: (params: GridRenderCellParams<User>) => (
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Box sx={{ display: "flex", gap: 0.5 }}>
           <Button
             variant="outlined"
             size="small"
@@ -482,8 +495,8 @@ export default function AdminUsersClient() {
               color: "#96ff9b",
               "&:hover": {
                 borderColor: "#96ff9b",
-                backgroundColor: "rgba(150, 255, 155, 0.1)"
-              }
+                backgroundColor: "rgba(150, 255, 155, 0.1)",
+              },
             }}
           >
             Wallet
@@ -508,9 +521,6 @@ export default function AdminUsersClient() {
       ),
     },
   ];
-
-  // Rest of your existing functions (handleEditUser, handleSaveUser, etc.)
-  // I'll include the key ones and you can keep your existing implementations
 
   const handleEditUser = (user: User) => {
     setEditUser(user);
@@ -539,11 +549,71 @@ export default function AdminUsersClient() {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    // Your existing delete logic
+    if (!session) return;
+    setConfirmAction({
+      action: "delete this user",
+      callback: async () => {
+        setRowLoading((prev) => ({ ...prev, [userId]: true }));
+        setActionLoading(true);
+        try {
+          const response = await fetch(`/api/admin/users/${userId}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+          });
+          if (!response.ok) throw new Error("Failed to delete user");
+          setUsers((prev) => prev.filter((user) => user.id !== userId));
+          toast.success("User deleted successfully!");
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : "Failed to delete user.";
+          toast.error(errorMessage);
+        } finally {
+          setRowLoading((prev) => ({ ...prev, [userId]: false }));
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   const handleSaveUser = async () => {
-    // Your existing save logic
+    if (!editUser || !session) return;
+
+    const errors: { [key: string]: string } = {};
+    if (!editUser.name) errors.name = "Name is required";
+    if (!editUser.email) errors.email = "Email is required";
+    if (editUser.id === 0 && !editUser.password) errors.password = "Password is required";
+    setValidationErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setActionLoading(true);
+    try {
+      const method = editUser.id === 0 ? "POST" : "PUT";
+      const url = editUser.id === 0 ? "/api/admin/users" : `/api/admin/users/${editUser.id}`;
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify(editUser),
+      });
+      if (!response.ok) throw new Error("Failed to save user");
+      const savedUser = await response.json();
+      setUsers((prev) =>
+        editUser.id === 0
+          ? [...prev, savedUser]
+          : prev.map((user) => (user.id === editUser.id ? savedUser : user))
+      );
+      setEditUser(null);
+      toast.success("User saved successfully!");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to save user.";
+      toast.error(errorMessage);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -607,63 +677,147 @@ export default function AdminUsersClient() {
                 <Grid item xs={12} md={2.4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Total Users</Typography>
-                      <Typography variant="h4" color="text.primary">{stats.total}</Typography>
+                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>
+                        Total Users
+                      </Typography>
+                      <Typography variant="h4" color="text.primary">
+                        {stats.total}
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={2.4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Active</Typography>
-                      <Typography variant="h4" color="text.primary">{stats.active}</Typography>
+                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>
+                        Active
+                      </Typography>
+                      <Typography variant="h4" color="text.primary">
+                        {stats.active}
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={2.4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Admins</Typography>
-                      <Typography variant="h4" color="text.primary">{stats.admins}</Typography>
+                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>
+                        Admins
+                      </Typography>
+                      <Typography variant="h4" color="text.primary">
+                        {stats.admins}
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={2.4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Total Balance</Typography>
-                      <Typography variant="h4" color="text.primary">${stats.totalBalance.toFixed(2)}</Typography>
+                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>
+                        Total Balance
+                      </Typography>
+                      <Typography variant="h4" color="text.primary">
+                        ${stats.totalBalance.toFixed(2)}
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={2.4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Frozen</Typography>
-                      <Typography variant="h4" color="text.primary">${stats.totalFrozen.toFixed(2)}</Typography>
+                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>
+                        Frozen
+                      </Typography>
+                      <Typography variant="h4" color="text.primary">
+                        ${stats.totalFrozen.toFixed(2)}
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
               </Grid>
             </motion.div>
 
-            {/* Your existing controls and filters */}
+            {/* Controls and Filters */}
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
               <motion.div variants={itemVariants}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 2 }}>
-                  <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={handleAddUser} disabled={actionLoading}>
+                  <Button
+                    variant="contained"
+                    sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+                    onClick={handleAddUser}
+                    disabled={actionLoading}
+                  >
                     Add User
                   </Button>
-                  <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={fetchUsers} disabled={loading || actionLoading}>
+                  <Button
+                    variant="contained"
+                    sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+                    onClick={fetchUsers}
+                    disabled={loading || actionLoading}
+                  >
                     Refresh
                   </Button>
-                  <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={exportToCSV} disabled={actionLoading}>
+                  <Button
+                    variant="contained"
+                    sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+                    onClick={exportToCSV}
+                    disabled={actionLoading}
+                  >
                     Export to CSV
                   </Button>
                 </Box>
               </motion.div>
 
-              {/* Enhanced Column Visibility Toggle */}
+              {/* Search and Filters */}
+              <motion.div variants={itemVariants}>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
+                  <TextField
+                    label="Search by Name or Email"
+                    value={searchQuery}
+                    onChange={(e) => debouncedSetSearchQuery(e.target.value)}
+                    sx={{ minWidth: 200 }}
+                  />
+                  <Select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    displayEmpty
+                    sx={{ minWidth: 150 }}
+                  >
+                    <MenuItem value="">All Roles</MenuItem>
+                    <MenuItem value="admin">Admin</MenuItem>
+                    <MenuItem value="user">User</MenuItem>
+                  </Select>
+                  <Select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    displayEmpty
+                    sx={{ minWidth: 150 }}
+                  >
+                    <MenuItem value="">All Statuses</MenuItem>
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                    <MenuItem value="pending">Pending</MenuItem>
+                  </Select>
+                  <TextField
+                    label="Registered From"
+                    type="date"
+                    value={registeredAtStart}
+                    onChange={(e) => setRegisteredAtStart(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ minWidth: 150 }}
+                  />
+                  <TextField
+                    label="Registered To"
+                    type="date"
+                    value={registeredAtEnd}
+                    onChange={(e) => setRegisteredAtEnd(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ minWidth: 150 }}
+                  />
+                </Box>
+              </motion.div>
+
+              {/* Column Visibility Toggle */}
               <motion.div variants={itemVariants}>
                 <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
                   {Object.keys(visibleColumns).map((col) => (
@@ -672,20 +826,20 @@ export default function AdminUsersClient() {
                       control={
                         <Checkbox
                           checked={visibleColumns[col as keyof typeof visibleColumns]}
-                          onChange={(e) => setVisibleColumns((prev) => ({ ...prev, [col]: e.target.checked }))}
+                          onChange={(e) =>
+                            setVisibleColumns((prev) => ({ ...prev, [col]: e.target.checked }))
+                          }
                           sx={{ color: "text.secondary" }}
                         />
                       }
-                      label={col.charAt(0).toUpperCase() + col.slice(1).replace('_', ' ')}
+                      label={col.charAt(0).toUpperCase() + col.slice(1).replace("_", " ")}
                       sx={{ color: "text.secondary" }}
                     />
                   ))}
                 </Box>
               </motion.div>
 
-              {/* Your existing filters */}
-
-              {/* Enhanced DataGrid */}
+              {/* DataGrid */}
               <motion.div variants={itemVariants}>
                 <Box sx={{ height: 600, width: "100%", overflow: "auto" }}>
                   <DataGrid
@@ -694,14 +848,8 @@ export default function AdminUsersClient() {
                     paginationModel={paginationModel}
                     onPaginationModelChange={(newModel) => {
                       setPaginationModel(newModel);
-                      setSelected([]);
                     }}
                     pageSizeOptions={[5, 10, 25, 50]}
-                    checkboxSelection
-                    onRowSelectionModelChange={(newSelection) => {
-                      const selectedIds = newSelection.map((id) => Number(id));
-                      setSelected(selectedIds);
-                    }}
                     disableRowSelectionOnClick
                     sx={{
                       color: "text.secondary",
@@ -732,51 +880,55 @@ export default function AdminUsersClient() {
             backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
             borderRadius: 2,
             boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
-          }
+          },
         }}
       >
         <DialogTitle>
           Wallet Management - {selectedUserForWallet?.name}
           <Typography variant="body2" color="text.secondary">
-            Balance: ${selectedUserForWallet?.balance?.toFixed(2) || '0.00'} |
-            Available: ${selectedUserForWallet?.available_balance?.toFixed(2) || '0.00'} |
-            Frozen: ${selectedUserForWallet?.frozen_balance?.toFixed(2) || '0.00'}
+            Balance: ${selectedUserForWallet?.balance?.toFixed(2) || "0.00"} | Available: $
+            {selectedUserForWallet?.available_balance?.toFixed(2) || "0.00"} | Frozen: $
+            {selectedUserForWallet?.frozen_balance?.toFixed(2) || "0.00"}
           </Typography>
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={3}>
             {/* Wallet Operations */}
             <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>Wallet Operations</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Wallet Operations
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Select
                   value={walletOperation.operation}
-                  onChange={(e) => setWalletOperation(prev => ({
-                    ...prev,
-                    operation: e.target.value as WalletOperationData['operation']
-                  }))}
+                  onChange={(e) =>
+                    setWalletOperation((prev) => ({
+                      ...prev,
+                      operation: e.target.value as WalletOperationData["operation"],
+                    }))
+                  }
                   fullWidth
                 >
                   <MenuItem value="ADD_MONEY">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <AddIcon color="success" />
                       Add Money
                     </Box>
                   </MenuItem>
                   <MenuItem value="DEDUCT_MONEY">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <RemoveIcon color="error" />
                       Deduct Money
                     </Box>
                   </MenuItem>
                   <MenuItem value="FREEZE_FUNDS">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <LockIcon color="warning" />
                       Freeze Funds
                     </Box>
                   </MenuItem>
                   <MenuItem value="UNFREEZE_FUNDS">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <LockOpenIcon color="info" />
                       Unfreeze Funds
                     </Box>
@@ -787,10 +939,12 @@ export default function AdminUsersClient() {
                   label="Amount ($)"
                   type="number"
                   value={walletOperation.amount}
-                  onChange={(e) => setWalletOperation(prev => ({
-                    ...prev,
-                    amount: Number(e.target.value)
-                  }))}
+                  onChange={(e) =>
+                    setWalletOperation((prev) => ({
+                      ...prev,
+                      amount: Number(e.target.value),
+                    }))
+                  }
                   fullWidth
                   inputProps={{ min: 0, step: 0.01 }}
                 />
@@ -798,10 +952,12 @@ export default function AdminUsersClient() {
                 <TextField
                   label="Description (Optional)"
                   value={walletOperation.description}
-                  onChange={(e) => setWalletOperation(prev => ({
-                    ...prev,
-                    description: e.target.value
-                  }))}
+                  onChange={(e) =>
+                    setWalletOperation((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                   fullWidth
                   multiline
                   rows={2}
@@ -815,37 +971,39 @@ export default function AdminUsersClient() {
                   sx={{
                     bgcolor: "#96ff9b",
                     color: "grey.900",
-                    "&:hover": { bgcolor: "rgba(150, 255, 155, 0.8)" }
+                    "&:hover": { bgcolor: "rgba(150, 255, 155, 0.8)" },
                   }}
                 >
-                  {walletLoading ? 'Processing...' : walletOperation.operation.replace('_', ' ')}
+                  {walletLoading ? "Processing..." : walletOperation.operation.replace("_", " ")}
                 </Button>
               </Box>
             </Grid>
 
             {/* Transaction History */}
             <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>Recent Transactions</Typography>
-              <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+              <Typography variant="h6" gutterBottom>
+                Recent Transactions
+              </Typography>
+              <Box sx={{ maxHeight: 400, overflow: "auto" }}>
                 {walletTransactions.length > 0 ? (
                   <List>
                     {walletTransactions.map((transaction) => (
-                      <ListItem key={transaction.id} sx={{ bgcolor: 'grey.800', mb: 1, borderRadius: 1 }}>
+                      <ListItem key={transaction.id} sx={{ bgcolor: "grey.800", mb: 1, borderRadius: 1 }}>
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <Typography variant="body2">
-                                {transaction.type.replace('_', ' ')}
+                                {transaction.type.replace("_", " ")}
                                 {transaction.performed_by_admin && (
                                   <Chip label="Admin" size="small" color="warning" sx={{ ml: 1 }} />
                                 )}
                               </Typography>
                               <Typography
                                 variant="body2"
-                                color={transaction.amount >= 0 ? 'success.main' : 'error.main'}
+                                color={transaction.amount >= 0 ? "success.main" : "error.main"}
                                 fontWeight="bold"
                               >
-                                ${transaction.amount >= 0 ? '+' : ''}${transaction.amount.toFixed(2)}
+                                ${transaction.amount >= 0 ? "+" : ""}${transaction.amount.toFixed(2)}
                               </Typography>
                             </Box>
                           }
@@ -855,7 +1013,8 @@ export default function AdminUsersClient() {
                                 {transaction.description}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Balance: ${transaction.balance_before.toFixed(2)} → ${transaction.balance_after.toFixed(2)}
+                                Balance: ${transaction.balance_before.toFixed(2)} → $
+                                {transaction.balance_after.toFixed(2)}
                               </Typography>
                               <Typography variant="caption" display="block" color="text.secondary">
                                 {new Date(transaction.created_at).toLocaleString()}
@@ -880,7 +1039,6 @@ export default function AdminUsersClient() {
         </DialogActions>
       </Dialog>
 
-      {/* Your existing dialogs (Edit User, Activity Log, Confirmation) */}
       {/* Edit/Add User Dialog */}
       <Dialog
         open={!!editUser}

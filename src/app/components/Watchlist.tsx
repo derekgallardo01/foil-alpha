@@ -14,7 +14,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from "@mui/material/styles";
 import he from "he";
 import axios from "axios";
-import Image from "next/image"; // Import Next.js Image component
+import Image from "next/image";
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -25,7 +25,7 @@ import {
   Title,
   Tooltip,
   Legend,
-  TooltipItem, // Import TooltipItem for typing
+  TooltipItem,
 } from 'chart.js';
 
 // Register ChartJS components
@@ -288,7 +288,7 @@ const Watchlist = () => {
                 <a href={product.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "200px" }}>
                   <Image
                     width={200}
-                    height={200} // Add height for proper aspect ratio
+                    height={200}
                     src={product.image}
                     alt={product.title}
                     style={{

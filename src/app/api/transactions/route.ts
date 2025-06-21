@@ -1,7 +1,6 @@
-// src/app/api/transactions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
-// import { getCurrentUser } from '../../lib/dev-auth';
+import { Prisma } from '@prisma/client';
 
 // POST /api/transactions - Handle card purchase
 export async function POST(request: NextRequest) {
@@ -17,7 +16,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { user_card_id, transaction_type, amount } = body;
+        const { user_card_id, transaction_type } = body;
 
         if (!user_card_id || !transaction_type) {
             return NextResponse.json(
@@ -166,7 +165,7 @@ export async function GET(request: NextRequest) {
         const skip = (page - 1) * limit;
 
         // Build where clause
-        const where: any = {
+        const where: Prisma.CardHistoryWhereInput = {
             OR: [
                 { from_user_id: user.id }, // User as seller
                 { to_user_id: user.id }    // User as buyer

@@ -1,5 +1,3 @@
-
-// File: app/api/proxy-target/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -88,7 +86,7 @@ export async function GET(req: Request) {
 
       // Ensure product exists
       await prisma.product.upsert({
-        where: { tcin },
+        where: { tcin: tcin! }, // Use tcin as unique field; non-null assertion since tcin is checked
         update: {
           title: 'Pokémon Trading Card Game: Scarlet & Violet—Prismatic Evolutions Super-Premium Collection',
           url: `https://www.target.com/p/A-${tcin}`,
@@ -97,7 +95,7 @@ export async function GET(req: Request) {
         },
         create: {
           product_id: productId,
-          tcin,
+          tcin: tcin!,
           title: 'Pokémon Trading Card Game: Scarlet & Violet—Prismatic Evolutions Super-Premium Collection',
           url: `https://www.target.com/p/A-${tcin}`,
           stock_status: fulfillment.store_options?.[0]?.order_pickup?.availability_status || 'UNKNOWN',

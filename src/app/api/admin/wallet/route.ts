@@ -1,4 +1,3 @@
-// src/app/api/admin/wallet/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
         const currentFrozen = Number(wallet.frozen_balance);
         let newBalance = currentBalance;
         let newFrozenBalance = currentFrozen;
-        let transactionType = operation;
+        const transactionType = operation;
 
         console.log('Current wallet state:', { currentBalance, currentFrozen });
 

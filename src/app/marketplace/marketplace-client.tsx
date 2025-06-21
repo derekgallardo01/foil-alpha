@@ -1,6 +1,5 @@
-// src/app/marketplace/marketplace-client.tsx - Fixed version
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -84,8 +83,6 @@ export default function MarketplacePage() {
     const [selectedSet, setSelectedSet] = useState('');
     const [selectedType, setSelectedType] = useState('');
     const [selectedSaleType, setSelectedSaleType] = useState('');
-    const [selectedCardForPurchase, setSelectedCardForPurchase] = useState<UserCard | null>(null);
-    const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
     const [purchasing, setPurchasing] = useState(false);
 
     // Extract unique sets and types from cards for filters
@@ -94,7 +91,7 @@ export default function MarketplacePage() {
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-    const fetchCards = async () => {
+    const fetchCards = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -120,7 +117,7 @@ export default function MarketplacePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [searchTerm, selectedSet, selectedType, selectedSaleType]);
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -132,7 +129,7 @@ export default function MarketplacePage() {
         if (status === 'authenticated') {
             fetchCards();
         }
-    }, [searchTerm, selectedSet, selectedType, selectedSaleType, status]);
+    }, [fetchCards, status]);
 
     const formatPrice = (price: number | null) => {
         if (!price) return 'N/A';

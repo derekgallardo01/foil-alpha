@@ -1,4 +1,3 @@
-// src/app/api/admin/users/route.ts - Simplified version that will work
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
@@ -6,8 +5,8 @@ import { prisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import type { Session } from "next-auth";
 
-// GET /api/admin/users - List all users (simplified)
-export async function GET(req: Request) {
+// GET /api/admin/users - List all users
+export async function GET() {
   try {
     const session = await getServerSession(authOptions) as Session | null;
 
@@ -20,7 +19,6 @@ export async function GET(req: Request) {
 
     console.log("Fetching users from database..."); // Debug log
 
-    // Try simple query first
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -38,7 +36,6 @@ export async function GET(req: Request) {
 
     console.log("Found users:", users.length); // Debug log
 
-    // Try to get wallet info for each user
     const usersWithWallets = await Promise.all(
       users.map(async (user) => {
         try {
@@ -82,7 +79,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/admin/users - Create new user (simplified)
+// POST /api/admin/users - Create new user
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions) as Session | null;
@@ -119,7 +116,7 @@ export async function POST(req: Request) {
           role,
           subscriptionStatus,
           password: hashedPassword,
-          is_verified: 0
+          is_verified: false
         }
       });
 
@@ -128,7 +125,7 @@ export async function POST(req: Request) {
         data: {
           user_id: newUser.id,
           balance: Number(initialBalance),
-          frozen_balance: 0.00
+          frozen_balance: 0
         }
       });
 
@@ -139,7 +136,7 @@ export async function POST(req: Request) {
             user_id: newUser.id,
             transaction_type: 'INITIAL_DEPOSIT',
             amount: Number(initialBalance),
-            balance_before: 0.00,
+            balance_before: 0,
             balance_after: Number(initialBalance),
             description: `Initial deposit by admin: ${session.user.name}`,
             reference_type: 'ADMIN_DEPOSIT',
@@ -152,9 +149,9 @@ export async function POST(req: Request) {
           data: {
             user_id: newUser.id,
             transaction_type: 'WALLET_SETUP',
-            amount: 0.00,
-            balance_before: 0.00,
-            balance_after: 0.00,
+            amount: 0,
+            balance_before: 0,
+            balance_after: 0,
             description: 'Wallet created during user registration',
             reference_type: 'SYSTEM_SETUP'
           }

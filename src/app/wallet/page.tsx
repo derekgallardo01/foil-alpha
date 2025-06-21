@@ -1,17 +1,13 @@
-// src/app/wallet/page.tsx
 "use client";
 
-import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
     Box,
     Container,
     Typography,
-    IconButton,
     Button,
 } from "@mui/material";
-import { Menu as MenuIcon, ArrowBack } from "@mui/icons-material";
 import Image from "next/image";
 import UserWallet from "../components/UserWallet";
 import { ToastContainer } from "react-toastify";

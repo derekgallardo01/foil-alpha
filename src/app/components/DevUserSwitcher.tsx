@@ -22,18 +22,6 @@ export default function DevUserSwitcher() {
     const [currentUser, setCurrentUser] = React.useState<DevUser>(devUsers[0]);
     const [isExpanded, setIsExpanded] = React.useState(false);
 
-    // Only show in development
-    if (process.env.NODE_ENV !== 'development') return null;
-
-    const switchUser = (user: DevUser) => {
-        // Store in localStorage for other components to read
-        localStorage.setItem('dev_current_user', JSON.stringify(user));
-        setCurrentUser(user);
-        setIsExpanded(false);
-        // Refresh page to apply changes
-        window.location.reload();
-    };
-
     React.useEffect(() => {
         const stored = localStorage.getItem('dev_current_user');
         if (stored) {
@@ -44,6 +32,16 @@ export default function DevUserSwitcher() {
             }
         }
     }, []);
+
+    // Only render in development
+    if (process.env.NODE_ENV !== 'development') return null;
+
+    const switchUser = (user: DevUser) => {
+        localStorage.setItem('dev_current_user', JSON.stringify(user));
+        setCurrentUser(user);
+        setIsExpanded(false);
+        window.location.reload();
+    };
 
     return (
         <Paper

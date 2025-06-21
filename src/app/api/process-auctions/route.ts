@@ -1,11 +1,10 @@
-// src/app/api/process-auctions/route.ts - Process ended auctions
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '../../lib/prisma';
 
 // POST /api/process-auctions - Process all ended auctions
-export async function POST(request: NextRequest) {
+export async function POST() {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id || session.user.role !== 'admin') {
@@ -274,7 +273,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/process-auctions - Get auctions that need processing
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id || session.user.role !== 'admin') {

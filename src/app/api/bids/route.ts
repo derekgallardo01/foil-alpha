@@ -1,8 +1,13 @@
-// src/app/api/bids/route.ts - Enhanced with wallet frozen balance
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '../../lib/prisma';
+
+// Define type for where clause
+interface BidWhereClause {
+  user_card_id?: number;
+  bidder_id?: number;
+}
 
 // GET /api/bids - Get bids for a card or user's bids
 export async function GET(request: NextRequest) {
@@ -16,7 +21,7 @@ export async function GET(request: NextRequest) {
         const userCardId = searchParams.get('user_card_id');
         const userId = searchParams.get('user_id');
 
-        let where: any = {};
+        const where: BidWhereClause = {};
 
         if (userCardId) {
             where.user_card_id = parseInt(userCardId);
@@ -173,8 +178,6 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            let amountToFreeze = bidAmount;
-
             if (previousBidFromUser) {
                 // Unfreeze previous bid amount
                 const previousAmount = Number(previousBidFromUser.amount);
@@ -186,9 +189,6 @@ export async function POST(request: NextRequest) {
                         }
                     }
                 });
-
-                // Calculate net amount to freeze (difference)
-                amountToFreeze = bidAmount - previousAmount;
 
                 // Deactivate previous bid
                 await tx.bid.update({
@@ -209,6 +209,45 @@ export async function POST(request: NextRequest) {
                         reference_type: 'BID_REPLACED'
                     }
                 });
+
+                // Update wallet with new frozen amount
+                const updatedWallet = await tx.userWallet.update({
+                    where: { user_id: bidderId },
+                    data: {
+                        frozen_balance: {
+                            increment: bidAmount
+                        }
+                    }
+                });
+
+                // Create the new bid
+                const newBid = await tx.bid.create({
+                    data: {
+                        user_card_id,
+                        bidder_id: bidderId,
+                        amount: bidAmount,
+                        is_active: true
+                    }
+                });
+
+                // Record freeze transaction
+                await tx.walletTransaction.create({
+                    data: {
+                        user_id: bidderId,
+                        transaction_type: 'FREEZE_FUNDS',
+                        amount: bidAmount,
+                        balance_before: Number(bidderWallet.balance),
+                        balance_after: Number(bidderWallet.balance),
+                        description: `Bid placed on ${userCard.card.name}`,
+                        reference_id: newBid.id,
+                        reference_type: 'BID_PLACED'
+                    }
+                });
+
+                return {
+                    bid: newBid,
+                    wallet: updatedWallet
+                };
             }
 
             // 2. If there's a previous highest bid from another user, unfreeze their amount

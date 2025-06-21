@@ -1,7 +1,6 @@
-// src/app/components/UserWallet.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
     Box,
@@ -24,6 +23,7 @@ import {
     TrendingDown,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
+import type { ChipProps } from "@mui/material"; // Import ChipProps for typing
 
 interface WalletData {
     balance: number;
@@ -46,7 +46,8 @@ export default function UserWallet() {
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchWalletData = async () => {
+    // Memoize fetchWalletData to prevent unnecessary re-renders
+    const fetchWalletData = useCallback(async () => {
         try {
             setLoading(true);
             const response = await fetch("/api/user/wallet?include_transactions=true&limit=10", {
@@ -66,15 +67,16 @@ export default function UserWallet() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [session?.accessToken]); // Dependency array for useCallback
 
     useEffect(() => {
         if (session?.user?.id) {
             fetchWalletData();
         }
-    }, [session]);
+    }, [session, fetchWalletData]); // Include fetchWalletData in dependency array
 
-    const getTransactionColor = (type: string) => {
+    // Explicitly type the return value of getTransactionColor
+    const getTransactionColor = (type: string): ChipProps['color'] => {
         switch (type) {
             case 'DEPOSIT':
             case 'INITIAL_SETUP':
@@ -267,7 +269,7 @@ export default function UserWallet() {
                                                 <Chip
                                                     label={transaction.type.replace('_', ' ')}
                                                     size="small"
-                                                    color={getTransactionColor(transaction.type) as any}
+                                                    color={getTransactionColor(transaction.type)}
                                                 />
                                             </Box>
                                             {!transaction.type.includes('FREEZE') && (

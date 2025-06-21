@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import {
     ShoppingCart as CartIcon,
-    Person as PersonIcon,
     AttachMoney as MoneyIcon,
     CheckCircle as CheckIcon,
     Warning as WarningIcon

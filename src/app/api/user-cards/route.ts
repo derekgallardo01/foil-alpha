@@ -1,14 +1,12 @@
-// src/app/api/user-cards/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '../../lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // GET /api/user-cards - Get user's card collection
 export async function GET(request: NextRequest) {
     console.log('🔍 User-cards API called');
     try {
-
-        // const user = { id: 1, email: 'admin@test.com', name: 'Admin User' }; //temp
         const session = await getServerSession();
 
         if (!session?.user?.email) {
@@ -37,8 +35,8 @@ export async function GET(request: NextRequest) {
 
         const skip = (page - 1) * limit;
 
-        // Build where clause
-        const where: any = {
+        // Build where clause with specific type
+        const where: Prisma.UserCardWhereInput = {
             owner_id: user.id
         };
 

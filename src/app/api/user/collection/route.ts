@@ -1,11 +1,10 @@
-// src/app/api/user/collection/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
 
 // GET /api/user/collection - Get user's card collection
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {

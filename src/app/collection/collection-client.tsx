@@ -1,7 +1,6 @@
-// src/app/collection/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -23,16 +22,11 @@ import {
     FormControl,
     InputLabel,
     Chip,
-    IconButton,
 } from "@mui/material";
 import {
-    Menu as MenuIcon,
     Sell,
     Gavel,
     AttachMoney,
-    Schedule,
-    Visibility,
-    Edit,
 } from "@mui/icons-material";
 import Image from "next/image";
 import { toast, ToastContainer } from "react-toastify";
@@ -66,6 +60,13 @@ interface SellDialogData {
     auctionDays: string;
 }
 
+interface SellRequestBody {
+    sale_type: 'FIXED' | 'AUCTION';
+    fixed_price?: number;
+    reserve_price?: number;
+    auction_duration_hours?: number;
+}
+
 export default function CollectionPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
@@ -82,15 +83,7 @@ export default function CollectionPage() {
     });
     const [actionLoading, setActionLoading] = useState(false);
 
-    useEffect(() => {
-        if (status === "authenticated") {
-            fetchUserCards();
-        } else if (status === "unauthenticated") {
-            router.push("/login");
-        }
-    }, [status, router]);
-
-    const fetchUserCards = async () => {
+    const fetchUserCards = useCallback(async () => {
         try {
             setLoading(true);
             const response = await fetch("/api/user/collection", {
@@ -110,7 +103,15 @@ export default function CollectionPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [session?.accessToken]);
+
+    useEffect(() => {
+        if (status === "authenticated") {
+            fetchUserCards();
+        } else if (status === "unauthenticated") {
+            router.push("/login");
+        }
+    }, [status, router, fetchUserCards]);
 
     const handleSellCard = (userCard: UserCard) => {
         setSellData({
@@ -128,7 +129,7 @@ export default function CollectionPage() {
         try {
             setActionLoading(true);
 
-            const requestBody: any = {
+            const requestBody: SellRequestBody = {
                 sale_type: sellData.saleType,
             };
 
@@ -136,7 +137,7 @@ export default function CollectionPage() {
                 requestBody.fixed_price = parseFloat(sellData.fixedPrice);
             } else {
                 requestBody.reserve_price = parseFloat(sellData.reservePrice);
-                requestBody.auction_duration_hours = parseInt(sellData.auctionDays) * 24; // Convert days to hours
+                requestBody.auction_duration_hours = parseInt(sellData.auctionDays) * 24;
             }
 
             const response = await fetch(`/api/user/collection/${sellData.userCardId}/sell`, {
@@ -153,10 +154,10 @@ export default function CollectionPage() {
                 throw new Error(errorData.error || 'Failed to list card');
             }
 
-            const result = await response.json();
+            await response.json();
             toast.success(`${sellData.cardName} listed for ${sellData.saleType === 'FIXED' ? 'sale' : 'auction'}!`);
             setSellDialogOpen(false);
-            fetchUserCards(); // Refresh the collection
+            fetchUserCards();
 
         } catch (error) {
             console.error("Error listing card:", error);
@@ -186,7 +187,7 @@ export default function CollectionPage() {
         }
     };
 
-    const getRarityColor = (rarity: string) => {
+    const getRarityColor = (rarity: string): 'default' | 'primary' | 'secondary' | 'warning' => {
         switch (rarity.toLowerCase()) {
             case 'common': return 'default';
             case 'uncommon': return 'primary';
@@ -223,7 +224,6 @@ export default function CollectionPage() {
         >
             <ToastContainer position="top-right" />
 
-            {/* Header */}
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={40} height={20} />
@@ -259,7 +259,7 @@ export default function CollectionPage() {
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 <Typography variant="h4" sx={{ color: '#96ff9b', mb: 3, textAlign: 'center' }}>
-                    {session?.user?.name}'s Card Collection
+                    {`${session?.user?.name}'s Card Collection`}
                 </Typography>
 
                 {userCards.length === 0 ? (
@@ -310,7 +310,7 @@ export default function CollectionPage() {
                                             <Chip
                                                 label={userCard.card.rarity}
                                                 size="small"
-                                                color={getRarityColor(userCard.card.rarity) as any}
+                                                color={getRarityColor(userCard.card.rarity)}
                                             />
                                             <Chip
                                                 label={userCard.condition}
@@ -379,7 +379,6 @@ export default function CollectionPage() {
                 )}
             </Container>
 
-            {/* Sell Dialog */}
             <Dialog open={sellDialogOpen} onClose={() => setSellDialogOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>List {sellData.cardName} for Sale</DialogTitle>
                 <DialogContent>
