@@ -37,3 +37,4 @@ export function getDevVerificationStatus() {
     console.log('🚀 DEV MODE: Auto-verifying user');
     return { is_verified: true };
 }
+

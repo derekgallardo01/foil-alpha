@@ -11,12 +11,16 @@ import {
   IconButton,
   Box,
 } from "@mui/material";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import CollectionsIcon from "@mui/icons-material/Collections";
 import HomeIcon from "@mui/icons-material/Home";
 import TaskIcon from "@mui/icons-material/Assignment";
 import LogoutIcon from "@mui/icons-material/ExitToApp";
 import MenuIcon from "@mui/icons-material/Menu";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChatIcon from "@mui/icons-material/Chat";
+import StyleIcon from "@mui/icons-material/Style";
+import BusinessIcon from "@mui/icons-material/Business";
 
 // Define prop types
 interface SidebarProps {
@@ -65,11 +69,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
         {/* Sidebar Links */}
         <List>
+
+          <ListItem component="div" onClick={() => handleNavigation("/admin/listings")}>
+            <ListItemIcon>
+              <BusinessIcon />
+            </ListItemIcon>
+            <ListItemText primary="Marketplace Listings" />
+          </ListItem>
+
+          <ListItem component="div" onClick={() => handleNavigation("/admin/cards")}>
+            <ListItemIcon>
+              <StyleIcon />
+            </ListItemIcon>
+            <ListItemText primary="Manage Cards" />
+          </ListItem>
+
           <ListItem component="div" onClick={() => handleNavigation("/dashboard")}>
             <ListItemIcon>
               <HomeIcon />
             </ListItemIcon>
             <ListItemText primary="Dashboard" />
+          </ListItem>
+
+          <ListItem component="div" onClick={() => handleNavigation("/marketplace")}>
+            <ListItemIcon>
+              <StorefrontIcon /> 
+            </ListItemIcon>
+            <ListItemText primary="Marketplace" />
+          </ListItem>
+
+          <ListItem component="div" onClick={() => handleNavigation("/collection")}>
+            <ListItemIcon>
+              <CollectionsIcon /> 
+            </ListItemIcon>
+            <ListItemText primary="My Collection" />
           </ListItem>
 
           <ListItem component="div" onClick={() => handleNavigation("/tasks")}>
