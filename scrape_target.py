@@ -57,10 +57,10 @@ def check_existing_products(connection, urls):
             FROM products p
             LEFT JOIN (
                 SELECT product_id, price, recorded_at
-                FROM priceHistory
+                FROM pricehistory
                 WHERE (product_id, recorded_at) IN (
                     SELECT product_id, MAX(recorded_at)
-                    FROM priceHistory
+                    FROM pricehistory
                     GROUP BY product_id
                 )
             ) ph ON p.product_id = ph.product_id
@@ -237,7 +237,7 @@ def save_to_db(connection, results):
 
         if price_inserts:
             cursor.executemany("""
-                INSERT INTO priceHistory (product_id, price)
+                INSERT INTO pricehistory (product_id, price)
                 VALUES (%s, %s)
             """, price_inserts)
 
@@ -255,14 +255,17 @@ def save_to_db(connection, results):
 
 def main():
     urls = [
-       # "https://www.target.com/p/2025-pokemon-scarlet-violet-s8-5-poster-collection/-/A-93803457",
-       # "https://www.target.com/p/2024-pok-scarlet-violet-s8-5-elite-trainer-box/-/A-93954435",
-       # "https://www.target.com/p/pokemon-scarlet-violet-s3-5-booster-bundle-box/-/A-88897904",
-        #"https://www.target.com/p/pok-233-mon-trading-card-game-crown-zenith-booster-bundle-box/-/A-94091405",
-       # "https://www.target.com/p/pokemon-trading-card-game-scarlet-38-violet-151-elite-trainer-box/-/A-88897899",
-       # "https://www.target.com/p/pokemon-trading-card-game-scarlet-38-violet-151-ultra-premium-collection/-/A-88897906",
+        "https://www.target.com/p/2025-pokemon-scarlet-violet-s8-5-poster-collection/-/A-93803457",
+        "https://www.target.com/p/2024-pok-scarlet-violet-s8-5-elite-trainer-box/-/A-93954435",
+        "https://www.target.com/p/pokemon-scarlet-violet-s3-5-booster-bundle-box/-/A-88897904",
+        "https://www.target.com/p/pok-233-mon-trading-card-game-crown-zenith-booster-bundle-box/-/A-94091405",
+        "https://www.target.com/p/pokemon-trading-card-game-scarlet-38-violet-151-elite-trainer-box/-/A-88897899",
+        "https://www.target.com/p/pokemon-trading-card-game-scarlet-38-violet-151-ultra-premium-collection/-/A-88897906",
         "https://www.target.com/p/2025-pokemon-prismatic-evolutions-binder-collection/-/A-94300066",
-        "https://www.target.com/p/pok-233-mon-trading-card-game-scarlet-38-violet-151-collection-zapdos-ex/-/A-88897898"
+        "https://www.target.com/p/pok-233-mon-trading-card-game-scarlet-38-violet-151-collection-zapdos-ex/-/A-88897898",
+        "https://www.target.com/p/2025-pok-233-mon-prismatic-evolutions-super-premium-collection/-/A-94300072",
+        "https://www.target.com/p/pok-233-mon-trading-card-game-scarlet-38-violet-prismatic-evolutions-booster-bundle/-/A-93954446",
+        "https://www.target.com/p/2025-pok-233-mon-scarlet-violet-s9-elite-trainer-box/-/A-93803439"
     ]
     
     connection = None

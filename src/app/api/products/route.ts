@@ -46,10 +46,10 @@ export async function GET() {
       FROM products p
       LEFT JOIN (
         SELECT product_id, price, recorded_at
-        FROM priceHistory
+        FROM pricehistory
         WHERE (product_id, recorded_at) IN (
           SELECT product_id, MAX(recorded_at)
-          FROM priceHistory
+          FROM pricehistory
           GROUP BY product_id
         )
       ) ph ON p.product_id = ph.product_id

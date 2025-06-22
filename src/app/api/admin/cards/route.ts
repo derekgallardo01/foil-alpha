@@ -25,9 +25,9 @@ interface PrismaCard {
   id: number;
   name: string;
   set_name: string;
-  set_number: string;
+  set_number: string | null; // Change to nullable
   rarity: string;
-  card_type: string;
+  card_type: string | null; // Also nullable to match schema
   subtype: string | null;
   hp: number | null;
   image_url: string | null;

@@ -22,15 +22,18 @@ import {
     FormControl,
     InputLabel,
     Chip,
+    IconButton,
 } from "@mui/material";
 import {
     Sell,
     Gavel,
     AttachMoney,
+    MenuIcon,
 } from "@mui/icons-material";
 import Image from "next/image";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Sidebar from "../components/Sidebar"; // Adjust the import path based on your project structure
 
 interface UserCard {
     id: number;
@@ -82,6 +85,11 @@ export default function CollectionPage() {
         auctionDays: '7'
     });
     const [actionLoading, setActionLoading] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
 
     const fetchUserCards = useCallback(async () => {
         try {
@@ -224,7 +232,12 @@ export default function CollectionPage() {
         >
             <ToastContainer position="top-right" />
 
+            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b', mr: 2 }}>
+                    <MenuIcon />
+                </IconButton>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={40} height={20} />
                     <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
