@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
 
+// Define valid wallet operations for type safety
+type WalletOperation = 'ADD_MONEY' | 'DEDUCT_MONEY' | 'FREEZE_FUNDS' | 'UNFREEZE_FUNDS';
+
 // POST /api/admin/wallet - Admin wallet operations
 export async function POST(request: NextRequest) {
     try {
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
         const operationAmount = Number(amount);
 
         // Validate operation type
-        const validOperations = ['ADD_MONEY', 'DEDUCT_MONEY', 'FREEZE_FUNDS', 'UNFREEZE_FUNDS'];
+        const validOperations: WalletOperation[] = ['ADD_MONEY', 'DEDUCT_MONEY', 'FREEZE_FUNDS', 'UNFREEZE_FUNDS'];
         if (!validOperations.includes(operation)) {
             return NextResponse.json({
                 error: 'Invalid operation. Must be ADD_MONEY, DEDUCT_MONEY, FREEZE_FUNDS, or UNFREEZE_FUNDS'
@@ -50,11 +53,15 @@ export async function POST(request: NextRequest) {
             });
         }
 
+        if (!wallet.id) {
+            throw new Error('Failed to create or retrieve user wallet');
+        }
+
         const currentBalance = Number(wallet.balance);
         const currentFrozen = Number(wallet.frozen_balance);
         let newBalance = currentBalance;
         let newFrozenBalance = currentFrozen;
-        const transactionType = operation;
+        const transactionType: WalletOperation = operation;
 
         console.log('Current wallet state:', { currentBalance, currentFrozen });
 
@@ -109,6 +116,7 @@ export async function POST(request: NextRequest) {
             // Create wallet transaction record
             const walletTransaction = await tx.walletTransaction.create({
                 data: {
+                    wallet_id: wallet.id,
                     user_id: targetUserId,
                     transaction_type: transactionType,
                     amount: operation === 'DEDUCT_MONEY' ? -operationAmount : operationAmount,
@@ -173,8 +181,13 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'user_id parameter required' }, { status: 400 });
         }
 
+        const parsedUserId = parseInt(userId);
+        if (isNaN(parsedUserId)) {
+            return NextResponse.json({ error: 'Invalid user_id format' }, { status: 400 });
+        }
+
         const wallet = await prisma.userWallet.findUnique({
-            where: { user_id: parseInt(userId) },
+            where: { user_id: parsedUserId },
             include: {
                 user: {
                     select: { id: true, name: true, email: true }
@@ -187,7 +200,7 @@ export async function GET(request: NextRequest) {
             // Create wallet if it doesn't exist
             const newWallet = await prisma.userWallet.create({
                 data: {
-                    user_id: parseInt(userId),
+                    user_id: parsedUserId,
                     balance: 0.00,
                     frozen_balance: 0.00
                 },
@@ -198,10 +211,15 @@ export async function GET(request: NextRequest) {
                 }
             });
 
+            if (!newWallet.id) {
+                throw new Error('Failed to create new wallet');
+            }
+
             // Create initial transaction
             await prisma.walletTransaction.create({
                 data: {
-                    user_id: parseInt(userId),
+                    wallet_id: newWallet.id,
+                    user_id: parsedUserId,
                     transaction_type: 'WALLET_SETUP',
                     amount: 0.00,
                     balance_before: 0.00,
@@ -226,7 +244,7 @@ export async function GET(request: NextRequest) {
 
         // Get recent transactions
         const recentTransactions = await prisma.walletTransaction.findMany({
-            where: { user_id: parseInt(userId) },
+            where: { user_id: parsedUserId },
             orderBy: { created_at: 'desc' },
             take: 20,
             select: {

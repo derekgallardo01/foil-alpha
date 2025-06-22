@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   try {
     // Check for existing email using Prisma
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
@@ -44,25 +44,25 @@ export async function POST(req: Request) {
     const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user with Prisma
+    // Create user with Prisma, aligning is_verified with schema (number)
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        is_verified: DEV_BYPASS.AUTO_VERIFY_USERS ? true : false,
+        is_verified: DEV_BYPASS.AUTO_VERIFY_USERS ? 1 : 0, // Use number to match schema
         verification_code: verificationCode,
         role: "user",
-        subscriptionStatus: "active"
-      }
+        subscriptionStatus: "active",
+      },
     });
 
     // Email handling with development bypass
-    const emailEnabled = process.env.ENABLE_EMAIL === 'true';
+    const emailEnabled = process.env.ENABLE_EMAIL === "true";
 
     if (DEV_BYPASS.SKIP_EMAIL_SENDING) {
       // Development: Use mock email
-      console.log('🚀 DEV MODE: Using mock email service');
+      console.log("🚀 DEV MODE: Using mock email service");
       const htmlContent = `
         <h2>Email Verification</h2>
         <p>Welcome to TCG Market! Please verify your email address.</p>
@@ -96,15 +96,14 @@ export async function POST(req: Request) {
     return NextResponse.json({
       message: responseMessage,
       userId: newUser.id,
-      ...(DEV_BYPASS.AUTO_VERIFY_USERS && { devMode: true, autoVerified: true })
+      ...(DEV_BYPASS.AUTO_VERIFY_USERS && { devMode: true, autoVerified: true }),
     }, { status: 201 });
-
   } catch (error) {
     console.error("Database or email error:", error);
 
     // Handle Prisma-specific errors
     if (error instanceof Error) {
-      if (error.message.includes('P2002')) {
+      if (error.message.includes("P2002")) {
         return NextResponse.json({ message: "Email is already registered." }, { status: 400 });
       }
     }

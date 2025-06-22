@@ -185,6 +185,8 @@ model UserWallet {
   user           User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
   balance        Decimal           @db.Decimal(10, 2)
   frozen_balance Decimal           @db.Decimal(10, 2)
+  created_at     DateTime          @default(now()) @db.DateTime(0)
+  updated_at     DateTime          @updatedAt @db.DateTime(0)
   transactions   WalletTransaction[] @relation("UserWalletTransactions")
   @@map("user_wallets")
 }
@@ -201,6 +203,7 @@ model WalletTransaction {
   balance_after   Decimal  @db.Decimal(10, 2)
   description     String?  @db.VarChar(255)
   reference_type  String   @db.VarChar(50)
+  reference_id    Int?     // Added to store related bid ID
   admin_id        Int?
   created_at      DateTime @default(now()) @db.DateTime(0)
   @@map("wallet_transactions")

@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '../../../lib/prisma';
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest, context: unknown) {
             },
           },
         },
-        history: { // Changed from 'cardHistory' to 'history'
+        history: {
           orderBy: { created_at: 'desc' },
           include: {
             fromUser: {
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest, context: unknown) {
     console.error('Error fetching user card:', error);
     return NextResponse.json(
       { error: 'Failed to fetch card details' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -95,7 +96,7 @@ export async function PUT(request: NextRequest, context: unknown) {
     if (!existingUserCard) {
       return NextResponse.json(
         { error: 'Card not found or not owned by user' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -125,7 +126,7 @@ export async function PUT(request: NextRequest, context: unknown) {
         // Cancel any existing bids if re-listing
         await prisma.bid.updateMany({
           where: {
-            user_card_id: userCardId,
+            userCardId: userCardId, // Fixed: user_card_id → userCardId
             is_active: true,
           },
           data: {
@@ -143,7 +144,7 @@ export async function PUT(request: NextRequest, context: unknown) {
       // Cancel any active bids
       await prisma.bid.updateMany({
         where: {
-          user_card_id: userCardId,
+          userCardId: userCardId, // Fixed: user_card_id → userCardId
           is_active: true,
         },
         data: {
@@ -172,26 +173,20 @@ export async function PUT(request: NextRequest, context: unknown) {
 
     // Create history entry for significant changes
     if (body.is_for_sale && !existingUserCard.is_for_sale) {
-      await prisma.cardHistory.create({
+      await prisma.cardTransactionHistory.create({
         data: {
-          user_card_id: userCardId,
-          to_user_id: user.id,
-          transaction_type: 'LISTING',
-          price:
-            body.sale_type === 'FIXED'
-              ? parseFloat(body.fixed_price)
-              : parseFloat(body.reserve_price),
-          notes: `Listed for ${
-            body.sale_type === 'FIXED' ? 'fixed price sale' : 'auction'
-          }`,
+          userCardId: userCardId, // Fixed: user_card_id → userCardId
+          toUserId: user.id, // Fixed: to_user_id → toUserId
+          action: 'LISTING', // Fixed: transaction_type → action
+          notes: `Listed for ${body.sale_type === 'FIXED' ? 'fixed price sale' : 'auction'}`,
         },
       });
     } else if (!body.is_for_sale && existingUserCard.is_for_sale) {
-      await prisma.cardHistory.create({
+      await prisma.cardTransactionHistory.create({
         data: {
-          user_card_id: userCardId,
-          to_user_id: user.id,
-          transaction_type: 'DELISTING',
+          userCardId: userCardId, // Fixed: user_card_id → userCardId
+          toUserId: user.id, // Fixed: to_user_id → toUserId
+          action: 'DELISTING', // Fixed: transaction_type → action
           notes: 'Removed from sale',
         },
       });
@@ -205,7 +200,7 @@ export async function PUT(request: NextRequest, context: unknown) {
         error: 'Failed to update card',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -240,14 +235,14 @@ export async function DELETE(request: NextRequest, context: unknown) {
     if (!userCard) {
       return NextResponse.json(
         { error: 'Card not found or not owned by user' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Check if card has active bids
     const activeBids = await prisma.bid.count({
       where: {
-        user_card_id: userCardId,
+        userCardId: userCardId, // Fixed: user_card_id → userCardId
         is_active: true,
       },
     });
@@ -255,7 +250,7 @@ export async function DELETE(request: NextRequest, context: unknown) {
     if (activeBids > 0) {
       return NextResponse.json(
         { error: 'Cannot delete card with active bids' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -263,16 +258,16 @@ export async function DELETE(request: NextRequest, context: unknown) {
     await prisma.$transaction(async (tx) => {
       // Deactivate any bids
       await tx.bid.updateMany({
-        where: { user_card_id: userCardId },
+        where: { userCardId: userCardId }, // Fixed: user_card_id → userCardId
         data: { is_active: false },
       });
 
       // Create deletion history
-      await tx.cardHistory.create({
+      await tx.cardTransactionHistory.create({
         data: {
-          user_card_id: userCardId,
-          to_user_id: user.id,
-          transaction_type: 'DELETION',
+          userCardId: userCardId, // Fixed: user_card_id → userCardId
+          toUserId: user.id, // Fixed: to_user_id → toUserId
+          action: 'DELETION', // Fixed: transaction_type → action
           notes: 'Card removed from collection',
         },
       });
@@ -291,7 +286,7 @@ export async function DELETE(request: NextRequest, context: unknown) {
         error: 'Failed to delete card',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

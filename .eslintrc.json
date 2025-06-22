@@ -14,26 +14,63 @@ const eslintConfig = [
     extends: [
       'eslint:recommended',
       'plugin:@typescript-eslint/recommended',
+      'plugin:@typescript-eslint/recommended-requiring-type-checking',
       'plugin:react/recommended',
       'plugin:react-hooks/recommended',
+      'plugin:react/jsx-runtime', // Supports React 17+ JSX transform
+      'plugin:prisma/recommended', // Added for Prisma schema validation
       'next/core-web-vitals',
+      'plugin:import/recommended',
+      'plugin:import/typescript',
     ],
     parser: '@typescript-eslint/parser',
     parserOptions: {
-      ecmaVersion: 12,
+      ecmaVersion: 'latest',
       sourceType: 'module',
+      project: './tsconfig.json',
+      tsconfigRootDir: import.meta.dirname,
     },
-    plugins: ['@typescript-eslint', 'react', 'react-hooks'],
+    plugins: ['@typescript-eslint', 'react', 'react-hooks', 'prisma', 'import'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@next/next/no-img-element': 'off',
-      'react-hooks/exhaustive-deps': 'off',
-      'react/no-unescaped-entities': 'off',
-      'prefer-const': 'off',
-      'react-hooks/rules-of-hooks': 'off',
-      '@typescript-eslint/no-require-imports': 'off',
-      '@typescript-eslint/no-unused-expressions': 'off',
+      // TypeScript rules for robust type safety
+      '@typescript-eslint/no-explicit-any': 'error', // Enforce no `any` for stricter typing
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }], // Stricter than warn
+      '@typescript-eslint/explicit-function-return-type': ['warn', { allowExpressions: true }], // Encourage explicit return types
+      '@typescript-eslint/no-unsafe-assignment': 'error', // Prevent unsafe type assignments
+      '@typescript-eslint/no-unsafe-member-access': 'error', // Catch unsafe property access
+      '@typescript-eslint/no-unsafe-call': 'error', // Prevent unsafe function calls
+      '@typescript-eslint/no-floating-promises': 'error', // Ensure async/await is handled
+      '@typescript-eslint/await-thenable': 'error', // Catch improper await usage
+      '@typescript-eslint/no-misused-promises': 'error', // Prevent misused promises in conditionals
+
+      // React and Next.js rules
+      'react/prop-types': 'off', // Not needed with TypeScript
+      'react/no-unescaped-entities': 'off', // Keep disabled per your config
+      '@next/next/no-img-element': 'off', // Keep disabled per your config
+      'react-hooks/exhaustive-deps': 'warn', // Re-enabled as warn to catch dependency issues
+      'react-hooks/rules-of-hooks': 'error', // Re-enabled to enforce React Hooks rules
+      'react/no-unused-prop-types': 'off', // Not needed with TypeScript
+
+      // Import rules for cleaner code
+      'import/order': ['error', { groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'] }], // Organize imports
+      'import/no-unresolved': 'error', // Catch unresolved imports
+      'import/no-duplicates': 'error', // Prevent duplicate imports
+
+      // General JavaScript rules
+      'prefer-const': 'error', // Re-enabled to enforce const where possible
+      'no-unused-expressions': 'error', // Re-enabled instead of @typescript-eslint/no-unused-expressions
+      'no-console': ['warn', { allow: ['error'] }], // Warn on console.log but allow console.error
+
+      // Prisma rules
+      'prisma/require-valid-schema': 'error', // Ensure schema-code alignment
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+      'import/resolver': {
+        typescript: {}, // Enable TypeScript import resolution
+      },
     },
   }),
 ];

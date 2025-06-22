@@ -28,7 +28,7 @@ import {
     Sell,
     Gavel,
     AttachMoney,
-    MenuIcon,
+    Menu,
 } from "@mui/icons-material";
 import Image from "next/image";
 import { toast, ToastContainer } from "react-toastify";
@@ -236,7 +236,7 @@ export default function CollectionPage() {
 
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
                 <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b', mr: 2 }}>
-                    <MenuIcon />
+                    <Menu />
                 </IconButton>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={40} height={20} />

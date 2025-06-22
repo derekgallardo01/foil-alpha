@@ -8,9 +8,9 @@ interface CardResponse {
   id: string;
   name: string;
   set_name: string;
-  set_number: string;
+  set_number: string | null; // Made nullable to match Prisma schema
   rarity: string;
-  card_type: string;
+  card_type: string | null; // Made nullable to match Prisma schema
   imageUrl: string | null;
   createdAt: Date;
 }
@@ -19,18 +19,18 @@ interface CardResponse {
 interface CreateCardBody {
   name: string;
   set_name: string;
-  set_number: string;
+  set_number?: string | null; // Made optional to align with schema
   rarity: string;
-  card_type: string;
+  card_type?: string | null; // Made optional to align with schema
   imageUrl?: string | null;
 }
 
 interface UpdateCardBody {
   name?: string;
   set_name?: string;
-  set_number?: string;
+  set_number?: string | null; // Made nullable
   rarity?: string;
-  card_type?: string;
+  card_type?: string | null; // Made nullable
   imageUrl?: string | null;
 }
 
@@ -89,13 +89,18 @@ export async function POST(request: Request) {
   try {
     const body: CreateCardBody = await request.json();
 
+    // Validate required fields
+    if (!body.name || !body.set_name || !body.rarity) {
+      return NextResponse.json({ error: "Name, set_name, and rarity are required" }, { status: 400 });
+    }
+
     const newCard = await prisma.card.create({
       data: {
         name: body.name,
         set_name: body.set_name,
-        set_number: body.set_number,
+        set_number: body.set_number ?? null,
         rarity: body.rarity,
-        card_type: body.card_type,
+        card_type: body.card_type ?? null,
         image_url: body.imageUrl ?? null,
       },
       select: {
@@ -150,9 +155,9 @@ export async function PUT(request: Request) {
     type CardUpdateData = {
       name?: string;
       set_name?: string;
-      set_number?: string;
+      set_number?: string | null;
       rarity?: string;
-      card_type?: string;
+      card_type?: string | null;
       image_url?: string | null;
     };
 
