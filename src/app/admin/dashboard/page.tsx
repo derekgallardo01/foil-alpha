@@ -25,7 +25,6 @@ import {
     Menu as MenuIcon,
     TrendingUp,
     People,
-    AccountBalanceWallet,
     Store,
     Gavel,
     Assessment,
@@ -51,8 +50,6 @@ const itemVariants = {
 interface DashboardStats {
     totalUsers: number;
     activeUsers: number;
-    totalBalance: number;
-    frozenBalance: number;
     totalCards: number;
     activeListings: number;
     activeAuctions: number;
@@ -78,8 +75,6 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats>({
         totalUsers: 0,
         activeUsers: 0,
-        totalBalance: 0,
-        frozenBalance: 0,
         totalCards: 0,
         activeListings: 0,
         activeAuctions: 0,
@@ -103,7 +98,7 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
 
-            // Fetch users with wallet info
+            // Fetch users data
             const usersResponse = await fetch("/api/admin/users", {
                 headers: {
                     "Authorization": `Bearer ${session?.accessToken}`,
@@ -113,12 +108,10 @@ export default function AdminDashboard() {
             if (!usersResponse.ok) throw new Error("Failed to fetch users");
             const users = await usersResponse.json();
 
-            // Calculate stats from users data
+            // Calculate stats from users data (removed balance-related calculations)
             const newStats: DashboardStats = {
                 totalUsers: users.length,
                 activeUsers: users.filter((u: any) => u.subscriptionStatus === 'active').length,
-                totalBalance: users.reduce((sum: number, u: any) => sum + (u.balance || 0), 0),
-                frozenBalance: users.reduce((sum: number, u: any) => sum + (u.frozen_balance || 0), 0),
                 totalCards: users.reduce((sum: number, u: any) => sum + (u.cardCount || 0), 0),
                 activeListings: 0, // TODO: Fetch from listings API
                 activeAuctions: 0, // TODO: Fetch from auctions API
@@ -140,19 +133,19 @@ export default function AdminDashboard() {
                 },
                 {
                     id: '2',
-                    type: 'wallet_deposit',
-                    description: 'Admin wallet deposit',
-                    user: 'Jane Smith',
-                    amount: 100,
-                    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-                },
-                {
-                    id: '3',
                     type: 'card_sold',
                     description: 'Card sold via fixed price',
                     user: 'Bob Wilson',
                     amount: 25.99,
                     timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+                },
+                {
+                    id: '3',
+                    type: 'auction_ended',
+                    description: 'Auction completed successfully',
+                    user: 'Alice Johnson',
+                    amount: 45.50,
+                    timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
                 },
             ];
 
@@ -173,6 +166,7 @@ export default function AdminDashboard() {
         }
     }, [status, session]);
 
+    // Updated stat cards without balance information
     const statCards = [
         {
             title: "Total Users",
@@ -191,22 +185,6 @@ export default function AdminDashboard() {
             link: "/admin/users"
         },
         {
-            title: "Total Balance",
-            value: `$${stats.totalBalance.toFixed(2)}`,
-            icon: <AccountBalanceWallet sx={{ fontSize: 40, color: '#96ff9b' }} />,
-            change: "+15%",
-            changeType: "up" as const,
-            link: "/admin/wallets"
-        },
-        {
-            title: "Frozen Balance",
-            value: `$${stats.frozenBalance.toFixed(2)}`,
-            icon: <AccountBalanceWallet sx={{ fontSize: 40, color: '#96ff9b' }} />,
-            change: "0%",
-            changeType: "neutral" as const,
-            link: "/admin/wallets/freeze"
-        },
-        {
             title: "Total Cards",
             value: stats.totalCards,
             icon: <Store sx={{ fontSize: 40, color: '#96ff9b' }} />,
@@ -222,13 +200,28 @@ export default function AdminDashboard() {
             changeType: "down" as const,
             link: "/admin/auctions"
         },
+        {
+            title: "Total Sales",
+            value: stats.totalSales,
+            icon: <TrendingUp sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            change: "+18%",
+            changeType: "up" as const,
+            link: "/admin/transactions"
+        },
+        {
+            title: "Active Listings",
+            value: stats.activeListings,
+            icon: <Store sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            change: "+10%",
+            changeType: "up" as const,
+            link: "/admin/listings"
+        },
     ];
 
     const getActivityIcon = (type: RecentActivity['type']) => {
         const iconProps = { sx: { color: '#96ff9b' } };
         switch (type) {
             case 'user_registered': return <People {...iconProps} />;
-            case 'wallet_deposit': return <AccountBalanceWallet {...iconProps} />;
             case 'card_sold': return <Store {...iconProps} />;
             case 'auction_ended': return <Gavel {...iconProps} />;
             default: return <Assessment {...iconProps} />;
@@ -238,7 +231,6 @@ export default function AdminDashboard() {
     const getActivityColor = (type: RecentActivity['type']) => {
         switch (type) {
             case 'user_registered': return 'primary';
-            case 'wallet_deposit': return 'success';
             case 'card_sold': return 'info';
             case 'auction_ended': return 'warning';
             default: return 'default';
@@ -424,14 +416,14 @@ export default function AdminDashboard() {
                                                 fullWidth
                                                 variant="outlined"
                                                 startIcon={<People />}
-                                                onClick={() => router.push('/admin/users/add')}
+                                                onClick={() => router.push('/admin/users')}
                                                 sx={{
                                                     borderColor: '#96ff9b',
                                                     color: '#96ff9b',
                                                     '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
                                                 }}
                                             >
-                                                Add User
+                                                Manage Users
                                             </Button>
                                         </Grid>
                                         <Grid item xs={6}>
@@ -439,29 +431,14 @@ export default function AdminDashboard() {
                                                 fullWidth
                                                 variant="outlined"
                                                 startIcon={<Store />}
-                                                onClick={() => router.push('/admin/cards/add')}
+                                                onClick={() => router.push('/admin/cards')}
                                                 sx={{
                                                     borderColor: '#96ff9b',
                                                     color: '#96ff9b',
                                                     '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
                                                 }}
                                             >
-                                                Add Card
-                                            </Button>
-                                        </Grid>
-                                        <Grid item xs={6}>
-                                            <Button
-                                                fullWidth
-                                                variant="outlined"
-                                                startIcon={<AccountBalanceWallet />}
-                                                onClick={() => router.push('/admin/wallets/add-funds')}
-                                                sx={{
-                                                    borderColor: '#96ff9b',
-                                                    color: '#96ff9b',
-                                                    '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-                                                }}
-                                            >
-                                                Add Funds
+                                                Manage Cards
                                             </Button>
                                         </Grid>
                                         <Grid item xs={6}>
@@ -469,14 +446,29 @@ export default function AdminDashboard() {
                                                 fullWidth
                                                 variant="outlined"
                                                 startIcon={<Gavel />}
-                                                onClick={() => router.push('/admin/process-auctions')}
+                                                onClick={() => router.push('/admin/auctions')}
                                                 sx={{
                                                     borderColor: '#96ff9b',
                                                     color: '#96ff9b',
                                                     '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
                                                 }}
                                             >
-                                                Process Auctions
+                                                Manage Auctions
+                                            </Button>
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <Button
+                                                fullWidth
+                                                variant="outlined"
+                                                startIcon={<TrendingUp />}
+                                                onClick={() => router.push('/admin/transactions')}
+                                                sx={{
+                                                    borderColor: '#96ff9b',
+                                                    color: '#96ff9b',
+                                                    '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                }}
+                                            >
+                                                View Transactions
                                             </Button>
                                         </Grid>
                                         <Grid item xs={12}>
@@ -491,7 +483,7 @@ export default function AdminDashboard() {
                                                     '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
                                                 }}
                                             >
-                                                View Full Analytics
+                                                View Analytics
                                             </Button>
                                         </Grid>
                                     </Grid>
@@ -545,7 +537,7 @@ export default function AdminDashboard() {
                                                     ●
                                                 </Typography>
                                                 <Typography variant="body2" color="text.primary">
-                                                    Payment System
+                                                    Marketplace
                                                 </Typography>
                                                 <Typography variant="caption" color="success.main">
                                                     Active

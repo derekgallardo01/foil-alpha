@@ -27,7 +27,8 @@ import {
     Gavel as GavelIcon,
     Person as PersonIcon,
     AttachMoney as MoneyIcon,
-    TrendingUp as TrendingIcon
+    TrendingUp as TrendingIcon,
+    Info as InfoIcon
 } from '@mui/icons-material';
 
 interface Card {
@@ -201,7 +202,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                 throw new Error(data.error || 'Failed to place bid');
             }
 
-            setSuccess(`Bid of ${formatPrice(parseFloat(bidAmount))} placed successfully!`);
+            setSuccess(`Bid of ${formatPrice(parseFloat(bidAmount))} placed successfully! ${data.message || ''}`);
             setBidAmount('');
 
             // Call the callback to refresh the parent component
@@ -309,6 +310,19 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                 </Box>
                             </Box>
 
+                            {/* New Flow Information */}
+                            <Alert
+                                severity="info"
+                                icon={<InfoIcon />}
+                                sx={{ mb: 2 }}
+                            >
+                                <Typography variant="body2">
+                                    <strong>New Bidding Process:</strong> Funds are not reserved when bidding.
+                                    If you win, you'll have 24 hours to confirm your purchase.
+                                    The seller can also accept your bid before the auction ends.
+                                </Typography>
+                            </Alert>
+
                             {/* Countdown Timer */}
                             <Box sx={{
                                 display: 'flex',
@@ -341,7 +355,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                         InputProps={{
                                             startAdornment: <InputAdornment position="start">$</InputAdornment>,
                                         }}
-                                        helperText={`Minimum bid: ${formatPrice(minimumBid)}`}
+                                        helperText={`Minimum bid: ${formatPrice(minimumBid)} • No funds will be reserved`}
                                         sx={{ mb: 2 }}
                                         disabled={loading}
                                     />
@@ -368,6 +382,10 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                     >
                                         {loading ? 'Placing Bid...' : `Place Bid - ${formatPrice(parseFloat(bidAmount) || 0)}`}
                                     </Button>
+
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                                        By placing a bid, you agree to purchase if you win or if the seller accepts your bid
+                                    </Typography>
                                 </Box>
                             )}
                         </Paper>

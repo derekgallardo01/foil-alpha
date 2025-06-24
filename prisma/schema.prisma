@@ -35,6 +35,8 @@ model User {
   saleHistory         CardHistory[]       @relation("CardHistorySeller")
   watchlistItems      Watchlist[]         @relation("UserWatchlist")
   activityLogs        ActivityLog[]       @relation("UserActivity")
+  notifications        Notification[]      @relation("UserNotifications")
+
 
   @@map("users")
 }
@@ -254,8 +256,8 @@ model Transaction {
   buyer_id         Int       @map("buyer_id")
   seller_id        Int       @map("seller_id")
   amount           Decimal   @db.Decimal(10, 2)
-  transaction_type String    @map("transaction_type") // FIXED_PRICE, AUCTION, BID_WIN
-  status           String    @default("PENDING") // PENDING, COMPLETED, CANCELLED, FAILED
+  transaction_type String    @map("transaction_type") // FIXED_PRICE, AUCTION_WIN_PENDING, BID_ACCEPTED, BID_PURCHASE_CONFIRMED, etc.
+  status           String    @default("PENDING") // PENDING, PENDING_BUYER_CONFIRMATION, COMPLETED, CANCELLED, FAILED, EXPIRED
   notes            String?   @db.Text
   completed_at     DateTime? @map("completed_at")
   created_at       DateTime  @default(now()) @map("created_at")
@@ -321,6 +323,9 @@ model user {
   lastLoginAt        DateTime?
   subscriptionStatus String
   auditTrail         Json?
+
+  
+
 }
 
 model verificationtoken {
@@ -329,4 +334,25 @@ model verificationtoken {
   expires    DateTime
 
   @@unique([identifier, token], map: "VerificationToken_identifier_token_key")
+}
+
+
+model Notification {
+  id           Int      @id @default(autoincrement())
+  user_id      Int      @map("user_id")
+  type         String   @db.VarChar(50) // BID_RECEIVED, BID_ACCEPTED, AUCTION_WON, AUCTION_LOST, etc.
+  title        String   @db.VarChar(255)
+  message      String   @db.Text
+  is_read      Boolean  @default(false) @map("is_read")
+  reference_id Int?     @map("reference_id") // ID of related record (bid, transaction, etc.)
+  reference_type String? @map("reference_type") @db.VarChar(50) // BID, TRANSACTION, AUCTION, etc.
+  metadata     Json?    // Additional data
+  created_at   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation("UserNotifications", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, is_read])
+  @@index([created_at])
+  @@map("notifications")
 }

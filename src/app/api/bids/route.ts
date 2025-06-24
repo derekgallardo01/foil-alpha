@@ -1,8 +1,9 @@
-// src/app/api/bids/route.ts - Enhanced with wallet frozen balance
+// src/app/api/bids/route.ts - Updated with new bidding flow (no fund freezing)
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '../../lib/prisma';
+import { createBidNotifications, createBidOutbidNotification } from '../../lib/notification';
 
 // GET /api/bids - Get bids for a card or user's bids
 export async function GET(request: NextRequest) {
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST /api/bids - Place a new bid with frozen balance
+// POST /api/bids - Place a new bid (NO fund freezing)
 export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
@@ -137,7 +138,12 @@ export async function POST(request: NextRequest) {
                 user_card_id,
                 is_active: true
             },
-            orderBy: { amount: 'desc' }
+            orderBy: { amount: 'desc' },
+            include: {
+                bidder: {
+                    select: { id: true, name: true }
+                }
+            }
         });
 
         if (currentHighestBid && bidAmount <= Number(currentHighestBid.amount)) {
@@ -146,7 +152,7 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Get bidder's wallet
+        // Check if bidder has sufficient balance (but don't freeze it)
         const bidderWallet = await prisma.userWallet.findUnique({
             where: { user_id: bidderId }
         });
@@ -158,13 +164,13 @@ export async function POST(request: NextRequest) {
         const availableBalance = Number(bidderWallet.balance) - Number(bidderWallet.frozen_balance);
         if (availableBalance < bidAmount) {
             return NextResponse.json({
-                error: `Insufficient available balance. Available: $${availableBalance.toFixed(2)}, Required: $${bidAmount.toFixed(2)}`
+                error: `Insufficient balance. Available: $${availableBalance.toFixed(2)}, Required: $${bidAmount.toFixed(2)}`
             }, { status: 400 });
         }
 
-        // Execute the bidding transaction
+        // Execute the bidding transaction (NO fund freezing)
         const result = await prisma.$transaction(async (tx) => {
-            // 1. If there's a previous highest bid from this user, unfreeze that amount first
+            // 1. If there's a previous bid from this user, deactivate it
             const previousBidFromUser = await tx.bid.findFirst({
                 where: {
                     user_card_id,
@@ -173,95 +179,14 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            let amountToFreeze = bidAmount;
-
             if (previousBidFromUser) {
-                // Unfreeze previous bid amount
-                const previousAmount = Number(previousBidFromUser.amount);
-                await tx.userWallet.update({
-                    where: { user_id: bidderId },
-                    data: {
-                        frozen_balance: {
-                            decrement: previousAmount
-                        }
-                    }
-                });
-
-                // Calculate net amount to freeze (difference)
-                amountToFreeze = bidAmount - previousAmount;
-
-                // Deactivate previous bid
                 await tx.bid.update({
                     where: { id: previousBidFromUser.id },
                     data: { is_active: false }
                 });
-
-                // Record unfreeze transaction
-                await tx.walletTransaction.create({
-                    data: {
-                        user_id: bidderId,
-                        transaction_type: 'UNFREEZE_FUNDS',
-                        amount: previousAmount,
-                        balance_before: Number(bidderWallet.balance),
-                        balance_after: Number(bidderWallet.balance),
-                        description: `Unfreeze previous bid for ${userCard.card.name}`,
-                        reference_id: previousBidFromUser.id,
-                        reference_type: 'BID_REPLACED'
-                    }
-                });
             }
 
-            // 2. If there's a previous highest bid from another user, unfreeze their amount
-            if (currentHighestBid && currentHighestBid.bidder_id !== bidderId) {
-                const previousBidderWallet = await tx.userWallet.findUnique({
-                    where: { user_id: currentHighestBid.bidder_id }
-                });
-
-                if (previousBidderWallet) {
-                    const previousAmount = Number(currentHighestBid.amount);
-
-                    await tx.userWallet.update({
-                        where: { user_id: currentHighestBid.bidder_id },
-                        data: {
-                            frozen_balance: {
-                                decrement: previousAmount
-                            }
-                        }
-                    });
-
-                    // Deactivate previous highest bid
-                    await tx.bid.update({
-                        where: { id: currentHighestBid.id },
-                        data: { is_active: false }
-                    });
-
-                    // Record unfreeze transaction for previous bidder
-                    await tx.walletTransaction.create({
-                        data: {
-                            user_id: currentHighestBid.bidder_id,
-                            transaction_type: 'UNFREEZE_FUNDS',
-                            amount: previousAmount,
-                            balance_before: Number(previousBidderWallet.balance),
-                            balance_after: Number(previousBidderWallet.balance),
-                            description: `Bid outbid on ${userCard.card.name}`,
-                            reference_id: currentHighestBid.id,
-                            reference_type: 'BID_OUTBID'
-                        }
-                    });
-                }
-            }
-
-            // 3. Freeze the new bid amount
-            const updatedWallet = await tx.userWallet.update({
-                where: { user_id: bidderId },
-                data: {
-                    frozen_balance: {
-                        increment: bidAmount
-                    }
-                }
-            });
-
-            // 4. Create the new bid
+            // 2. Create the new bid (NO fund freezing)
             const newBid = await tx.bid.create({
                 data: {
                     user_card_id,
@@ -271,25 +196,37 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            // 5. Record freeze transaction
-            await tx.walletTransaction.create({
-                data: {
-                    user_id: bidderId,
-                    transaction_type: 'FREEZE_FUNDS',
-                    amount: bidAmount,
-                    balance_before: Number(bidderWallet.balance),
-                    balance_after: Number(bidderWallet.balance),
-                    description: `Bid placed on ${userCard.card.name}`,
-                    reference_id: newBid.id,
-                    reference_type: 'BID_PLACED'
-                }
-            });
-
             return {
                 bid: newBid,
-                wallet: updatedWallet
+                previousHighestBid: currentHighestBid
             };
         });
+
+        // Create notifications (outside of transaction for better error handling)
+        try {
+            // Notify card owner of new bid
+            await createBidNotifications(
+                userCard.owner_id,
+                bidderId,
+                userCard.card.name,
+                bidAmount,
+                result.bid.id
+            );
+
+            // Notify previous highest bidder if they were outbid
+            if (result.previousHighestBid && result.previousHighestBid.bidder_id !== bidderId) {
+                await createBidOutbidNotification(
+                    result.previousHighestBid.bidder_id,
+                    userCard.card.name,
+                    Number(result.previousHighestBid.amount),
+                    bidAmount,
+                    result.bid.id
+                );
+            }
+        } catch (notificationError) {
+            console.error('Error creating notifications:', notificationError);
+            // Don't fail the entire request for notification errors
+        }
 
         return NextResponse.json({
             success: true,
@@ -300,11 +237,7 @@ export async function POST(request: NextRequest) {
                 card_name: userCard.card.name,
                 created_at: result.bid.created_at
             },
-            wallet: {
-                balance: Number(result.wallet.balance),
-                frozen_balance: Number(result.wallet.frozen_balance),
-                available_balance: Number(result.wallet.balance) - Number(result.wallet.frozen_balance)
-            }
+            message: 'Bid placed successfully! No funds have been reserved.'
         });
 
     } catch (error) {
@@ -319,7 +252,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// DELETE /api/bids - Cancel a bid (unfreeze funds)
+// DELETE /api/bids - Cancel a bid (no fund unfreezing needed)
 export async function DELETE(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
@@ -363,59 +296,15 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Cannot cancel bid after auction has ended' }, { status: 400 });
         }
 
-        // Get wallet
-        const wallet = await prisma.userWallet.findUnique({
-            where: { user_id: userId }
-        });
-
-        if (!wallet) {
-            return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
-        }
-
-        // Cancel bid and unfreeze funds
-        const result = await prisma.$transaction(async (tx) => {
-            // Deactivate bid
-            await tx.bid.update({
-                where: { id: parseInt(bidId) },
-                data: { is_active: false }
-            });
-
-            // Unfreeze funds
-            const updatedWallet = await tx.userWallet.update({
-                where: { user_id: userId },
-                data: {
-                    frozen_balance: {
-                        decrement: Number(bid.amount)
-                    }
-                }
-            });
-
-            // Record transaction
-            await tx.walletTransaction.create({
-                data: {
-                    user_id: userId,
-                    transaction_type: 'UNFREEZE_FUNDS',
-                    amount: Number(bid.amount),
-                    balance_before: Number(wallet.balance),
-                    balance_after: Number(wallet.balance),
-                    description: `Bid cancelled on ${bid.userCard.card.name}`,
-                    reference_id: parseInt(bidId),
-                    reference_type: 'BID_CANCELLED'
-                }
-            });
-
-            return updatedWallet;
+        // Simply deactivate the bid (no fund unfreezing needed)
+        await prisma.bid.update({
+            where: { id: parseInt(bidId) },
+            data: { is_active: false }
         });
 
         return NextResponse.json({
             success: true,
-            message: 'Bid cancelled successfully',
-            unfrozen_amount: Number(bid.amount),
-            wallet: {
-                balance: Number(result.balance),
-                frozen_balance: Number(result.frozen_balance),
-                available_balance: Number(result.balance) - Number(result.frozen_balance)
-            }
+            message: 'Bid cancelled successfully'
         });
 
     } catch (error) {

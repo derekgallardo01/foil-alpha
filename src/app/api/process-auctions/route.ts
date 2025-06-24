@@ -1,189 +1,158 @@
-// src/app/api/process-auctions/route.ts - Process ended auctions
+// src/app/api/process-auctions/route.ts - Updated with new confirmation flow
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '../../lib/prisma';
+import {
+    createAuctionWonNotifications,
+    createAuctionLostNotifications,
+    createPurchaseExpiredNotifications
+} from '../../lib/notification';
 
-// POST /api/process-auctions - Process all ended auctions
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+        // This endpoint should be called by a cron job or admin
+        const authHeader = request.headers.get('authorization');
+        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const now = new Date();
+        console.log('Processing ended auctions...');
 
-        // Find all cards with ended auctions that haven't been processed
+        // Find ended auctions that haven't been processed
         const endedAuctions = await prisma.userCard.findMany({
             where: {
                 sale_type: 'AUCTION',
                 is_for_sale: true,
                 is_sold: false,
                 auction_end: {
-                    lte: now
+                    lte: new Date()
                 }
             },
             include: {
                 card: true,
-                owner: {
-                    select: { id: true, name: true, email: true }
-                },
-                bids: {
-                    where: { is_active: true },
-                    orderBy: { amount: 'desc' },
-                    take: 1,
-                    include: {
-                        bidder: {
-                            select: { id: true, name: true, email: true }
-                        }
-                    }
-                }
+                owner: true
             }
         });
 
-        const processedAuctions = [];
-        const failedAuctions = [];
+        console.log(`Found ${endedAuctions.length} ended auctions to process`);
 
+        // Also process expired purchase confirmations
+        const expiredTransactions = await prisma.transaction.findMany({
+            where: {
+                status: 'PENDING_BUYER_CONFIRMATION',
+                created_at: {
+                    lte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
+                }
+            },
+            include: {
+                userCard: {
+                    include: {
+                        card: true
+                    }
+                },
+                buyer: true,
+                seller: true
+            }
+        });
+
+        console.log(`Found ${expiredTransactions.length} expired purchase confirmations`);
+
+        const results = [];
+
+        // Process ended auctions
         for (const auction of endedAuctions) {
             try {
-                const highestBid = auction.bids[0];
+                // Get highest bid
+                const highestBid = await prisma.bid.findFirst({
+                    where: {
+                        user_card_id: auction.id,
+                        is_active: true
+                    },
+                    orderBy: { amount: 'desc' },
+                    include: {
+                        bidder: true
+                    }
+                });
 
                 if (!highestBid) {
-                    // No bids - just mark as not for sale
+                    // No bids - mark auction as ended
                     await prisma.userCard.update({
                         where: { id: auction.id },
-                        data: {
-                            is_for_sale: false,
-                            sale_type: null,
-                            auction_end: null,
-                            reserve_price: null
-                        }
+                        data: { is_for_sale: false }
                     });
 
-                    processedAuctions.push({
+                    results.push({
                         auction_id: auction.id,
                         card_name: auction.card.name,
-                        result: 'NO_BIDS',
-                        final_price: 0
+                        status: 'ended_no_bids'
                     });
                     continue;
                 }
 
-                const winningBid = Number(highestBid.amount);
-                const sellerId = auction.owner_id;
-                const buyerId = highestBid.bidder_id;
-
-                // Process the winning auction
-                await prisma.$transaction(async (tx) => {
-                    // Get seller's wallet or create one
-                    let sellerWallet = await tx.userWallet.findUnique({
-                        where: { user_id: sellerId }
+                // Check if bid meets reserve price
+                const reservePrice = Number(auction.reserve_price) || 0;
+                if (Number(highestBid.amount) < reservePrice) {
+                    // Reserve not met - end auction
+                    await prisma.userCard.update({
+                        where: { id: auction.id },
+                        data: { is_for_sale: false }
                     });
 
-                    if (!sellerWallet) {
-                        sellerWallet = await tx.userWallet.create({
-                            data: {
-                                user_id: sellerId,
-                                balance: 0.00,
-                                frozen_balance: 0.00
-                            }
-                        });
-                    }
-
-                    // Get buyer's wallet
-                    const buyerWallet = await tx.userWallet.findUnique({
-                        where: { user_id: buyerId }
+                    // Deactivate all bids
+                    await prisma.bid.updateMany({
+                        where: {
+                            user_card_id: auction.id,
+                            is_active: true
+                        },
+                        data: { is_active: false }
                     });
 
-                    if (!buyerWallet) {
-                        throw new Error('Buyer wallet not found');
-                    }
+                    results.push({
+                        auction_id: auction.id,
+                        card_name: auction.card.name,
+                        status: 'ended_reserve_not_met',
+                        highest_bid: Number(highestBid.amount),
+                        reserve_price: reservePrice
+                    });
+                    continue;
+                }
 
-                    // Transfer payment from frozen to seller
-                    const newSellerBalance = Number(sellerWallet.balance) + winningBid;
-                    const newBuyerFrozen = Number(buyerWallet.frozen_balance) - winningBid;
-
-                    // Update seller's wallet
-                    await tx.userWallet.update({
-                        where: { user_id: sellerId },
-                        data: { balance: newSellerBalance }
+                // Winner found - create pending transaction for confirmation
+                const result = await prisma.$transaction(async (tx) => {
+                    // Create pending transaction for winner to confirm
+                    const pendingTransaction = await tx.transaction.create({
+                        data: {
+                            user_card_id: auction.id,
+                            buyer_id: highestBid.bidder_id,
+                            seller_id: auction.owner_id,
+                            amount: highestBid.amount,
+                            transaction_type: 'AUCTION_WIN_PENDING',
+                            status: 'PENDING_BUYER_CONFIRMATION',
+                            notes: `Auction ended. Winner has 24 hours to confirm purchase.`
+                        }
                     });
 
-                    // Update buyer's wallet (unfreeze the bid amount)
-                    await tx.userWallet.update({
-                        where: { user_id: buyerId },
-                        data: { frozen_balance: newBuyerFrozen }
-                    });
-
-                    // Transfer card ownership
+                    // Mark auction as ended but not sold yet
                     await tx.userCard.update({
                         where: { id: auction.id },
                         data: {
-                            owner_id: buyerId,
-                            is_for_sale: false,
-                            is_sold: true,
-                            sale_type: null,
-                            auction_end: null,
-                            reserve_price: null
+                            is_for_sale: false, // Auction ended
+                            notes: `Pending winner confirmation - Transaction #${pendingTransaction.id}`
                         }
                     });
 
-                    // Create transaction record
-                    const transaction = await tx.transaction.create({
-                        data: {
+                    // Get all losing bidders
+                    const losingBids = await tx.bid.findMany({
+                        where: {
                             user_card_id: auction.id,
-                            buyer_id: buyerId,
-                            seller_id: sellerId,
-                            amount: winningBid,
-                            transaction_type: 'AUCTION_WIN',
-                            status: 'COMPLETED',
-                            completed_at: now,
-                            notes: `Auction won with bid of ${winningBid.toFixed(2)}`
+                            is_active: true,
+                            id: { not: highestBid.id }
+                        },
+                        include: {
+                            bidder: true
                         }
                     });
 
-                    // Create wallet transaction records
-                    await tx.walletTransaction.createMany({
-                        data: [
-                            // Buyer's payment (unfreeze)
-                            {
-                                user_id: buyerId,
-                                transaction_type: 'AUCTION_PAYMENT',
-                                amount: -winningBid,
-                                balance_before: Number(buyerWallet.balance),
-                                balance_after: Number(buyerWallet.balance),
-                                description: `Won auction for ${auction.card.name}`,
-                                reference_id: transaction.id,
-                                reference_type: 'TRANSACTION'
-                            },
-                            // Seller's receipt
-                            {
-                                user_id: sellerId,
-                                transaction_type: 'AUCTION_SALE',
-                                amount: winningBid,
-                                balance_before: Number(sellerWallet.balance),
-                                balance_after: newSellerBalance,
-                                description: `Sold ${auction.card.name} via auction`,
-                                reference_id: transaction.id,
-                                reference_type: 'TRANSACTION'
-                            }
-                        ]
-                    });
-
-                    // Create card history record
-                    await tx.cardHistory.create({
-                        data: {
-                            user_card_id: auction.id,
-                            from_user_id: sellerId,
-                            to_user_id: buyerId,
-                            transaction_type: 'AUCTION_WIN',
-                            price: winningBid,
-                            notes: `Auction completed. Winning bid: ${winningBid.toFixed(2)}`
-                        }
-                    });
-
-                    // Deactivate all bids for this auction
+                    // Deactivate all bids (auction is over)
                     await tx.bid.updateMany({
                         where: {
                             user_card_id: auction.id,
@@ -192,150 +161,138 @@ export async function POST(request: NextRequest) {
                         data: { is_active: false }
                     });
 
-                    // Unfreeze funds for all other losing bidders
-                    const losingBids = await tx.bid.findMany({
-                        where: {
-                            user_card_id: auction.id,
-                            bidder_id: { not: buyerId },
-                            is_active: false
-                        }
-                    });
-
-                    for (const losingBid of losingBids) {
-                        const loserWallet = await tx.userWallet.findUnique({
-                            where: { user_id: losingBid.bidder_id }
-                        });
-
-                        if (loserWallet) {
-                            await tx.userWallet.update({
-                                where: { user_id: losingBid.bidder_id },
-                                data: {
-                                    frozen_balance: {
-                                        decrement: Number(losingBid.amount)
-                                    }
-                                }
-                            });
-
-                            await tx.walletTransaction.create({
-                                data: {
-                                    user_id: losingBid.bidder_id,
-                                    transaction_type: 'UNFREEZE_FUNDS',
-                                    amount: Number(losingBid.amount),
-                                    balance_before: Number(loserWallet.balance),
-                                    balance_after: Number(loserWallet.balance),
-                                    description: `Auction ended - bid refunded for ${auction.card.name}`,
-                                    reference_id: losingBid.id,
-                                    reference_type: 'AUCTION_REFUND'
-                                }
-                            });
-                        }
-                    }
+                    return {
+                        transaction: pendingTransaction,
+                        losingBidders: losingBids.map(bid => bid.bidder_id)
+                    };
                 });
 
-                processedAuctions.push({
+                // Create notifications
+                try {
+                    // Notify winner (they need to confirm within 24 hours)
+                    await createAuctionWonNotifications(
+                        highestBid.bidder_id,
+                        auction.owner_id,
+                        auction.card.name,
+                        Number(highestBid.amount),
+                        auction.id
+                    );
+
+                    // Notify losing bidders
+                    if (result.losingBidders.length > 0) {
+                        await createAuctionLostNotifications(
+                            result.losingBidders,
+                            auction.card.name,
+                            Number(highestBid.amount),
+                            auction.id
+                        );
+                    }
+                } catch (notificationError) {
+                    console.error('Error creating auction end notifications:', notificationError);
+                }
+
+                results.push({
                     auction_id: auction.id,
                     card_name: auction.card.name,
                     winner: highestBid.bidder.name,
-                    winner_email: highestBid.bidder.email,
-                    seller: auction.owner.name,
-                    final_price: winningBid,
-                    result: 'SOLD'
+                    winning_bid: Number(highestBid.amount),
+                    status: 'winner_needs_confirmation',
+                    transaction_id: result.transaction.id
                 });
 
             } catch (error) {
-                console.error(`Failed to process auction ${auction.id}:`, error);
-                failedAuctions.push({
+                console.error(`Error processing auction ${auction.id}:`, error);
+                results.push({
                     auction_id: auction.id,
                     card_name: auction.card.name,
+                    status: 'error',
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
             }
         }
 
-        return NextResponse.json({
-            success: true,
-            processed_count: processedAuctions.length,
-            failed_count: failedAuctions.length,
-            processed_auctions: processedAuctions,
-            failed_auctions: failedAuctions,
-            timestamp: now.toISOString()
-        });
+        // Process expired purchase confirmations
+        for (const expiredTransaction of expiredTransactions) {
+            try {
+                await prisma.$transaction(async (tx) => {
+                    // Mark transaction as expired
+                    await tx.transaction.update({
+                        where: { id: expiredTransaction.id },
+                        data: {
+                            status: 'EXPIRED',
+                            transaction_type: 'AUCTION_WIN_EXPIRED',
+                            notes: 'Purchase confirmation expired after 24 hours'
+                        }
+                    });
 
-    } catch (error) {
-        console.error('Error processing auctions:', error);
-        return NextResponse.json(
-            {
-                error: 'Failed to process auctions',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
-        );
-    }
-}
+                    // Reset card to available for sale (relist)
+                    await tx.userCard.update({
+                        where: { id: expiredTransaction.user_card_id },
+                        data: {
+                            is_for_sale: true,
+                            sale_type: 'AUCTION',
+                            // Extend auction by 7 days or set new end time
+                            auction_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                            notes: 'Relisted due to expired purchase confirmation'
+                        }
+                    });
 
-// GET /api/process-auctions - Get auctions that need processing
-export async function GET(request: NextRequest) {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+                    // Reactivate other bids (excluding the expired winner)
+                    await tx.bid.updateMany({
+                        where: {
+                            user_card_id: expiredTransaction.user_card_id,
+                            bidder_id: { not: expiredTransaction.buyer_id }
+                        },
+                        data: { is_active: true }
+                    });
+                });
+
+                // Create expiration notifications
+                try {
+                    await createPurchaseExpiredNotifications(
+                        expiredTransaction.buyer_id,
+                        expiredTransaction.seller_id,
+                        expiredTransaction.userCard.card.name,
+                        Number(expiredTransaction.amount),
+                        expiredTransaction.user_card_id
+                    );
+                } catch (notificationError) {
+                    console.error('Error creating expiration notifications:', notificationError);
+                }
+
+                results.push({
+                    transaction_id: expiredTransaction.id,
+                    card_name: expiredTransaction.userCard.card.name,
+                    expired_buyer: expiredTransaction.buyer.name,
+                    expired_amount: Number(expiredTransaction.amount),
+                    status: 'confirmation_expired_relisted'
+                });
+
+            } catch (error) {
+                console.error(`Error processing expired transaction ${expiredTransaction.id}:`, error);
+                results.push({
+                    transaction_id: expiredTransaction.id,
+                    card_name: expiredTransaction.userCard.card.name,
+                    status: 'expiration_error',
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
+            }
         }
 
-        const now = new Date();
-
-        const endedAuctions = await prisma.userCard.findMany({
-            where: {
-                sale_type: 'AUCTION',
-                is_for_sale: true,
-                is_sold: false,
-                auction_end: {
-                    lte: now
-                }
-            },
-            include: {
-                card: {
-                    select: { id: true, name: true, set_name: true, image_url: true }
-                },
-                owner: {
-                    select: { id: true, name: true, email: true }
-                },
-                bids: {
-                    where: { is_active: true },
-                    orderBy: { amount: 'desc' },
-                    take: 1,
-                    include: {
-                        bidder: {
-                            select: { id: true, name: true, email: true }
-                        }
-                    }
-                },
-                _count: {
-                    select: { bids: true }
-                }
-            }
-        });
+        console.log('Auction processing complete:', results);
 
         return NextResponse.json({
-            pending_auctions: endedAuctions.length,
-            auctions: endedAuctions.map(auction => ({
-                id: auction.id,
-                card: auction.card,
-                owner: auction.owner,
-                auction_end: auction.auction_end,
-                reserve_price: Number(auction.reserve_price) || 0,
-                highest_bid: auction.bids[0] ? {
-                    amount: Number(auction.bids[0].amount),
-                    bidder: auction.bids[0].bidder
-                } : null,
-                total_bids: auction._count.bids,
-                days_since_end: Math.floor((now.getTime() - auction.auction_end!.getTime()) / (1000 * 60 * 60 * 24))
-            }))
+            success: true,
+            processed_auctions: endedAuctions.length,
+            processed_expirations: expiredTransactions.length,
+            total_processed: results.length,
+            results
         });
 
     } catch (error) {
-        console.error('Error fetching pending auctions:', error);
+        console.error('Error in auction processing:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch pending auctions' },
+            { error: 'Failed to process auctions' },
             { status: 500 }
         );
     }

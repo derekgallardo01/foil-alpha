@@ -769,9 +769,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 
 
-
-```
-
 ```
 tcg-market
 ├─ .eslintrc.json
@@ -812,6 +809,7 @@ tcg-market
 │  ├─ get-gmail-credentials.js
 │  ├─ load-env.js
 │  ├─ seed-sample-data.cjs
+│  ├─ setup-cron.js
 │  ├─ test-oauth-flow.js
 │  ├─ test-waitlist-signup.js
 │  └─ update-waitlist-status.js
@@ -822,12 +820,20 @@ tcg-market
 │  │  │  ├─ activation-success-client.tsx
 │  │  │  └─ page.tsx
 │  │  ├─ admin
+│  │  │  ├─ auctions
+│  │  │  │  └─ page.tsx
 │  │  │  ├─ cards
 │  │  │  │  ├─ admin-cards-client.tsx
+│  │  │  │  └─ page.tsx
+│  │  │  ├─ dashboard
 │  │  │  │  └─ page.tsx
 │  │  │  ├─ listings
 │  │  │  │  ├─ admin-listings-client.tsx
 │  │  │  │  └─ page.tsx
+│  │  │  ├─ transactions
+│  │  │  │  ├─ page.tsx
+│  │  │  │  └─ pending
+│  │  │  │     └─ page.tsx
 │  │  │  ├─ users
 │  │  │  │  ├─ admin-user-date.tsx
 │  │  │  │  ├─ admin-users-client.tsx
@@ -835,10 +841,14 @@ tcg-market
 │  │  │  │  └─ types.ts
 │  │  │  ├─ waitlist-signups
 │  │  │  │  └─ page.tsx
-│  │  │  └─ wallet-test
+│  │  │  └─ wallet
 │  │  │     └─ page.tsx
 │  │  ├─ api
 │  │  │  ├─ admin
+│  │  │  │  ├─ auctions
+│  │  │  │  │  ├─ end
+│  │  │  │  │  │  └─ route.ts
+│  │  │  │  │  └─ route.ts
 │  │  │  │  ├─ cards
 │  │  │  │  │  ├─ route.ts
 │  │  │  │  │  └─ [id]
@@ -847,13 +857,19 @@ tcg-market
 │  │  │  │  │  ├─ route.ts
 │  │  │  │  │  └─ [id]
 │  │  │  │  │     └─ route.ts
+│  │  │  │  ├─ transactions
+│  │  │  │  │  ├─ force-complete
+│  │  │  │  │  │  └─ route.ts
+│  │  │  │  │  └─ route.ts
 │  │  │  │  ├─ users
 │  │  │  │  │  ├─ route.ts
 │  │  │  │  │  └─ [id]
 │  │  │  │  │     ├─ activity
 │  │  │  │  │     │  └─ route.ts
 │  │  │  │  │     └─ route.ts
-│  │  │  │  └─ waitlist
+│  │  │  │  ├─ waitlist
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ wallet
 │  │  │  │     └─ route.ts
 │  │  │  ├─ auth
 │  │  │  │  ├─ forgot-password
@@ -869,6 +885,10 @@ tcg-market
 │  │  │  │  └─ [...nextauth]
 │  │  │  │     └─ route.ts
 │  │  │  ├─ bids
+│  │  │  │  ├─ accept
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ confirm-purchase
+│  │  │  │  │  └─ route.ts
 │  │  │  │  └─ route.ts
 │  │  │  ├─ cards
 │  │  │  │  └─ route.ts
@@ -882,6 +902,8 @@ tcg-market
 │  │  │  ├─ marketplace
 │  │  │  │  ├─ purchase
 │  │  │  │  │  └─ route.ts
+│  │  │  │  └─ route.ts
+│  │  │  ├─ notification
 │  │  │  │  └─ route.ts
 │  │  │  ├─ price-history
 │  │  │  │  └─ route.ts
@@ -911,6 +933,8 @@ tcg-market
 │  │  │  │  └─ wallet
 │  │  │  │     └─ route.ts
 │  │  │  ├─ user-cards
+│  │  │  │  ├─ my-sales
+│  │  │  │  │  └─ route.ts
 │  │  │  │  ├─ route.ts
 │  │  │  │  └─ [id]
 │  │  │  │     └─ route.ts
@@ -924,6 +948,9 @@ tcg-market
 │  │  │     ├─ route.ts
 │  │  │     └─ [id]
 │  │  │        └─ route.ts
+│  │  ├─ bids
+│  │  │  └─ my-auctions
+│  │  │     └─ page.tsx
 │  │  ├─ chat
 │  │  │  └─ page.tsx
 │  │  ├─ client-layout.tsx
@@ -931,6 +958,7 @@ tcg-market
 │  │  │  ├─ collection-client.tsx
 │  │  │  └─ page.tsx
 │  │  ├─ components
+│  │  │  ├─ AdminSidebar.tsx
 │  │  │  ├─ AuctionNotifications.tsx
 │  │  │  ├─ BiddingModal.tsx
 │  │  │  ├─ CountdownTimer.tsx
@@ -941,11 +969,13 @@ tcg-market
 │  │  │  │  └─ DiscordIcon.tsx
 │  │  │  ├─ ManualWatchlist.tsx
 │  │  │  ├─ ParticlesBackground.tsx
+│  │  │  ├─ PurchaseConfirmationModal.tsx
 │  │  │  ├─ PurchaseModal.tsx
 │  │  │  ├─ Settings.tsx
 │  │  │  ├─ Sidebar.tsx
 │  │  │  ├─ TaskManagement.tsx
 │  │  │  ├─ TransactionTracker.tsx
+│  │  │  ├─ UserWallet.tsx
 │  │  │  ├─ VisitorCount.tsx
 │  │  │  └─ Watchlist.tsx
 │  │  ├─ dashboard
@@ -966,6 +996,7 @@ tcg-market
 │  │  │  ├─ email.ts
 │  │  │  ├─ email.ts.backup
 │  │  │  ├─ google-sheets.ts
+│  │  │  ├─ notification.ts
 │  │  │  ├─ prisma.ts
 │  │  │  ├─ releaseNotifier-backup.ts
 │  │  │  ├─ releaseNotifier.ts
@@ -981,6 +1012,8 @@ tcg-market
 │  │  ├─ metadata.ts
 │  │  ├─ middleware.ts
 │  │  ├─ next-favicon.ico
+│  │  ├─ notification
+│  │  │  └─ page.tsx
 │  │  ├─ page.tsx
 │  │  ├─ protected
 │  │  │  └─ page.tsx
@@ -990,6 +1023,9 @@ tcg-market
 │  │  ├─ reset-password
 │  │  │  ├─ page.tsx
 │  │  │  └─ reset-password-client.tsx
+│  │  ├─ selling
+│  │  │  └─ dashboard
+│  │  │     └─ page.tsx
 │  │  ├─ settings
 │  │  │  └─ page.tsx
 │  │  ├─ tasks
@@ -1000,13 +1036,16 @@ tcg-market
 │  │  ├─ verify-email
 │  │  │  ├─ page.tsx
 │  │  │  └─ verify-email-client.tsx
-│  │  └─ waitlist
+│  │  ├─ waitlist
+│  │  │  └─ page.tsx
+│  │  └─ wallet
 │  │     └─ page.tsx
 │  └─ middleware.ts
 ├─ t
 ├─ tailwind.config.ts
 ├─ test-api.js
 ├─ test-connection.js
+├─ test-data.cjs
 ├─ test-gmail.js
 ├─ test-prisma.js
 ├─ test-wallet.js

@@ -68,7 +68,7 @@ interface User {
   purchaseCount?: number;
   saleCount?: number;
   auditTrail?: { action: string; by: string; at: string }[];
-  password?: string;
+  // Removed password field
 }
 
 interface WalletTransaction {
@@ -146,7 +146,8 @@ export default function AdminUsersClient() {
     lastLoginAt: false,
     subscriptionStatus: true,
   });
-  const currentAdmin = session?.user?.name || "AdminUser";
+
+  // Removed admin identifier
   const editDialogRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
 
@@ -337,20 +338,26 @@ export default function AdminUsersClient() {
     }
   }, [session]);
 
-  // User Stats Dashboard
-  const stats = useMemo(() => ({
-    total: users.length,
-    active: users.filter((u) => u.subscriptionStatus === "active").length,
-    admins: users.filter((u) => u.role === "admin").length,
-    totalBalance: users.reduce((sum, u) => sum + (u.balance || 0), 0),
-    totalFrozen: users.reduce((sum, u) => sum + (u.frozen_balance || 0), 0),
-  }), [users]);
+  // User Stats Dashboard (excluding admin users from counts)
+  const stats = useMemo(() => {
+    const nonAdminUsers = users.filter((u) => u.role !== "admin");
+    return {
+      total: nonAdminUsers.length,
+      active: nonAdminUsers.filter((u) => u.subscriptionStatus === "active").length,
+      admins: 0, // Hide admin count
+      totalFrozen: nonAdminUsers.reduce((sum, u) => sum + (u.frozen_balance || 0), 0),
+    };
+  }, [users]);
 
   // Debounced Search
   const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
 
   const filteredUsers = useMemo(() => {
     let result = [...users];
+
+    // Filter out admin users - only show regular users
+    result = result.filter((user) => user && user.role !== "admin");
+
     if (searchQuery) {
       result = result.filter(
         (user) =>
@@ -393,7 +400,7 @@ export default function AdminUsersClient() {
     a.click();
   };
 
-  // Table Columns with Wallet Info
+  // Table Columns with Wallet Info (Password column removed)
   const columns: GridColDef[] = [
     ...(visibleColumns.id ? [{ field: "id", headerName: "ID", width: 70, sortable: true }] : []),
     ...(visibleColumns.name ? [{ field: "name", headerName: "Name", width: 130, sortable: true }] : []),
@@ -509,9 +516,6 @@ export default function AdminUsersClient() {
     },
   ];
 
-  // Rest of your existing functions (handleEditUser, handleSaveUser, etc.)
-  // I'll include the key ones and you can keep your existing implementations
-
   const handleEditUser = (user: User) => {
     setEditUser(user);
     setValidationErrors({});
@@ -527,7 +531,7 @@ export default function AdminUsersClient() {
       registeredAt: new Date().toISOString(),
       subscriptionStatus: "inactive",
       auditTrail: [],
-      password: "",
+      // Removed password field initialization
     });
     setValidationErrors({});
     setTimeout(() => editDialogRef.current?.focus(), 0);
@@ -543,7 +547,7 @@ export default function AdminUsersClient() {
   };
 
   const handleSaveUser = async () => {
-    // Your existing save logic
+    // Your existing save logic (without password handling)
   };
 
   return (
@@ -601,10 +605,10 @@ export default function AdminUsersClient() {
               Admin - Users & Wallets
             </Typography>
 
-            {/* Enhanced Stats Dashboard with Wallet Info */}
+            {/* Stats Dashboard - Without Total Balance */}
             <motion.div variants={itemVariants}>
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={2.4}>
+                <Grid item xs={12} md={4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
                       <Typography variant="h6" sx={{ color: "#96ff9b" }}>Total Users</Typography>
@@ -612,7 +616,7 @@ export default function AdminUsersClient() {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} md={2.4}>
+                <Grid item xs={12} md={4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
                       <Typography variant="h6" sx={{ color: "#96ff9b" }}>Active</Typography>
@@ -620,26 +624,10 @@ export default function AdminUsersClient() {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} md={2.4}>
+                <Grid item xs={12} md={4}>
                   <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Admins</Typography>
-                      <Typography variant="h4" color="text.primary">{stats.admins}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={2.4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Total Balance</Typography>
-                      <Typography variant="h4" color="text.primary">${stats.totalBalance.toFixed(2)}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={2.4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Frozen</Typography>
+                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Frozen Funds</Typography>
                       <Typography variant="h4" color="text.primary">${stats.totalFrozen.toFixed(2)}</Typography>
                     </CardContent>
                   </Card>
@@ -682,8 +670,6 @@ export default function AdminUsersClient() {
                   ))}
                 </Box>
               </motion.div>
-
-              {/* Your existing filters */}
 
               {/* Enhanced DataGrid */}
               <motion.div variants={itemVariants}>
@@ -880,8 +866,7 @@ export default function AdminUsersClient() {
         </DialogActions>
       </Dialog>
 
-      {/* Your existing dialogs (Edit User, Activity Log, Confirmation) */}
-      {/* Edit/Add User Dialog */}
+      {/* Edit/Add User Dialog - Password field removed */}
       <Dialog
         open={!!editUser}
         onClose={() => setEditUser(null)}
@@ -911,26 +896,15 @@ export default function AdminUsersClient() {
                 error={!!validationErrors.email}
                 helperText={validationErrors.email}
               />
-              {editUser.id === 0 && (
-                <TextField
-                  label="Password"
-                  type="password"
-                  fullWidth
-                  value={editUser.password || ""}
-                  onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
-                  sx={{ mb: 2 }}
-                  error={!!validationErrors.password}
-                  helperText={validationErrors.password}
-                />
-              )}
+              {/* Password field removed completely */}
               <Select
                 fullWidth
                 value={editUser.role}
                 onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}
                 sx={{ mb: 2 }}
               >
-                <MenuItem value="admin">Admin</MenuItem>
                 <MenuItem value="user">User</MenuItem>
+                <MenuItem value="moderator">Moderator</MenuItem>
               </Select>
               <Select
                 fullWidth

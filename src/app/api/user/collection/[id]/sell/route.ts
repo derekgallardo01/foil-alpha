@@ -1,4 +1,4 @@
-// src/app/api/user/collection/[id]/sell/route.ts - Ultra simplified version
+// src/app/api/user/collection/[id]/sell/route.ts - Fixed to match frontend
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
@@ -7,7 +7,7 @@ import { prisma } from '../../../../../lib/prisma';
 // POST /api/user/collection/[id]/sell - List a card for sale
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -15,10 +15,19 @@ export async function POST(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const { id: userCardId } = await context.params;
         const userId = parseInt(session.user.id);
-        const userCardId = parseInt(params.id);
         const body = await request.json();
         const { sale_type, fixed_price, reserve_price, auction_duration_hours } = body;
+
+        console.log('Sell API received:', {
+            sale_type,
+            fixed_price,
+            reserve_price,
+            auction_duration_hours,
+            userCardId,
+            userId
+        });
 
         // Validate sale type
         if (!['FIXED', 'AUCTION'].includes(sale_type)) {
@@ -26,8 +35,10 @@ export async function POST(
         }
 
         // Validate required fields based on sale type
-        if (sale_type === 'FIXED' && (!fixed_price || fixed_price <= 0)) {
-            return NextResponse.json({ error: 'fixed_price is required for fixed price sales' }, { status: 400 });
+        if (sale_type === 'FIXED') {
+            if (!fixed_price || fixed_price <= 0) {
+                return NextResponse.json({ error: 'fixed_price is required for fixed price sales' }, { status: 400 });
+            }
         }
 
         if (sale_type === 'AUCTION') {
@@ -35,42 +46,35 @@ export async function POST(
                 return NextResponse.json({ error: 'reserve_price is required for auctions' }, { status: 400 });
             }
             if (!auction_duration_hours || auction_duration_hours < 1 || auction_duration_hours > 168) {
-                return NextResponse.json({ error: 'auction_duration_hours must be between 1 and 168 (7 days)' }, { status: 400 });
+                return NextResponse.json({
+                    error: `auction_duration_hours is required and must be between 1 and 168 hours. Received: ${auction_duration_hours}`
+                }, { status: 400 });
             }
         }
 
-        // Get the card
+        // Get the card and verify ownership
         const userCard = await prisma.userCard.findUnique({
-            where: { id: userCardId }
+            where: { id: parseInt(userCardId) },
+            include: {
+                card: {
+                    select: { name: true }
+                }
+            }
         });
 
         if (!userCard) {
             return NextResponse.json({ error: 'Card not found' }, { status: 404 });
         }
 
-        // Verify ownership
         if (userCard.owner_id !== userId) {
             return NextResponse.json({ error: 'You can only sell your own cards' }, { status: 403 });
         }
 
-        // Check if already for sale
         if (userCard.is_for_sale) {
             return NextResponse.json({ error: 'Card is already listed for sale' }, { status: 400 });
         }
 
-        // Check if already sold
-        if (userCard.is_sold) {
-            return NextResponse.json({ error: 'Card has already been sold' }, { status: 400 });
-        }
-
-        // Get card details for response
-        const card = await prisma.card.findUnique({
-            where: { id: userCard.card_id }
-        });
-
-        if (!card) {
-            return NextResponse.json({ error: 'Card details not found' }, { status: 404 });
-        }
+        console.log('Validation passed, updating card...');
 
         // Prepare update data
         const updateData: any = {
@@ -85,21 +89,26 @@ export async function POST(
         } else if (sale_type === 'AUCTION') {
             updateData.fixed_price = null;
             updateData.reserve_price = Number(reserve_price);
+            // Calculate auction end time from duration
             updateData.auction_end = new Date(Date.now() + Number(auction_duration_hours) * 60 * 60 * 1000);
         }
 
+        console.log('Update data:', updateData);
+
         // Update the card
-        await prisma.userCard.update({
-            where: { id: userCardId },
+        const updatedCard = await prisma.userCard.update({
+            where: { id: parseInt(userCardId) },
             data: updateData
         });
 
+        console.log('Card updated successfully');
+
         return NextResponse.json({
             success: true,
-            message: `Card listed for ${sale_type.toLowerCase()} sale`,
+            message: `${userCard.card.name} listed for ${sale_type.toLowerCase()} sale`,
             listing: {
-                id: userCardId,
-                card_name: card.name,
+                id: parseInt(userCardId),
+                card_name: userCard.card.name,
                 sale_type: sale_type,
                 price: sale_type === 'FIXED' ? Number(fixed_price) : Number(reserve_price),
                 auction_end: updateData.auction_end
@@ -121,7 +130,7 @@ export async function POST(
 // DELETE /api/user/collection/[id]/sell - Remove card from sale
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -129,12 +138,17 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const { id: userCardId } = await context.params;
         const userId = parseInt(session.user.id);
-        const userCardId = parseInt(params.id);
 
         // Get the card
         const userCard = await prisma.userCard.findUnique({
-            where: { id: userCardId }
+            where: { id: parseInt(userCardId) },
+            include: {
+                card: {
+                    select: { name: true }
+                }
+            }
         });
 
         if (!userCard) {
@@ -155,7 +169,7 @@ export async function DELETE(
         if (userCard.sale_type === 'AUCTION') {
             const activeBids = await prisma.bid.count({
                 where: {
-                    user_card_id: userCardId,
+                    user_card_id: parseInt(userCardId),
                     is_active: true
                 }
             });
@@ -167,14 +181,9 @@ export async function DELETE(
             }
         }
 
-        // Get card details for response
-        const card = await prisma.card.findUnique({
-            where: { id: userCard.card_id }
-        });
-
         // Remove from sale
         await prisma.userCard.update({
-            where: { id: userCardId },
+            where: { id: parseInt(userCardId) },
             data: {
                 is_for_sale: false,
                 sale_type: null,
@@ -187,7 +196,7 @@ export async function DELETE(
         return NextResponse.json({
             success: true,
             message: 'Card removed from sale',
-            card_name: card?.name || 'Unknown'
+            card_name: userCard.card.name
         });
 
     } catch (error) {

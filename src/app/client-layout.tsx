@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { ThemeProvider, CssBaseline, Box, Typography } from "@mui/material";
 import darkTheme from "./theme";
 import { SessionProvider, useSession } from "next-auth/react";
+import AuctionNotifications from "./components/AuctionNotifications";
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
@@ -12,11 +13,11 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     setIsClient(true);
   }, []);
 
-  // Component to display Discord status
-  const DiscordStatus = () => {
-    const { status } = useSession();
+  // Component to display Discord status and notifications
+  const HeaderStatus = () => {
+    const { data: session, status } = useSession();
     const isConnected = status === "authenticated";
-    
+
     return (
       <Box
         sx={{
@@ -25,27 +26,35 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           right: 10,
           display: "flex",
           alignItems: "center",
-          gap: 1,
+          gap: 2,
           zIndex: 1000,
         }}
       >
-        <Box
-          sx={{
-            width: 12,
-            height: 12,
-            borderRadius: "50%",
-            bgcolor: isConnected ? "#4caf50" : "#f44336", // Green for connected, red for disconnected
-            boxShadow: isConnected
-              ? "0 0 8px #4caf50"
-              : "0 0 8px #f44336", // Glow effect
-          }}
-        />
-        <Typography
-          variant="caption"
-          sx={{ color: "#e0e0e0", fontSize: "0.8rem" }}
-        >
-          Discord: {isConnected ? "Connected" : "Disconnected"}
-        </Typography>
+        {/* Notifications - only show when authenticated */}
+        {isConnected && session?.user?.id && (
+          <AuctionNotifications userId={parseInt(session.user.id)} />
+        )}
+
+        {/* Discord Status */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box
+            sx={{
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              bgcolor: isConnected ? "#4caf50" : "#f44336", // Green for connected, red for disconnected
+              boxShadow: isConnected
+                ? "0 0 8px #4caf50"
+                : "0 0 8px #f44336", // Glow effect
+            }}
+          />
+          <Typography
+            variant="caption"
+            sx={{ color: "#e0e0e0", fontSize: "0.8rem" }}
+          >
+            Discord: {isConnected ? "Connected" : "Disconnected"}
+          </Typography>
+        </Box>
       </Box>
     );
   };
@@ -56,7 +65,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         <SessionProvider>
           <ThemeProvider theme={darkTheme}>
             <CssBaseline />
-            <DiscordStatus /> {/* Add status indicator */}
+            <HeaderStatus />
             {children}
           </ThemeProvider>
         </SessionProvider>

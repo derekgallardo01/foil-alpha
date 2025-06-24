@@ -382,6 +382,85 @@ export async function PUT(
     }
 }
 
+export async function GET(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const session = await getServerSession();
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const userCardId = parseInt(params.id);
+
+        const userCard = await prisma.userCard.findUnique({
+            where: { id: userCardId },
+            include: {
+                card: true,
+                owner: {
+                    select: { id: true, name: true, email: true }
+                }
+            }
+        });
+
+        if (!userCard) {
+            return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+        }
+
+        // Get current price
+        let currentPrice = null;
+        if (userCard.sale_type === 'FIXED') {
+            currentPrice = Number(userCard.fixed_price || 0);
+        } else if (userCard.sale_type === 'AUCTION') {
+            // Get highest bid
+            const highestBid = await prisma.bid.findFirst({
+                where: {
+                    user_card_id: userCardId,
+                    is_active: true
+                },
+                orderBy: { amount: 'desc' }
+            });
+            currentPrice = highestBid ? Number(highestBid.amount) : Number(userCard.reserve_price || 0);
+        }
+
+        // Calculate time remaining for auctions
+        let timeRemaining = null;
+        if (userCard.sale_type === 'AUCTION' && userCard.auction_end) {
+            const endTime = new Date(userCard.auction_end).getTime();
+            const now = Date.now();
+            timeRemaining = Math.max(0, endTime - now);
+        }
+
+        const result = {
+            id: userCard.id,
+            card: userCard.card,
+            owner: userCard.owner,
+            condition: userCard.condition,
+            sale_type: userCard.sale_type,
+            fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
+            reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
+            auction_end: userCard.auction_end,
+            is_for_sale: userCard.is_for_sale,
+            is_sold: userCard.is_sold,
+            notes: userCard.notes,
+            current_price: currentPrice,
+            time_remaining: timeRemaining,
+            created_at: userCard.created_at,
+            updated_at: userCard.updated_at
+        };
+
+        return NextResponse.json(result);
+
+    } catch (error) {
+        console.error('Error fetching user card:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch user card' },
+            { status: 500 }
+        );
+    }
+}
+
 // DELETE /api/user-cards/[id] - Remove card from collection (admin only or special cases)
 export async function DELETE(
     request: NextRequest,
