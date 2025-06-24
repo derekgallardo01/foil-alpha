@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const productId = searchParams.get('product_id');
     const retailer = searchParams.get('retailer');
 
-    let query = 'SELECT id, product_id, retailer, price, recorded_at FROM priceHistory';
+    let query = 'SELECT id, product_id, retailer, price, recorded_at FROM pricehistory';
     const params: string[] = [];
 
     if (productId) {

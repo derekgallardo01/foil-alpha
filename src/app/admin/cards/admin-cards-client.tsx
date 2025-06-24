@@ -24,8 +24,6 @@ import {
     Checkbox,
     Grid,
     Card,
-    CardContent,
-    CardMedia,
     Chip,
     InputLabel,
     FormControl
@@ -111,7 +109,6 @@ export default function AdminCardsClient() {
         forSaleCount: true,
         created_at: true,
     });
-    const currentAdmin = session?.user?.name || "AdminUser";
     const editDialogRef = useRef<HTMLDivElement>(null);
     const hasFetchedRef = useRef(false);
 
@@ -203,10 +200,12 @@ export default function AdminCardsClient() {
             renderCell: (params: GridRenderCellParams<Card>) => (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     {params.row.small_image_url && (
-                        <img
+                        <Image
                             src={params.row.small_image_url}
                             alt={params.row.name}
-                            style={{ width: 30, height: 42, marginRight: 8, borderRadius: 4 }}
+                            width={30}
+                            height={42}
+                            style={{ marginRight: 8, borderRadius: 4 }}
                             onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                             }}
@@ -792,10 +791,12 @@ export default function AdminCardsClient() {
                             {editCard.image_url && (
                                 <Grid item xs={12}>
                                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                                        <img
+                                        <Image
                                             src={editCard.image_url}
                                             alt="Card preview"
-                                            style={{ maxWidth: 200, maxHeight: 280, objectFit: 'contain' }}
+                                            width={200}
+                                            height={280}
+                                            style={{ objectFit: 'contain' }}
                                             onError={(e) => {
                                                 e.currentTarget.style.display = 'none';
                                             }}

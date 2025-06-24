@@ -11,7 +11,7 @@ export const DEV_BYPASS = {
 };
 
 // Mock email function for development
-export async function mockSendEmail(to: string, subject: string, html: string) {
+export async function mockSendEmail(to: string, subject: string) {
     if (!isDevelopment) {
         throw new Error('Mock email function should only be used in development');
     }
@@ -37,4 +37,3 @@ export function getDevVerificationStatus() {
     console.log('🚀 DEV MODE: Auto-verifying user');
     return { is_verified: true };
 }
-

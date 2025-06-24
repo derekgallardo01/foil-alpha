@@ -1,0 +1,56 @@
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  .title {
+    color: #333;
+    text-align: center;
+  }
+  
+  .loading {
+    color: #007bff;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  .error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 10px 0;
+  }
+  
+  .stockInfo {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 10px 0;
+  }
+  
+  .stockInfoList {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .stockInfoItem {
+    margin: 10px 0;
+    font-size: 16px;
+  }
+  
+  .refreshButton, .retryButton {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  .refreshButton:hover, .retryButton:hover {
+    background-color: #0056b3;
+  }

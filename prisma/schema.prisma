@@ -8,58 +8,56 @@ datasource db {
 }
 
 model User {
-  id                    Int       @id @default(autoincrement())
-  email                 String    @unique(map: "email") @db.VarChar(255)
-  name                  String    @db.VarChar(255)
-  password              String    @db.VarChar(255)
-  role                  String    @default("user") @db.VarChar(50)
-  subscriptionStatus    String    @default("inactive") @map("subscriptionStatus") @db.VarChar(50)
-  last_login_at         DateTime? @map("last_login_at") @db.DateTime(0)
-  discord_access_token  String?   @map("discord_access_token") @db.VarChar(255)
-  discord_refresh_token String?   @map("discord_refresh_token") @db.VarChar(255)
-  google_access_token   String?   @map("google_access_token") @db.VarChar(255)
-  google_refresh_token  String?   @map("google_refresh_token") @db.VarChar(255)
-  google_scopes         String?   @map("google_scopes") @db.VarChar(255)
-  registeredAt          DateTime  @default(now()) @map("registeredAt") @db.DateTime(0)
-  is_verified           Int?      @default(0) @map("is_verified") @db.TinyInt
-  verification_code     String?   @map("verification_code") @db.VarChar(10)
-
-  // Relations
-  wallet              UserWallet?         @relation("UserWallet")
-  walletTransactions  WalletTransaction[] @relation("UserWalletTransactions")
-  ownedCards          UserCard[]          @relation("CardOwner")
-  purchases           Transaction[]       @relation("TransactionBuyer")
-  sales               Transaction[]       @relation("TransactionSeller")
-  bids                Bid[]               @relation("BidUser")
-  purchaseHistory     CardHistory[]       @relation("CardHistoryBuyer")
-  saleHistory         CardHistory[]       @relation("CardHistorySeller")
-  watchlistItems      Watchlist[]         @relation("UserWatchlist")
-  activityLogs        ActivityLog[]       @relation("UserActivity")
-  notifications        Notification[]      @relation("UserNotifications")
-
-
+  id                    Int                    @id @default(autoincrement())
+  email                 String                 @unique(map: "email") @db.VarChar(255)
+  name                  String                 @db.VarChar(255)
+  password              String                 @db.VarChar(255)
+  role                  String                 @default("user") @db.VarChar(50)
+  subscriptionStatus    String                 @default("inactive") @map("subscriptionStatus") @db.VarChar(50)
+  last_login_at         DateTime?              @map("last_login_at") @db.DateTime(0)
+  discord_access_token  String?                @map("discord_access_token") @db.VarChar(255)
+  discord_refresh_token String?                @map("discord_refresh_token") @db.VarChar(255)
+  google_access_token   String?                @map("google_access_token") @db.VarChar(255)
+  google_refresh_token  String?                @map("google_refresh_token") @db.VarChar(255)
+  google_scopes         String?                @map("google_scopes") @db.VarChar(255)
+  registeredAt          DateTime               @default(now()) @map("registeredAt") @db.DateTime(0)
+  is_verified           Int?                   @default(0) @map("is_verified") @db.TinyInt
+  verification_code     String?                @map("verification_code") @db.VarChar(10)
+  watchlistItems        Watchlist[]            @relation("UserWatchlist")
+  userCards             UserCard[]             @relation("UserToUserCard")
+  activityLogs          ActivityLog[]          @relation("UserActivity")
+  bids                  Bid[]                  @relation("BidToUser")
+  historyFrom           CardTransactionHistory[] @relation("HistoryFromUser")
+  historyTo             CardTransactionHistory[] @relation("HistoryToUser")
+  wallet                UserWallet?            @relation // Add this line
+  walletTransactions    WalletTransaction[]    @relation("UserWalletTransaction") // Add this line
   @@map("users")
 }
-
 model Product {
-  product_id   Int       @id @default(autoincrement()) @map("product_id")
-  retailer     String    @db.VarChar(255)
-  title        String    @db.VarChar(255)
-  url          String    @db.VarChar(255)
-  image        String?   @db.VarChar(255)
-  screenshot   String?   @db.VarChar(255)
-  stock_status String    @map("stock_status") @db.VarChar(50)
-  release_date DateTime? @map("release_date") @db.Date
+  product_id   Int            @id @default(autoincrement()) @map("product_id")
+  retailer     String         @db.VarChar(255)
+  title        String         @db.VarChar(255)
+  url          String         @db.VarChar(255)
+  image        String?        @db.VarChar(255)
+  screenshot   String?        @db.VarChar(255)
+  stock_status String         @map("stock_status") @db.VarChar(50)
+  release_date DateTime?      @map("release_date") @db.Date
+  tcin         String?        @unique(map: "tcin") @db.VarChar(20)
+  priceHistory PriceHistory[]
 
   @@map("products")
 }
 
 model PriceHistory {
-  id          Int      @id @default(autoincrement())
-  product_id  Int      @map("product_id")
-  retailer    String   @default("Unknown") @db.VarChar(50)
-  price       Decimal  @db.Decimal(10, 2)
-  recorded_at DateTime @default(now()) @map("recorded_at") @db.DateTime(0)
+  id             Int      @id @default(autoincrement())
+  product_id     Int      @map("product_id")
+  retailer       String   @default("Unknown") @db.VarChar(50)
+  price          Decimal  @db.Decimal(10, 2)
+  recorded_at    DateTime @default(now()) @map("recorded_at") @db.DateTime(0)
+  stock_status   String?  @map("stock_status") @db.VarChar(50)
+  store_quantity Int?     @map("store_quantity")
+  ship_quantity  Int?     @map("ship_quantity")
+  product        Product  @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: NoAction, map: "priceHistory_ibfk_1")
 
   @@index([product_id, retailer, recorded_at], map: "idx_product_retailer_date")
   @@map("pricehistory")
@@ -74,22 +72,21 @@ model Watchlist {
   stock_quantity Int?    @map("stock_quantity")
   stock_status   String? @map("stock_status") @db.VarChar(50)
   user_id        Int     @map("user_id")
+  user           User    @relation("UserWatchlist", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "watchlist_ibfk_1")
 
-  // Relations
-  user User @relation("UserWatchlist", fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id], map: "watchlist_user_id_idx")
+  @@index([user_id], map: "user_id")
   @@map("watchlist")
 }
 
 model Waitlist {
-  id         Int       @id @default(autoincrement())
-  email      String    @unique(map: "email") @db.VarChar(255)
-  name       String    @db.VarChar(255)
-  created_at DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
-  status     String?   @default("PENDING") @db.VarChar(50)
-  source     String?   @default("WEBSITE") @db.VarChar(50)
-  metadata   Json?
+  id           Int       @id @default(autoincrement())
+  email        String    @unique(map: "email") @db.VarChar(255)
+  phone_number String?   @map("phone_number") @db.VarChar(20)
+  name         String    @db.VarChar(255)
+  created_at   DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  status       String?   @default("PENDING") @db.VarChar(50)
+  source       String?   @default("WEBSITE") @db.VarChar(50)
+  metadata     Json?
 
   @@map("waitlist")
 }
@@ -99,11 +96,9 @@ model ActivityLog {
   userId    Int      @map("userId")
   action    String
   timestamp DateTime @default(now())
+  user      User     @relation("UserActivity", fields: [userId], references: [id], onDelete: Cascade, map: "ActivityLog_userId_fkey")
 
-  // Relations
-  user User @relation("UserActivity", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId], map: "ActivityLog_userId_idx")
+  @@index([userId], map: "ActivityLog_userId_fkey")
   @@map("activitylog")
 }
 
@@ -119,240 +114,97 @@ model ResetToken {
 }
 
 model Card {
-  id              Int      @id @default(autoincrement())
-  name            String   @db.VarChar(255)
-  set_name        String   @map("set_name") @db.VarChar(255)
-  set_number      String   @map("set_number") @db.VarChar(100)
-  rarity          String   @db.VarChar(100)
-  card_type       String   @map("card_type") @db.VarChar(100)
-  subtype         String?  @db.VarChar(100)
+  id              Int        @id @default(autoincrement())
+  name            String     @db.VarChar(255)
+  set_name        String     @db.VarChar(255)
+  set_number      String?    @db.VarChar(50)
+  rarity          String     @db.VarChar(50)
+  card_type       String?    @db.VarChar(50)
+  subtype         String?    @db.VarChar(255)
   hp              Int?
-  image_url       String?  @map("image_url") @db.Text
-  small_image_url String?  @map("small_image_url") @db.Text
-  tcg_id          String?  @unique @map("tcg_id") @db.VarChar(255)
-  created_at      DateTime @default(now()) @map("created_at") @db.DateTime(0)
-  updated_at      DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
-
-  // Relations
-  userCards UserCard[] @relation("CardUserCards")
-
-  @@index([name])
-  @@index([set_name])
+  image_url       String?    @db.VarChar(255)
+  small_image_url String?    @db.VarChar(255)
+  tcg_id          String?    @db.VarChar(255)
+  created_at      DateTime   @default(now()) @db.DateTime(0)
+  updated_at      DateTime   @updatedAt @db.DateTime(0) // Add this line
+  userCards       UserCard[] @relation("CardUserCards")
   @@map("cards")
 }
-
 model UserCard {
-  id            Int       @id @default(autoincrement())
-  card_id       Int       @map("card_id")
-  owner_id      Int       @map("owner_id")
-  condition     String    @default("NM") @db.VarChar(10)
-  is_for_sale   Boolean   @default(false) @map("is_for_sale")
-  sale_type     String?   @map("sale_type") @db.VarChar(20)
-  fixed_price   Decimal?  @map("fixed_price") @db.Decimal(10, 2)
-  reserve_price Decimal?  @map("reserve_price") @db.Decimal(10, 2)
-  auction_end   DateTime? @map("auction_end") @db.DateTime(0)
-  is_sold       Boolean   @default(false) @map("is_sold")
-  notes         String?   @db.Text
-  acquired_date DateTime  @default(now()) @map("acquired_date") @db.DateTime(0)
-  created_at    DateTime  @default(now()) @map("created_at") @db.DateTime(0)
-  updated_at    DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
-
-  // Relations
-  card         Card          @relation("CardUserCards", fields: [card_id], references: [id], onDelete: Cascade)
-  owner        User          @relation("CardOwner", fields: [owner_id], references: [id], onDelete: Cascade)
-  bids         Bid[]         @relation("UserCardBids")
-  transactions Transaction[] @relation("UserCardTransactions")
-  history      CardHistory[] @relation("CardHistoryUserCard")
-
-  @@index([owner_id])
-  @@index([card_id])
-  @@index([is_for_sale])
-  @@index([sale_type])
+  id            Int                  @id @default(autoincrement())
+  owner_id      Int                  @map("owner_id")
+  card_id       Int                  @map("card_id")
+  condition     String?              @db.VarChar(50)
+  is_for_sale   Boolean              @default(false) @map("is_for_sale")
+  sale_type     String?              @map("sale_type") @db.VarChar(50)
+  fixed_price   Decimal?             @map("fixed_price") @db.Decimal(10, 2)
+  reserve_price Decimal?             @map("reserve_price") @db.Decimal(10, 2)
+  auction_end   DateTime?            @map("auction_end") @db.DateTime(0)
+  is_sold       Boolean              @default(false) @map("is_sold")
+  notes         String?              @db.VarChar(255)
+  acquired_date DateTime?            @map("acquired_date") @db.DateTime(0)
+  created_at    DateTime             @default(now()) @db.DateTime(0) // Add this line
+  owner         User                 @relation("UserToUserCard", fields: [owner_id], references: [id], onDelete: Cascade, map: "userCard_ibfk_1")
+  card          Card                 @relation("CardUserCards", fields: [card_id], references: [id], onDelete: Cascade, map: "userCard_ibfk_2")
+  bids          Bid[]                @relation("UserCardBids")
+  history       CardTransactionHistory[] @relation("UserCardHistory")
+  @@index([owner_id], map: "owner_id")
+  @@index([card_id], map: "card_id")
   @@map("user_cards")
 }
 
 model Bid {
-  id           Int      @id @default(autoincrement())
-  user_card_id Int      @map("user_card_id")
-  bidder_id    Int      @map("bidder_id")
-  amount       Decimal  @db.Decimal(10, 2)
-  is_active    Boolean  @default(true) @map("is_active")
-  created_at   DateTime @default(now()) @map("created_at") @db.DateTime(0)
-
-  // Relations
-  userCard UserCard @relation("UserCardBids", fields: [user_card_id], references: [id], onDelete: Cascade)
-  bidder   User     @relation("BidUser", fields: [bidder_id], references: [id], onDelete: Cascade)
-
-  @@index([user_card_id])
-  @@index([bidder_id])
-  @@index([created_at])
-  @@index([is_active])
+  id          Int      @id @default(autoincrement())
+  userCardId  Int
+  userCard    UserCard @relation("UserCardBids", fields: [userCardId], references: [id]) // Change relation name to match
+  bidderId    Int
+  bidder      User     @relation("BidToUser", fields: [bidderId], references: [id])
+  amount      Float
+  is_active   Boolean  @default(true)
+  createdAt   DateTime @default(now())
   @@map("bids")
 }
 
-model CardHistory {
-  id               Int      @id @default(autoincrement())
-  user_card_id     Int      @map("user_card_id")
-  from_user_id     Int?     @map("from_user_id")
-  to_user_id       Int      @map("to_user_id")
-  transaction_type String   @map("transaction_type") @db.VarChar(50)
-  price            Decimal? @db.Decimal(10, 2)
-  notes            String?  @db.Text
-  created_at       DateTime @default(now()) @map("created_at") @db.DateTime(0)
-
-  // Relations
-  userCard UserCard @relation("CardHistoryUserCard", fields: [user_card_id], references: [id], onDelete: Cascade)
-  fromUser User?    @relation("CardHistorySeller", fields: [from_user_id], references: [id], onDelete: SetNull)
-  toUser   User     @relation("CardHistoryBuyer", fields: [to_user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_card_id])
-  @@index([from_user_id])
-  @@index([to_user_id])
-  @@index([transaction_type])
-  @@map("card_history")
+model CardTransactionHistory {
+  id          Int      @id @default(autoincrement())
+  userCardId  Int
+  userCard    UserCard @relation("UserCardHistory", fields: [userCardId], references: [id], onDelete: Cascade)
+  fromUserId  Int?
+  fromUser    User?    @relation("HistoryFromUser", fields: [fromUserId], references: [id])
+  toUserId    Int?
+  toUser      User?    @relation("HistoryToUser", fields: [toUserId], references: [id])
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  action      String   @db.VarChar(50)
+  notes       String?  @db.VarChar(255)
+  @@map("card_transaction_history")
 }
 
 model UserWallet {
-  id             Int      @id @default(autoincrement())
-  user_id        Int      @unique @map("user_id")
-  balance        Decimal  @default(0.00) @db.Decimal(10, 2)
-  frozen_balance Decimal  @default(0.00) @map("frozen_balance") @db.Decimal(10, 2)
-  created_at     DateTime @default(now()) @map("created_at")
-  updated_at     DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  user User @relation("UserWallet", fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id], map: "user_wallets_user_id_idx")
+  id             Int               @id @default(autoincrement())
+  user_id        Int               @unique
+  user           User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  balance        Decimal           @db.Decimal(10, 2)
+  frozen_balance Decimal           @db.Decimal(10, 2)
+  created_at     DateTime          @default(now()) @db.DateTime(0)
+  updated_at     DateTime          @updatedAt @db.DateTime(0)
+  transactions   WalletTransaction[] @relation("UserWalletTransactions")
   @@map("user_wallets")
 }
 
 model WalletTransaction {
-  id               Int      @id @default(autoincrement())
-  user_id          Int      @map("user_id")
-  transaction_type String   @map("transaction_type") // DEPOSIT, WITHDRAWAL, PURCHASE, SALE, FREEZE, UNFREEZE
-  amount           Decimal  @db.Decimal(10, 2)
-  balance_before   Decimal  @map("balance_before") @db.Decimal(10, 2)
-  balance_after    Decimal  @map("balance_after") @db.Decimal(10, 2)
-  description      String?  @db.Text
-  reference_id     Int?     @map("reference_id")
-  reference_type   String?  @map("reference_type") // TRANSACTION, ADMIN_DEPOSIT, BID, etc.
-  admin_id         Int?     @map("admin_id") // Track which admin made the change
-  created_at       DateTime @default(now()) @map("created_at")
-
-  // Relations
-  user User @relation("UserWalletTransactions", fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id], map: "wallet_transactions_user_id_idx")
-  @@index([transaction_type], map: "wallet_transactions_type_idx")
-  @@index([created_at], map: "wallet_transactions_created_at_idx")
-  @@index([admin_id], map: "wallet_transactions_admin_id_idx")
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  user            User     @relation("UserWalletTransaction", fields: [user_id], references: [id], onDelete: Cascade)
+  wallet_id       Int
+  wallet          UserWallet @relation("UserWalletTransactions", fields: [wallet_id], references: [id], onDelete: Cascade)
+  transaction_type String   @db.VarChar(50)
+  amount          Decimal  @db.Decimal(10, 2)
+  balance_before  Decimal  @db.Decimal(10, 2)
+  balance_after   Decimal  @db.Decimal(10, 2)
+  description     String?  @db.VarChar(255)
+  reference_type  String   @db.VarChar(50)
+  reference_id    Int?     // Added to store related bid ID
+  admin_id        Int?
+  created_at      DateTime @default(now()) @db.DateTime(0)
   @@map("wallet_transactions")
-}
-
-model Transaction {
-  id               Int       @id @default(autoincrement())
-  user_card_id     Int       @map("user_card_id")
-  buyer_id         Int       @map("buyer_id")
-  seller_id        Int       @map("seller_id")
-  amount           Decimal   @db.Decimal(10, 2)
-  transaction_type String    @map("transaction_type") // FIXED_PRICE, AUCTION_WIN_PENDING, BID_ACCEPTED, BID_PURCHASE_CONFIRMED, etc.
-  status           String    @default("PENDING") // PENDING, PENDING_BUYER_CONFIRMATION, COMPLETED, CANCELLED, FAILED, EXPIRED
-  notes            String?   @db.Text
-  completed_at     DateTime? @map("completed_at")
-  created_at       DateTime  @default(now()) @map("created_at")
-  updated_at       DateTime  @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  userCard UserCard @relation("UserCardTransactions", fields: [user_card_id], references: [id], onDelete: Cascade)
-  buyer    User     @relation("TransactionBuyer", fields: [buyer_id], references: [id], onDelete: Cascade)
-  seller   User     @relation("TransactionSeller", fields: [seller_id], references: [id], onDelete: Cascade)
-
-  @@index([user_card_id])
-  @@index([buyer_id])
-  @@index([seller_id])
-  @@index([status])
-  @@index([created_at])
-  @@map("transactions")
-}
-
-// NextAuth models (keeping existing structure)
-model account {
-  id                String  @id
-  userId            Int
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  @@unique([provider, providerAccountId], map: "Account_provider_providerAccountId_key")
-  @@index([userId], map: "Account_userId_idx")
-}
-
-model resettoken {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique(map: "ResetToken_token_key")
-  userId    Int
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-
-  @@index([userId], map: "ResetToken_userId_idx")
-}
-
-model session {
-  id           String   @id
-  sessionToken String   @unique(map: "Session_sessionToken_key")
-  userId       Int
-  expires      DateTime
-
-  @@index([userId], map: "Session_userId_idx")
-}
-
-model user {
-  id                 Int       @id @default(autoincrement())
-  email              String    @unique(map: "User_email_key")
-  name               String
-  role               String
-  registeredAt       DateTime
-  lastLoginAt        DateTime?
-  subscriptionStatus String
-  auditTrail         Json?
-
-  
-
-}
-
-model verificationtoken {
-  identifier String
-  token      String   @unique(map: "VerificationToken_token_key")
-  expires    DateTime
-
-  @@unique([identifier, token], map: "VerificationToken_identifier_token_key")
-}
-
-
-model Notification {
-  id           Int      @id @default(autoincrement())
-  user_id      Int      @map("user_id")
-  type         String   @db.VarChar(50) // BID_RECEIVED, BID_ACCEPTED, AUCTION_WON, AUCTION_LOST, etc.
-  title        String   @db.VarChar(255)
-  message      String   @db.Text
-  is_read      Boolean  @default(false) @map("is_read")
-  reference_id Int?     @map("reference_id") // ID of related record (bid, transaction, etc.)
-  reference_type String? @map("reference_type") @db.VarChar(50) // BID, TRANSACTION, AUCTION, etc.
-  metadata     Json?    // Additional data
-  created_at   DateTime @default(now()) @map("created_at")
-
-  // Relations
-  user User @relation("UserNotifications", fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id, is_read])
-  @@index([created_at])
-  @@map("notifications")
 }

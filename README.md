@@ -1,240 +1,89 @@
 # TCG Market
 
-A comprehensive trading card game (TCG) marketplace application built with Next.js and modern technologies. This platform provides tools for tracking, analyzing, and trading TCG cards with real-time market data integration.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-13.4.12-000000?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.10.1-2D3748?logo=prisma)](https://www.prisma.io/)
 
-## Core Features
+A comprehensive trading card game (TCG) marketplace application built with Next.js 13+, TypeScript, and modern technologies. This platform provides tools for tracking, analyzing, and trading TCG cards with real-time market data integration.
 
-### User Management
-- Secure authentication system with NextAuth.js
-- Role-based access control (RBAC)
-- Email verification system
-- Password reset functionality
-- User profile management
-- Activity logging and audit trails
+> **Last Updated**: June 22, 2025
 
-## APIs and Third-Party Services
+## Features
 
-### Core APIs
-- **Google Cloud Platform**
-  - Google Cloud Local Auth
-  - Google APIs (general services)
-  - Google Authentication Library
-  - Google Analytics
-  - Google Sheets
+### Core Functionality
+- **User Management**
+  - Secure authentication with NextAuth.js and Google OAuth2
+  - Role-based access control (Admin/User)
+  - Email verification & password reset
+  - User activity tracking
 
-- **Mailchimp**
-  - Mailchimp Marketing API
+- **Marketplace**
+  - Advanced card search and filtering
+  - Real-time price tracking
+  - Buy/Sell order management
+  - Watchlist functionality
 
-- **NextAuth.js**
-  - Authentication API
+- **Admin Dashboard**
+  - User management
+  - Analytics and reporting
+  - System configuration
+  - Waitlist management
 
-- **Chart.js**
-  - Data visualization API
+### Technical Stack
 
-- **Particle.js**
-  - Visual effects API
+**Frontend**
+- Next.js 13+ (App Router)
+- React 19
+- TypeScript
+- Material-UI (MUI) v6
+- Tailwind CSS
+- Framer Motion
 
-- **MySQL**
-  - Database API
+**Backend**
+- Next.js API Routes
+- Prisma ORM
+- MySQL
+- NextAuth.js
 
-- **Axios**
-  - HTTP client API
+**DevOps**
+- ESLint + Prettier
+- TypeScript type checking
+- PM2 process management
+- GitHub Actions (CI/CD)
 
-### Third-Party Services
-- **Authentication & Security**
-  - NextAuth.js
-  - Google OAuth2
-  - bcrypt (password hashing)
+## Installation
 
-- **Email Services**
-  - Nodemailer
-  - Mailchimp
-  - Google Gmail API
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/tcg-market.git
+   cd tcg-market
+   ```
 
-- **Data Visualization**
-  - Chart.js
-  - Material-UI Data Grid
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-- **Web Scraping & Automation**
-  - Playwright
-  - Puppeteer
-  - Selenium WebDriver
-  - Cheerio
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env.local
+   # Update the environment variables in .env.local
+   ```
 
-- **Database**
-  - Prisma ORM
-  - MySQL
+4. Set up the database:
+   ```bash
+   npx prisma migrate dev
+   ```
 
-- **Frontend Framework**
-  - Next.js
-  - React
-  - Material-UI
-  - Framer Motion
-  - React Toastify
+5. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-### Development Tools
-- **TypeScript**
-- **ESLint**
-- **Tailwind CSS**
-- **PostCSS**
+## Deployment
 
-This section provides a comprehensive overview of all external services and APIs that the application relies on for its functionality.
-
-### Market Tracking
-- Real-time market data scraping
-- Price history tracking
-- Product watchlist system
-- Advanced filtering and search capabilities
-- Price change notifications
-- Waitlist management with detailed user metadata
-
-### Analytics & Visualization
-- Interactive data grids using @mui/x-data-grid
-- Chart.js integration for data visualization
-- Real-time market trend analysis
-- User activity analytics
-- Google Analytics integration
-
-### Admin Tools
-- User management dashboard
-- Activity monitoring
-- System configuration
-- Task scheduling
-- Email notifications management
-
-### Technical Features
-- Automated data scraping with Puppeteer/Playwright
-- Cron job scheduling for periodic tasks
-- Secure API endpoints with rate limiting
-- Email notification system
-- Activity logging and audit trails
-- Google Analytics integration
-
-## Recent Changes
-
-- Added waitlist confirmation email with TCG Market logo and improved styling
-- Updated launch date to June 2026
-- Enhanced logging for waitlist submissions and email confirmations
-- Improved error handling and user feedback
-- Removed temporary Discord integration features
-- Added proper email sending for both new and existing users system
-- Activity logging and audit trails
-- Google Analytics integration
-
-## Development Timeline
-
-### Completed Features
-- Waitlist page with signup form
-- Waitlist confirmation emails with TCG Market logo
-- Google Sheets integration for waitlist tracking
-- Mailchimp integration for email list management
-- OAuth2 authentication for protected routes
-- Responsive design with Material-UI
-- Framer Motion animations
-- Toast notifications for user feedback
-- Detailed logging for waitlist submissions and email confirmations
-- Real-time communication infrastructure (WebSocket/SSE)
-
-### Current Development
-- ✅ Google Sheets Integration
-- ✅ Email Sending System
-- ✅ Waitlist Management
-- 🔄 Real-time communication infrastructure (WebSocket/SSE)
-
-### Recent Updates
-
-#### Data Management
-- 📋 Google Sheets integration with proper headers matching UI
-- 📋 Waitlist management scripts for bulk operations
-- 📋 Automated data synchronization between UI and Google Sheets
-
-#### Email System
-- 📋 TypeScript-based email sending system
-- 📋 OAuth2 authentication with Gmail API
-- 📋 Error handling and logging
-- 📋 Automated token refresh
-
-#### Waitlist Management
-- 📋 TypeScript-based waitlist management
-- 📋 Automated cleanup scripts
-- 📋 Status update scripts
-- 📋 Integration with Google Sheets
-
-#### Discord Integration
-- 📋 Discord button and integration card temporarily commented out
-- 📋 Discord bot integration text updated to reference "our Discord server"
-- 📋 Note: Uncomment Discord-related features when integration is ready
-
-### Future Development
-#### Pokémon Card Auction & Trading System
-
-1. **Core Infrastructure Setup**
-   - 📋 Real-time communication setup (WebSocket/SSE)
-   - 📋 Card database integration
-   - 📋 Error handling system
-   - 📋 Unit testing setup
-
-2. **Basic Card Display**
-   - 📋 Card details component
-   - 📋 Card condition indicators (NM, SP, LP)
-   - 📋 Rarity indicators (Common, Rare, Ultra Rare)
-   - 📋 Edition display
-
-3. **Order Book Foundation**
-   - 📋 Basic order book visualization
-   - 📋 Price level aggregation
-   - 📋 Volume display
-   - 📋 Order depth visualization
-
-4. **Order Entry System**
-   - 📋 Order entry form
-   - 📋 Buy/Sell selection
-   - 📋 Price input with validation
-   - 📋 Quantity input
-   - 📋 Order type selection (Market/Limit)
-
-5. **Trading Engine**
-   - 📋 Trade execution system
-   - 📋 Transaction history
-   - 📋 Order status updates
-   - 📋 Price validation
-
-6. **Real-Time Integration**
-   - 📋 Real-time price updates
-   - 📋 Trade notifications
-   - 📋 Market activity tracking
-   - 📋 WebSocket optimization
-
-7. **Advanced Features**
-   - 📋 Card verification system
-   - 📋 Trade validation
-   - 📋 Performance optimization
-   - 📋 Cache strategy
-   - 📋 Security enhancements
-   - 📋 Advanced analytics
-
-## Pokémon Card Auction System
-
-### Core Features
-
-#### Trading Platform
-- Real-time bid/ask system
-- Card-specific order book
-- Trade execution engine
-- Transaction history
-- Price history tracking
-
-#### Card Management
-- Card verification system
-- Condition tracking (NM, SP, LP)
-- Rarity classification (Common, Rare, Ultra Rare, etc.)
-- Edition verification
-- Authenticity checks
-
-#### Real-Time Features
-- WebSocket/SSE integration
-- Real-time price updates
-
+### Production Build
 ## Database Management
 
 ### Backup Scripts
@@ -250,13 +99,10 @@ The project includes several backup scripts for managing the database:
    - Backup files are stored in the `backups/` directory with timestamps
    - Contains all waitlist entries with their metadata
 
-### Backup Location
-All backup files are stored in the `backups/` directory with filenames that include timestamps for easy reference.
-
 ### Restore Instructions
 To restore the MySQL database from a backup:
 ```bash
-mysql -u derek -p visitorDB < backups/mysql-backup-YYYY-MM-DD_HH-MM-SS.sql
+mysql -u username -p database_name < backups/mysql-backup-YYYY-MM-DD_HH-MM-SS.sql
 ```
 
 To restore the waitlist from a backup:
@@ -267,177 +113,24 @@ await prisma.waitlist.createMany({
   data: JSON.parse(backupData)
 });
 ```
-- Trade notifications
-- Market activity tracking
-- Price alerts
 
-#### Security & Validation
-- Trade validation
-- Price manipulation prevention
-- Transaction security
-- User authentication
-- Trade authorization
+## 📝 License
 
-#### Performance
-- Real-time updates
-- Price tracking optimization
-- Trade matching speed
-- Database efficiency
-- Cache strategy
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-#### UI Components
-- Real-time order book display
-- Card details visualization
-- Condition indicators
-- Price history charts
-- Trade history interface
+## 🤝 Contributing
 
-## Subscription & Monetization
+Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) to get started.
 
-### Subscription Tiers
+## 📬 Contact
 
-#### Free Tier ($0/month)
-- Basic card trading
-- Limited order book depth (5 levels)
-- Basic market data access (15-minute delay)
-- Standard trade execution (queue-based)
-- Basic analytics (daily price history)
-- 1 active order limit
-- Basic support (email only)
-- 1% transaction fee
-- No card verification
-- Basic alerts
+For inquiries, please contact [your-email@example.com](mailto:your-email@example.com).
 
-#### Premium Tier ($9.99/month)
-- Advanced order book access (10 levels)
-- Real-time market data (1-minute delay)
-- Priority trade execution (priority queue)
-- Advanced analytics (hourly price history)
-- Card verification service (basic)
-- Priority support (24-hour response)
-- 3 active order limit
-- 0.75% transaction fee
-- Basic market alerts
-- Basic price alerts
-- Basic trading tools
-- Basic portfolio tracking
-- Basic market research
-- Basic trading history
+---
 
-#### Professional Tier ($29.99/month)
-- Full order book access (20 levels)
-- Premium market data (real-time)
-- Instant trade execution (priority)
-- Professional analytics (real-time)
-- Advanced verification (full)
-- Dedicated support (24/7)
-- 5 active order limit
-- 0.5% transaction fee
-- Custom alerts
-- Advanced trading tools
-- Advanced portfolio tracking
-- Advanced market research
-- Advanced trading history
-- Custom trading strategies
-- Professional market data
-- White-label solutions
-- Custom analytics
-- Verified seller badges
-- Premium listings
-- Custom alerts
-- Real-time notifications
-
-### Monetization Features
-
-#### Trading Fees
-- Transaction-based fees (0.5% - 1%)
-- Volume-based discounts (up to 50%)
-- Market maker incentives (0.1% rebate)
-- Trade execution fees (0.01%)
-- Premium listing fees ($5/order)
-- Verified seller badge ($10/month)
-- Custom analytics ($50/month)
-- White-label solutions (custom pricing)
-- Priority support ($100/month)
-
-#### Subscription Benefits
-- Priority access to new features
-- Advanced trading tools
-- Enhanced market data
-- Professional support
-- Custom alerts
-- Real-time notifications
-- Advanced analytics
-- Portfolio management
-- Trading history
-- Market research
-- Trading strategies
-- White-label solutions
-
-#### Additional Revenue Streams
-- Premium listings (featured trades)
-- Verified seller badges
-- Custom analytics packages
-- White-label solutions
-- Priority support services
-- Custom trading strategies
-- Market research reports
-- Professional consulting
-- Custom integration services
-- Enterprise solutions
-
-### Security & Compliance
-- Secure payment processing (PCI-DSS)
-- Regulatory compliance (SEC, FINRA)
-- Data privacy (GDPR, CCPA)
-- Fraud prevention (AI-based)
-- Transaction monitoring
-- KYC/AML compliance
-- Secure authentication
-- Two-factor authentication
-- Encrypted data storage
-- Regular security audits
-- Compliance certifications
-
-### Payment Processing
-- Multiple payment methods
-- Secure payment gateway
-- Recurring subscription management
-- Automated billing
-- Tax calculation
-- Refund processing
-- Chargeback prevention
-- Payment dispute handling
-- Multi-currency support
-- International payments
-
-### Analytics & Reporting
-- Real-time trading analytics
-- Portfolio performance tracking
-- Market trend analysis
-- Custom trading metrics
-- Risk management tools
-- Performance benchmarks
-- Trading strategy analysis
-- Market impact analysis
-- Transaction cost analysis
-- Historical performance reports
-
-### Support & Documentation
-- 24/7 support (Professional tier)
-- 24-hour support (Premium tier)
-- Email support (Free tier)
-- Knowledge base
-- API documentation
-- Integration guides
-- Best practices
-- Trading guides
-- Market analysis
-- Educational resources
-
-### Integration & API
-- REST API access
-- WebSocket API
+<div align="center">
+  Made with ❤️ by TCG Market Team
+</div>
 - API rate limiting
 - API documentation
 - Integration guides

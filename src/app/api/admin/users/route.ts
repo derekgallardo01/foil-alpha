@@ -1,4 +1,3 @@
-// src/app/api/admin/users/route.ts - Simplified version that will work
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
@@ -6,10 +5,37 @@ import { prisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import type { Session } from "next-auth";
 
-// GET /api/admin/users - List all users (simplified)
-export async function GET(req: Request) {
+// Interface for response user data
+interface UserResponse {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  registeredAt: Date;
+  last_login_at: Date | null;
+  subscriptionStatus: string;
+  balance: number;
+  frozen_balance: number;
+  available_balance: number;
+  cardCount: number;
+  purchaseCount: number;
+  saleCount: number;
+}
+
+// Interface for POST request body
+interface CreateUserBody {
+  name: string;
+  email: string;
+  role: string;
+  subscriptionStatus: string;
+  password: string;
+  initialBalance?: number | string;
+}
+
+// GET /api/admin/users - List all users
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
+    const session = (await getServerSession(authOptions)) as Session | null;
 
     console.log("Session:", session); // Debug log
 
@@ -20,7 +46,6 @@ export async function GET(req: Request) {
 
     console.log("Fetching users from database..."); // Debug log
 
-    // Try simple query first
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -32,18 +57,29 @@ export async function GET(req: Request) {
         subscriptionStatus: true,
       },
       orderBy: {
-        registeredAt: 'desc'
-      }
+        registeredAt: 'desc',
+      },
     });
 
     console.log("Found users:", users.length); // Debug log
 
-    // Try to get wallet info for each user
-    const usersWithWallets = await Promise.all(
+    const usersWithWallets: UserResponse[] = await Promise.all(
       users.map(async (user) => {
         try {
           const wallet = await prisma.userWallet.findUnique({
-            where: { user_id: user.id }
+            where: { user_id: user.id },
+          });
+
+          const userCards = await prisma.userCard.count({
+            where: { owner_id: user.id },
+          });
+
+          const purchases = await prisma.cardTransactionHistory.count({
+            where: { toUserId: user.id, action: 'SALE' },
+          });
+
+          const sales = await prisma.cardTransactionHistory.count({
+            where: { fromUserId: user.id, action: 'SALE' },
           });
 
           return {
@@ -51,9 +87,9 @@ export async function GET(req: Request) {
             balance: wallet ? Number(wallet.balance) : 0,
             frozen_balance: wallet ? Number(wallet.frozen_balance) : 0,
             available_balance: wallet ? Number(wallet.balance) - Number(wallet.frozen_balance) : 0,
-            cardCount: 0, // TODO: Count cards
-            purchaseCount: 0, // TODO: Count purchases
-            saleCount: 0, // TODO: Count sales
+            cardCount: userCards,
+            purchaseCount: purchases,
+            saleCount: sales,
           };
         } catch (walletError) {
           console.error("Error fetching wallet for user", user.id, walletError);
@@ -67,39 +103,45 @@ export async function GET(req: Request) {
             saleCount: 0,
           };
         }
-      })
+      }),
     );
 
     console.log("Returning users with wallet data"); // Debug log
     return NextResponse.json(usersWithWallets);
-
   } catch (error) {
     console.error("Error in GET /api/admin/users:", error);
     return NextResponse.json({
       message: "Error fetching users",
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     }, { status: 500 });
   }
 }
 
-// POST /api/admin/users - Create new user (simplified)
+// POST /api/admin/users - Create new user
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
+    const session = (await getServerSession(authOptions)) as Session | null;
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
     }
 
-    const { name, email, role, subscriptionStatus, password, initialBalance = 0 } = await req.json();
+    const body = (await req.json()) as CreateUserBody;
+    const { name, email, role, subscriptionStatus, password, initialBalance = 0 } = body;
 
     // Validate required fields
     if (!name || !email || !role || !subscriptionStatus || !password) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
+    // Validate initialBalance
+    const initialBalanceNum = parseFloat(String(initialBalance));
+    if (isNaN(initialBalanceNum) || initialBalanceNum < 0) {
+      return NextResponse.json({ message: "Invalid initialBalance: must be a non-negative number" }, { status: 400 });
+    }
+
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
@@ -119,45 +161,47 @@ export async function POST(req: Request) {
           role,
           subscriptionStatus,
           password: hashedPassword,
-          is_verified: 0
-        }
+          is_verified: 0, // Fixed from false to 0
+        },
       });
 
       // Create wallet
       const wallet = await tx.userWallet.create({
         data: {
           user_id: newUser.id,
-          balance: Number(initialBalance),
-          frozen_balance: 0.00
-        }
+          balance: initialBalanceNum,
+          frozen_balance: 0,
+        },
       });
 
       // Create initial wallet transaction if there's an initial balance
-      if (initialBalance > 0) {
+      if (initialBalanceNum > 0) {
         await tx.walletTransaction.create({
           data: {
             user_id: newUser.id,
+            wallet_id: wallet.id,
             transaction_type: 'INITIAL_DEPOSIT',
-            amount: Number(initialBalance),
-            balance_before: 0.00,
-            balance_after: Number(initialBalance),
+            amount: initialBalanceNum,
+            balance_before: 0,
+            balance_after: initialBalanceNum,
             description: `Initial deposit by admin: ${session.user.name}`,
             reference_type: 'ADMIN_DEPOSIT',
-            admin_id: parseInt(session.user.id)
-          }
+            admin_id: parseInt(String(session.user.id)),
+          },
         });
       } else {
         // Create setup transaction
         await tx.walletTransaction.create({
           data: {
             user_id: newUser.id,
+            wallet_id: wallet.id,
             transaction_type: 'WALLET_SETUP',
-            amount: 0.00,
-            balance_before: 0.00,
-            balance_after: 0.00,
+            amount: 0,
+            balance_before: 0,
+            balance_after: 0,
             description: 'Wallet created during user registration',
-            reference_type: 'SYSTEM_SETUP'
-          }
+            reference_type: 'SYSTEM_SETUP',
+          },
         });
       }
 
@@ -173,13 +217,12 @@ export async function POST(req: Request) {
       lastLoginAt: result.user.last_login_at,
       subscriptionStatus: result.user.subscriptionStatus,
       balance: Number(result.wallet.balance),
-      frozen_balance: Number(result.wallet.frozen_balance)
+      frozen_balance: Number(result.wallet.frozen_balance),
     }, { status: 201 });
-
   } catch (error) {
     console.error("Error adding user:", error);
     return NextResponse.json({
-      message: `Error adding user: ${(error as Error).message}`
+      message: `Error adding user: ${error instanceof Error ? error.message : 'Unknown error'}`,
     }, { status: 500 });
   }
 }

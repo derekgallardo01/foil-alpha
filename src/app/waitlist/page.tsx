@@ -1,7 +1,7 @@
+
 "use client";
 
-import React from "react";
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Container,
@@ -16,9 +16,31 @@ import {
   Tooltip,
 } from "@mui/material";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
+
+// Reusable AnimatedCard component
+interface AnimatedCardProps {
+  children: React.ReactNode;
+  delay?: number;
+}
+
+const AnimatedCard = ({ children, delay = 0 }: AnimatedCardProps) => {
+  const ref = React.useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 // Variants for animations
 const containerVariants = {
@@ -34,16 +56,6 @@ const itemVariants = {
 const bounceVariants = {
   hidden: { opacity: 0, scale: 0.8 },
   visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 15 } },
-};
-
-const slideInLeft = {
-  hidden: { opacity: 0, x: -50 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: "easeOut" } },
-};
-
-const slideInRight = {
-  hidden: { opacity: 0, x: 50 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: "easeOut" } },
 };
 
 interface FormData {
@@ -134,7 +146,8 @@ export default function WaitlistPage() {
     }
 
     try {
-      console.log("[Client] Starting waitlist submission for:", formData.email);
+      const submittedEmail = formData.email; // Store email before resetting form
+      console.log("[Client] Starting waitlist submission for:", submittedEmail);
       const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: {
@@ -143,7 +156,7 @@ export default function WaitlistPage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          phone_number: formData.phone_number || undefined, // Send undefined if empty to match backend
+          phone_number: formData.phone_number || undefined,
           emailData: {
             subject: "Welcome to TCG Market! Your Waitlist Confirmation",
             body: `
@@ -188,7 +201,7 @@ export default function WaitlistPage() {
       setSuccess(true);
       setFormData({ name: "", email: "", phone_number: "" });
       toast.success("Successfully joined the waitlist!", { position: "top-right" });
-      console.log("[Client] Waitlist submission successful for:", formData.email);
+      console.log("[Client] Waitlist submission successful for:", submittedEmail);
       setTimeout(() => {
         setSuccess(false);
       }, 5000);
@@ -295,6 +308,7 @@ export default function WaitlistPage() {
                       width={200}
                       height={100}
                       priority
+                      onError={() => console.error("Failed to load logo image")}
                     />
                   </motion.div>
                 </Box>
@@ -456,7 +470,7 @@ export default function WaitlistPage() {
                           {loading ? (
                             <>
                               <CircularProgress size={24} color="inherit" />
-                              Submitting...
+                              <span style={{ marginLeft: 8 }}>Submitting...</span>
                             </>
                           ) : (
                             "Join Waitlist"
@@ -567,11 +581,10 @@ export default function WaitlistPage() {
           </motion.div>
         </Container>
 
-        {/* Features Section */}
         <Container maxWidth="sm" sx={{ mt: 8, mb: 8 }}>
-          <motion.div variants={containerVariants} initial="hidden" animate="visible">
+          <div>
             {/* Feature 1: Smart Market Insights */}
-            <motion.div variants={slideInLeft}>
+            <AnimatedCard delay={0.1}>
               <Paper
                 elevation={6}
                 sx={{
@@ -700,10 +713,10 @@ export default function WaitlistPage() {
                   </Box>
                 </Box>
               </Paper>
-            </motion.div>
+            </AnimatedCard>
 
             {/* Feature 2: Real-Time Alerts with Pokémon-Themed Graphic */}
-            <motion.div variants={slideInRight}>
+            <AnimatedCard delay={0.2}>
               <Paper
                 elevation={6}
                 sx={{
@@ -843,10 +856,10 @@ export default function WaitlistPage() {
                   </Box>
                 </Box>
               </Paper>
-            </motion.div>
+            </AnimatedCard>
 
             {/* Feature 3: Community Market Insights */}
-            <motion.div variants={slideInLeft}>
+            <AnimatedCard delay={0.3}>
               <Paper
                 elevation={6}
                 sx={{
@@ -933,10 +946,10 @@ export default function WaitlistPage() {
                   </Box>
                 </Box>
               </Paper>
-            </motion.div>
+            </AnimatedCard>
 
             {/* Feature 4: Discord Bot Integration */}
-            <motion.div variants={slideInRight}>
+            <AnimatedCard delay={0.4}>
               <Paper
                 elevation={6}
                 sx={{
@@ -1023,14 +1036,14 @@ export default function WaitlistPage() {
                   </Box>
                 </Box>
               </Paper>
-            </motion.div>
-          </motion.div>
+            </AnimatedCard>
+          </div>
         </Container>
 
         {/* Footer Section */}
         <Box sx={{ textAlign: "center", py: 2, bgcolor: "grey.800", width: "100%", mt: "auto" }}>
           <Typography variant="body2" sx={{ color: "grey.400" }}>
-            © 2025 TCG Market. All rights reserved.{" "}
+            2025 TCG Market. All rights reserved.{" "}
             <Link
               href="/privacy"
               sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}

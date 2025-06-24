@@ -1,4 +1,3 @@
-// src/app/components/AdminSidebar.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -372,7 +371,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
 
             {/* Navigation */}
             <List sx={{ py: 1, px: 1 }}>
-                {navigationItems.map((item, index) => (
+                {navigationItems.map((item) => (
                     <Box key={item.title}>
                         {item.divider && <Divider sx={{ my: 1, borderColor: 'rgba(150, 255, 155, 0.2)' }} />}
 

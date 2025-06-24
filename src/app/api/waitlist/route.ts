@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
@@ -8,8 +9,8 @@ interface WaitlistResponseData {
   email: string;
   name: string;
   phone_number?: string | null;
-  status: string;
-  source: string;
+  status: string | null; // Made nullable to match Prisma schema
+  source: string | null; // Made nullable to match Prisma schema
   createdAt: Date;
   metadata: Record<string, unknown> | null;
 }
@@ -75,9 +76,9 @@ export async function GET(request: Request) {
         email: waitlistEntry.email,
         name: waitlistEntry.name,
         phone_number: waitlistEntry.phone_number ?? null,
-        status: waitlistEntry.status,
-        source: waitlistEntry.source,
-        createdAt: waitlistEntry.created_at,
+        status: waitlistEntry.status ?? null,
+        source: waitlistEntry.source ?? null,
+        createdAt: waitlistEntry.created_at ?? new Date(), // Fallback to current date if null
         metadata: (typeof waitlistEntry.metadata === "object" && waitlistEntry.metadata !== null
           ? waitlistEntry.metadata
           : null) as Record<string, unknown> | null,

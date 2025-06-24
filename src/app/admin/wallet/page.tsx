@@ -1,4 +1,3 @@
-// src/app/admin/wallets/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -40,7 +39,7 @@ export default function AdminWalletsPage() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: "1px solid rgba(150, 255, 155, 0.2)" }}>
                 <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
                     <MenuIcon />
                 </IconButton>
@@ -72,7 +71,7 @@ export default function AdminWalletsPage() {
                         Wallet Management
                     </Typography>
                     <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
-                        Manage user wallets from the Users page. Click on any user's "Wallet" button to access wallet management features.
+                        Manage user wallets from the Users page. Click on any user&apos;s &quot;Wallet&quot; button to access wallet management features.
                     </Typography>
                     <Button
                         variant="contained"
