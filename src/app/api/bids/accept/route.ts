@@ -1,4 +1,4 @@
-// src/app/api/bids/accept/route.ts - Updated with new confirmation flow
+// src/app/api/bids/accept/route.ts - Fixed TypeScript error
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
@@ -20,17 +20,29 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'bid_id is required' }, { status: 400 });
         }
 
-        // Get bid with all related data
+        // OPTIMIZED: Get bid with minimal data first
         const bid = await prisma.bid.findUnique({
             where: { id: bid_id },
             include: {
                 userCard: {
-                    include: {
-                        card: true,
-                        owner: true
+                    select: {
+                        id: true,
+                        owner_id: true,
+                        is_sold: true,
+                        card: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
                     }
                 },
-                bidder: true
+                bidder: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                }
             }
         });
 
@@ -48,9 +60,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Card has already been sold' }, { status: 400 });
         }
 
-        // Create a pending transaction instead of immediate sale
+        // OPTIMIZED: Use faster transaction with timeout increase
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Create pending transaction
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+            // 1. Create pending transaction (single operation)
             const pendingTransaction = await tx.transaction.create({
                 data: {
                     user_card_id: bid.user_card_id,
@@ -59,83 +73,80 @@ export async function POST(request: NextRequest) {
                     amount: bid.amount,
                     transaction_type: 'BID_ACCEPTED_PENDING',
                     status: 'PENDING_BUYER_CONFIRMATION',
-                    notes: 'Waiting for buyer confirmation within 24 hours',
-                    // Will be completed when buyer confirms
+                    notes: `Bid accepted. Expires at: ${expiresAt.toISOString()}. Waiting for buyer confirmation.`
                 }
             });
 
-            // 2. Mark card as pending sale (not sold yet)
+            // 2. Update card status (single operation)
             await tx.userCard.update({
                 where: { id: bid.user_card_id },
                 data: {
-                    // Keep is_for_sale true but add a note that it's pending
                     notes: `Pending buyer confirmation - Transaction #${pendingTransaction.id}`
                 }
             });
 
-            // 3. Deactivate the accepted bid (but keep others active until confirmation)
+            // 3. Deactivate the accepted bid (single operation)
             await tx.bid.update({
                 where: { id: bid_id },
-                data: {
-                    is_active: false,
-                    // Add metadata to track it was accepted
-                }
-            });
-
-            // 4. Add expiration tracking
-            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-            // Store expiration info in transaction metadata or separate table
-            await tx.transaction.update({
-                where: { id: pendingTransaction.id },
-                data: {
-                    notes: `Expires at: ${expiresAt.toISOString()}. Waiting for buyer confirmation.`
-                }
+                data: { is_active: false }
             });
 
             return {
                 transaction: pendingTransaction,
-                card: bid.userCard.card,
-                buyer: bid.bidder,
-                seller: bid.userCard.owner,
-                amount: Number(bid.amount),
-                expiresAt
+                expiresAt,
+                amount: Number(bid.amount)
             };
+        }, {
+            timeout: 10000, // Increase timeout to 10 seconds
+            isolationLevel: 'ReadCommitted' // Use faster isolation level
         });
 
-        // Create notifications (outside transaction)
-        try {
-            await createBidAcceptedNotifications(
-                bid.bidder_id,
-                sellerId,
-                bid.userCard.card.name,
-                Number(bid.amount),
-                result.transaction.id
-            );
-        } catch (notificationError) {
-            console.error('Error creating notifications:', notificationError);
-        }
+        // OPTIMIZED: Create notifications outside transaction with error handling
+        setImmediate(async () => {
+            try {
+                await createBidAcceptedNotifications(
+                    bid.bidder_id,
+                    sellerId,
+                    bid.userCard.card.name,
+                    Number(bid.amount),
+                    result.transaction.id
+                );
+            } catch (notificationError) {
+                console.error('Error creating notifications (async):', notificationError);
+            }
+        });
 
         return NextResponse.json({
             success: true,
             message: 'Bid accepted! Buyer has 24 hours to confirm purchase.',
             transaction: {
                 id: result.transaction.id,
-                card_name: result.card.name,
-                buyer_name: result.buyer.name,
-                seller_name: result.seller.name,
+                card_name: bid.userCard.card.name,
+                buyer_name: bid.bidder.name,
                 amount: result.amount,
                 status: 'PENDING_BUYER_CONFIRMATION',
                 expires_at: result.expiresAt
             }
         });
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error accepting bid:', error);
+
+        // FIXED: Proper TypeScript error handling
+        if (error && typeof error === 'object' && 'code' in error) {
+            const prismaError = error as { code: string; message?: string };
+            if (prismaError.code === 'P2028') {
+                return NextResponse.json(
+                    { error: 'Transaction timeout - please try again' },
+                    { status: 408 }
+                );
+            }
+        }
+
         return NextResponse.json(
             {
                 error: 'Failed to accept bid',
-                details: error instanceof Error ? error.message : 'Unknown error'
+                details: error instanceof Error ? error.message : 'Unknown error occurred'
             },
             { status: 500 }
         );

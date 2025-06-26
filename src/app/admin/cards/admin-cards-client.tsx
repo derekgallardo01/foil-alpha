@@ -26,13 +26,20 @@ import {
     Card,
     Chip,
     InputLabel,
-    FormControl
+    FormControl,
+    CardContent,
+    CardMedia,
+    Alert,
+    Pagination,
+    Tabs,
+    Tab
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import UploadIcon from "@mui/icons-material/Upload";
+import DownloadIcon from "@mui/icons-material/Download";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
@@ -77,6 +84,401 @@ interface CardsResponse {
     };
 }
 
+// Pokemon Card Import Modal Component
+function PokemonImportModal({ open, onClose, onImportComplete }: {
+    open: boolean;
+    onClose: () => void;
+    onImportComplete?: (results: any) => void;
+}) {
+    const [activeTab, setActiveTab] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const [error, setError] = useState('');
+
+    // Search state
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSet, setSelectedSet] = useState('');
+    const [selectedType, setSelectedType] = useState('');
+    const [selectedRarity, setSelectedRarity] = useState('');
+
+    // Results state
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [selectedCards, setSelectedCards] = useState(new Set<string>());
+    const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
+
+    // Sets and filters
+    const [availableSets, setAvailableSets] = useState<any[]>([]);
+    const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+    const [availableRarities, setAvailableRarities] = useState<string[]>([]);
+
+    // Load sets and filter options
+    useEffect(() => {
+        if (open) {
+            loadFilterOptions();
+        }
+    }, [open]);
+
+    const loadFilterOptions = async () => {
+        try {
+            setLoading(true);
+
+            // Load sets
+            const setsResponse = await fetch('/api/pokemon-tcg/sets?pageSize=100');
+            const setsData = await setsResponse.json();
+            if (setsData.success) {
+                setAvailableSets(setsData.data);
+            }
+
+            // Load types and rarities
+            const filtersResponse = await fetch('/api/pokemon-tcg/types', { method: 'POST' });
+            const filtersData = await filtersResponse.json();
+            if (filtersData.success) {
+                setAvailableTypes(filtersData.data.types);
+                setAvailableRarities(filtersData.data.rarities);
+            }
+        } catch (error) {
+            console.error('Error loading filter options:', error);
+            setError('Failed to load filter options');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const searchCards = async (page = 1) => {
+        try {
+            setLoading(true);
+            setError('');
+
+            const params = new URLSearchParams({
+                page: page.toString(),
+                pageSize: '20',
+            });
+
+            if (searchTerm) params.append('name', searchTerm);
+            if (selectedSet) params.append('set', selectedSet);
+            if (selectedType) params.append('types', selectedType);
+            if (selectedRarity) params.append('rarity', selectedRarity);
+
+            const response = await fetch(`/api/pokemon-tcg/search?${params}`);
+            const data = await response.json();
+
+            if (data.success) {
+                setSearchResults(data.data);
+                setPagination({
+                    page: data.pagination.page,
+                    totalPages: data.pagination.totalPages,
+                });
+            } else {
+                setError(data.error || 'Search failed');
+            }
+        } catch (error) {
+            console.error('Error searching cards:', error);
+            setError('Failed to search cards');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCardSelection = (cardId: string, selected: boolean) => {
+        const newSelected = new Set(selectedCards);
+        if (selected) {
+            newSelected.add(cardId);
+        } else {
+            newSelected.delete(cardId);
+        }
+        setSelectedCards(newSelected);
+    };
+
+    const importSelectedCards = async () => {
+        if (selectedCards.size === 0) {
+            setError('Please select at least one card to import');
+            return;
+        }
+
+        try {
+            setImporting(true);
+            setError('');
+
+            const response = await fetch('/api/pokemon-tcg/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cardIds: Array.from(selectedCards),
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                onImportComplete?.(data.results);
+                onClose();
+                setSelectedCards(new Set());
+                setSearchResults([]);
+            } else {
+                setError(data.error || 'Import failed');
+            }
+        } catch (error) {
+            console.error('Error importing cards:', error);
+            setError('Failed to import cards');
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const importEntireSet = async () => {
+        if (!selectedSet) {
+            setError('Please select a set to import');
+            return;
+        }
+
+        const selectedSetObj = availableSets.find(set => set.name === selectedSet);
+        if (!selectedSetObj) {
+            setError('Invalid set selected');
+            return;
+        }
+
+        try {
+            setImporting(true);
+            setError('');
+
+            const response = await fetch('/api/pokemon-tcg/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    setId: selectedSetObj.id,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                onImportComplete?.(data.results);
+                onClose();
+            } else {
+                setError(data.error || 'Import failed');
+            }
+        } catch (error) {
+            console.error('Error importing set:', error);
+            setError('Failed to import set');
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const handleClose = () => {
+        setSelectedCards(new Set());
+        setSearchResults([]);
+        setError('');
+        setActiveTab(0);
+        onClose();
+    };
+
+    return (
+        <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+            <DialogTitle>Import Pokemon Cards from API</DialogTitle>
+            <DialogContent>
+                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
+                    <Tab label="Search & Import Cards" />
+                    <Tab label="Import Entire Set" />
+                </Tabs>
+
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+
+                {/* Tab 1: Search & Import Individual Cards */}
+                {activeTab === 0 && (
+                    <Box>
+                        {/* Search Filters */}
+                        <Grid container spacing={2} sx={{ mb: 3 }}>
+                            <Grid item xs={12} md={3}>
+                                <TextField
+                                    fullWidth
+                                    label="Search by name"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && searchCards(1)}
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={3}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Set</InputLabel>
+                                    <Select
+                                        value={selectedSet}
+                                        label="Set"
+                                        onChange={(e) => setSelectedSet(e.target.value)}
+                                    >
+                                        <MenuItem value="">All Sets</MenuItem>
+                                        {availableSets.map(set => (
+                                            <MenuItem key={set.id} value={set.name}>
+                                                {set.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={2}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Type</InputLabel>
+                                    <Select
+                                        value={selectedType}
+                                        label="Type"
+                                        onChange={(e) => setSelectedType(e.target.value)}
+                                    >
+                                        <MenuItem value="">All Types</MenuItem>
+                                        {availableTypes.map(type => (
+                                            <MenuItem key={type} value={type}>{type}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={2}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Rarity</InputLabel>
+                                    <Select
+                                        value={selectedRarity}
+                                        label="Rarity"
+                                        onChange={(e) => setSelectedRarity(e.target.value)}
+                                    >
+                                        <MenuItem value="">All Rarities</MenuItem>
+                                        {availableRarities.map(rarity => (
+                                            <MenuItem key={rarity} value={rarity}>{rarity}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={2}>
+                                <Button
+                                    fullWidth
+                                    variant="contained"
+                                    onClick={() => searchCards(1)}
+                                    disabled={loading}
+                                    sx={{ height: '56px' }}
+                                >
+                                    {loading ? <CircularProgress size={24} /> : 'Search'}
+                                </Button>
+                            </Grid>
+                        </Grid>
+
+                        {/* Search Results */}
+                        {searchResults.length > 0 && (
+                            <Box>
+                                <Typography variant="h6" sx={{ mb: 2 }}>
+                                    Search Results ({selectedCards.size} selected)
+                                </Typography>
+
+                                <Grid container spacing={2} sx={{ mb: 2 }}>
+                                    {searchResults.map((card) => (
+                                        <Grid item xs={12} sm={6} md={4} lg={3} key={card.id}>
+                                            <Card sx={{ height: '100%', position: 'relative' }}>
+                                                <Checkbox
+                                                    checked={selectedCards.has(card.id)}
+                                                    onChange={(e) => handleCardSelection(card.id, e.target.checked)}
+                                                    sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                                                />
+                                                <CardMedia
+                                                    component="img"
+                                                    height="200"
+                                                    image={card.images.small}
+                                                    alt={card.name}
+                                                    sx={{ objectFit: 'contain' }}
+                                                />
+                                                <CardContent>
+                                                    <Typography variant="h6" noWrap>
+                                                        {card.name}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {card.set.name} • {card.number}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={card.rarity}
+                                                        size="small"
+                                                        sx={{ mt: 1 }}
+                                                    />
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+
+                                {/* Pagination */}
+                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                                    <Pagination
+                                        count={pagination.totalPages}
+                                        page={pagination.page}
+                                        onChange={(e, page) => searchCards(page)}
+                                        disabled={loading}
+                                    />
+                                </Box>
+                            </Box>
+                        )}
+                    </Box>
+                )}
+
+                {/* Tab 2: Import Entire Set */}
+                {activeTab === 1 && (
+                    <Box>
+                        <Typography variant="h6" sx={{ mb: 2 }}>
+                            Import All Cards from a Set
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={8}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Select Set to Import</InputLabel>
+                                    <Select
+                                        value={selectedSet}
+                                        label="Select Set to Import"
+                                        onChange={(e) => setSelectedSet(e.target.value)}
+                                    >
+                                        {availableSets.map(set => (
+                                            <MenuItem key={set.id} value={set.name}>
+                                                {set.name} ({set.total} cards) - {set.releaseDate}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <Button
+                                    fullWidth
+                                    variant="contained"
+                                    onClick={importEntireSet}
+                                    disabled={importing || !selectedSet}
+                                    sx={{ height: '56px' }}
+                                >
+                                    {importing ? <CircularProgress size={24} /> : 'Import Entire Set'}
+                                </Button>
+                            </Grid>
+                        </Grid>
+
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                            This will import all cards from the selected set. This may take a few minutes for large sets.
+                        </Alert>
+                    </Box>
+                )}
+            </DialogContent>
+
+            <DialogActions>
+                <Button onClick={handleClose} disabled={importing}>
+                    Cancel
+                </Button>
+                {activeTab === 0 && (
+                    <Button
+                        variant="contained"
+                        onClick={importSelectedCards}
+                        disabled={importing || selectedCards.size === 0}
+                    >
+                        {importing ? <CircularProgress size={24} /> : `Import ${selectedCards.size} Cards`}
+                    </Button>
+                )}
+            </DialogActions>
+        </Dialog>
+    );
+}
+
 export default function AdminCardsClient() {
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -98,6 +500,7 @@ export default function AdminCardsClient() {
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
     const [bulkCreateOpen, setBulkCreateOpen] = useState<boolean>(false);
     const [bulkCardsText, setBulkCardsText] = useState<string>("");
+    const [pokemonImportOpen, setPokemonImportOpen] = useState<boolean>(false);
     const [visibleColumns, setVisibleColumns] = useState({
         id: true,
         name: true,
@@ -429,6 +832,16 @@ export default function AdminCardsClient() {
         }
     };
 
+    const handlePokemonImportComplete = (results: any) => {
+        if (results && results.imported) {
+            setCards((prev) => [...results.imported, ...prev]);
+            toast.success(`Successfully imported ${results.imported.length} Pokemon cards!`);
+
+            // Refresh the cards list to get updated data
+            fetchCards();
+        }
+    };
+
     return (
         <Box
             sx={{
@@ -514,6 +927,15 @@ export default function AdminCardsClient() {
                                         startIcon={<UploadIcon />}
                                     >
                                         Bulk Create
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        sx={{ bgcolor: "#ff9696", color: "grey.900" }}
+                                        onClick={() => setPokemonImportOpen(true)}
+                                        disabled={actionLoading}
+                                        startIcon={<DownloadIcon />}
+                                    >
+                                        Import Pokemon Cards
                                     </Button>
                                     <Button
                                         variant="contained"
@@ -682,6 +1104,13 @@ export default function AdminCardsClient() {
                     </Paper>
                 </motion.div>
             </Container>
+
+            {/* Pokemon Import Modal */}
+            <PokemonImportModal
+                open={pokemonImportOpen}
+                onClose={() => setPokemonImportOpen(false)}
+                onImportComplete={handlePokemonImportComplete}
+            />
 
             {/* Add/Edit Card Dialog */}
             <Dialog

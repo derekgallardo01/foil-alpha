@@ -1,5 +1,6 @@
-// src/app/notifications/page.tsx - Fixed with consistent endpoints and HTML structure
+// src/app/notification/page.tsx - Fixed notification page
 'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -7,28 +8,33 @@ import {
     Container,
     Typography,
     Box,
-    Paper,
-    List,
-    ListItem,
-    ListItemIcon,
-    ListItemText,
-    ListItemSecondaryAction,
+    Card,
+    CardContent,
     IconButton,
+    Badge,
     Button,
-    Chip,
     Alert,
     CircularProgress,
+    Chip,
+    Stack,
     Divider,
-    Badge
+    Paper
 } from '@mui/material';
 import {
     Notifications as NotificationIcon,
-    Gavel as GavelIcon,
-    AttachMoney as MoneyIcon,
-    Check as CheckIcon,
+    MarkEmailRead as MarkReadIcon,
+    Delete as DeleteIcon,
     Menu as MenuIcon,
-    MarkEmailRead as MarkReadIcon
+    Refresh as RefreshIcon,
+    CheckCircle as CheckIcon,
+    Info as InfoIcon,
+    Warning as WarningIcon,
+    Error as ErrorIcon,
+    Gavel as AuctionIcon,
+    AttachMoney as MoneyIcon,
+    ShoppingCart as SaleIcon
 } from '@mui/icons-material';
+import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 
@@ -37,161 +43,91 @@ interface Notification {
     type: string;
     title: string;
     message: string;
-    is_read: boolean;
-    reference_id?: number;
-    reference_type?: string;
-    metadata?: any;
+    data?: any;
+    read: boolean;
     created_at: string;
+    updated_at: string;
 }
 
-export default function NotificationsPage() {
+interface NotificationResponse {
+    notifications: Notification[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+export default function NotificationPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [markingAsRead, setMarkingAsRead] = useState<Set<number>>(new Set());
+    const [markingRead, setMarkingRead] = useState<Set<number>>(new Set());
+    const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+    // Fetch notifications
     const fetchNotifications = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            // FIXED: Use consistent API endpoint
             const response = await fetch('/api/notifications');
 
             if (!response.ok) {
-                throw new Error(`Failed to fetch notifications: ${response.status}`);
+                throw new Error('Failed to fetch notifications');
             }
 
-            const data = await response.json();
-            console.log('Fetched notifications:', data);
-            setNotifications(data || []);
+            const data: NotificationResponse = await response.json();
 
+            // Extract notifications array from response
+            setNotifications(data.notifications || []);
         } catch (err) {
             console.error('Error fetching notifications:', err);
             setError(err instanceof Error ? err.message : 'Failed to load notifications');
-
-            // Show sample notifications as fallback
-            const sampleNotifications: Notification[] = [
-                {
-                    id: 1,
-                    type: 'BID_RECEIVED',
-                    title: 'New Bid Received',
-                    message: 'Someone placed a bid of $25.00 on your Pikachu card',
-                    is_read: false,
-                    created_at: new Date().toISOString()
-                },
-                {
-                    id: 2,
-                    type: 'AUCTION_WON',
-                    title: 'Auction Won!',
-                    message: 'Congratulations! You won the auction for Charizard with a bid of $150.00',
-                    is_read: false,
-                    created_at: new Date(Date.now() - 3600000).toISOString()
-                }
-            ];
-            setNotifications(sampleNotifications);
+            setNotifications([]); // Set empty array on error
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        }
-    }, [status, router]);
-
-    useEffect(() => {
-        if (status === 'authenticated') {
-            fetchNotifications();
-        }
-    }, [status]);
-
-    // Auto-refresh notifications every 30 seconds
-    useEffect(() => {
-        if (status === 'authenticated') {
-            const interval = setInterval(fetchNotifications, 30000);
-            return () => clearInterval(interval);
-        }
-    }, [status]);
-
-    const getNotificationIcon = (type: string) => {
-        switch (type) {
-            case 'BID_RECEIVED':
-            case 'BID_OUTBID':
-            case 'BID_ACCEPTED':
-                return <GavelIcon />;
-            case 'AUCTION_WON':
-            case 'AUCTION_LOST':
-                return <GavelIcon color="primary" />;
-            case 'PURCHASE_COMPLETE':
-            case 'SALE_COMPLETE':
-            case 'PURCHASE_CONFIRMED':
-            case 'SALE_COMPLETED':
-                return <MoneyIcon color="success" />;
-            default:
-                return <NotificationIcon />;
-        }
-    };
-
-    const getNotificationColor = (type: string, isRead: boolean) => {
-        if (isRead) return 'default';
-
-        switch (type) {
-            case 'BID_RECEIVED':
-            case 'AUCTION_WON':
-                return 'success';
-            case 'BID_OUTBID':
-            case 'AUCTION_LOST':
-                return 'warning';
-            case 'BID_ACCEPTED':
-            case 'PURCHASE_COMPLETE':
-            case 'SALE_COMPLETE':
-            case 'PURCHASE_CONFIRMED':
-            case 'SALE_COMPLETED':
-                return 'primary';
-            default:
-                return 'default';
-        }
-    };
-
+    // Mark notification as read
     const markAsRead = async (notificationId: number) => {
-        setMarkingAsRead(prev => new Set(prev).add(notificationId));
-
         try {
-            // FIXED: Use consistent API endpoint
+            setMarkingRead(prev => new Set(prev).add(notificationId));
+
             const response = await fetch('/api/notifications', {
-                method: 'PATCH',
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    notification_id: notificationId
-                })
+                body: JSON.stringify({ notificationId }),
             });
 
-            if (response.ok) {
-                setNotifications(prev =>
-                    prev.map(notif =>
-                        notif.id === notificationId
-                            ? { ...notif, is_read: true }
-                            : notif
-                    )
-                );
-                toast.success('Notification marked as read');
-            } else {
-                throw new Error('Failed to mark as read');
+            if (!response.ok) {
+                throw new Error('Failed to mark notification as read');
             }
+
+            // Update local state
+            setNotifications(prev =>
+                prev.map(notification =>
+                    notification.id === notificationId
+                        ? { ...notification, read: true }
+                        : notification
+                )
+            );
+
+            toast.success('Notification marked as read');
         } catch (error) {
             console.error('Error marking notification as read:', error);
             toast.error('Failed to mark notification as read');
         } finally {
-            setMarkingAsRead(prev => {
+            setMarkingRead(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(notificationId);
                 return newSet;
@@ -199,78 +135,141 @@ export default function NotificationsPage() {
         }
     };
 
+    // Mark all as read
     const markAllAsRead = async () => {
         try {
-            // FIXED: Use consistent API endpoint
             const response = await fetch('/api/notifications', {
-                method: 'PATCH',
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    mark_as_read: 'all'
-                })
+                body: JSON.stringify({ markAllAsRead: true }),
             });
 
-            if (response.ok) {
-                setNotifications(prev =>
-                    prev.map(notif => ({ ...notif, is_read: true }))
-                );
-                toast.success('All notifications marked as read');
-            } else {
-                throw new Error('Failed to mark all as read');
+            if (!response.ok) {
+                throw new Error('Failed to mark all notifications as read');
             }
+
+            // Update local state
+            setNotifications(prev =>
+                prev.map(notification => ({ ...notification, read: true }))
+            );
+
+            toast.success('All notifications marked as read');
         } catch (error) {
             console.error('Error marking all as read:', error);
-            toast.error('Failed to mark all as read');
+            toast.error('Failed to mark all notifications as read');
         }
     };
 
-    const formatDateTime = (dateString: string) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / (1000 * 60));
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    // Delete notification
+    const deleteNotification = async (notificationId: number) => {
+        try {
+            setDeletingIds(prev => new Set(prev).add(notificationId));
 
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString();
+            const response = await fetch(`/api/notifications?id=${notificationId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete notification');
+            }
+
+            // Remove from local state
+            setNotifications(prev =>
+                prev.filter(notification => notification.id !== notificationId)
+            );
+
+            toast.success('Notification deleted');
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+            toast.error('Failed to delete notification');
+        } finally {
+            setDeletingIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(notificationId);
+                return newSet;
+            });
+        }
     };
 
+    // Handle notification click (navigate based on type)
     const handleNotificationClick = (notification: Notification) => {
-        if (!notification.is_read) {
+        if (!notification.read) {
             markAsRead(notification.id);
         }
 
         // Navigate based on notification type
         switch (notification.type) {
-            case 'BID_RECEIVED':
+            case 'bid_received':
+            case 'bid_accepted':
                 router.push('/selling/dashboard');
                 break;
-            case 'BID_ACCEPTED':
-            case 'AUCTION_WON':
-            case 'PURCHASE_COMPLETE':
-            case 'PURCHASE_CONFIRMED':
+            case 'auction_won':
+            case 'auction_lost':
                 router.push('/collection');
                 break;
-            case 'SALE_COMPLETE':
-            case 'SALE_COMPLETED':
-                router.push('/wallet');
-                break;
-            case 'BID_OUTBID':
-            case 'AUCTION_LOST':
+            case 'outbid':
                 router.push('/marketplace');
                 break;
+            case 'sale_completed':
+            case 'payment_received':
+                router.push('/wallet');
+                break;
             default:
+                // Stay on notifications page
                 break;
         }
     };
 
-    const unreadCount = notifications.filter(n => !n.is_read).length;
+    // Get notification icon based on type
+    const getNotificationIcon = (type: string) => {
+        switch (type) {
+            case 'bid_received':
+            case 'bid_accepted':
+            case 'outbid':
+                return <AuctionIcon />;
+            case 'sale_completed':
+            case 'payment_received':
+                return <MoneyIcon />;
+            case 'auction_won':
+            case 'auction_lost':
+                return <SaleIcon />;
+            case 'info':
+                return <InfoIcon />;
+            case 'warning':
+                return <WarningIcon />;
+            case 'error':
+                return <ErrorIcon />;
+            default:
+                return <NotificationIcon />;
+        }
+    };
+
+    // Get notification color based on type
+    const getNotificationColor = (type: string) => {
+        switch (type) {
+            case 'bid_received':
+            case 'auction_won':
+            case 'sale_completed':
+                return 'success';
+            case 'outbid':
+            case 'auction_lost':
+                return 'warning';
+            case 'error':
+                return 'error';
+            default:
+                return 'info';
+        }
+    };
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        } else if (status === 'authenticated') {
+            fetchNotifications();
+        }
+    }, [status, router]);
 
     if (status === 'loading') {
         return (
@@ -286,25 +285,30 @@ export default function NotificationsPage() {
         return null;
     }
 
+    const unreadCount = notifications.filter(n => !n.read).length;
+
     return (
         <Container sx={{ marginTop: 4, marginBottom: 4 }}>
             <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <IconButton onClick={toggleSidebar}>
                     <MenuIcon />
                 </IconButton>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Badge badgeContent={unreadCount} color="error">
                         <NotificationIcon />
                     </Badge>
-                    <Typography variant="h4">Notifications</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    Notifications
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton onClick={fetchNotifications} title="Refresh">
+                        <RefreshIcon />
+                    </IconButton>
                     {unreadCount > 0 && (
                         <Button
-                            variant="outlined"
+                            variant="contained"
                             size="small"
                             onClick={markAllAsRead}
                             startIcon={<MarkReadIcon />}
@@ -312,119 +316,116 @@ export default function NotificationsPage() {
                             Mark All Read
                         </Button>
                     )}
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/marketplace')}
-                        size="small"
-                    >
-                        Back to Marketplace
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={fetchNotifications}
-                        size="small"
-                        disabled={loading}
-                    >
-                        Refresh
-                    </Button>
                 </Box>
             </Box>
 
-            {/* Error State */}
+            {/* Content */}
             {error && (
-                <Alert severity="warning" sx={{ mb: 3 }}>
-                    {error} - Showing sample notifications
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
                 </Alert>
             )}
 
-            {/* Loading State */}
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
                 </Box>
+            ) : notifications.length === 0 ? (
+                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                    <NotificationIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary">
+                        No notifications yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        You'll see notifications here when you receive bids, make sales, or other activity occurs.
+                    </Typography>
+                </Paper>
             ) : (
-                <>
-                    {/* Notifications List */}
-                    {notifications.length === 0 ? (
-                        <Paper sx={{ p: 4, textAlign: 'center' }}>
-                            <NotificationIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                            <Typography variant="h6" color="text.secondary">
-                                No notifications yet
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                You'll receive notifications for bids, auctions, and sales here
-                            </Typography>
-                        </Paper>
-                    ) : (
-                        <Paper>
-                            <List>
-                                {notifications.map((notification, index) => (
-                                    <React.Fragment key={notification.id}>
-                                        <ListItem
-                                            onClick={() => handleNotificationClick(notification)}
-                                            sx={{
-                                                bgcolor: notification.is_read ? 'transparent' : 'action.hover',
-                                                '&:hover': {
-                                                    bgcolor: 'action.selected'
-                                                },
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <ListItemIcon>
-                                                {getNotificationIcon(notification.type)}
-                                            </ListItemIcon>
-
-                                            <ListItemText
-                                                primary={
-                                                    // FIXED: Removed nested Box to prevent div in p error
-                                                    <Typography
-                                                        variant="subtitle1"
-                                                        fontWeight={notification.is_read ? 'normal' : 'bold'}
-                                                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                                                    >
-                                                        {notification.title}
-                                                        {!notification.is_read && (
-                                                            <Chip
-                                                                label="New"
-                                                                color={getNotificationColor(notification.type, notification.is_read)}
-                                                                size="small"
-                                                            />
-                                                        )}
-                                                    </Typography>
-                                                }
-                                                secondary={
-                                                    // FIXED: Use string concatenation instead of nested divs
-                                                    `${notification.message} • ${formatDateTime(notification.created_at)}`
-                                                }
-                                            />
-
-                                            <ListItemSecondaryAction>
-                                                {!notification.is_read && (
-                                                    <IconButton
-                                                        edge="end"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            markAsRead(notification.id);
-                                                        }}
-                                                        disabled={markingAsRead.has(notification.id)}
-                                                        size="small"
-                                                    >
-                                                        {markingAsRead.has(notification.id) ? (
-                                                            <CircularProgress size={20} />
-                                                        ) : (
-                                                            <CheckIcon />
-                                                        )}
-                                                    </IconButton>
+                <Stack spacing={2}>
+                    {notifications.map((notification) => (
+                        <Card
+                            key={notification.id}
+                            sx={{
+                                cursor: 'pointer',
+                                opacity: notification.read ? 0.7 : 1,
+                                border: notification.read ? 'none' : '2px solid',
+                                borderColor: notification.read ? 'none' : 'primary.main',
+                                '&:hover': {
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: 4,
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                            }}
+                            onClick={() => handleNotificationClick(notification)}
+                        >
+                            <CardContent>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
+                                        <Box sx={{ color: `${getNotificationColor(notification.type)}.main` }}>
+                                            {getNotificationIcon(notification.type)}
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                <Typography variant="h6" component="h3">
+                                                    {notification.title}
+                                                </Typography>
+                                                <Chip
+                                                    label={notification.type.replace('_', ' ')}
+                                                    color={getNotificationColor(notification.type) as any}
+                                                    size="small"
+                                                />
+                                                {!notification.read && (
+                                                    <Chip label="New" color="primary" size="small" />
                                                 )}
-                                            </ListItemSecondaryAction>
-                                        </ListItem>
-                                        {index < notifications.length - 1 && <Divider />}
-                                    </React.Fragment>
-                                ))}
-                            </List>
-                        </Paper>
-                    )}
-                </>
+                                            </Box>
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                {notification.message}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                        {!notification.read && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    markAsRead(notification.id);
+                                                }}
+                                                disabled={markingRead.has(notification.id)}
+                                                title="Mark as read"
+                                            >
+                                                {markingRead.has(notification.id) ? (
+                                                    <CircularProgress size={20} />
+                                                ) : (
+                                                    <CheckIcon />
+                                                )}
+                                            </IconButton>
+                                        )}
+                                        <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteNotification(notification.id);
+                                            }}
+                                            disabled={deletingIds.has(notification.id)}
+                                            title="Delete notification"
+                                        >
+                                            {deletingIds.has(notification.id) ? (
+                                                <CircularProgress size={20} />
+                                            ) : (
+                                                <DeleteIcon />
+                                            )}
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </Stack>
             )}
         </Container>
     );

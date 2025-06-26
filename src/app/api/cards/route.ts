@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "../../lib/prisma";
+import { CardSource } from '@prisma/client';
 
 // Response interface
 interface CardResponse {
   id: string;
   name: string;
   set_name: string;
-  set_number: string | null; // Made nullable to match Prisma schema
+  set_number: string | null;
   rarity: string;
-  card_type: string | null; // Made nullable to match Prisma schema
+  card_type: string | null;
   imageUrl: string | null;
   createdAt: Date;
 }
@@ -19,18 +20,18 @@ interface CardResponse {
 interface CreateCardBody {
   name: string;
   set_name: string;
-  set_number?: string | null; // Made optional to align with schema
+  set_number?: string | null;
   rarity: string;
-  card_type?: string | null; // Made optional to align with schema
+  card_type?: string | null;
   imageUrl?: string | null;
 }
 
 interface UpdateCardBody {
   name?: string;
   set_name?: string;
-  set_number?: string | null; // Made nullable
+  set_number?: string | null;
   rarity?: string;
-  card_type?: string | null; // Made nullable
+  card_type?: string | null;
   imageUrl?: string | null;
 }
 
@@ -102,6 +103,7 @@ export async function POST(request: Request) {
         rarity: body.rarity,
         card_type: body.card_type ?? null,
         image_url: body.imageUrl ?? null,
+        source: CardSource.MANUAL, // Use the enum
       },
       select: {
         id: true,
@@ -159,6 +161,7 @@ export async function PUT(request: Request) {
       rarity?: string;
       card_type?: string | null;
       image_url?: string | null;
+      source?: CardSource;
     };
 
     const dataToUpdate: CardUpdateData = {};
@@ -168,6 +171,9 @@ export async function PUT(request: Request) {
     if (body.rarity !== undefined) dataToUpdate.rarity = body.rarity;
     if (body.card_type !== undefined) dataToUpdate.card_type = body.card_type;
     if (body.imageUrl !== undefined) dataToUpdate.image_url = body.imageUrl;
+
+    // Set source to MIXED when manually updating API-imported cards
+    dataToUpdate.source = CardSource.MIXED;
 
     const updatedCard = await prisma.card.update({
       where: { id: Number(id) },
