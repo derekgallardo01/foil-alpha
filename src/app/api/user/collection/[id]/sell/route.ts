@@ -1,8 +1,9 @@
-// src/app/api/user/collection/[id]/sell/route.ts - Fixed to match frontend
+// src/app/api/user/collection/[id]/sell/route.ts - Updated with NextAuth integration
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { prisma } from '../../../../../lib/prisma';
+import { getCurrentDevUserForAPI, isDevMode } from '../../../../../lib/dev-auth';
 
 // POST /api/user/collection/[id]/sell - List a card for sale
 export async function POST(
@@ -10,13 +11,28 @@ export async function POST(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        // Get user session with dev mode support
+        let userId: number;
+        let userEmail: string;
+
+        if (isDevMode()) {
+            const devUser = getCurrentDevUserForAPI();
+            if (!devUser) {
+                return NextResponse.json({ error: 'Dev mode: No dev user configured' }, { status: 401 });
+            }
+            userId = devUser.id;
+            userEmail = devUser.email;
+            console.log(`🚧 DEV MODE: Sell API using ${userEmail} (ID: ${userId})`);
+        } else {
+            const session = await getServerSession(authOptions);
+            if (!session?.user?.id) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+            userId = parseInt(session.user.id);
+            userEmail = session.user.email || 'unknown';
         }
 
         const { id: userCardId } = await context.params;
-        const userId = parseInt(session.user.id);
         const body = await request.json();
         const { sale_type, fixed_price, reserve_price, auction_duration_hours } = body;
 
@@ -26,7 +42,8 @@ export async function POST(
             reserve_price,
             auction_duration_hours,
             userCardId,
-            userId
+            userId,
+            userEmail
         });
 
         // Validate sale type
@@ -57,9 +74,16 @@ export async function POST(
             where: { id: parseInt(userCardId) },
             include: {
                 card: {
-                    select: { name: true }
+                    select: { name: true, id: true }
                 }
             }
+        });
+
+        console.log('Found userCard:', {
+            id: userCard?.id,
+            owner_id: userCard?.owner_id,
+            expected_userId: userId,
+            card_name: userCard?.card?.name
         });
 
         if (!userCard) {
@@ -67,11 +91,23 @@ export async function POST(
         }
 
         if (userCard.owner_id !== userId) {
-            return NextResponse.json({ error: 'You can only sell your own cards' }, { status: 403 });
+            console.error('Ownership mismatch:', {
+                userCard_owner_id: userCard.owner_id,
+                userId: userId,
+                card_name: userCard.card.name,
+                user_email: userEmail
+            });
+            return NextResponse.json({
+                error: `You can only sell your own cards. Card owner: ${userCard.owner_id}, Your ID: ${userId}`
+            }, { status: 403 });
         }
 
         if (userCard.is_for_sale) {
             return NextResponse.json({ error: 'Card is already listed for sale' }, { status: 400 });
+        }
+
+        if (userCard.is_sold) {
+            return NextResponse.json({ error: 'This card has already been sold' }, { status: 400 });
         }
 
         console.log('Validation passed, updating card...');
@@ -101,7 +137,7 @@ export async function POST(
             data: updateData
         });
 
-        console.log('Card updated successfully');
+        console.log('Card updated successfully:', updatedCard);
 
         return NextResponse.json({
             success: true,
@@ -133,13 +169,27 @@ export async function DELETE(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        // Get user session with dev mode support
+        let userId: number;
+        let userEmail: string;
+
+        if (isDevMode()) {
+            const devUser = getCurrentDevUserForAPI();
+            if (!devUser) {
+                return NextResponse.json({ error: 'Dev mode: No dev user configured' }, { status: 401 });
+            }
+            userId = devUser.id;
+            userEmail = devUser.email;
+        } else {
+            const session = await getServerSession(authOptions);
+            if (!session?.user?.id) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+            userId = parseInt(session.user.id);
+            userEmail = session.user.email || 'unknown';
         }
 
         const { id: userCardId } = await context.params;
-        const userId = parseInt(session.user.id);
 
         // Get the card
         const userCard = await prisma.userCard.findUnique({
@@ -169,7 +219,7 @@ export async function DELETE(
         if (userCard.sale_type === 'AUCTION') {
             const activeBids = await prisma.bid.count({
                 where: {
-                    user_card_id: parseInt(userCardId),
+                    userCardId: parseInt(userCardId),
                     is_active: true
                 }
             });

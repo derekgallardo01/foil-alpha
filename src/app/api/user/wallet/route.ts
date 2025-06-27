@@ -1,84 +1,229 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+// src/app/api/user/wallet/route.ts - Updated with NextAuth integration
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
+import { getCurrentDevUserForAPI, isDevMode } from '../../../lib/dev-auth';
 
-// GET /api/user/collection - Get user's card collection
-export async function GET() {
+
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    console.log('🔍 Wallet GET API called');
+    console.log('🔍 Dev mode enabled:', isDevMode());
+    console.log('🔍 Environment ENABLE_DEV_AUTH:', process.env.ENABLE_DEV_AUTH);
+    console.log('🔍 Environment DEV_USER_EMAIL:', process.env.DEV_USER_EMAIL);
+
+    // Get user session with dev mode support
+    let userId: number;
+    let userEmail: string;
+
+    if (isDevMode()) {
+      console.log('🚧 Using dev mode authentication');
+      const devUser = getCurrentDevUserForAPI();
+      if (!devUser) {
+        console.error('❌ Dev mode: No dev user configured');
+        return NextResponse.json({
+          error: 'Dev mode: No dev user configured',
+          debug: {
+            devMode: isDevMode(),
+            enableDevAuth: process.env.ENABLE_DEV_AUTH,
+            devUserEmail: process.env.DEV_USER_EMAIL
+          }
+        }, { status: 401 });
+      }
+      userId = devUser.id;
+      userEmail = devUser.email;
+      console.log(`🚧 DEV MODE: Wallet API using ${userEmail} (ID: ${userId})`);
+    } else {
+      console.log('🔐 Using NextAuth session authentication');
+      const session = await getServerSession(authOptions);
+      console.log('🔍 Session:', session ? 'Found' : 'Not found');
+      console.log('🔍 Session user ID:', session?.user?.id);
+      console.log('🔍 Session user email:', session?.user?.email);
+
+      if (!session?.user?.id) {
+        console.error('❌ No session or user ID found');
+        return NextResponse.json({
+          error: 'Authentication required',
+          debug: {
+            sessionExists: !!session,
+            userId: session?.user?.id,
+            userEmail: session?.user?.email
+          }
+        }, { status: 401 });
+      }
+      userId = parseInt(session.user.id);
+      userEmail = session.user.email || 'unknown';
+      console.log(`🔐 SESSION: Wallet API using ${userEmail} (ID: ${userId})`);
     }
 
-    const userId = parseInt(session.user.id);
+    console.log(`📝 Fetching wallet for user ${userId} (${userEmail})`);
 
-    const userCards = await prisma.userCard.findMany({
-      where: {
-        owner_id: userId,
-        // ✅ Remove is_sold filter - show ALL owned cards
-      },
-      orderBy: {
-        acquired_date: 'desc',
-      },
+    let wallet = await prisma.userWallet.findUnique({
+      where: { user_id: userId },
+      include: {
+        transactions: {
+          orderBy: { created_at: 'desc' },
+          take: 10
+        }
+      }
     });
 
-    // Enrich with card details step by step
-    const enrichedCollection = [];
-
-    for (const userCard of userCards) {
-      try {
-        // Get card details
-        const card = await prisma.card.findUnique({
-          where: { id: userCard.card_id },
-          select: {
-            id: true,
-            name: true,
-            set_name: true,
-            set_number: true,
-            rarity: true,
-            card_type: true,
-            image_url: true,
-            small_image_url: true,
-          },
-        });
-
-        if (!card) continue;
-
-        // Get bid count if it's an auction
-        const bidCount =
-          userCard.sale_type === 'AUCTION'
-            ? await prisma.bid.count({
-                where: {
-                  userCardId: userCard.id, // Fixed: user_card_id → userCardId
-                  is_active: true,
-                },
-              })
-            : 0;
-
-        enrichedCollection.push({
-          id: userCard.id,
-          card,
-          condition: userCard.condition,
-          is_for_sale: userCard.is_for_sale,
-          sale_type: userCard.sale_type,
-          fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
-          reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
-          auction_end: userCard.auction_end,
-          is_sold: userCard.is_sold,
-          notes: userCard.notes,
-          acquired_date: userCard.acquired_date,
-          bid_count: bidCount,
-        });
-      } catch (error) {
-        console.error('Error processing user card:', error);
-        continue;
-      }
+    if (!wallet) {
+      // Create wallet if it doesn't exist
+      console.log(`💰 Creating wallet for user ${userId} (${userEmail})`);
+      wallet = await prisma.userWallet.create({
+        data: {
+          user_id: userId,
+          balance: 0,
+          frozen_balance: 0
+        },
+        include: {
+          transactions: true
+        }
+      });
+      console.log(`✅ Created wallet ID: ${wallet.id}`);
+    } else {
+      console.log(`✅ Found existing wallet ID: ${wallet.id}, Balance: ${Number(wallet.balance)}`);
     }
 
-    return NextResponse.json(enrichedCollection);
+    const walletData = {
+      wallet_id: wallet.id,
+      balance: Number(wallet.balance),
+      frozen_balance: Number(wallet.frozen_balance),
+      available_balance: Number(wallet.balance) - Number(wallet.frozen_balance),
+      transactions: wallet.transactions.map(tx => ({
+        id: tx.id,
+        type: tx.transaction_type,
+        amount: Number(tx.amount),
+        description: tx.description,
+        created_at: tx.created_at,
+        balance_after: Number(tx.balance_after)
+      }))
+    };
+
+    console.log(`📊 Returning wallet data:`, {
+      wallet_id: walletData.wallet_id,
+      balance: walletData.balance,
+      transaction_count: walletData.transactions.length
+    });
+
+    return NextResponse.json(walletData);
+
   } catch (error) {
-    console.error('Error fetching user collection:', error);
-    return NextResponse.json({ error: 'Failed to fetch collection' }, { status: 500 });
+    console.error('❌ Error fetching wallet:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch wallet',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        debug: {
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+          devMode: isDevMode(),
+          enableDevAuth: process.env.ENABLE_DEV_AUTH
+        }
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    console.log('🔍 Wallet POST API called');
+
+    // Get user session with dev mode support
+    let userId: number;
+    let userEmail: string;
+
+    if (isDevMode()) {
+      const devUser = getCurrentDevUserForAPI();
+      if (!devUser) {
+        return NextResponse.json({ error: 'Dev mode: No dev user configured' }, { status: 401 });
+      }
+      userId = devUser.id;
+      userEmail = devUser.email;
+      console.log(`🚧 DEV MODE: Wallet POST API using ${userEmail} (ID: ${userId})`);
+    } else {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+      userId = parseInt(session.user.id);
+      userEmail = session.user.email || 'unknown';
+    }
+
+    const body = await request.json();
+    const { action, amount } = body;
+
+    console.log(`📝 Wallet action: ${action}, Amount: ${amount}`);
+
+    if (action === 'add_funds') {
+      const addAmount = parseFloat(amount);
+      if (addAmount <= 0) {
+        return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+      }
+
+      // Get or create wallet
+      let wallet = await prisma.userWallet.findUnique({
+        where: { user_id: userId }
+      });
+
+      if (!wallet) {
+        console.log(`💰 Creating wallet for user ${userId} (${userEmail})`);
+        wallet = await prisma.userWallet.create({
+          data: {
+            user_id: userId,
+            balance: 0,
+            frozen_balance: 0
+          }
+        });
+      }
+
+      const oldBalance = Number(wallet.balance);
+      const newBalance = oldBalance + addAmount;
+
+      // Update wallet
+      await prisma.userWallet.update({
+        where: { user_id: userId },
+        data: { balance: newBalance }
+      });
+
+      // Record transaction
+      await prisma.walletTransaction.create({
+        data: {
+          user_id: userId,
+          wallet_id: wallet.id,
+          transaction_type: 'DEPOSIT',
+          amount: addAmount,
+          balance_before: oldBalance,
+          balance_after: newBalance,
+          description: isDevMode() ? 'Dev mode funds addition' : 'Manual funds addition',
+          reference_type: 'SYSTEM',
+          reference_id: null
+        }
+      });
+
+      console.log(`💰 Added ${addAmount} to wallet for user ${userId} (${userEmail}): ${oldBalance} -> ${newBalance}`);
+
+      return NextResponse.json({
+        success: true,
+        message: `Added ${addAmount.toFixed(2)} to wallet`,
+        new_balance: newBalance
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+
+  } catch (error) {
+    console.error('❌ Error updating wallet:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to update wallet',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }

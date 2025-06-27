@@ -1,4 +1,4 @@
-// src/app/notification/page.tsx - Fixed notification page
+// src/app/notifications/page.tsx - Notifications page with plural route
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -59,7 +59,7 @@ interface NotificationResponse {
     };
 }
 
-export default function NotificationPage() {
+export default function NotificationsPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -201,19 +201,19 @@ export default function NotificationPage() {
 
         // Navigate based on notification type
         switch (notification.type) {
-            case 'bid_received':
-            case 'bid_accepted':
+            case 'BID_RECEIVED':
+            case 'BID_ACCEPTED':
                 router.push('/selling/dashboard');
                 break;
-            case 'auction_won':
-            case 'auction_lost':
+            case 'AUCTION_WON':
+            case 'AUCTION_LOST':
                 router.push('/collection');
                 break;
-            case 'outbid':
+            case 'BID_OUTBID':
                 router.push('/marketplace');
                 break;
-            case 'sale_completed':
-            case 'payment_received':
+            case 'SALE_COMPLETED':
+            case 'PURCHASE_CONFIRMED':
                 router.push('/wallet');
                 break;
             default:
@@ -225,21 +225,21 @@ export default function NotificationPage() {
     // Get notification icon based on type
     const getNotificationIcon = (type: string) => {
         switch (type) {
-            case 'bid_received':
-            case 'bid_accepted':
-            case 'outbid':
+            case 'BID_RECEIVED':
+            case 'BID_ACCEPTED':
+            case 'BID_OUTBID':
                 return <AuctionIcon />;
-            case 'sale_completed':
-            case 'payment_received':
+            case 'SALE_COMPLETED':
+            case 'PURCHASE_CONFIRMED':
                 return <MoneyIcon />;
-            case 'auction_won':
-            case 'auction_lost':
+            case 'AUCTION_WON':
+            case 'AUCTION_LOST':
                 return <SaleIcon />;
-            case 'info':
+            case 'INFO':
                 return <InfoIcon />;
-            case 'warning':
+            case 'WARNING':
                 return <WarningIcon />;
-            case 'error':
+            case 'ERROR':
                 return <ErrorIcon />;
             default:
                 return <NotificationIcon />;
@@ -249,14 +249,15 @@ export default function NotificationPage() {
     // Get notification color based on type
     const getNotificationColor = (type: string) => {
         switch (type) {
-            case 'bid_received':
-            case 'auction_won':
-            case 'sale_completed':
+            case 'BID_RECEIVED':
+            case 'AUCTION_WON':
+            case 'SALE_COMPLETED':
+            case 'BID_ACCEPTED':
                 return 'success';
-            case 'outbid':
-            case 'auction_lost':
+            case 'BID_OUTBID':
+            case 'AUCTION_LOST':
                 return 'warning';
-            case 'error':
+            case 'ERROR':
                 return 'error';
             default:
                 return 'info';

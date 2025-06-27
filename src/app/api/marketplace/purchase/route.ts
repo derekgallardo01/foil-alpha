@@ -1,253 +1,381 @@
+// src/app/api/marketplace/purchase/route.ts - Updated with NextAuth integration
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
+import { getCurrentDevUserForAPI, isDevMode } from '../../../lib/dev-auth';
 
-// POST /api/marketplace/purchase - Purchase a card
 export async function POST(request: NextRequest) {
   try {
-    console.log('🛒 Purchase API called');
+    // Get user session with dev mode support
+    let userId: number;
+    let userName: string;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      console.log('❌ No session found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (isDevMode()) {
+      const devUser = getCurrentDevUserForAPI();
+      if (!devUser) {
+        return NextResponse.json(
+          { error: 'Dev mode: No dev user configured' },
+          { status: 401 }
+        );
+      }
+      userId = devUser.id;
+      userName = devUser.name;
+      console.log(`🚧 DEV MODE: Using dev user ${devUser.email} (ID: ${userId})`);
+    } else {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      userId = parseInt(session.user.id);
+      userName = session.user.name || 'Unknown User';
     }
-
-    const buyerId = parseInt(session.user.id);
-    console.log('👤 Buyer ID:', buyerId);
 
     const body = await request.json();
-    console.log('📦 Request body:', body);
+    const { user_card_id, catalog_card_id, quantity = 1 } = body;
 
-    const { user_card_id } = body;
-
-    if (!user_card_id) {
-      console.log('❌ No user_card_id provided');
-      return NextResponse.json({ error: 'user_card_id is required' }, { status: 400 });
-    }
-
-    console.log('🎴 Looking for user card:', user_card_id);
-
-    // Get the card being purchased
-    const userCard = await prisma.userCard.findUnique({
-      where: { id: parseInt(user_card_id) },
+    console.log('Purchase request:', {
+      userId,
+      userName,
+      user_card_id,
+      catalog_card_id,
+      quantity
     });
 
-    if (!userCard) {
-      console.log('❌ User card not found:', user_card_id);
-      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
-    }
-
-    console.log('🎴 Found user card:', {
-      id: userCard.id,
-      owner_id: userCard.owner_id,
-      is_for_sale: userCard.is_for_sale,
-      sale_type: userCard.sale_type,
-      fixed_price: userCard.fixed_price,
-      is_sold: userCard.is_sold,
-    });
-
-    // Get card details separately
-    const card = await prisma.card.findUnique({
-      where: { id: userCard.card_id },
-    });
-
-    // Get owner details separately
-    const owner = await prisma.user.findUnique({
-      where: { id: userCard.owner_id },
-      select: { id: true, name: true, email: true },
-    });
-
-    if (!card || !owner) {
-      console.log('❌ Card or owner not found');
-      return NextResponse.json({ error: 'Card or owner not found' }, { status: 404 });
-    }
-
-    console.log('📝 Card details:', card.name, 'Owner:', owner.name);
-
-    // Validation checks
-    if (!userCard.is_for_sale || userCard.is_sold) {
-      console.log('❌ Card not for sale or already sold');
-      return NextResponse.json({ error: 'Card is not for sale' }, { status: 400 });
-    }
-
-    if (userCard.owner_id === buyerId) {
-      console.log('❌ Buyer trying to buy own card');
-      return NextResponse.json({ error: 'Cannot buy your own card' }, { status: 400 });
-    }
-
-    // Only handle fixed price purchases for now
-    if (userCard.sale_type !== 'FIXED' || !userCard.fixed_price) {
-      console.log('❌ Not a fixed price sale');
-      return NextResponse.json({ error: 'Only fixed price purchases supported' }, { status: 400 });
-    }
-
-    const purchasePrice = userCard.fixed_price;
-    console.log('💰 Purchase price:', Number(purchasePrice));
-
-    // Get buyer's wallet
-    const buyerWallet = await prisma.userWallet.findUnique({
-      where: { user_id: buyerId },
-    });
-
-    if (!buyerWallet) {
-      console.log('❌ Buyer wallet not found');
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 400 });
-    }
-
-    console.log('💳 Buyer wallet:', {
-      balance: Number(buyerWallet.balance),
-      frozen: Number(buyerWallet.frozen_balance),
-      available: Number(buyerWallet.balance) - Number(buyerWallet.frozen_balance),
-    });
-
-    const availableBalance = Number(buyerWallet.balance) - Number(buyerWallet.frozen_balance);
-
-    if (availableBalance < Number(purchasePrice)) {
-      console.log('❌ Insufficient balance:', {
-        required: Number(purchasePrice),
-        available: availableBalance,
-      });
+    // Handle different purchase types
+    if (user_card_id) {
+      // Purchase user-owned card (existing functionality)
+      return await purchaseUserCard(userId, user_card_id);
+    } else if (catalog_card_id) {
+      // Purchase catalog card (new functionality)
+      return await purchaseCatalogCard(userId, catalog_card_id, quantity);
+    } else {
       return NextResponse.json(
-        {
-          error: 'Insufficient balance',
-          details: {
-            required: Number(purchasePrice),
-            available: availableBalance,
-            total_balance: Number(buyerWallet.balance),
-            frozen_balance: Number(buyerWallet.frozen_balance),
-          },
-        },
-        { status: 400 },
+        { error: 'Either user_card_id or catalog_card_id must be provided' },
+        { status: 400 }
       );
     }
 
-    // Get or create seller's wallet
-    let sellerWallet = await prisma.userWallet.findUnique({
-      where: { user_id: userCard.owner_id },
+  } catch (error) {
+    console.error('Purchase error:', error);
+    return NextResponse.json(
+      { error: 'Failed to process purchase' },
+      { status: 500 }
+    );
+  }
+}
+
+// Purchase user-owned card (existing resale functionality)
+async function purchaseUserCard(buyerId: number, userCardId: number) {
+  return await prisma.$transaction(async (tx) => {
+    console.log(`Processing user card purchase: Buyer ${buyerId}, UserCard ${userCardId}`);
+
+    // Get the user card with owner and card details
+    const userCard = await tx.userCard.findUnique({
+      where: { id: userCardId },
+      include: {
+        card: true,
+        owner: true
+      }
     });
 
-    if (!sellerWallet) {
-      console.log('🏦 Creating seller wallet');
-      sellerWallet = await prisma.userWallet.create({
+    if (!userCard) {
+      throw new Error('Card not found');
+    }
+
+    if (!userCard.is_for_sale) {
+      throw new Error('Card is not for sale');
+    }
+
+    if (userCard.is_sold) {
+      throw new Error('Card has already been sold');
+    }
+
+    if (userCard.owner_id === buyerId) {
+      throw new Error('You cannot buy your own card');
+    }
+
+    // Check if it's an auction and if it's still active
+    if (userCard.sale_type === 'AUCTION') {
+      if (!userCard.auction_end || new Date(userCard.auction_end) <= new Date()) {
+        throw new Error('Auction has ended');
+      }
+      throw new Error('This is an auction card. Please place a bid instead of purchasing directly.');
+    }
+
+    const purchasePrice = Number(userCard.fixed_price || 0);
+
+    if (purchasePrice <= 0) {
+      throw new Error('Invalid purchase price');
+    }
+
+    // Get buyer's wallet
+    let buyerWallet = await tx.userWallet.findUnique({
+      where: { user_id: buyerId }
+    });
+
+    if (!buyerWallet) {
+      // Create buyer wallet if it doesn't exist
+      console.log(`Creating wallet for buyer ${buyerId}`);
+      buyerWallet = await tx.userWallet.create({
         data: {
-          user_id: userCard.owner_id,
-          balance: 0.00,
-          frozen_balance: 0.00,
-        },
+          user_id: buyerId,
+          balance: 0,
+          frozen_balance: 0
+        }
       });
     }
 
-    console.log('💰 Starting transaction processing...');
+    const buyerBalance = Number(buyerWallet.balance);
+    if (buyerBalance < purchasePrice) {
+      throw new Error(`Insufficient funds. Required: $${purchasePrice.toFixed(2)}, Available: $${buyerBalance.toFixed(2)}`);
+    }
 
-    // Execute the purchase transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Update buyer's wallet
-      const newBuyerBalance = Number(buyerWallet.balance) - Number(purchasePrice);
-      await tx.userWallet.update({
-        where: { user_id: buyerId },
-        data: { balance: newBuyerBalance },
+    // Get seller's wallet
+    let sellerWallet = await tx.userWallet.findUnique({
+      where: { user_id: userCard.owner_id }
+    });
+
+    if (!sellerWallet) {
+      // Create seller wallet if it doesn't exist
+      console.log(`Creating wallet for seller ${userCard.owner_id}`);
+      sellerWallet = await tx.userWallet.create({
+        data: {
+          user_id: userCard.owner_id,
+          balance: 0,
+          frozen_balance: 0
+        }
       });
+    }
 
-      // 2. Update seller's wallet
-      const newSellerBalance = Number(sellerWallet!.balance) + Number(purchasePrice);
-      await tx.userWallet.update({
-        where: { user_id: userCard.owner_id },
-        data: { balance: newSellerBalance },
+    // Calculate transaction fees (5% marketplace fee)
+    const marketplaceFee = purchasePrice * 0.05;
+    const sellerReceives = purchasePrice - marketplaceFee;
+
+    // Update buyer's wallet
+    await tx.userWallet.update({
+      where: { user_id: buyerId },
+      data: {
+        balance: { decrement: purchasePrice }
+      }
+    });
+
+    // Update seller's wallet
+    await tx.userWallet.update({
+      where: { user_id: userCard.owner_id },
+      data: {
+        balance: { increment: sellerReceives }
+      }
+    });
+
+    // Transfer card ownership
+    await tx.userCard.update({
+      where: { id: userCardId },
+      data: {
+        owner_id: buyerId,
+        is_for_sale: false,
+        is_sold: true,
+        sale_type: null,
+        fixed_price: null,
+        auction_end: null,
+        notes: `Purchased from ${userCard.owner.name} for $${purchasePrice.toFixed(2)}`
+      }
+    });
+
+    // Record wallet transactions
+    await Promise.all([
+      // Buyer transaction
+      tx.walletTransaction.create({
+        data: {
+          user_id: buyerId,
+          wallet_id: buyerWallet.id,
+          transaction_type: 'PURCHASE',
+          amount: -purchasePrice,
+          balance_before: buyerBalance,
+          balance_after: buyerBalance - purchasePrice,
+          description: `Purchased ${userCard.card.name} from ${userCard.owner.name}`,
+          reference_type: 'USER_CARD',
+          reference_id: userCardId
+        }
+      }),
+      // Seller transaction
+      tx.walletTransaction.create({
+        data: {
+          user_id: userCard.owner_id,
+          wallet_id: sellerWallet.id,
+          transaction_type: 'SALE',
+          amount: sellerReceives,
+          balance_before: Number(sellerWallet.balance),
+          balance_after: Number(sellerWallet.balance) + sellerReceives,
+          description: `Sold ${userCard.card.name} to buyer (after ${(marketplaceFee * 100 / purchasePrice).toFixed(1)}% fee)`,
+          reference_type: 'USER_CARD',
+          reference_id: userCardId
+        }
+      })
+    ]);
+
+    // Record transaction history
+    await tx.cardTransactionHistory.create({
+      data: {
+        userCardId: userCardId,
+        fromUserId: userCard.owner_id,
+        toUserId: buyerId,
+        action: 'PURCHASED',
+        notes: `Card purchased for $${purchasePrice.toFixed(2)}`
+      }
+    });
+
+    console.log(`User card purchase completed: ${userCard.card.name} for $${purchasePrice}`);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Card purchased successfully!',
+      purchase_details: {
+        card_name: userCard.card.name,
+        purchase_price: purchasePrice.toFixed(2),
+        marketplace_fee: marketplaceFee.toFixed(2),
+        seller_receives: sellerReceives.toFixed(2),
+        seller_name: userCard.owner.name,
+        transaction_id: userCardId
+      }
+    });
+  });
+}
+
+// Purchase catalog card (new functionality for fresh cards)
+async function purchaseCatalogCard(buyerId: number, catalogCardId: number, quantity: number) {
+  return await prisma.$transaction(async (tx) => {
+    console.log(`Processing catalog purchase: Buyer ${buyerId}, Card ${catalogCardId}, Qty ${quantity}`);
+
+    // Get the catalog card
+    const catalogCard = await tx.card.findUnique({
+      where: { id: catalogCardId },
+      include: {
+        pokemonSet: true,
+        rarity_ref: true
+      }
+    });
+
+    if (!catalogCard) {
+      throw new Error('Card not found');
+    }
+
+    if (!catalogCard.market_price || Number(catalogCard.market_price) <= 0) {
+      throw new Error('Card price not set');
+    }
+
+    const unitPrice = Number(catalogCard.market_price);
+    const totalPrice = unitPrice * quantity;
+
+    console.log(`Card: ${catalogCard.name}, Unit Price: $${unitPrice}, Total: $${totalPrice}`);
+
+    // Get buyer's wallet
+    let buyerWallet = await tx.userWallet.findUnique({
+      where: { user_id: buyerId }
+    });
+
+    if (!buyerWallet) {
+      // Create wallet if it doesn't exist
+      console.log(`Creating wallet for buyer ${buyerId}`);
+      buyerWallet = await tx.userWallet.create({
+        data: {
+          user_id: buyerId,
+          balance: 0,
+          frozen_balance: 0
+        }
       });
+    }
 
-      // 3. Transfer card ownership
-      await tx.userCard.update({
-        where: { id: parseInt(user_card_id) },
+    const buyerBalance = Number(buyerWallet.balance);
+    console.log(`Buyer balance: $${buyerBalance}, Required: $${totalPrice}`);
+
+    if (buyerBalance < totalPrice) {
+      throw new Error(`Insufficient funds. Required: $${totalPrice.toFixed(2)}, Available: $${buyerBalance.toFixed(2)}`);
+    }
+
+    // Update buyer's wallet
+    await tx.userWallet.update({
+      where: { user_id: buyerId },
+      data: {
+        balance: { decrement: totalPrice }
+      }
+    });
+
+    console.log(`Updated wallet balance from $${buyerBalance} to $${buyerBalance - totalPrice}`);
+
+    // Create user card entries for the purchased quantity
+    const userCards = [];
+    for (let i = 0; i < quantity; i++) {
+      console.log(`Creating UserCard ${i + 1} of ${quantity}`);
+
+      const userCard = await tx.userCard.create({
         data: {
           owner_id: buyerId,
+          card_id: catalogCardId,
+          condition: 'Mint', // New cards are mint condition
           is_for_sale: false,
           is_sold: false,
           sale_type: null,
           fixed_price: null,
+          reserve_price: null,
           auction_end: null,
-          acquired_date: new Date(),
-        },
+          notes: `Purchased from TCG Market catalog for $${unitPrice.toFixed(2)}`,
+          acquired_date: new Date()
+        }
       });
 
-      // 4. Create transaction record
-      const transaction = await tx.cardTransactionHistory.create({
-        data: {
-          userCardId: parseInt(user_card_id),
-          fromUserId: userCard.owner_id,
-          toUserId: buyerId,
-          action: 'PURCHASE',
-          notes: `Fixed price purchase for $${Number(purchasePrice).toFixed(2)}`,
-        },
-      });
+      console.log(`Created UserCard ID: ${userCard.id}`);
+      userCards.push(userCard);
+    }
 
-      // 5. Create wallet transaction records
-      await tx.walletTransaction.createMany({
-        data: [
-          // Buyer's transaction
-          {
-            user_id: buyerId,
-            wallet_id: buyerWallet.id, // Added for consistency
-            transaction_type: 'PURCHASE',
-            amount: -Number(purchasePrice),
-            balance_before: Number(buyerWallet.balance),
-            balance_after: newBuyerBalance,
-            description: `Purchased ${card.name}`,
-            reference_id: transaction.id,
-            reference_type: 'CARD_TRANSACTION_HISTORY',
-          },
-          // Seller's transaction
-          {
-            user_id: userCard.owner_id,
-            wallet_id: sellerWallet!.id, // Added for consistency
-            transaction_type: 'SALE',
-            amount: Number(purchasePrice),
-            balance_before: Number(sellerWallet!.balance),
-            balance_after: newSellerBalance,
-            description: `Sold ${card.name}`,
-            reference_id: transaction.id,
-            reference_type: 'CARD_TRANSACTION_HISTORY',
-          },
-        ],
-      });
-
-      // 6. Create card history record (replaced cardHistory with cardTransactionHistory)
-      await tx.cardTransactionHistory.create({
-        data: {
-          userCardId: parseInt(user_card_id),
-          fromUserId: userCard.owner_id,
-          toUserId: buyerId,
-          action: 'PURCHASE',
-          notes: `Purchased for $${Number(purchasePrice).toFixed(2)} from ${owner.name}`,
-        },
-      });
-
-      return {
-        transaction,
-        buyer_new_balance: newBuyerBalance,
-        seller_new_balance: newSellerBalance,
-      };
+    // Record wallet transaction
+    const walletTransaction = await tx.walletTransaction.create({
+      data: {
+        user_id: buyerId,
+        wallet_id: buyerWallet.id,
+        transaction_type: 'CATALOG_PURCHASE',
+        amount: -totalPrice,
+        balance_before: buyerBalance,
+        balance_after: buyerBalance - totalPrice,
+        description: `Purchased ${quantity}x ${catalogCard.name} from catalog`,
+        reference_type: 'CARD',
+        reference_id: catalogCardId
+      }
     });
 
-    console.log('✅ Purchase completed successfully');
+    console.log(`Created wallet transaction ID: ${walletTransaction.id}`);
+
+    // Record transaction history for each card
+    for (const userCard of userCards) {
+      await tx.cardTransactionHistory.create({
+        data: {
+          userCardId: userCard.id,
+          fromUserId: null, // No previous owner (catalog purchase)
+          toUserId: buyerId,
+          action: 'CATALOG_PURCHASE',
+          notes: `Card purchased from catalog for $${unitPrice.toFixed(2)}`
+        }
+      });
+    }
+
+    console.log(`Catalog purchase completed successfully. Created ${userCards.length} UserCard entries.`);
 
     return NextResponse.json({
       success: true,
-      transaction_id: result.transaction.id,
-      card_name: card.name,
-      purchase_price: Number(purchasePrice),
-      new_balance: result.buyer_new_balance,
-      seller: owner.name,
+      message: `Successfully purchased ${quantity}x ${catalogCard.name}!`,
+      purchase_details: {
+        card_name: catalogCard.name,
+        quantity: quantity,
+        unit_price: unitPrice.toFixed(2),
+        total_price: totalPrice.toFixed(2),
+        condition: 'Mint',
+        cards_added_to_collection: userCards.length,
+        remaining_balance: (buyerBalance - totalPrice).toFixed(2),
+        user_card_ids: userCards.map(uc => uc.id)
+      }
     });
-  } catch (error) {
-    console.error('❌ Error purchasing card:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to purchase card',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 },
-    );
-  }
+  });
 }

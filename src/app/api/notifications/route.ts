@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
         const whereCondition = {
             user_id: parseInt(session.user.id),
-            ...(unreadOnly ? { read: false } : {}), // Fixed: use 'read' instead of 'is_read'
+            ...(unreadOnly ? { read: false } : {}), 
         };
 
         const notifications = await prisma.notification.findMany({
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
                 title: true,
                 message: true,
                 data: true,
-                read: true,        // Fixed: use 'read' instead of 'is_read'
+                read: true,        
                 created_at: true,
                 updated_at: true,
             },

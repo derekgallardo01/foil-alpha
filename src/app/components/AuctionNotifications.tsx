@@ -34,10 +34,8 @@ interface Notification {
     type: string;
     title: string;
     message: string;
-    is_read: boolean;
-    reference_id?: number;
-    reference_type?: string;
-    metadata?: any;
+    read: boolean; // Fixed: changed from is_read to read
+    data?: any; // Fixed: changed from metadata to data
     created_at: string;
 }
 
@@ -61,9 +59,12 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
             const response = await fetch('/api/notifications?unread_only=true');
 
             if (response.ok) {
-                const data = await response.json();
-                setNotifications(data.slice(0, 5)); // Show only latest 5 in dropdown
-                setUnreadCount(data.length);
+                const result = await response.json();
+
+                // Fixed: Handle the API response structure
+                const notificationsData = result.notifications || [];
+                setNotifications(notificationsData.slice(0, 5)); // Show only latest 5 in dropdown
+                setUnreadCount(notificationsData.length);
             } else {
                 throw new Error('Failed to fetch notifications');
             }
@@ -79,7 +80,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
                     title: 'Auction Won!',
                     message: 'Congratulations! You won the auction.',
                     created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-                    is_read: false
+                    read: false
                 },
                 {
                     id: 2,
@@ -87,7 +88,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
                     title: 'You\'ve been outbid',
                     message: 'Your bid has been exceeded by another bidder.',
                     created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-                    is_read: false
+                    read: false
                 }
             ];
             setNotifications(sampleNotifications);
@@ -119,19 +120,19 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
     const markAsRead = async (notificationId: number) => {
         try {
             const response = await fetch('/api/notifications', {
-                method: 'PATCH',
+                method: 'PUT', // Fixed: changed from PATCH to PUT
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    notification_id: notificationId
+                    notificationId: notificationId // Fixed: changed key name
                 })
             });
 
             if (response.ok) {
                 setNotifications(prev =>
                     prev.map(n =>
-                        n.id === notificationId ? { ...n, is_read: true } : n
+                        n.id === notificationId ? { ...n, read: true } : n
                     )
                 );
                 setUnreadCount(prev => Math.max(0, prev - 1));
@@ -144,17 +145,17 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
     const markAllAsRead = async () => {
         try {
             const response = await fetch('/api/notifications', {
-                method: 'PATCH',
+                method: 'PUT', // Fixed: changed from PATCH to PUT
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    mark_as_read: 'all'
+                    markAllAsRead: true // Fixed: changed key name
                 })
             });
 
             if (response.ok) {
-                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
                 setUnreadCount(0);
             }
         } catch (error) {
@@ -164,7 +165,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
 
     const handleViewAll = () => {
         handleClose();
-        router.push('/notifications');
+        router.push('/notifications'); // Fixed: using plural form
     };
 
     const getNotificationIcon = (type: string) => {
@@ -225,13 +226,13 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
     };
 
     const getCardName = (notification: Notification) => {
-        return notification.metadata?.card_name || 'Card';
+        return notification.data?.card_name || 'Card'; // Fixed: using data instead of metadata
     };
 
     const getAmount = (notification: Notification) => {
-        const amount = notification.metadata?.amount ||
-            notification.metadata?.bid_amount ||
-            notification.metadata?.winning_amount;
+        const amount = notification.data?.amount ||
+            notification.data?.bid_amount ||
+            notification.data?.winning_amount; // Fixed: using data instead of metadata
         return amount ? `$${Number(amount).toFixed(2)}` : '';
     };
 
@@ -320,97 +321,102 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
                             </Box>
                         ) : (
                             <List sx={{ p: 0 }}>
-                                {notifications.map((notification, index) => [
-                                    <ListItem
-                                        key={notification.id}
-                                        sx={{
-                                            bgcolor: notification.is_read ? 'transparent' : 'action.hover',
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                bgcolor: 'action.selected'
-                                            }
-                                        }}
-                                        onClick={() => markAsRead(notification.id)}
-                                    >
-                                        <ListItemAvatar>
-                                            <Avatar sx={{ bgcolor: 'transparent' }}>
-                                                {getNotificationIcon(notification.type)}
-                                            </Avatar>
-                                        </ListItemAvatar>
-                                        <ListItemText
-                                            primary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                    <Typography variant="subtitle2" component="span">
-                                                        {notification.title}
-                                                    </Typography>
-                                                    <Chip
-                                                        label={notification.type.replace('_', ' ')}
-                                                        size="small"
-                                                        color={getNotificationColor(notification.type)}
-                                                        sx={{
-                                                            fontSize: '0.6rem',
-                                                            height: 18,
-                                                            '& .MuiChip-label': {
-                                                                px: 0.5
-                                                            }
-                                                        }}
-                                                    />
-                                                </Box>
-                                            }
-                                            secondary={
-                                                <Box>
-                                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }} component="span">
-                                                        {notification.message}
-                                                    </Typography>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                                        <Typography variant="caption" sx={{ fontWeight: 'medium', color: 'text.primary' }} component="span">
-                                                            {getCardName(notification)}
+                                {notifications.map((notification, index) => (
+                                    <React.Fragment key={notification.id}>
+                                        <ListItem
+                                            sx={{
+                                                bgcolor: notification.read ? 'transparent' : 'action.hover',
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                    bgcolor: 'action.selected'
+                                                }
+                                            }}
+                                            onClick={() => markAsRead(notification.id)}
+                                        >
+                                            <ListItemAvatar>
+                                                <Avatar sx={{ bgcolor: 'transparent' }}>
+                                                    {getNotificationIcon(notification.type)}
+                                                </Avatar>
+                                            </ListItemAvatar>
+                                            <ListItemText
+                                                primary={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                        <Typography variant="subtitle2" component="span">
+                                                            {notification.title}
                                                         </Typography>
-                                                        {getAmount(notification) && (
-                                                            <Typography variant="caption" color="primary.main" sx={{ fontWeight: 'bold' }} component="span">
-                                                                {getAmount(notification)}
-                                                            </Typography>
-                                                        )}
+                                                        <Chip
+                                                            label={notification.type.replace('_', ' ')}
+                                                            size="small"
+                                                            color={getNotificationColor(notification.type)}
+                                                            sx={{
+                                                                fontSize: '0.6rem',
+                                                                height: 18,
+                                                                '& .MuiChip-label': {
+                                                                    px: 0.5
+                                                                }
+                                                            }}
+                                                        />
                                                     </Box>
-                                                    <Typography variant="caption" color="text.disabled" component="span">
-                                                        {formatTimeAgo(notification.created_at)}
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                        />
-                                        {!notification.is_read && (
-                                            <Box
-                                                sx={{
-                                                    width: 8,
-                                                    height: 8,
-                                                    borderRadius: '50%',
-                                                    bgcolor: 'primary.main',
-                                                    ml: 1
-                                                }}
+                                                }
+                                                secondary={
+                                                    <Box>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }} component="span">
+                                                            {notification.message}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                                            <Typography variant="caption" sx={{ fontWeight: 'medium', color: 'text.primary' }} component="span">
+                                                                {getCardName(notification)}
+                                                            </Typography>
+                                                            {getAmount(notification) && (
+                                                                <Typography variant="caption" color="primary.main" sx={{ fontWeight: 'bold' }} component="span">
+                                                                    {getAmount(notification)}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                        <Typography variant="caption" color="text.disabled" component="span">
+                                                            {formatTimeAgo(notification.created_at)}
+                                                        </Typography>
+                                                    </Box>
+                                                }
                                             />
+                                            {!notification.read && (
+                                                <Box
+                                                    sx={{
+                                                        width: 8,
+                                                        height: 8,
+                                                        borderRadius: '50%',
+                                                        bgcolor: 'primary.main',
+                                                        ml: 1
+                                                    }}
+                                                />
+                                            )}
+                                        </ListItem>
+                                        {index < notifications.length - 1 && (
+                                            <Divider variant="inset" component="li" />
                                         )}
-                                    </ListItem>,
-                                    index < notifications.length - 1 ? <Divider key={`divider-${notification.id}`} variant="inset" component="li" /> : null
-                                ].filter(Boolean))}
+                                    </React.Fragment>
+                                ))}
                             </List>
                         )}
                     </>
                 )}
 
                 {/* Footer */}
-                {!loading && notifications.length > 0 && [
-                    <Divider key="footer-divider" />,
-                    <Box key="footer" sx={{ p: 1 }}>
-                        <Button
-                            fullWidth
-                            size="small"
-                            sx={{ textTransform: 'none' }}
-                            onClick={handleViewAll}
-                        >
-                            View All Notifications
-                        </Button>
-                    </Box>
-                ]}
+                {!loading && notifications.length > 0 && (
+                    <>
+                        <Divider />
+                        <Box sx={{ p: 1 }}>
+                            <Button
+                                fullWidth
+                                size="small"
+                                sx={{ textTransform: 'none' }}
+                                onClick={handleViewAll}
+                            >
+                                View All Notifications
+                            </Button>
+                        </Box>
+                    </>
+                )}
             </Menu>
         </Box>
     );
