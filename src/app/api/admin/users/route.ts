@@ -32,19 +32,19 @@ interface CreateUserBody {
   initialBalance?: number | string;
 }
 
-// GET /api/admin/users - List all users
+// GET /api/admin/users - List all users with wallet information
 export async function GET() {
   try {
     const session = (await getServerSession(authOptions)) as Session | null;
 
-    console.log("Session:", session); // Debug log
+    console.log("Admin users API - Session check:", session ? 'Authenticated' : 'Not authenticated');
 
     if (!session || session.user.role !== "admin") {
-      console.log("Unauthorized access attempt"); // Debug log
+      console.log("Unauthorized access attempt to admin users API");
       return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
     }
 
-    console.log("Fetching users from database..."); // Debug log
+    console.log("Fetching users from database...");
 
     const users = await prisma.user.findMany({
       select: {
@@ -61,15 +61,43 @@ export async function GET() {
       },
     });
 
-    console.log("Found users:", users.length); // Debug log
+    console.log(`Found ${users.length} users, fetching wallet information...`);
 
     const usersWithWallets: UserResponse[] = await Promise.all(
       users.map(async (user) => {
         try {
-          const wallet = await prisma.userWallet.findUnique({
+          // Get or create wallet for each user
+          let wallet = await prisma.userWallet.findUnique({
             where: { user_id: user.id },
           });
 
+          // Create wallet if it doesn't exist
+          if (!wallet) {
+            console.log(`Creating missing wallet for user ${user.id} (${user.email})`);
+            wallet = await prisma.userWallet.create({
+              data: {
+                user_id: user.id,
+                balance: 0,
+                frozen_balance: 0
+              }
+            });
+
+            // Create setup transaction
+            await prisma.walletTransaction.create({
+              data: {
+                user_id: user.id,
+                wallet_id: wallet.id,
+                transaction_type: 'WALLET_SETUP',
+                amount: 0,
+                balance_before: 0,
+                balance_after: 0,
+                description: 'Wallet created automatically by admin panel',
+                reference_type: 'SYSTEM_SETUP'
+              }
+            });
+          }
+
+          // Get user card statistics
           const userCards = await prisma.userCard.count({
             where: { owner_id: user.id },
           });
@@ -84,15 +112,15 @@ export async function GET() {
 
           return {
             ...user,
-            balance: wallet ? Number(wallet.balance) : 0,
-            frozen_balance: wallet ? Number(wallet.frozen_balance) : 0,
-            available_balance: wallet ? Number(wallet.balance) - Number(wallet.frozen_balance) : 0,
+            balance: Number(wallet.balance),
+            frozen_balance: Number(wallet.frozen_balance),
+            available_balance: Number(wallet.balance) - Number(wallet.frozen_balance),
             cardCount: userCards,
             purchaseCount: purchases,
             saleCount: sales,
           };
         } catch (walletError) {
-          console.error("Error fetching wallet for user", user.id, walletError);
+          console.error(`Error processing wallet for user ${user.id}:`, walletError);
           return {
             ...user,
             balance: 0,
@@ -106,8 +134,9 @@ export async function GET() {
       }),
     );
 
-    console.log("Returning users with wallet data"); // Debug log
+    console.log("Successfully returning users with wallet data");
     return NextResponse.json(usersWithWallets);
+
   } catch (error) {
     console.error("Error in GET /api/admin/users:", error);
     return NextResponse.json({
@@ -117,7 +146,7 @@ export async function GET() {
   }
 }
 
-// POST /api/admin/users - Create new user
+// POST /api/admin/users - Create new user with wallet
 export async function POST(req: Request) {
   try {
     const session = (await getServerSession(authOptions)) as Session | null;
@@ -128,6 +157,8 @@ export async function POST(req: Request) {
     const body = (await req.json()) as CreateUserBody;
     const { name, email, role, subscriptionStatus, password, initialBalance = 0 } = body;
 
+    console.log("Creating new user:", { name, email, role, initialBalance });
+
     // Validate required fields
     if (!name || !email || !role || !subscriptionStatus || !password) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -136,7 +167,9 @@ export async function POST(req: Request) {
     // Validate initialBalance
     const initialBalanceNum = parseFloat(String(initialBalance));
     if (isNaN(initialBalanceNum) || initialBalanceNum < 0) {
-      return NextResponse.json({ message: "Invalid initialBalance: must be a non-negative number" }, { status: 400 });
+      return NextResponse.json({
+        message: "Invalid initialBalance: must be a non-negative number"
+      }, { status: 400 });
     }
 
     // Check if email already exists
@@ -161,7 +194,7 @@ export async function POST(req: Request) {
           role,
           subscriptionStatus,
           password: hashedPassword,
-          is_verified: 0, // Fixed from false to 0
+          is_verified: 0,
         },
       });
 
@@ -174,7 +207,7 @@ export async function POST(req: Request) {
         },
       });
 
-      // Create initial wallet transaction if there's an initial balance
+      // Create wallet transaction
       if (initialBalanceNum > 0) {
         await tx.walletTransaction.create({
           data: {
@@ -190,7 +223,6 @@ export async function POST(req: Request) {
           },
         });
       } else {
-        // Create setup transaction
         await tx.walletTransaction.create({
           data: {
             user_id: newUser.id,
@@ -208,6 +240,8 @@ export async function POST(req: Request) {
       return { user: newUser, wallet };
     });
 
+    console.log(`Successfully created user ${result.user.id} with wallet`);
+
     return NextResponse.json({
       id: result.user.id,
       name: result.user.name,
@@ -218,7 +252,12 @@ export async function POST(req: Request) {
       subscriptionStatus: result.user.subscriptionStatus,
       balance: Number(result.wallet.balance),
       frozen_balance: Number(result.wallet.frozen_balance),
+      available_balance: Number(result.wallet.balance),
+      cardCount: 0,
+      purchaseCount: 0,
+      saleCount: 0,
     }, { status: 201 });
+
   } catch (error) {
     console.error("Error adding user:", error);
     return NextResponse.json({
@@ -226,3 +265,6 @@ export async function POST(req: Request) {
     }, { status: 500 });
   }
 }
+
+// PUT /api/admin/users/[id] - Update user (handled by individual user route)
+// DELETE /api/admin/users/[id] - Delete user (handled by individual user route)

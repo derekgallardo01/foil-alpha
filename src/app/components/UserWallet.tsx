@@ -14,6 +14,7 @@ import {
     Chip,
     CircularProgress,
     Divider,
+    Alert,
 } from "@mui/material";
 import {
     AccountBalanceWallet,
@@ -21,15 +22,16 @@ import {
     Refresh,
     TrendingUp,
     TrendingDown,
+    AdminPanelSettings,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import type { ChipProps } from "@mui/material";
 
 interface WalletData {
-    balance?: number; // Make balance optional
-    frozen_balance?: number;
-    available_balance?: number;
-    recent_transactions?: WalletTransaction[];
+    balance: number;
+    frozen_balance: number;
+    available_balance: number;
+    recent_transactions: WalletTransaction[];
 }
 
 interface WalletTransaction {
@@ -42,51 +44,65 @@ interface WalletTransaction {
 }
 
 export default function UserWallet() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchWalletData = useCallback(async () => {
+        if (status !== "authenticated" || !session?.user?.id) {
+            setLoading(false);
+            return;
+        }
+
+        // Don't fetch wallet for admins
+        if (session.user.role === 'admin') {
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
-            const response = await fetch("/api/user/wallet?include_transactions=true&limit=10", {
-                headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
-                },
-            });
+            setError(null);
 
-            if (!response.ok) throw new Error("Failed to fetch wallet data");
+            const response = await fetch("/api/user/wallet?include_transactions=true&limit=10");
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to fetch wallet');
+            }
 
             const data = await response.json();
             setWallet(data);
 
         } catch (error) {
             console.error("Error fetching wallet:", error);
-            toast.error("Failed to load wallet data");
+            const errorMessage = error instanceof Error ? error.message : "Failed to load wallet data";
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
-    }, [session?.accessToken]);
+    }, [session, status]);
 
     useEffect(() => {
-        if (session?.user?.id) {
-            fetchWalletData();
-        }
-    }, [session, fetchWalletData]);
+        fetchWalletData();
+    }, [fetchWalletData]);
+
+    const handleRefresh = () => {
+        fetchWalletData();
+    };
 
     const getTransactionColor = (type: string): ChipProps['color'] => {
         switch (type) {
             case 'DEPOSIT':
-            case 'INITIAL_SETUP':
-            case 'INITIAL_DEPOSIT':
+            case 'ADD_MONEY':
             case 'SALE':
-            case 'AUCTION_SALE':
+            case 'UNFREEZE_FUNDS':
                 return 'success';
             case 'PURCHASE':
-            case 'AUCTION_PAYMENT':
+            case 'DEDUCT_MONEY':
                 return 'error';
             case 'FREEZE_FUNDS':
-            case 'UNFREEZE_FUNDS':
                 return 'warning';
             default:
                 return 'default';
@@ -94,37 +110,72 @@ export default function UserWallet() {
     };
 
     const getTransactionIcon = (type: string, amount: number) => {
-        if (type.includes('FREEZE') || type.includes('UNFREEZE')) {
+        if (type.includes('FREEZE')) {
             return null;
         }
         return amount >= 0 ? <TrendingUp sx={{ fontSize: 16 }} /> : <TrendingDown sx={{ fontSize: 16 }} />;
     };
 
-    const getTransactionPrefix = (amount: number, type: string) => {
-        if (type.includes('UNFREEZE') || type.includes('FREEZE')) {
-            return '';
-        }
-        return amount >= 0 ? '+' : '';
-    };
-
-    if (loading) {
+    if (status === "loading" || loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                 <CircularProgress sx={{ color: '#96ff9b' }} />
+                <Typography sx={{ ml: 2, color: 'text.secondary' }}>
+                    Loading wallet...
+                </Typography>
             </Box>
         );
     }
 
-    if (!wallet) {
+    if (status === "unauthenticated") {
         return (
             <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                 <CardContent>
-                    <Typography color="error">Failed to load wallet data</Typography>
+                    <Typography color="error">Please log in to view your wallet</Typography>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // Show admin message instead of wallet
+    if (session?.user?.role === 'admin') {
+        return (
+            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
+                <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                    <AdminPanelSettings sx={{ fontSize: 60, color: '#96ff9b', mb: 2 }} />
+                    <Typography variant="h5" sx={{ color: '#96ff9b', mb: 2 }}>
+                        Admin Account
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                        Admins don't have personal wallets. Use the admin panel to manage user wallets.
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        href="/admin/users"
+                        sx={{
+                            bgcolor: '#96ff9b',
+                            color: 'grey.900',
+                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                        }}
+                    >
+                        Go to User Management
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (error) {
+        return (
+            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                <CardContent>
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
                     <Button
                         variant="outlined"
-                        onClick={fetchWalletData}
+                        onClick={handleRefresh}
                         sx={{
-                            mt: 2,
                             borderColor: '#96ff9b',
                             color: '#96ff9b',
                             '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
@@ -132,6 +183,16 @@ export default function UserWallet() {
                     >
                         Retry
                     </Button>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (!wallet) {
+        return (
+            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                <CardContent>
+                    <Typography color="text.secondary">Wallet not found. Contact admin to create your wallet.</Typography>
                 </CardContent>
             </Card>
         );
@@ -150,8 +211,9 @@ export default function UserWallet() {
                     <Button
                         variant="outlined"
                         size="small"
-                        startIcon={<Refresh />}
-                        onClick={fetchWalletData}
+                        startIcon={loading ? <CircularProgress size={16} /> : <Refresh />}
+                        onClick={handleRefresh}
+                        disabled={loading}
                         sx={{
                             borderColor: '#96ff9b',
                             color: '#96ff9b',
@@ -171,7 +233,7 @@ export default function UserWallet() {
                         border: '1px solid rgba(150, 255, 155, 0.3)'
                     }}>
                         <Typography variant="h3" sx={{ color: '#96ff9b', fontWeight: 'bold', mb: 1 }}>
-                            ${typeof wallet.balance === 'number' ? wallet.balance.toFixed(2) : '0.00'}
+                            ${wallet.balance.toFixed(2)}
                         </Typography>
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Total Balance
@@ -183,21 +245,21 @@ export default function UserWallet() {
                         p: 3,
                         bgcolor: 'grey.700',
                         borderRadius: 2,
-                        border: `1px solid ${typeof wallet.available_balance === 'number' && wallet.available_balance > 0 ? 'rgba(76, 175, 80, 0.3)' : 'rgba(158, 158, 158, 0.3)'}`
+                        border: `1px solid ${wallet.available_balance > 0 ? 'rgba(76, 175, 80, 0.3)' : 'rgba(158, 158, 158, 0.3)'}`
                     }}>
                         <Typography variant="h3" sx={{
-                            color: typeof wallet.available_balance === 'number' && wallet.available_balance > 0 ? 'success.main' : 'text.secondary',
+                            color: wallet.available_balance > 0 ? 'success.main' : 'text.secondary',
                             fontWeight: 'bold',
                             mb: 1
                         }}>
-                            ${typeof wallet.available_balance === 'number' ? wallet.available_balance.toFixed(2) : '0.00'}
+                            ${wallet.available_balance.toFixed(2)}
                         </Typography>
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Available to Spend
                         </Typography>
                     </Box>
 
-                    {typeof wallet.frozen_balance === 'number' && wallet.frozen_balance > 0 && (
+                    {wallet.frozen_balance > 0 && (
                         <Box sx={{
                             textAlign: 'center',
                             p: 3,
@@ -215,14 +277,20 @@ export default function UserWallet() {
                     )}
                 </Box>
 
-                <Box sx={{ mb: 3, p: 2, bgcolor: 'rgba(150, 255, 155, 0.05)', borderRadius: 1 }}>
-                    {typeof wallet.available_balance === 'number' && wallet.available_balance > 50 ? (
+                <Box sx={{
+                    mb: 3,
+                    p: 2,
+                    bgcolor: 'rgba(150, 255, 155, 0.05)',
+                    borderRadius: 1,
+                    textAlign: 'center'
+                }}>
+                    {wallet.available_balance > 50 ? (
                         <Typography variant="body2" sx={{ color: 'success.main' }}>
                             ✅ Your wallet is ready for purchases and bidding!
                         </Typography>
-                    ) : typeof wallet.available_balance === 'number' && wallet.available_balance > 0 ? (
+                    ) : wallet.available_balance > 0 ? (
                         <Typography variant="body2" sx={{ color: 'warning.main' }}>
-                            ⚠️ Low balance - consider adding funds for larger purchases.
+                            ⚠️ Low balance - contact admin to add more funds.
                         </Typography>
                     ) : (
                         <Typography variant="body2" sx={{ color: 'error.main' }}>
@@ -266,7 +334,7 @@ export default function UserWallet() {
                                                     color={getTransactionColor(transaction.type)}
                                                 />
                                             </Box>
-                                            {!transaction.type.includes('FREEZE') && (
+                                            {transaction.amount !== 0 && (
                                                 <Typography
                                                     variant="h6"
                                                     sx={{
@@ -274,7 +342,7 @@ export default function UserWallet() {
                                                         fontWeight: 'bold'
                                                     }}
                                                 >
-                                                    {getTransactionPrefix(transaction.amount, transaction.type)}${Math.abs(transaction.amount).toFixed(2)}
+                                                    {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
                                                 </Typography>
                                             )}
                                         </Box>
@@ -294,7 +362,7 @@ export default function UserWallet() {
                             No transactions yet
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Start by browsing the marketplace or managing your card collection!
+                            Contact admin to add funds or start trading!
                         </Typography>
                     </Box>
                 )}

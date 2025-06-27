@@ -6,7 +6,7 @@ import { prisma } from '../../../lib/prisma';
 // Define valid wallet operations for type safety
 type WalletOperation = 'ADD_MONEY' | 'DEDUCT_MONEY' | 'FREEZE_FUNDS' | 'UNFREEZE_FUNDS';
 
-// POST /api/admin/wallet - Admin wallet operations
+// POST /api/admin/wallet - Admin wallet operations (NO ADMIN WALLET REQUIRED)
 export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { user_id, operation, amount, description } = body;
 
-        console.log('Wallet operation request:', { user_id, operation, amount });
+        console.log('Admin wallet operation request:', { user_id, operation, amount });
 
         if (!user_id || !operation || !amount || amount <= 0) {
             return NextResponse.json({
@@ -37,6 +37,21 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
+        // Verify target user exists
+        const targetUser = await prisma.user.findUnique({
+            where: { id: targetUserId },
+            select: { id: true, name: true, email: true, role: true }
+        });
+
+        if (!targetUser) {
+            return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
+        }
+
+        // Prevent operations on admin accounts
+        if (targetUser.role === 'admin') {
+            return NextResponse.json({ error: 'Cannot perform wallet operations on admin accounts' }, { status: 400 });
+        }
+
         // Get or create user wallet
         let wallet = await prisma.userWallet.findUnique({
             where: { user_id: targetUserId }
@@ -53,50 +68,50 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        if (!wallet.id) {
-            throw new Error('Failed to create or retrieve user wallet');
-        }
-
         const currentBalance = Number(wallet.balance);
         const currentFrozen = Number(wallet.frozen_balance);
         let newBalance = currentBalance;
         let newFrozenBalance = currentFrozen;
-        const transactionType: WalletOperation = operation;
+        let transactionAmount = operationAmount;
 
         console.log('Current wallet state:', { currentBalance, currentFrozen });
 
-        // Perform operation
+        // Perform operation validation and calculation
         switch (operation) {
             case 'ADD_MONEY':
+                // Admin can add money directly - no source wallet required
                 newBalance = currentBalance + operationAmount;
                 break;
 
             case 'DEDUCT_MONEY':
                 if (currentBalance < operationAmount) {
                     return NextResponse.json({
-                        error: 'Insufficient balance for deduction'
+                        error: `Insufficient balance for deduction. Current balance: $${currentBalance.toFixed(2)}`
                     }, { status: 400 });
                 }
                 newBalance = currentBalance - operationAmount;
+                transactionAmount = -operationAmount; // Negative for deduction
                 break;
 
             case 'FREEZE_FUNDS':
                 const availableBalance = currentBalance - currentFrozen;
                 if (availableBalance < operationAmount) {
                     return NextResponse.json({
-                        error: 'Insufficient available balance to freeze'
+                        error: `Insufficient available balance to freeze. Available: $${availableBalance.toFixed(2)}`
                     }, { status: 400 });
                 }
                 newFrozenBalance = currentFrozen + operationAmount;
+                transactionAmount = 0; // Freeze doesn't change total balance
                 break;
 
             case 'UNFREEZE_FUNDS':
                 if (currentFrozen < operationAmount) {
                     return NextResponse.json({
-                        error: 'Insufficient frozen balance to unfreeze'
+                        error: `Insufficient frozen balance to unfreeze. Frozen: $${currentFrozen.toFixed(2)}`
                     }, { status: 400 });
                 }
                 newFrozenBalance = currentFrozen - operationAmount;
+                transactionAmount = 0; // Unfreeze doesn't change total balance
                 break;
         }
 
@@ -118,11 +133,11 @@ export async function POST(request: NextRequest) {
                 data: {
                     wallet_id: wallet.id,
                     user_id: targetUserId,
-                    transaction_type: transactionType,
-                    amount: operation === 'DEDUCT_MONEY' ? -operationAmount : operationAmount,
+                    transaction_type: operation,
+                    amount: transactionAmount,
                     balance_before: currentBalance,
                     balance_after: newBalance,
-                    description: description || `Admin ${operation.toLowerCase().replace('_', ' ')}: $${operationAmount}`,
+                    description: description || `Admin ${operation.toLowerCase().replace('_', ' ')}: $${operationAmount.toFixed(2)}`,
                     reference_type: 'ADMIN_OPERATION',
                     admin_id: adminId
                 }
@@ -131,25 +146,24 @@ export async function POST(request: NextRequest) {
             return { wallet: updatedWallet, transaction: walletTransaction };
         });
 
-        // Get user info for response
-        const user = await prisma.user.findUnique({
-            where: { id: targetUserId },
-            select: { name: true, email: true }
-        });
-
         console.log('Wallet operation completed successfully');
 
         return NextResponse.json({
             success: true,
             operation,
             amount: operationAmount,
-            user: user,
+            user: {
+                id: targetUser.id,
+                name: targetUser.name,
+                email: targetUser.email
+            },
             wallet: {
                 balance: Number(result.wallet.balance),
                 frozen_balance: Number(result.wallet.frozen_balance),
                 available_balance: Number(result.wallet.balance) - Number(result.wallet.frozen_balance)
             },
-            transaction_id: result.transaction.id
+            transaction_id: result.transaction.id,
+            message: `Successfully ${operation.toLowerCase().replace('_', ' ')} $${operationAmount.toFixed(2)} for ${targetUser.name}`
         });
 
     } catch (error) {
@@ -175,7 +189,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('user_id');
 
-        console.log('Fetching wallet data for user:', userId);
+        console.log('Admin fetching wallet data for user:', userId);
 
         if (!userId) {
             return NextResponse.json({ error: 'user_id parameter required' }, { status: 400 });
@@ -186,59 +200,44 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid user_id format' }, { status: 400 });
         }
 
-        const wallet = await prisma.userWallet.findUnique({
-            where: { user_id: parsedUserId },
-            include: {
-                user: {
-                    select: { id: true, name: true, email: true }
-                }
-            }
+        // Get user info
+        const user = await prisma.user.findUnique({
+            where: { id: parsedUserId },
+            select: { id: true, name: true, email: true, role: true }
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        // Get or create wallet
+        let wallet = await prisma.userWallet.findUnique({
+            where: { user_id: parsedUserId }
         });
 
         if (!wallet) {
             console.log('Wallet not found, creating new one');
-            // Create wallet if it doesn't exist
-            const newWallet = await prisma.userWallet.create({
+            wallet = await prisma.userWallet.create({
                 data: {
                     user_id: parsedUserId,
                     balance: 0.00,
                     frozen_balance: 0.00
-                },
-                include: {
-                    user: {
-                        select: { id: true, name: true, email: true }
-                    }
                 }
             });
-
-            if (!newWallet.id) {
-                throw new Error('Failed to create new wallet');
-            }
 
             // Create initial transaction
             await prisma.walletTransaction.create({
                 data: {
-                    wallet_id: newWallet.id,
+                    wallet_id: wallet.id,
                     user_id: parsedUserId,
                     transaction_type: 'WALLET_SETUP',
                     amount: 0.00,
                     balance_before: 0.00,
                     balance_after: 0.00,
-                    description: 'Wallet created automatically',
-                    reference_type: 'SYSTEM_SETUP'
+                    description: 'Wallet created by admin',
+                    reference_type: 'ADMIN_SETUP',
+                    admin_id: parseInt(session.user.id)
                 }
-            });
-
-            return NextResponse.json({
-                user: newWallet.user,
-                wallet: {
-                    balance: 0,
-                    frozen_balance: 0,
-                    available_balance: 0,
-                    created_at: newWallet.created_at,
-                    updated_at: newWallet.updated_at
-                },
-                recent_transactions: []
             });
         }
 
@@ -265,7 +264,7 @@ export async function GET(request: NextRequest) {
         });
 
         return NextResponse.json({
-            user: wallet.user,
+            user: user,
             wallet: {
                 balance: Number(wallet.balance),
                 frozen_balance: Number(wallet.frozen_balance),

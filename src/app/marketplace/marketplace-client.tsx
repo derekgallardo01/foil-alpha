@@ -645,7 +645,7 @@ export default function MarketplacePage() {
                                                         variant="contained"
                                                         size="small"
                                                         onClick={() => handlePurchase(listing)}
-                                                        disabled={isCardPurchasing || isOwnCard}
+                                                        // disabled={isCardPurchasing || isOwnCard}
                                                     >
                                                         {isCardPurchasing ? (
                                                             <CircularProgress size={20} />
