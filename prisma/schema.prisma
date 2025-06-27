@@ -162,7 +162,6 @@ model Card {
   set_number      String?    @db.VarChar(50)
   rarity          String     @db.VarChar(50)     // Keep as string for display
   card_type       String?    @db.VarChar(50)     // Keep as string for display
-  subtype         String?    @db.VarChar(255)    // Keep as string for display
   hp              Int?
   image_url       String?    @db.VarChar(500)
   small_image_url String?    @db.VarChar(500)

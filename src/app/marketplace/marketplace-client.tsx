@@ -1,4 +1,3 @@
-// src/app/marketplace/marketplace-client.tsx - Enhanced with pagination and catalog cards
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -25,9 +24,6 @@ import {
     Paper,
     Divider,
     Badge,
-    Pagination,
-    Stack,
-    SelectChangeEvent
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -38,15 +34,11 @@ import {
     FilterList as FilterIcon,
     Notifications as NotificationIcon,
     Refresh as RefreshIcon,
-    Store as StoreIcon,
-    Person as PersonIcon,
-    Sort as SortIcon
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import BiddingModal from '../components/BiddingModal';
-import PurchaseConfirmationModal from '../components/PurchaseConfirmationModal';
 
 interface Card {
     id: number;
@@ -57,32 +49,35 @@ interface Card {
     card_type: string;
     image_url: string;
     small_image_url: string;
+    set?: any;
+    rarity_info?: any;
+    subtype_info?: any;
+    supertype_info?: any;
 }
 
-interface MarketplaceListing {
-    id: string;
+interface Listing {
+    id: string; // e.g., "catalog-123" or "user-456"
     type: 'CATALOG' | 'USER_CARD';
-    user_card_id?: number;
+    user_card_id?: number; // Only for USER_CARD
     card: Card;
-    owner: { id: number; name: string; role: string };
+    owner: { id: number | null; name: string; role?: string };
     condition: string;
     sale_type: 'FIXED' | 'AUCTION';
-    current_price: number;
     fixed_price: number | null;
     reserve_price: number | null;
     auction_end: string | null;
+    current_price: number;
     highest_bid: number | null;
     highest_bidder?: { id: number; name: string } | null;
     bid_count: number;
     time_remaining: number | null;
-    is_auction_expired: boolean;
+    is_auction_expired?: boolean;
     notes: string | null;
     availability: 'IN_STOCK' | 'FOR_SALE';
-    created_at: string;
 }
 
 interface MarketplaceResponse {
-    listings: MarketplaceListing[];
+    listings: Listing[];
     pagination: {
         page: number;
         limit: number;
@@ -90,14 +85,12 @@ interface MarketplaceResponse {
         totalPages: number;
         catalog_cards: number;
         user_cards: number;
-        showing: number;
     };
     filters: {
         sets: Array<{ name: string; count: number }>;
         types: Array<{ name: string; count: number }>;
         rarities: Array<{ name: string; count: number }>;
         price_range: { min: number; max: number; avg: number };
-        sort_options: Array<{ value: string; label: string }>;
     };
 }
 
@@ -126,53 +119,24 @@ export default function MarketplacePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-    const [listings, setListings] = useState<MarketplaceListing[]>([]);
+    const [cards, setCards] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [unreadNotifications, setUnreadNotifications] = useState(0);
-
-    // Search and filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSet, setSelectedSet] = useState('');
     const [selectedType, setSelectedType] = useState('');
-    const [selectedRarity, setSelectedRarity] = useState('');
     const [selectedSaleType, setSelectedSaleType] = useState('');
-    const [sortBy, setSortBy] = useState('newest');
-    const [priceMin, setPriceMin] = useState('');
-    const [priceMax, setPriceMax] = useState('');
-
-    // Pagination states
-    const [page, setPage] = useState(1);
-    const [pagination, setPagination] = useState({
-        page: 1,
-        limit: 20,
-        total: 0,
-        totalPages: 0,
-        catalog_cards: 0,
-        user_cards: 0,
-        showing: 0
-    });
-
-    // Available filter options
-    const [filterOptions, setFilterOptions] = useState({
-        sets: [] as Array<{ name: string; count: number }>,
-        types: [] as Array<{ name: string; count: number }>,
-        rarities: [] as Array<{ name: string; count: number }>,
-        price_range: { min: 0, max: 1000, avg: 50 },
-        sort_options: [] as Array<{ value: string; label: string }>
-    });
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [availableSets, setAvailableSets] = useState<string[]>([]);
+    const [availableTypes, setAvailableTypes] = useState<string[]>([]);
 
     // Bidding modal state
     const [biddingModalOpen, setBiddingModalOpen] = useState(false);
     const [selectedCardForBidding, setSelectedCardForBidding] = useState<BiddingUserCard | null>(null);
 
-    // Purchase confirmation modal state
-    const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
-    const [selectedListingForPurchase, setSelectedListingForPurchase] = useState<MarketplaceListing | null>(null);
-
-    // Loading states for individual cards
+    // Individual loading states for each card
     const [purchasingCards, setPurchasingCards] = useState<Set<string>>(new Set());
-    const [biddingCards, setBiddingCards] = useState<Set<number>>(new Set());
+    const [biddingCards, setBiddingCards] = useState<Set<string>>(new Set());
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -189,42 +153,56 @@ export default function MarketplacePage() {
         }
     };
 
-    const fetchMarketplace = async (resetPage = false) => {
+    const fetchCards = async () => {
         try {
             setLoading(true);
             setError(null);
+            const params = new URLSearchParams();
 
-            const currentPage = resetPage ? 1 : page;
-            if (resetPage) setPage(1);
-
-            const params = new URLSearchParams({
-                page: currentPage.toString(),
-                limit: '20'
-            });
-
-            if (searchTerm) params.append('search', searchTerm);
-            if (selectedSet) params.append('set', selectedSet);
-            if (selectedType) params.append('type', selectedType);
-            if (selectedRarity) params.append('rarity', selectedRarity);
-            if (selectedSaleType) params.append('sale_type', selectedSaleType);
-            if (sortBy) params.append('sort_by', sortBy);
-            if (priceMin) params.append('price_min', priceMin);
-            if (priceMax) params.append('price_max', priceMax);
+            if (searchTerm.trim()) {
+                params.append('search', encodeURIComponent(searchTerm.trim()));
+            }
+            if (selectedSet && availableSets.includes(selectedSet)) {
+                params.append('set', encodeURIComponent(selectedSet));
+            }
+            if (selectedType && availableTypes.includes(selectedType)) {
+                params.append('type', encodeURIComponent(selectedType));
+            }
+            if (selectedSaleType && ['FIXED', 'AUCTION'].includes(selectedSaleType)) {
+                params.append('sale_type', selectedSaleType);
+            }
 
             console.log('Fetching marketplace with params:', params.toString());
 
             const response = await fetch(`/api/marketplace?${params.toString()}`);
 
             if (!response.ok) {
-                throw new Error('Failed to fetch marketplace');
+                const contentType = response.headers.get('content-type');
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (jsonError) {
+                    errorData = { rawBody: await response.text() };
+                }
+                console.error('API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType,
+                    errorData,
+                    url: response.url,
+                });
+                throw new Error(
+                    errorData.details
+                        ? `Failed to fetch marketplace cards: ${errorData.details}`
+                        : `Failed to fetch marketplace cards: ${response.status} ${response.statusText}`
+                );
             }
 
             const data: MarketplaceResponse = await response.json();
             console.log('Marketplace data:', data);
-
-            setListings(data.listings || []);
-            setPagination(data.pagination);
-            setFilterOptions(data.filters);
+            setCards(data.listings || []);
+            setAvailableSets(data.filters.sets.map((s) => s.name).sort());
+            setAvailableTypes(data.filters.types.map((t) => t.name).sort());
         } catch (err) {
             console.error('Marketplace fetch error:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
@@ -233,11 +211,14 @@ export default function MarketplacePage() {
         }
     };
 
-    // Fetch detailed card data for bidding modal
-    const fetchCardForBidding = async (userCardId: number): Promise<BiddingUserCard | null> => {
+    const fetchCardForBidding = async (listingId: string): Promise<BiddingUserCard | null> => {
+        if (!listingId.startsWith('user-')) {
+            toast.error('Bidding is only available for user cards');
+            return null;
+        }
+        const userCardId = parseInt(listingId.replace('user-', ''));
         try {
-            setBiddingCards(prev => new Set(prev).add(userCardId));
-
+            setBiddingCards((prev) => new Set(prev).add(listingId));
             const cardResponse = await fetch(`/api/user-cards/${userCardId}`);
             if (!cardResponse.ok) throw new Error('Failed to fetch card details');
             const cardData = await cardResponse.json();
@@ -258,12 +239,14 @@ export default function MarketplacePage() {
                 bid_count: bidsData.length,
                 time_left_ms: cardData.auction_end ? new Date(cardData.auction_end).getTime() - Date.now() : null,
                 is_auction_active: cardData.auction_end ? new Date(cardData.auction_end) > new Date() : false,
-                bids: bidsData.map((bid: any) => ({
-                    id: bid.id,
-                    amount: Number(bid.amount),
-                    bidder: bid.bidder,
-                    created_at: bid.created_at
-                })).sort((a: any, b: any) => Number(b.amount) - Number(a.amount))
+                bids: bidsData
+                    .map((bid: any) => ({
+                        id: bid.id,
+                        amount: Number(bid.amount),
+                        bidder: bid.bidder,
+                        created_at: bid.created_at,
+                    }))
+                    .sort((a: any, b: any) => Number(b.amount) - Number(a.amount)),
             };
 
             return biddingCard;
@@ -272,9 +255,9 @@ export default function MarketplacePage() {
             toast.error('Failed to load card details');
             return null;
         } finally {
-            setBiddingCards(prev => {
+            setBiddingCards((prev) => {
                 const newSet = new Set(prev);
-                newSet.delete(userCardId);
+                newSet.delete(listingId);
                 return newSet;
             });
         }
@@ -288,86 +271,117 @@ export default function MarketplacePage() {
 
     useEffect(() => {
         if (status === 'authenticated') {
-            fetchMarketplace();
+            fetchCards();
             fetchNotificationCount();
         }
-    }, [page, status]);
+    }, [searchTerm, selectedSet, selectedType, selectedSaleType, status]);
 
-    useEffect(() => {
-        if (status === 'authenticated') {
-            fetchMarketplace(true); // Reset to page 1 when filters change
-        }
-    }, [searchTerm, selectedSet, selectedType, selectedRarity, selectedSaleType, sortBy, priceMin, priceMax, status]);
-
-    // Auto-refresh every 30 seconds for live updates
     useEffect(() => {
         if (status === 'authenticated') {
             const interval = setInterval(() => {
-                fetchMarketplace();
+                fetchCards();
                 fetchNotificationCount();
             }, 30000);
-
             return () => clearInterval(interval);
         }
-    }, [status, page, searchTerm, selectedSet, selectedType, selectedRarity, selectedSaleType, sortBy, priceMin, priceMax]);
+    }, [status]);
 
     const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
+        return price != null ? `$${Number(price).toFixed(2)}` : 'N/A';
     };
 
     const formatTimeLeft = (timeLeftMs: number | null) => {
         if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
         const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
         if (days > 0) return `${days}d ${hours}h`;
         if (hours > 0) return `${hours}h ${minutes}m`;
         return `${minutes}m`;
     };
 
-    const handlePurchase = async (listing: MarketplaceListing) => {
+    const handlePurchase = async (listing: Listing) => {
         if (!session?.user?.id) {
             toast.error('Please login to purchase cards');
             return;
         }
-
-        if (listing.type === 'USER_CARD' && listing.owner.id === parseInt(session.user.id)) {
+        if (listing.owner.id && listing.owner.id === parseInt(session.user.id)) {
             toast.error('You cannot buy your own card');
             return;
         }
-
-        // Show purchase confirmation modal instead of direct purchase
-        setSelectedListingForPurchase(listing);
-        setPurchaseModalOpen(true);
+        if (listing.type === 'CATALOG') {
+            setPurchasingCards((prev) => new Set(prev).add(listing.id));
+            try {
+                const response = await fetch('/api/marketplace/purchase-catalog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_id: listing.card.id }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    toast.success(`Successfully purchased ${data.card_name} for ${data.purchase_price}!`);
+                    fetchCards();
+                    fetchNotificationCount();
+                } else {
+                    toast.error(data.error || 'Failed to purchase catalog card');
+                }
+            } catch (error) {
+                console.error('Catalog purchase error:', error);
+                toast.error('Failed to purchase catalog card');
+            } finally {
+                setPurchasingCards((prev) => {
+                    const newSet = new Set(prev);
+                    newSet.delete(listing.id);
+                    return newSet;
+                });
+            }
+        } else {
+            if (!listing.user_card_id) {
+                toast.error('Invalid user card ID');
+                return;
+            }
+            setPurchasingCards((prev) => new Set(prev).add(listing.id));
+            try {
+                const response = await fetch('/api/marketplace/purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_card_id: listing.user_card_id }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    toast.success(`Successfully purchased ${data.card_name} for ${data.purchase_price}!`);
+                    fetchCards();
+                    fetchNotificationCount();
+                } else {
+                    toast.error(data.error || 'Failed to purchase card');
+                }
+            } catch (error) {
+                console.error('Purchase error:', error);
+                toast.error('Failed to purchase card');
+            } finally {
+                setPurchasingCards((prev) => {
+                    const newSet = new Set(prev);
+                    newSet.delete(listing.id);
+                    return newSet;
+                });
+            }
+        }
     };
 
-    const handlePurchaseComplete = () => {
-        fetchMarketplace(); // Refresh the marketplace
-        fetchNotificationCount(); // Refresh notifications
-        setPurchaseModalOpen(false);
-        setSelectedListingForPurchase(null);
-    };
-
-    const handleBidClick = async (listing: MarketplaceListing) => {
+    const handleBidClick = async (listing: Listing) => {
         if (!session?.user?.id) {
             toast.error('Please login to place bids');
             return;
         }
-
-        if (listing.owner.id === parseInt(session.user.id)) {
+        if (listing.owner.id && listing.owner.id === parseInt(session.user.id)) {
             toast.error('You cannot bid on your own card');
             return;
         }
-
-        if (!listing.user_card_id) {
-            toast.error('Invalid auction card');
+        if (listing.type !== 'USER_CARD' || !listing.user_card_id) {
+            toast.error('Bidding is only available for user cards');
             return;
         }
-
-        const biddingCard = await fetchCardForBidding(listing.user_card_id);
+        const biddingCard = await fetchCardForBidding(listing.id);
         if (biddingCard) {
             setSelectedCardForBidding(biddingCard);
             setBiddingModalOpen(true);
@@ -375,27 +389,24 @@ export default function MarketplacePage() {
     };
 
     const handleBidPlaced = () => {
-        fetchMarketplace();
+        fetchCards();
         fetchNotificationCount();
-    };
-
-    const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
-        setPage(newPage);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleSortChange = (event: SelectChangeEvent) => {
-        setSortBy(event.target.value);
     };
 
     const getRarityColor = (rarity: string) => {
         switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
+            case 'common':
+                return 'default' as const;
+            case 'uncommon':
+                return 'success' as const;
+            case 'rare':
+                return 'primary' as const;
+            case 'holo rare':
+                return 'secondary' as const;
+            case 'ultra rare':
+                return 'error' as const;
+            default:
+                return 'default' as const;
         }
     };
 
@@ -416,19 +427,11 @@ export default function MarketplacePage() {
     return (
         <Container sx={{ marginTop: 4, marginBottom: 4 }}>
             <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
-            {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
                 <IconButton onClick={toggleSidebar}>
                     <MenuIcon />
                 </IconButton>
-                <Image
-                    src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                    alt="Logo"
-                    width={120}
-                    height={60}
-                    priority
-                />
+                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" width={120} height={60} priority />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <IconButton
                         onClick={() => router.push('/notifications')}
@@ -438,7 +441,7 @@ export default function MarketplacePage() {
                             <NotificationIcon />
                         </Badge>
                     </IconButton>
-                    <IconButton onClick={() => fetchMarketplace()} title="Refresh">
+                    <IconButton onClick={fetchCards} title="Refresh">
                         <RefreshIcon />
                     </IconButton>
                     <Button variant="outlined" onClick={() => router.push('/wallet')} size="small">
@@ -450,33 +453,19 @@ export default function MarketplacePage() {
                     <Typography variant="body2">Welcome, {session?.user?.name}</Typography>
                 </Box>
             </Box>
-
-            {/* Page Title */}
             <Box sx={{ my: 3 }}>
                 <Typography variant="h4" gutterBottom>
                     Card Marketplace
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Typography variant="body1" color="text.secondary">
-                        Discover and purchase Pokemon cards from our catalog and other collectors
-                    </Typography>
-                    {pagination.total > 0 && (
-                        <Chip
-                            label={`${pagination.catalog_cards} Catalog • ${pagination.user_cards} User Cards`}
-                            variant="outlined"
-                            size="small"
-                        />
-                    )}
-                </Box>
+                <Typography variant="body1" color="text.secondary">
+                    Discover and purchase Pokemon cards from other collectors
+                </Typography>
             </Box>
-
-            {/* Search and Filters */}
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <FilterIcon sx={{ mr: 1 }} />
                     <Typography variant="h6">Search & Filters</Typography>
                 </Box>
-
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={3}>
                         <TextField
@@ -493,420 +482,258 @@ export default function MarketplacePage() {
                             }}
                         />
                     </Grid>
-
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={3}>
                         <FormControl fullWidth>
                             <InputLabel>Set</InputLabel>
                             <Select
                                 value={selectedSet}
                                 label="Set"
-                                onChange={(e) => setSelectedSet(e.target.value)}
+                                onChange={(e) => setSelectedSet(e.target.value as string)}
                             >
                                 <MenuItem value="">All Sets</MenuItem>
-                                {filterOptions.sets.map(set => (
-                                    <MenuItem key={set.name} value={set.name}>
-                                        {set.name} ({set.count})
+                                {availableSets.map((set) => (
+                                    <MenuItem key={set} value={set}>
+                                        {set}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
-
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={3}>
                         <FormControl fullWidth>
                             <InputLabel>Type</InputLabel>
                             <Select
                                 value={selectedType}
                                 label="Type"
-                                onChange={(e) => setSelectedType(e.target.value)}
+                                onChange={(e) => setSelectedType(e.target.value as string)}
                             >
                                 <MenuItem value="">All Types</MenuItem>
-                                {filterOptions.types.map(type => (
-                                    <MenuItem key={type.name} value={type.name}>
-                                        {type.name} ({type.count})
+                                {availableTypes.map((type) => (
+                                    <MenuItem key={type} value={type}>
+                                        {type}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
-
-                    <Grid item xs={12} md={2}>
-                        <FormControl fullWidth>
-                            <InputLabel>Rarity</InputLabel>
-                            <Select
-                                value={selectedRarity}
-                                label="Rarity"
-                                onChange={(e) => setSelectedRarity(e.target.value)}
-                            >
-                                <MenuItem value="">All Rarities</MenuItem>
-                                {filterOptions.rarities.map(rarity => (
-                                    <MenuItem key={rarity.name} value={rarity.name}>
-                                        {rarity.name} ({rarity.count})
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
-
                     <Grid item xs={12} md={3}>
                         <FormControl fullWidth>
                             <InputLabel>Sale Type</InputLabel>
                             <Select
                                 value={selectedSaleType}
                                 label="Sale Type"
-                                onChange={(e) => setSelectedSaleType(e.target.value)}
+                                onChange={(e) => setSelectedSaleType(e.target.value as string)}
                             >
-                                <MenuItem value="">All Types</MenuItem>
-                                <MenuItem value="CATALOG">
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        <StoreIcon sx={{ mr: 1, fontSize: 16 }} />
-                                        Catalog Cards
-                                    </Box>
-                                </MenuItem>
-                                <MenuItem value="FIXED">
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        <DollarIcon sx={{ mr: 1, fontSize: 16 }} />
-                                        Fixed Price
-                                    </Box>
-                                </MenuItem>
-                                <MenuItem value="AUCTION">
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        <GavelIcon sx={{ mr: 1, fontSize: 16 }} />
-                                        Auctions
-                                    </Box>
-                                </MenuItem>
+                                <MenuItem value="">All Sale Types</MenuItem>
+                                <MenuItem value="FIXED">Fixed Price</MenuItem>
+                                <MenuItem value="AUCTION">Auction</MenuItem>
                             </Select>
                         </FormControl>
-                    </Grid>
-                </Grid>
-
-                {/* Second row - Price range and sorting */}
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid item xs={12} md={2}>
-                        <TextField
-                            fullWidth
-                            label="Min Price"
-                            type="number"
-                            value={priceMin}
-                            onChange={(e) => setPriceMin(e.target.value)}
-                            InputProps={{
-                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                            }}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={2}>
-                        <TextField
-                            fullWidth
-                            label="Max Price"
-                            type="number"
-                            value={priceMax}
-                            onChange={(e) => setPriceMax(e.target.value)}
-                            InputProps={{
-                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                            }}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                        <FormControl fullWidth>
-                            <InputLabel>Sort By</InputLabel>
-                            <Select
-                                value={sortBy}
-                                label="Sort By"
-                                onChange={handleSortChange}
-                                startAdornment={<SortIcon sx={{ mr: 1 }} />}
-                            >
-                                {filterOptions.sort_options.map(option => (
-                                    <MenuItem key={option.value} value={option.value}>
-                                        {option.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                        <Button
-                            fullWidth
-                            variant="outlined"
-                            onClick={() => {
-                                setSearchTerm('');
-                                setSelectedSet('');
-                                setSelectedType('');
-                                setSelectedRarity('');
-                                setSelectedSaleType('');
-                                setPriceMin('');
-                                setPriceMax('');
-                                setSortBy('newest');
-                            }}
-                            sx={{ height: '56px' }}
-                        >
-                            Reset Filters
-                        </Button>
-                    </Grid>
-                    <Grid item xs={12} md={2}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            onClick={() => fetchMarketplace(true)}
-                            disabled={loading}
-                            sx={{ height: '56px' }}
-                        >
-                            {loading ? <CircularProgress size={24} /> : 'Apply Filters'}
-                        </Button>
                     </Grid>
                 </Grid>
             </Paper>
-
-            {/* Results Summary */}
-            {pagination.total > 0 && (
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="body2" color="text.secondary">
-                        Showing {pagination.showing} of {pagination.total} cards
-                        ({pagination.catalog_cards} catalog, {pagination.user_cards} user cards)
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Page {pagination.page} of {pagination.totalPages}
-                    </Typography>
-                </Box>
-            )}
-
-            {/* Error State */}
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
-                    Error: {error}
+                    {error.includes('Failed to fetch marketplace cards')
+                        ? `Unable to load marketplace cards. Please try again later or contact support. (${error})`
+                        : `Error: ${error}`}
                 </Alert>
             )}
-
-            {/* Loading State */}
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
                 </Box>
+            ) : cards.length === 0 ? (
+                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" color="text.secondary">
+                        No cards found matching your criteria
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Try adjusting your search or filters
+                    </Typography>
+                </Paper>
             ) : (
-                <>
-                    {/* Cards Grid */}
-                    {listings.length === 0 ? (
-                        <Paper sx={{ p: 4, textAlign: 'center' }}>
-                            <Typography variant="h6" color="text.secondary">
-                                No cards found matching your criteria
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Try adjusting your search or filters
-                            </Typography>
-                        </Paper>
-                    ) : (
-                        <>
-                            <Grid container spacing={3}>
-                                {listings.map((listing) => {
-                                    const isCardPurchasing = purchasingCards.has(listing.id);
-                                    const isCardBidding = listing.user_card_id ? biddingCards.has(listing.user_card_id) : false;
-                                    const isOwnCard = listing.owner.id === parseInt(session?.user?.id || '0');
-                                    const isAuctionActive = listing.sale_type === 'AUCTION' &&
-                                        listing.time_remaining && listing.time_remaining > 0;
+                <Grid container spacing={3}>
+                    {cards.map((listing) => {
+                        const isCardPurchasing = purchasingCards.has(listing.id);
+                        const isCardBidding = biddingCards.has(listing.id);
+                        const isOwnCard = listing.owner.id && listing.owner.id === parseInt(session?.user?.id || '0');
+                        const isAuctionActive =
+                            listing.sale_type === 'AUCTION' && listing.time_remaining && listing.time_remaining > 0;
 
-                                    return (
-                                        <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
-                                            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                                                {/* Card Image */}
-                                                <Box sx={{ position: 'relative' }}>
-                                                    <CardMedia
-                                                        component="img"
-                                                        height="200"
-                                                        image={listing.card.small_image_url || listing.card.image_url || '/placeholder-card.png'}
-                                                        alt={listing.card.name}
-                                                        sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
-                                                        onError={(e) => {
-                                                            (e.target as HTMLImageElement).src = '/placeholder-card.png';
-                                                        }}
-                                                    />
-
-                                                    {/* Listing Type Badge */}
-                                                    <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
-                                                        {listing.type === 'CATALOG' ? (
-                                                            <Chip
-                                                                icon={<StoreIcon />}
-                                                                label="Catalog"
-                                                                color="info"
-                                                                size="small"
-                                                                variant="filled"
-                                                            />
-                                                        ) : listing.sale_type === 'AUCTION' ? (
-                                                            <Chip
-                                                                icon={<GavelIcon />}
-                                                                label="Auction"
-                                                                color="secondary"
-                                                                size="small"
-                                                            />
-                                                        ) : (
-                                                            <Chip
-                                                                icon={<PersonIcon />}
-                                                                label="User"
-                                                                color="primary"
-                                                                size="small"
-                                                            />
-                                                        )}
-                                                    </Box>
-
-                                                    {/* Auction Status Badge */}
-                                                    {listing.sale_type === 'AUCTION' && (
-                                                        <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
-                                                            <Chip
-                                                                label={isAuctionActive ? 'Live' : 'Ended'}
-                                                                color={isAuctionActive ? 'success' : 'error'}
-                                                                size="small"
-                                                                variant="filled"
-                                                            />
-                                                        </Box>
-                                                    )}
-                                                </Box>
-
-                                                {/* Card Content */}
-                                                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                                    <Typography variant="h6" component="h3" gutterBottom noWrap>
-                                                        {listing.card.name}
-                                                    </Typography>
-
-                                                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                                                        {listing.card.set_name} • {listing.card.set_number}
-                                                    </Typography>
-
-                                                    <Chip
-                                                        label={listing.card.rarity}
-                                                        color={getRarityColor(listing.card.rarity)}
-                                                        size="small"
-                                                        sx={{ mb: 2, alignSelf: 'flex-start' }}
-                                                    />
-
-                                                    {/* Condition and Owner */}
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Condition: {listing.condition}
-                                                        </Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            by {listing.owner.name}
-                                                        </Typography>
-                                                    </Box>
-
-                                                    <Divider sx={{ my: 1 }} />
-
-                                                    {/* Price and Action */}
-                                                    <Box sx={{ mt: 'auto' }}>
-                                                        {listing.sale_type === 'FIXED' || listing.type === 'CATALOG' ? (
-                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <Typography variant="h6" color="primary.main">
-                                                                    {formatPrice(listing.current_price)}
-                                                                </Typography>
-                                                                <Button
-                                                                    variant="contained"
-                                                                    size="small"
-                                                                    onClick={() => handlePurchase(listing)}
-                                                                    disabled={isOwnCard}
-                                                                >
-                                                                    {isOwnCard ? (
-                                                                        'Your Card'
-                                                                    ) : (
-                                                                        'Buy Now'
-                                                                    )}
-                                                                </Button>
-                                                            </Box>
-                                                        ) : (
-                                                            <Box>
-                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                                                    <Typography variant="body2" color="text.secondary">
-                                                                        Current Bid:
-                                                                    </Typography>
-                                                                    <Typography variant="subtitle1" color="primary.main">
-                                                                        {formatPrice(listing.highest_bid || listing.reserve_price)}
-                                                                    </Typography>
-                                                                </Box>
-
-                                                                {isAuctionActive ? (
-                                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                                            <ClockIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                                                                            <Typography variant="body2" color="text.secondary">
-                                                                                Time left:
-                                                                            </Typography>
-                                                                        </Box>
-                                                                        <Typography variant="body2" color="error.main">
-                                                                            {formatTimeLeft(listing.time_remaining)}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                ) : (
-                                                                    <Typography variant="body2" color="error.main" align="center" sx={{ mb: 2 }}>
-                                                                        Auction Ended
-                                                                    </Typography>
-                                                                )}
-
-                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {listing.bid_count} bid{listing.bid_count !== 1 ? 's' : ''}
-                                                                    </Typography>
-                                                                    <Button
-                                                                        variant="contained"
-                                                                        color="secondary"
-                                                                        size="small"
-                                                                        onClick={() => handleBidClick(listing)}
-                                                                        disabled={!isAuctionActive || isOwnCard || isCardBidding}
-                                                                    >
-                                                                        {isCardBidding ? (
-                                                                            <CircularProgress size={20} />
-                                                                        ) : isOwnCard ? (
-                                                                            'Your Auction'
-                                                                        ) : !isAuctionActive ? (
-                                                                            'Auction Ended'
-                                                                        ) : (
-                                                                            'Place Bid'
-                                                                        )}
-                                                                    </Button>
-                                                                </Box>
-                                                            </Box>
-                                                        )}
-                                                    </Box>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    );
-                                })}
-                            </Grid>
-
-                            {/* Pagination */}
-                            {pagination.totalPages > 1 && (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                                    <Stack spacing={2}>
-                                        <Pagination
-                                            count={pagination.totalPages}
-                                            page={pagination.page}
-                                            onChange={handlePageChange}
-                                            color="primary"
-                                            size="large"
-                                            showFirstButton
-                                            showLastButton
+                        return (
+                            <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
+                                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <Box sx={{ position: 'relative' }}>
+                                        <CardMedia
+                                            component="img"
+                                            height="200"
+                                            image={
+                                                listing.card.small_image_url ||
+                                                listing.card.image_url ||
+                                                '/placeholder-card.png'
+                                            }
+                                            alt={listing.card.name}
+                                            sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = '/placeholder-card.png';
+                                            }}
                                         />
-                                        <Typography variant="body2" color="text.secondary" align="center">
-                                            Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                                            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                                            {pagination.total} cards
+                                        <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+                                            {listing.sale_type === 'AUCTION' ? (
+                                                <Chip
+                                                    icon={<GavelIcon />}
+                                                    label="Auction"
+                                                    color="secondary"
+                                                    size="small"
+                                                />
+                                            ) : (
+                                                <Chip
+                                                    icon={<DollarIcon />}
+                                                    label="Fixed"
+                                                    color="primary"
+                                                    size="small"
+                                                />
+                                            )}
+                                        </Box>
+                                        {listing.sale_type === 'AUCTION' && (
+                                            <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
+                                                <Chip
+                                                    label={isAuctionActive ? 'Live' : 'Ended'}
+                                                    color={isAuctionActive ? 'success' : 'error'}
+                                                    size="small"
+                                                    variant="filled"
+                                                />
+                                            </Box>
+                                        )}
+                                    </Box>
+                                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <Typography variant="h6" component="h3" gutterBottom noWrap>
+                                            {listing.card.name}
                                         </Typography>
-                                    </Stack>
-                                </Box>
-                            )}
-                        </>
-                    )}
-                </>
+                                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                                            {listing.card.set_name} • {listing.card.set_number}
+                                        </Typography>
+                                        <Chip
+                                            label={listing.card.rarity}
+                                            color={getRarityColor(listing.card.rarity)}
+                                            size="small"
+                                            sx={{ mb: 2, alignSelf: 'flex-start' }}
+                                        />
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Condition: {listing.condition}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                by {listing.owner.name}
+                                            </Typography>
+                                        </Box>
+                                        <Divider sx={{ my: 1 }} />
+                                        <Box sx={{ mt: 'auto' }}>
+                                            {listing.sale_type === 'FIXED' ? (
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                    }}
+                                                >
+                                                    <Typography variant="h6" color="primary.main">
+                                                        {formatPrice(listing.fixed_price)}
+                                                    </Typography>
+                                                    <Button
+                                                        variant="contained"
+                                                        size="small"
+                                                        onClick={() => handlePurchase(listing)}
+                                                        disabled={isCardPurchasing || isOwnCard}
+                                                    >
+                                                        {isCardPurchasing ? (
+                                                            <CircularProgress size={20} />
+                                                        ) : isOwnCard ? (
+                                                            'Your Card'
+                                                        ) : (
+                                                            'Buy Now'
+                                                        )}
+                                                    </Button>
+                                                </Box>
+                                            ) : (
+                                                <Box>
+                                                    <Box
+                                                        sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}
+                                                    >
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Current Bid:
+                                                        </Typography>
+                                                        <Typography variant="subtitle1" color="primary.main">
+                                                            {formatPrice(listing.highest_bid || listing.reserve_price)}
+                                                        </Typography>
+                                                    </Box>
+                                                    {isAuctionActive ? (
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                mb: 2,
+                                                            }}
+                                                        >
+                                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                                <ClockIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    Time left:
+                                                                </Typography>
+                                                            </Box>
+                                                            <Typography variant="body2" color="error.main">
+                                                                {formatTimeLeft(listing.time_remaining)}
+                                                            </Typography>
+                                                        </Box>
+                                                    ) : (
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="error.main"
+                                                            align="center"
+                                                            sx={{ mb: 2 }}
+                                                        >
+                                                            Auction Ended
+                                                        </Typography>
+                                                    )}
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                        }}
+                                                    >
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {listing.bid_count} bid{listing.bid_count !== 1 ? 's' : ''}
+                                                        </Typography>
+                                                        <Button
+                                                            variant="contained"
+                                                            color="secondary"
+                                                            size="small"
+                                                            onClick={() => handleBidClick(listing)}
+                                                            disabled={!isAuctionActive || isOwnCard || isCardBidding}
+                                                        >
+                                                            {isCardBidding ? (
+                                                                <CircularProgress size={20} />
+                                                            ) : isOwnCard ? (
+                                                                'Your Auction'
+                                                            ) : !isAuctionActive ? (
+                                                                'Auction Ended'
+                                                            ) : (
+                                                                'Place Bid'
+                                                            )}
+                                                        </Button>
+                                                    </Box>
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        );
+                    })}
+                </Grid>
             )}
-
-            {/* Purchase Confirmation Modal */}
-            <PurchaseConfirmationModal
-                open={purchaseModalOpen}
-                onClose={() => {
-                    setPurchaseModalOpen(false);
-                    setSelectedListingForPurchase(null);
-                }}
-                listingData={selectedListingForPurchase}
-                onPurchaseComplete={handlePurchaseComplete}
-            />
-
-            {/* Bidding Modal */}
             <BiddingModal
                 open={biddingModalOpen}
                 onClose={() => {

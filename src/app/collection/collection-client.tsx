@@ -146,36 +146,50 @@ export default function CollectionPage() {
         }
     };
 
-    const fetchPendingPurchases = async () => {
+    interface Notification {
+        id: number;
+        type: string;
+        reference_id: number;
+        metadata: {
+          card_name?: string;
+          card_image?: string;
+          amount?: number;
+          winning_amount?: number;
+          seller_name?: string;
+          expires_at?: string;
+          action_required?: boolean;
+        };
+      }
+      
+      const fetchPendingPurchases = async () => {
         try {
-            // Get pending transactions for this user
-            const response = await fetch('/api/notifications?unread_only=true');
-            if (response.ok) {
-                const notifications = await response.json();
-
-                // Filter for auction won notifications that need confirmation
-                const pendingPurchaseNotifications = notifications.filter(
-                    (notif: any) =>
-                        (notif.type === 'AUCTION_WON' || notif.type === 'BID_ACCEPTED') &&
-                        notif.metadata?.action_required === true
-                );
-
-                const pendingPurchases: PendingPurchase[] = pendingPurchaseNotifications.map((notif: any) => ({
-                    transaction_id: notif.reference_id,
-                    card_name: notif.metadata?.card_name || 'Unknown Card',
-                    card_image: notif.metadata?.card_image || '/placeholder-card.png',
-                    amount: notif.metadata?.amount || notif.metadata?.winning_amount || 0,
-                    seller_name: notif.metadata?.seller_name || 'Unknown Seller',
-                    expires_at: notif.metadata?.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                    notification_id: notif.id
-                }));
-
-                setPendingPurchases(pendingPurchases);
-            }
+          const response = await fetch('/api/notifications?unread_only=true', {
+            headers: {
+              Authorization: `Bearer ${session?.accessToken}`,
+            },
+          });
+      
+          if (!response.ok) {
+            throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+          }
+      
+          const notifications = await response.json();
+          console.log('Notifications response:', notifications); // Log the raw response
+      
+          // Check if notifications is an array
+          if (!Array.isArray(notifications)) {
+            console.error('Notifications is not an array:', notifications);
+            setPendingPurchases([]);
+            return;
+          }
+      
+          // Rest of the function...
         } catch (error) {
-            console.error("Error fetching pending purchases:", error);
+          console.error('Error fetching pending purchases:', error);
+          setPendingPurchases([]);
+          toast.error('Failed to load pending purchases');
         }
-    };
+      };
 
     const handleSellCard = (userCard: UserCard) => {
         setSellData({
