@@ -57,20 +57,28 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
         try {
             setLoading(true);
             setError(null);
-
+    
             const response = await fetch('/api/notifications?unread_only=true');
-
+    
             if (response.ok) {
                 const data = await response.json();
-                setNotifications(data.slice(0, 5)); // Show only latest 5 in dropdown
-                setUnreadCount(data.length);
+    
+                // Ensure data is an array
+                const notificationsArray = Array.isArray(data)
+                    ? data
+                    : Array.isArray(data.notifications)
+                    ? data.notifications
+                    : [];
+    
+                setNotifications(notificationsArray.slice(0, 5)); // Show only latest 5
+                setUnreadCount(notificationsArray.length);
             } else {
                 throw new Error('Failed to fetch notifications');
             }
         } catch (err) {
             console.error('Error fetching notifications:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
-
+    
             // Fallback to sample notifications
             const sampleNotifications: Notification[] = [
                 {
@@ -79,16 +87,16 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
                     title: 'Auction Won!',
                     message: 'Congratulations! You won the auction.',
                     created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-                    is_read: false
+                    is_read: false,
                 },
                 {
                     id: 2,
                     type: 'BID_OUTBID',
-                    title: 'You\'ve been outbid',
+                    title: "You've been outbid",
                     message: 'Your bid has been exceeded by another bidder.',
                     created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-                    is_read: false
-                }
+                    is_read: false,
+                },
             ];
             setNotifications(sampleNotifications);
             setUnreadCount(sampleNotifications.length);
@@ -253,165 +261,188 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
                     <NotificationsIcon />
                 </Badge>
             </IconButton>
-
             <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleClose}
-                PaperProps={{
-                    sx: {
-                        width: 400,
-                        maxHeight: 500,
-                        overflow: 'auto',
-                        mt: 1
-                    }
-                }}
-                anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                }}
+  anchorEl={anchorEl}
+  open={Boolean(anchorEl)}
+  onClose={handleClose}
+  PaperProps={{
+    sx: {
+      width: 400,
+      maxHeight: 500,
+      overflow: 'auto',
+      mt: 1,
+    },
+  }}
+  anchorOrigin={{
+    vertical: 'bottom',
+    horizontal: 'right',
+  }}
+  transformOrigin={{
+    vertical: 'top',
+    horizontal: 'right',
+  }}
+>
+  {[
+    // Header
+    <Box key="header" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" component="h3">
+          Notifications
+        </Typography>
+        {unreadCount > 0 && (
+          <Button size="small" onClick={markAllAsRead} sx={{ textTransform: 'none' }}>
+            Mark all read
+          </Button>
+        )}
+      </Box>
+      {error && (
+        <Typography variant="caption" color="error" display="block">
+          {error} - Showing sample data
+        </Typography>
+      )}
+    </Box>,
+
+    // Loading State
+    loading && (
+      <Box key="loading" sx={{ p: 3, textAlign: 'center' }}>
+        <CircularProgress size={24} />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Loading notifications...
+        </Typography>
+      </Box>
+    ),
+
+    // Notifications List
+    !loading &&
+      (notifications.length === 0 ? (
+        <Box key="empty" sx={{ p: 3, textAlign: 'center' }}>
+          <NotificationsIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+          <Typography variant="body2" color="text.secondary">
+            No new notifications
+          </Typography>
+        </Box>
+      ) : (
+        <List key="notifications" sx={{ p: 0 }}>
+          {notifications.map((notification, index) => [
+            <ListItem
+              key={notification.id}
+              sx={{
+                bgcolor: notification.is_read ? 'transparent' : 'action.hover',
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: 'action.selected',
+                },
+              }}
+              onClick={() => markAsRead(notification.id)}
             >
-                {/* Header */}
-                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" component="h3">
-                            Notifications
-                        </Typography>
-                        {unreadCount > 0 && (
-                            <Button
-                                size="small"
-                                onClick={markAllAsRead}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                Mark all read
-                            </Button>
-                        )}
-                    </Box>
-                    {error && (
-                        <Typography variant="caption" color="error" display="block">
-                            {error} - Showing sample data
-                        </Typography>
-                    )}
-                </Box>
-
-                {/* Loading State */}
-                {loading && (
-                    <Box sx={{ p: 3, textAlign: 'center' }}>
-                        <CircularProgress size={24} />
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            Loading notifications...
-                        </Typography>
-                    </Box>
-                )}
-
-                {/* Notifications List */}
-                {!loading && (
-                    <>
-                        {notifications.length === 0 ? (
-                            <Box sx={{ p: 3, textAlign: 'center' }}>
-                                <NotificationsIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                                <Typography variant="body2" color="text.secondary">
-                                    No new notifications
-                                </Typography>
-                            </Box>
-                        ) : (
-                            <List sx={{ p: 0 }}>
-                                {notifications.map((notification, index) => [
-                                    <ListItem
-                                        key={notification.id}
-                                        sx={{
-                                            bgcolor: notification.is_read ? 'transparent' : 'action.hover',
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                bgcolor: 'action.selected'
-                                            }
-                                        }}
-                                        onClick={() => markAsRead(notification.id)}
-                                    >
-                                        <ListItemAvatar>
-                                            <Avatar sx={{ bgcolor: 'transparent' }}>
-                                                {getNotificationIcon(notification.type)}
-                                            </Avatar>
-                                        </ListItemAvatar>
-                                        <ListItemText
-                                            primary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                    <Typography variant="subtitle2" component="span">
-                                                        {notification.title}
-                                                    </Typography>
-                                                    <Chip
-                                                        label={notification.type.replace('_', ' ')}
-                                                        size="small"
-                                                        color={getNotificationColor(notification.type)}
-                                                        sx={{
-                                                            fontSize: '0.6rem',
-                                                            height: 18,
-                                                            '& .MuiChip-label': {
-                                                                px: 0.5
-                                                            }
-                                                        }}
-                                                    />
-                                                </Box>
-                                            }
-                                            secondary={
-                                                <Box>
-                                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }} component="span">
-                                                        {notification.message}
-                                                    </Typography>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                                        <Typography variant="caption" sx={{ fontWeight: 'medium', color: 'text.primary' }} component="span">
-                                                            {getCardName(notification)}
-                                                        </Typography>
-                                                        {getAmount(notification) && (
-                                                            <Typography variant="caption" color="primary.main" sx={{ fontWeight: 'bold' }} component="span">
-                                                                {getAmount(notification)}
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-                                                    <Typography variant="caption" color="text.disabled" component="span">
-                                                        {formatTimeAgo(notification.created_at)}
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                        />
-                                        {!notification.is_read && (
-                                            <Box
-                                                sx={{
-                                                    width: 8,
-                                                    height: 8,
-                                                    borderRadius: '50%',
-                                                    bgcolor: 'primary.main',
-                                                    ml: 1
-                                                }}
-                                            />
-                                        )}
-                                    </ListItem>,
-                                    index < notifications.length - 1 ? <Divider key={`divider-${notification.id}`} variant="inset" component="li" /> : null
-                                ].filter(Boolean))}
-                            </List>
-                        )}
-                    </>
-                )}
-
-                {/* Footer */}
-                {!loading && notifications.length > 0 && [
-                    <Divider key="footer-divider" />,
-                    <Box key="footer" sx={{ p: 1 }}>
-                        <Button
-                            fullWidth
-                            size="small"
-                            sx={{ textTransform: 'none' }}
-                            onClick={handleViewAll}
+              <ListItemAvatar>
+                <Avatar sx={{ bgcolor: 'transparent' }}>
+                  {getNotificationIcon(notification.type)}
+                </Avatar>
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Typography variant="subtitle2" component="span">
+                      {notification.title}
+                    </Typography>
+                    <Chip
+                      label={notification.type.replace('_', ' ')}
+                      size="small"
+                      color={getNotificationColor(notification.type)}
+                      sx={{
+                        fontSize: '0.6rem',
+                        height: 18,
+                        '& .MuiChip-label': {
+                          px: 0.5,
+                        },
+                      }}
+                    />
+                  </Box>
+                }
+                secondary={
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 0.5 }}
+                      component="span"
+                    >
+                      {notification.message}
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 0.5,
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{ fontWeight: 'medium', color: 'text.primary' }}
+                        component="span"
+                      >
+                        {getCardName(notification)}
+                      </Typography>
+                      {getAmount(notification) && (
+                        <Typography
+                          variant="caption"
+                          color="primary.main"
+                          sx={{ fontWeight: 'bold' }}
+                          component="span"
                         >
-                            View All Notifications
-                        </Button>
+                          {getAmount(notification)}
+                        </Typography>
+                      )}
                     </Box>
-                ]}
-            </Menu>
+                    <Typography
+                      variant="caption"
+                      color="text.disabled"
+                      component="span"
+                    >
+                      {formatTimeAgo(notification.created_at)}
+                    </Typography>
+                  </Box>
+                }
+              />
+              {!notification.is_read && (
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: 'primary.main',
+                    ml: 1,
+                  }}
+                />
+              )}
+            </ListItem>,
+            index < notifications.length - 1 ? (
+              <Divider key={`divider-${notification.id}`} variant="inset" component="li" />
+            ) : null,
+          ].filter(Boolean))}
+        </List>
+      )),
+
+    // Footer
+    !loading &&
+      notifications.length > 0 && [
+        <Divider key="footer-divider" />,
+        <Box key="footer" sx={{ p: 1 }}>
+          <Button
+            fullWidth
+            size="small"
+            sx={{ textTransform: 'none' }}
+            onClick={handleViewAll}
+          >
+            View All Notifications
+          </Button>
+        </Box>,
+      ],
+  ].filter(Boolean)}
+</Menu>
+
         </Box>
     );
 }

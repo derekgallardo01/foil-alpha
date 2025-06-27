@@ -17,6 +17,6 @@
     "baseUrl": ".",
     "paths": { "@/*": ["./src/*"], "@/app/*": ["./src/app/*"] }
   },
-  "include": ["src/**/*", ".next/types/**/*.ts", "types/**/*.ts", "scripts/**/*.ts", "backups/**/*.ts"],
+  "include": ["src/**/*", ".next/types/**/*.ts", "types/**/*.ts", "scripts/**/*.ts", "backups/**/*.ts", "test-mysql12.js"],
   "exclude": ["node_modules"]
 }

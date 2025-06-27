@@ -11,71 +11,72 @@ export async function GET(request: NextRequest) {
         const search = searchParams.get('search') || '';
         const setName = searchParams.get('set') || '';
         const cardType = searchParams.get('type') || '';
+        const saleType = searchParams.get('sale_type') || ''; // Add sale_type
         const rarity = searchParams.get('rarity') || '';
         const priceMin = searchParams.get('price_min') ? parseFloat(searchParams.get('price_min')!) : null;
         const priceMax = searchParams.get('price_max') ? parseFloat(searchParams.get('price_max')!) : null;
 
+        if (page < 1 || limit < 1) {
+            return NextResponse.json(
+                { error: 'Invalid pagination parameters' },
+                { status: 400 }
+            );
+        }
+
         const skip = (page - 1) * limit;
 
-        // Build card filter for both types of listings
         const cardFilter: any = {};
+        if (search) cardFilter.name = { contains: search, mode: 'insensitive' };
+        if (setName) cardFilter.set_name = setName;
+        if (cardType) cardFilter.card_type = cardType;
+        if (rarity) cardFilter.rarity = rarity;
 
-        if (search) {
-            cardFilter.name = { contains: search, mode: 'insensitive' };
-        }
-        if (setName) {
-            cardFilter.set_name = setName;
-        }
-        if (cardType) {
-            cardFilter.card_type = cardType;
-        }
-        if (rarity) {
-            cardFilter.rarity = rarity;
+        const userCardFilter: any = {
+            is_for_sale: true,
+            is_sold: false,
+        };
+        if (saleType) {
+            userCardFilter.sale_type = saleType;
+        } else {
+            userCardFilter.OR = [
+                { sale_type: 'FIXED' },
+                { sale_type: 'AUCTION', auction_end: { gt: new Date() } },
+            ];
         }
 
-        console.log('Marketplace query filters:', { search, setName, cardType, rarity, priceMin, priceMax });
-
-        // Get two types of listings in parallel:
-        // 1. Cards from catalog that aren't owned yet (new cards available for purchase)
-        // 2. User cards that are for sale (resales)
+        console.log('Marketplace query filters:', {
+            search,
+            setName,
+            cardType,
+            saleType,
+            rarity,
+            priceMin,
+            priceMax,
+            page,
+            limit,
+        });
 
         const [catalogCards, userCardsForSale, totalCatalogCount, totalUserCardsCount] = await Promise.all([
-            // 1. Catalog cards not owned by anyone yet
             prisma.card.findMany({
                 where: {
                     ...cardFilter,
-                    userCards: {
-                        none: {} // Cards that have NO UserCard entries (not owned yet)
-                    }
+                    userCards: { none: {} },
                 },
                 include: {
                     pokemonSet: true,
                     rarity_ref: true,
                     subtype_ref: true,
                     supertype_ref: true,
-                    _count: {
-                        select: { userCards: true }
-                    }
+                    _count: { select: { userCards: true } },
                 },
                 skip,
                 take: limit,
-                orderBy: { created_at: 'desc' }
+                orderBy: { created_at: 'desc' },
             }),
-
-            // 2. User cards for sale
             prisma.userCard.findMany({
                 where: {
-                    is_for_sale: true,
-                    is_sold: false,
-                    // Add auction filter if needed
-                    OR: [
-                        { sale_type: 'FIXED' },
-                        {
-                            sale_type: 'AUCTION',
-                            auction_end: { gt: new Date() }
-                        }
-                    ],
-                    card: cardFilter
+                    ...userCardFilter,
+                    card: cardFilter,
                 },
                 include: {
                     card: {
@@ -84,74 +85,47 @@ export async function GET(request: NextRequest) {
                             rarity_ref: true,
                             subtype_ref: true,
                             supertype_ref: true,
-                        }
+                        },
                     },
                     owner: {
-                        select: {
-                            id: true,
-                            name: true,
-                            role: true
-                        }
+                        select: { id: true, name: true, role: true },
                     },
                     bids: {
                         where: { is_active: true },
                         orderBy: { amount: 'desc' },
                         take: 1,
                         include: {
-                            bidder: {
-                                select: { id: true, name: true }
-                            }
-                        }
+                            bidder: { select: { id: true, name: true } },
+                        },
                     },
                     _count: {
-                        select: {
-                            bids: {
-                                where: { is_active: true }
-                            }
-                        }
-                    }
+                        select: { bids: { where: { is_active: true } } },
+                    },
                 },
                 skip,
                 take: limit,
-                orderBy: { created_at: 'desc' }
+                orderBy: { created_at: 'desc' },
             }),
-
-            // Count totals
             prisma.card.count({
                 where: {
                     ...cardFilter,
-                    userCards: { none: {} }
-                }
+                    userCards: { none: {} },
+                },
             }),
-
             prisma.userCard.count({
                 where: {
-                    is_for_sale: true,
-                    is_sold: false,
-                    OR: [
-                        { sale_type: 'FIXED' },
-                        {
-                            sale_type: 'AUCTION',
-                            auction_end: { gt: new Date() }
-                        }
-                    ],
-                    card: cardFilter
-                }
-            })
+                    ...userCardFilter,
+                    card: cardFilter,
+                },
+            }),
         ]);
 
-        console.log(`Found ${catalogCards.length} catalog cards and ${userCardsForSale.length} user cards for sale`);
-
-        // Process listings
         const listings = [];
-
-        // Process catalog cards (new cards from admin/system)
         for (const card of catalogCards) {
-            // Apply price filter if specified
             if (priceMin !== null && (!card.market_price || Number(card.market_price) < priceMin)) continue;
             if (priceMax !== null && (!card.market_price || Number(card.market_price) > priceMax)) continue;
 
-            const listing = {
+            listings.push({
                 id: `catalog-${card.id}`,
                 type: 'CATALOG',
                 card: {
@@ -168,11 +142,7 @@ export async function GET(request: NextRequest) {
                     subtype_info: card.subtype_ref,
                     supertype_info: card.supertype_ref,
                 },
-                owner: {
-                    id: null,
-                    name: 'TCG Market',
-                    role: 'system'
-                },
+                owner: { id: null, name: 'TCG Market', role: 'system' },
                 condition: 'Mint',
                 sale_type: 'FIXED',
                 current_price: card.market_price ? Number(card.market_price) : 0,
@@ -184,29 +154,23 @@ export async function GET(request: NextRequest) {
                 time_remaining: null,
                 is_auction_expired: false,
                 notes: 'New card from Pokemon TCG catalog',
-                availability: 'IN_STOCK'
-            };
-
-            listings.push(listing);
+                availability: 'IN_STOCK',
+            });
         }
 
-        // Process user cards for sale
         for (const userCard of userCardsForSale) {
             try {
-                // Calculate current price
                 const highestBid = userCard.bids[0] ? Number(userCard.bids[0].amount) : null;
-                const current_price = userCard.sale_type === 'FIXED'
-                    ? Number(userCard.fixed_price || 0)
-                    : (highestBid || Number(userCard.reserve_price || 0));
+                const current_price =
+                    userCard.sale_type === 'FIXED'
+                        ? Number(userCard.fixed_price || 0)
+                        : highestBid || Number(userCard.reserve_price || 0);
 
-                // Apply price filter
                 if (priceMin !== null && current_price < priceMin) continue;
                 if (priceMax !== null && current_price > priceMax) continue;
 
-                // Calculate auction time remaining
                 let time_remaining = null;
                 let is_auction_expired = false;
-
                 if (userCard.sale_type === 'AUCTION' && userCard.auction_end) {
                     const endTime = new Date(userCard.auction_end).getTime();
                     const now = Date.now();
@@ -214,7 +178,7 @@ export async function GET(request: NextRequest) {
                     is_auction_expired = time_remaining <= 0;
                 }
 
-                const listing = {
+                listings.push({
                     id: `user-${userCard.id}`,
                     type: 'USER_CARD',
                     user_card_id: userCard.id,
@@ -235,7 +199,7 @@ export async function GET(request: NextRequest) {
                     owner: {
                         id: userCard.owner.id,
                         name: userCard.owner.name,
-                        role: userCard.owner.role
+                        role: userCard.owner.role,
                     },
                     condition: userCard.condition,
                     sale_type: userCard.sale_type,
@@ -249,20 +213,15 @@ export async function GET(request: NextRequest) {
                     time_remaining,
                     is_auction_expired,
                     notes: userCard.notes,
-                    availability: 'FOR_SALE'
-                };
-
-                listings.push(listing);
-
+                    availability: 'FOR_SALE',
+                });
             } catch (error) {
-                console.error('Error processing user card listing:', error);
+                console.error(`Error processing userCard ${userCard.id}:`, error);
                 continue;
             }
         }
 
-        // Sort all listings by price, date, or other criteria
         listings.sort((a, b) => {
-            // Prioritize catalog cards (new) over user cards, then by price
             if (a.type === 'CATALOG' && b.type === 'USER_CARD') return -1;
             if (a.type === 'USER_CARD' && b.type === 'CATALOG') return 1;
             return a.current_price - b.current_price;
@@ -270,7 +229,7 @@ export async function GET(request: NextRequest) {
 
         const totalCount = totalCatalogCount + totalUserCardsCount;
 
-        console.log(`Returning ${listings.length} processed listings (${catalogCards.length} catalog + ${userCardsForSale.length} user)`);
+        console.log(`Returning ${listings.length} listings (Catalog: ${catalogCards.length}, User: ${userCardsForSale.length})`);
 
         return NextResponse.json({
             listings,
@@ -280,25 +239,39 @@ export async function GET(request: NextRequest) {
                 total: totalCount,
                 totalPages: Math.ceil(totalCount / limit),
                 catalog_cards: totalCatalogCount,
-                user_cards: totalUserCardsCount
+                user_cards: totalUserCardsCount,
             },
             filters: {
-                sets: await getAvailableSets(),
-                types: await getAvailableTypes(),
-                rarities: await getAvailableRarities(),
-                price_range: await getPriceRange()
-            }
+                sets: await getAvailableSets().catch((err) => {
+                    console.error('Error fetching sets:', err);
+                    return [];
+                }),
+                types: await getAvailableTypes().catch((err) => {
+                    console.error('Error fetching types:', err);
+                    return [];
+                }),
+                rarities: await getAvailableRarities().catch((err) => {
+                    console.error('Error fetching rarities:', err);
+                    return [];
+                }),
+                price_range: await getPriceRange().catch((err) => {
+                    console.error('Error fetching price range:', err);
+                    return { min: 0, max: 1000, avg: 50 };
+                }),
+            },
         });
-
-    } catch (error) {
-        console.error('Error fetching marketplace:', error);
+    } catch (error: any) {
+        console.error('Marketplace API error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+        });
         return NextResponse.json(
-            { error: 'Failed to fetch marketplace listings' },
+            { error: 'Failed to fetch marketplace listings', details: error.message },
             { status: 500 }
         );
     }
 }
-
 // Helper functions to get filter options
 async function getAvailableSets() {
     const sets = await prisma.card.groupBy({

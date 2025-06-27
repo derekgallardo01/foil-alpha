@@ -1,4 +1,3 @@
-// src/app/marketplace/marketplace-client.tsx - Fixed loading states
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -24,7 +23,7 @@ import {
     InputAdornment,
     Paper,
     Divider,
-    Badge
+    Badge,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -34,7 +33,7 @@ import {
     Gavel as GavelIcon,
     FilterList as FilterIcon,
     Notifications as NotificationIcon,
-    Refresh as RefreshIcon
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
@@ -50,12 +49,18 @@ interface Card {
     card_type: string;
     image_url: string;
     small_image_url: string;
+    set?: any;
+    rarity_info?: any;
+    subtype_info?: any;
+    supertype_info?: any;
 }
 
-interface UserCard {
-    id: number;
+interface Listing {
+    id: string; // e.g., "catalog-123" or "user-456"
+    type: 'CATALOG' | 'USER_CARD';
+    user_card_id?: number; // Only for USER_CARD
     card: Card;
-    owner: { id: number; name: string };
+    owner: { id: number | null; name: string; role?: string };
     condition: string;
     sale_type: 'FIXED' | 'AUCTION';
     fixed_price: number | null;
@@ -63,19 +68,29 @@ interface UserCard {
     auction_end: string | null;
     current_price: number;
     highest_bid: number | null;
+    highest_bidder?: { id: number; name: string } | null;
     bid_count: number;
     time_remaining: number | null;
     is_auction_expired?: boolean;
     notes: string | null;
+    availability: 'IN_STOCK' | 'FOR_SALE';
 }
 
 interface MarketplaceResponse {
-    listings: UserCard[];
+    listings: Listing[];
     pagination: {
         page: number;
         limit: number;
         total: number;
         totalPages: number;
+        catalog_cards: number;
+        user_cards: number;
+    };
+    filters: {
+        sets: Array<{ name: string; count: number }>;
+        types: Array<{ name: string; count: number }>;
+        rarities: Array<{ name: string; count: number }>;
+        price_range: { min: number; max: number; avg: number };
     };
 }
 
@@ -104,7 +119,7 @@ export default function MarketplacePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-    const [cards, setCards] = useState<UserCard[]>([]);
+    const [cards, setCards] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -112,18 +127,16 @@ export default function MarketplacePage() {
     const [selectedType, setSelectedType] = useState('');
     const [selectedSaleType, setSelectedSaleType] = useState('');
     const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [availableSets, setAvailableSets] = useState<string[]>([]);
+    const [availableTypes, setAvailableTypes] = useState<string[]>([]);
 
     // Bidding modal state
     const [biddingModalOpen, setBiddingModalOpen] = useState(false);
     const [selectedCardForBidding, setSelectedCardForBidding] = useState<BiddingUserCard | null>(null);
 
-    // FIXED: Individual loading states for each card
-    const [purchasingCards, setPurchasingCards] = useState<Set<number>>(new Set());
-    const [biddingCards, setBiddingCards] = useState<Set<number>>(new Set()); // New: track bidding loading per card
-
-    // Extract unique sets and types from cards for filters
-    const availableSets = Array.from(new Set(cards.map(card => card.card.set_name))).sort();
-    const availableTypes = Array.from(new Set(cards.map(card => card.card.card_type))).sort();
+    // Individual loading states for each card
+    const [purchasingCards, setPurchasingCards] = useState<Set<string>>(new Set());
+    const [biddingCards, setBiddingCards] = useState<Set<string>>(new Set());
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -146,22 +159,50 @@ export default function MarketplacePage() {
             setError(null);
             const params = new URLSearchParams();
 
-            if (searchTerm) params.append('search', searchTerm);
-            if (selectedSet) params.append('set', selectedSet);
-            if (selectedType) params.append('type', selectedType);
-            if (selectedSaleType) params.append('sale_type', selectedSaleType);
+            if (searchTerm.trim()) {
+                params.append('search', encodeURIComponent(searchTerm.trim()));
+            }
+            if (selectedSet && availableSets.includes(selectedSet)) {
+                params.append('set', encodeURIComponent(selectedSet));
+            }
+            if (selectedType && availableTypes.includes(selectedType)) {
+                params.append('type', encodeURIComponent(selectedType));
+            }
+            if (selectedSaleType && ['FIXED', 'AUCTION'].includes(selectedSaleType)) {
+                params.append('sale_type', selectedSaleType);
+            }
 
             console.log('Fetching marketplace with params:', params.toString());
 
             const response = await fetch(`/api/marketplace?${params.toString()}`);
 
             if (!response.ok) {
-                throw new Error('Failed to fetch marketplace cards');
+                const contentType = response.headers.get('content-type');
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (jsonError) {
+                    errorData = { rawBody: await response.text() };
+                }
+                console.error('API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType,
+                    errorData,
+                    url: response.url,
+                });
+                throw new Error(
+                    errorData.details
+                        ? `Failed to fetch marketplace cards: ${errorData.details}`
+                        : `Failed to fetch marketplace cards: ${response.status} ${response.statusText}`
+                );
             }
 
             const data: MarketplaceResponse = await response.json();
             console.log('Marketplace data:', data);
             setCards(data.listings || []);
+            setAvailableSets(data.filters.sets.map((s) => s.name).sort());
+            setAvailableTypes(data.filters.types.map((t) => t.name).sort());
         } catch (err) {
             console.error('Marketplace fetch error:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
@@ -170,22 +211,21 @@ export default function MarketplacePage() {
         }
     };
 
-    // FIXED: Fetch detailed card data for bidding modal with individual loading
-    const fetchCardForBidding = async (userCardId: number): Promise<BiddingUserCard | null> => {
+    const fetchCardForBidding = async (listingId: string): Promise<BiddingUserCard | null> => {
+        if (!listingId.startsWith('user-')) {
+            toast.error('Bidding is only available for user cards');
+            return null;
+        }
+        const userCardId = parseInt(listingId.replace('user-', ''));
         try {
-            // Add this card to bidding loading state
-            setBiddingCards(prev => new Set(prev).add(userCardId));
-
-            // Get basic card info
+            setBiddingCards((prev) => new Set(prev).add(listingId));
             const cardResponse = await fetch(`/api/user-cards/${userCardId}`);
             if (!cardResponse.ok) throw new Error('Failed to fetch card details');
             const cardData = await cardResponse.json();
 
-            // Get bid history
             const bidsResponse = await fetch(`/api/bids?user_card_id=${userCardId}`);
             const bidsData = bidsResponse.ok ? await bidsResponse.json() : [];
 
-            // Transform to BiddingUserCard format
             const biddingCard: BiddingUserCard = {
                 id: cardData.id,
                 card: cardData.card,
@@ -199,12 +239,14 @@ export default function MarketplacePage() {
                 bid_count: bidsData.length,
                 time_left_ms: cardData.auction_end ? new Date(cardData.auction_end).getTime() - Date.now() : null,
                 is_auction_active: cardData.auction_end ? new Date(cardData.auction_end) > new Date() : false,
-                bids: bidsData.map((bid: any) => ({
-                    id: bid.id,
-                    amount: Number(bid.amount),
-                    bidder: bid.bidder,
-                    created_at: bid.created_at
-                })).sort((a: any, b: any) => Number(b.amount) - Number(a.amount)) // Sort by amount descending
+                bids: bidsData
+                    .map((bid: any) => ({
+                        id: bid.id,
+                        amount: Number(bid.amount),
+                        bidder: bid.bidder,
+                        created_at: bid.created_at,
+                    }))
+                    .sort((a: any, b: any) => Number(b.amount) - Number(a.amount)),
             };
 
             return biddingCard;
@@ -213,10 +255,9 @@ export default function MarketplacePage() {
             toast.error('Failed to load card details');
             return null;
         } finally {
-            // Remove this card from bidding loading state
-            setBiddingCards(prev => {
+            setBiddingCards((prev) => {
                 const newSet = new Set(prev);
-                newSet.delete(userCardId);
+                newSet.delete(listingId);
                 return newSet;
             });
         }
@@ -235,92 +276,112 @@ export default function MarketplacePage() {
         }
     }, [searchTerm, selectedSet, selectedType, selectedSaleType, status]);
 
-    // Auto-refresh every 30 seconds for live auction updates
     useEffect(() => {
         if (status === 'authenticated') {
             const interval = setInterval(() => {
                 fetchCards();
                 fetchNotificationCount();
             }, 30000);
-
             return () => clearInterval(interval);
         }
     }, [status]);
 
     const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `${Number(price).toFixed(2)}`;
+        return price != null ? `$${Number(price).toFixed(2)}` : 'N/A';
     };
 
     const formatTimeLeft = (timeLeftMs: number | null) => {
         if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
         const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
         if (days > 0) return `${days}d ${hours}h`;
         if (hours > 0) return `${hours}h ${minutes}m`;
         return `${minutes}m`;
     };
 
-    const handlePurchase = async (userCard: UserCard) => {
+    const handlePurchase = async (listing: Listing) => {
         if (!session?.user?.id) {
             toast.error('Please login to purchase cards');
             return;
         }
-
-        if (userCard.owner.id === parseInt(session.user.id)) {
+        if (listing.owner.id && listing.owner.id === parseInt(session.user.id)) {
             toast.error('You cannot buy your own card');
             return;
         }
-
-        setPurchasingCards(prev => new Set(prev).add(userCard.id));
-
-        try {
-            const response = await fetch('/api/marketplace/purchase', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_card_id: userCard.id
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                toast.success(`Successfully purchased ${data.card_name} for ${data.purchase_price}!`);
-                fetchCards(); // Refresh the marketplace
-                fetchNotificationCount(); // Refresh notifications
-            } else {
-                toast.error(data.error || 'Failed to purchase card');
+        if (listing.type === 'CATALOG') {
+            setPurchasingCards((prev) => new Set(prev).add(listing.id));
+            try {
+                const response = await fetch('/api/marketplace/purchase-catalog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_id: listing.card.id }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    toast.success(`Successfully purchased ${data.card_name} for ${data.purchase_price}!`);
+                    fetchCards();
+                    fetchNotificationCount();
+                } else {
+                    toast.error(data.error || 'Failed to purchase catalog card');
+                }
+            } catch (error) {
+                console.error('Catalog purchase error:', error);
+                toast.error('Failed to purchase catalog card');
+            } finally {
+                setPurchasingCards((prev) => {
+                    const newSet = new Set(prev);
+                    newSet.delete(listing.id);
+                    return newSet;
+                });
             }
-        } catch (error) {
-            console.error('Purchase error:', error);
-            toast.error('Failed to purchase card');
-        } finally {
-            setPurchasingCards(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(userCard.id);
-                return newSet;
-            });
+        } else {
+            if (!listing.user_card_id) {
+                toast.error('Invalid user card ID');
+                return;
+            }
+            setPurchasingCards((prev) => new Set(prev).add(listing.id));
+            try {
+                const response = await fetch('/api/marketplace/purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_card_id: listing.user_card_id }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    toast.success(`Successfully purchased ${data.card_name} for ${data.purchase_price}!`);
+                    fetchCards();
+                    fetchNotificationCount();
+                } else {
+                    toast.error(data.error || 'Failed to purchase card');
+                }
+            } catch (error) {
+                console.error('Purchase error:', error);
+                toast.error('Failed to purchase card');
+            } finally {
+                setPurchasingCards((prev) => {
+                    const newSet = new Set(prev);
+                    newSet.delete(listing.id);
+                    return newSet;
+                });
+            }
         }
     };
 
-    const handleBidClick = async (userCard: UserCard) => {
+    const handleBidClick = async (listing: Listing) => {
         if (!session?.user?.id) {
             toast.error('Please login to place bids');
             return;
         }
-
-        if (userCard.owner.id === parseInt(session.user.id)) {
+        if (listing.owner.id && listing.owner.id === parseInt(session.user.id)) {
             toast.error('You cannot bid on your own card');
             return;
         }
-
-        const biddingCard = await fetchCardForBidding(userCard.id);
+        if (listing.type !== 'USER_CARD' || !listing.user_card_id) {
+            toast.error('Bidding is only available for user cards');
+            return;
+        }
+        const biddingCard = await fetchCardForBidding(listing.id);
         if (biddingCard) {
             setSelectedCardForBidding(biddingCard);
             setBiddingModalOpen(true);
@@ -328,19 +389,24 @@ export default function MarketplacePage() {
     };
 
     const handleBidPlaced = () => {
-        // Refresh marketplace and notifications after successful bid
         fetchCards();
         fetchNotificationCount();
     };
 
     const getRarityColor = (rarity: string) => {
         switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
+            case 'common':
+                return 'default' as const;
+            case 'uncommon':
+                return 'success' as const;
+            case 'rare':
+                return 'primary' as const;
+            case 'holo rare':
+                return 'secondary' as const;
+            case 'ultra rare':
+                return 'error' as const;
+            default:
+                return 'default' as const;
         }
     };
 
@@ -361,19 +427,11 @@ export default function MarketplacePage() {
     return (
         <Container sx={{ marginTop: 4, marginBottom: 4 }}>
             <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
-            {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
                 <IconButton onClick={toggleSidebar}>
                     <MenuIcon />
                 </IconButton>
-                <Image
-                    src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                    alt="Logo"
-                    width={120}
-                    height={60}
-                    priority
-                />
+                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" width={120} height={60} priority />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <IconButton
                         onClick={() => router.push('/notifications')}
@@ -386,27 +444,15 @@ export default function MarketplacePage() {
                     <IconButton onClick={fetchCards} title="Refresh">
                         <RefreshIcon />
                     </IconButton>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/wallet')}
-                        size="small"
-                    >
+                    <Button variant="outlined" onClick={() => router.push('/wallet')} size="small">
                         My Wallet
                     </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/collection')}
-                        size="small"
-                    >
+                    <Button variant="outlined" onClick={() => router.push('/collection')} size="small">
                         My Collection
                     </Button>
-                    <Typography variant="body2">
-                        Welcome, {session?.user?.name}
-                    </Typography>
+                    <Typography variant="body2">Welcome, {session?.user?.name}</Typography>
                 </Box>
             </Box>
-
-            {/* Page Title */}
             <Box sx={{ my: 3 }}>
                 <Typography variant="h4" gutterBottom>
                     Card Marketplace
@@ -415,14 +461,11 @@ export default function MarketplacePage() {
                     Discover and purchase Pokemon cards from other collectors
                 </Typography>
             </Box>
-
-            {/* Search and Filters */}
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <FilterIcon sx={{ mr: 1 }} />
                     <Typography variant="h6">Search & Filters</Typography>
                 </Box>
-
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={3}>
                         <TextField
@@ -439,7 +482,6 @@ export default function MarketplacePage() {
                             }}
                         />
                     </Grid>
-
                     <Grid item xs={12} md={3}>
                         <FormControl fullWidth>
                             <InputLabel>Set</InputLabel>
@@ -449,13 +491,14 @@ export default function MarketplacePage() {
                                 onChange={(e) => setSelectedSet(e.target.value as string)}
                             >
                                 <MenuItem value="">All Sets</MenuItem>
-                                {availableSets.map(set => (
-                                    <MenuItem key={set} value={set}>{set}</MenuItem>
+                                {availableSets.map((set) => (
+                                    <MenuItem key={set} value={set}>
+                                        {set}
+                                    </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
-
                     <Grid item xs={12} md={3}>
                         <FormControl fullWidth>
                             <InputLabel>Type</InputLabel>
@@ -465,13 +508,14 @@ export default function MarketplacePage() {
                                 onChange={(e) => setSelectedType(e.target.value as string)}
                             >
                                 <MenuItem value="">All Types</MenuItem>
-                                {availableTypes.map(type => (
-                                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                                {availableTypes.map((type) => (
+                                    <MenuItem key={type} value={type}>
+                                        {type}
+                                    </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
-
                     <Grid item xs={12} md={3}>
                         <FormControl fullWidth>
                             <InputLabel>Sale Type</InputLabel>
@@ -488,207 +532,208 @@ export default function MarketplacePage() {
                     </Grid>
                 </Grid>
             </Paper>
-
-            {/* Error State */}
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
-                    Error: {error}
+                    {error.includes('Failed to fetch marketplace cards')
+                        ? `Unable to load marketplace cards. Please try again later or contact support. (${error})`
+                        : `Error: ${error}`}
                 </Alert>
             )}
-
-            {/* Loading State */}
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
                 </Box>
+            ) : cards.length === 0 ? (
+                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" color="text.secondary">
+                        No cards found matching your criteria
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Try adjusting your search or filters
+                    </Typography>
+                </Paper>
             ) : (
-                <>
-                    {/* Cards Grid */}
-                    {cards.length === 0 ? (
-                        <Paper sx={{ p: 4, textAlign: 'center' }}>
-                            <Typography variant="h6" color="text.secondary">
-                                No cards found matching your criteria
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Try adjusting your search or filters
-                            </Typography>
-                        </Paper>
-                    ) : (
-                        <Grid container spacing={3}>
-                            {cards.map((userCard) => {
-                                const isCardPurchasing = purchasingCards.has(userCard.id);
-                                const isCardBidding = biddingCards.has(userCard.id); // FIXED: Individual bidding state
-                                const isOwnCard = userCard.owner.id === parseInt(session?.user?.id || '0');
-                                const isAuctionActive = userCard.sale_type === 'AUCTION' &&
-                                    userCard.time_remaining && userCard.time_remaining > 0;
+                <Grid container spacing={3}>
+                    {cards.map((listing) => {
+                        const isCardPurchasing = purchasingCards.has(listing.id);
+                        const isCardBidding = biddingCards.has(listing.id);
+                        const isOwnCard = listing.owner.id && listing.owner.id === parseInt(session?.user?.id || '0');
+                        const isAuctionActive =
+                            listing.sale_type === 'AUCTION' && listing.time_remaining && listing.time_remaining > 0;
 
-                                return (
-                                    <Grid item xs={12} sm={6} md={4} lg={3} key={userCard.id}>
-                                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                            {/* Card Image */}
-                                            <Box sx={{ position: 'relative' }}>
-                                                <CardMedia
-                                                    component="img"
-                                                    height="200"
-                                                    image={userCard.card.small_image_url || userCard.card.image_url || '/placeholder-card.png'}
-                                                    alt={userCard.card.name}
-                                                    sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = '/placeholder-card.png';
-                                                    }}
+                        return (
+                            <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
+                                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <Box sx={{ position: 'relative' }}>
+                                        <CardMedia
+                                            component="img"
+                                            height="200"
+                                            image={
+                                                listing.card.small_image_url ||
+                                                listing.card.image_url ||
+                                                '/placeholder-card.png'
+                                            }
+                                            alt={listing.card.name}
+                                            sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = '/placeholder-card.png';
+                                            }}
+                                        />
+                                        <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+                                            {listing.sale_type === 'AUCTION' ? (
+                                                <Chip
+                                                    icon={<GavelIcon />}
+                                                    label="Auction"
+                                                    color="secondary"
+                                                    size="small"
                                                 />
-
-                                                {/* Sale Type Badge */}
-                                                <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
-                                                    {userCard.sale_type === 'AUCTION' ? (
-                                                        <Chip
-                                                            icon={<GavelIcon />}
-                                                            label="Auction"
+                                            ) : (
+                                                <Chip
+                                                    icon={<DollarIcon />}
+                                                    label="Fixed"
+                                                    color="primary"
+                                                    size="small"
+                                                />
+                                            )}
+                                        </Box>
+                                        {listing.sale_type === 'AUCTION' && (
+                                            <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
+                                                <Chip
+                                                    label={isAuctionActive ? 'Live' : 'Ended'}
+                                                    color={isAuctionActive ? 'success' : 'error'}
+                                                    size="small"
+                                                    variant="filled"
+                                                />
+                                            </Box>
+                                        )}
+                                    </Box>
+                                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <Typography variant="h6" component="h3" gutterBottom noWrap>
+                                            {listing.card.name}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                                            {listing.card.set_name} • {listing.card.set_number}
+                                        </Typography>
+                                        <Chip
+                                            label={listing.card.rarity}
+                                            color={getRarityColor(listing.card.rarity)}
+                                            size="small"
+                                            sx={{ mb: 2, alignSelf: 'flex-start' }}
+                                        />
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Condition: {listing.condition}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                by {listing.owner.name}
+                                            </Typography>
+                                        </Box>
+                                        <Divider sx={{ my: 1 }} />
+                                        <Box sx={{ mt: 'auto' }}>
+                                            {listing.sale_type === 'FIXED' ? (
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                    }}
+                                                >
+                                                    <Typography variant="h6" color="primary.main">
+                                                        {formatPrice(listing.fixed_price)}
+                                                    </Typography>
+                                                    <Button
+                                                        variant="contained"
+                                                        size="small"
+                                                        onClick={() => handlePurchase(listing)}
+                                                        disabled={isCardPurchasing || isOwnCard}
+                                                    >
+                                                        {isCardPurchasing ? (
+                                                            <CircularProgress size={20} />
+                                                        ) : isOwnCard ? (
+                                                            'Your Card'
+                                                        ) : (
+                                                            'Buy Now'
+                                                        )}
+                                                    </Button>
+                                                </Box>
+                                            ) : (
+                                                <Box>
+                                                    <Box
+                                                        sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}
+                                                    >
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Current Bid:
+                                                        </Typography>
+                                                        <Typography variant="subtitle1" color="primary.main">
+                                                            {formatPrice(listing.highest_bid || listing.reserve_price)}
+                                                        </Typography>
+                                                    </Box>
+                                                    {isAuctionActive ? (
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                mb: 2,
+                                                            }}
+                                                        >
+                                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                                <ClockIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    Time left:
+                                                                </Typography>
+                                                            </Box>
+                                                            <Typography variant="body2" color="error.main">
+                                                                {formatTimeLeft(listing.time_remaining)}
+                                                            </Typography>
+                                                        </Box>
+                                                    ) : (
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="error.main"
+                                                            align="center"
+                                                            sx={{ mb: 2 }}
+                                                        >
+                                                            Auction Ended
+                                                        </Typography>
+                                                    )}
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                        }}
+                                                    >
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {listing.bid_count} bid{listing.bid_count !== 1 ? 's' : ''}
+                                                        </Typography>
+                                                        <Button
+                                                            variant="contained"
                                                             color="secondary"
                                                             size="small"
-                                                        />
-                                                    ) : (
-                                                        <Chip
-                                                            icon={<DollarIcon />}
-                                                            label="Fixed"
-                                                            color="primary"
-                                                            size="small"
-                                                        />
-                                                    )}
-                                                </Box>
-
-                                                {/* Auction Status Badge */}
-                                                {userCard.sale_type === 'AUCTION' && (
-                                                    <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
-                                                        <Chip
-                                                            label={isAuctionActive ? 'Live' : 'Ended'}
-                                                            color={isAuctionActive ? 'success' : 'error'}
-                                                            size="small"
-                                                            variant="filled"
-                                                        />
-                                                    </Box>
-                                                )}
-                                            </Box>
-
-                                            {/* Card Content */}
-                                            <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                                <Typography variant="h6" component="h3" gutterBottom noWrap>
-                                                    {userCard.card.name}
-                                                </Typography>
-
-                                                <Typography variant="body2" color="text.secondary" gutterBottom>
-                                                    {userCard.card.set_name} • {userCard.card.set_number}
-                                                </Typography>
-
-                                                <Chip
-                                                    label={userCard.card.rarity}
-                                                    color={getRarityColor(userCard.card.rarity)}
-                                                    size="small"
-                                                    sx={{ mb: 2, alignSelf: 'flex-start' }}
-                                                />
-
-                                                {/* Condition and Owner */}
-                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Condition: {userCard.condition}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        by {userCard.owner.name}
-                                                    </Typography>
-                                                </Box>
-
-                                                <Divider sx={{ my: 1 }} />
-
-                                                {/* Price and Action */}
-                                                <Box sx={{ mt: 'auto' }}>
-                                                    {userCard.sale_type === 'FIXED' ? (
-                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <Typography variant="h6" color="primary.main">
-                                                                ${formatPrice(userCard.fixed_price)}
-                                                            </Typography>
-                                                            <Button
-                                                                variant="contained"
-                                                                size="small"
-                                                                onClick={() => handlePurchase(userCard)}
-                                                                disabled={isCardPurchasing || isOwnCard}
-                                                            >
-                                                                {isCardPurchasing ? (
-                                                                    <CircularProgress size={20} />
-                                                                ) : isOwnCard ? (
-                                                                    'Your Card'
-                                                                ) : (
-                                                                    'Buy Now'
-                                                                )}
-                                                            </Button>
-                                                        </Box>
-                                                    ) : (
-                                                        <Box>
-                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                                                <Typography variant="body2" color="text.secondary">
-                                                                    Current Bid:
-                                                                </Typography>
-                                                                <Typography
-                                                                    variant="subtitle1"
-                                                                    color="primary.main"
-                                                                >
-                                                                    ${formatPrice(userCard.highest_bid || userCard.reserve_price)}
-                                                                </Typography>
-                                                            </Box>
-
-                                                            {isAuctionActive ? (
-                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                                        <ClockIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                                                                        <Typography variant="body2" color="text.secondary">
-                                                                            Time left:
-                                                                        </Typography>
-                                                                    </Box>
-                                                                    <Typography variant="body2" color="error.main">
-                                                                        {formatTimeLeft(userCard.time_remaining)}
-                                                                    </Typography>
-                                                                </Box>
+                                                            onClick={() => handleBidClick(listing)}
+                                                            disabled={!isAuctionActive || isOwnCard || isCardBidding}
+                                                        >
+                                                            {isCardBidding ? (
+                                                                <CircularProgress size={20} />
+                                                            ) : isOwnCard ? (
+                                                                'Your Auction'
+                                                            ) : !isAuctionActive ? (
+                                                                'Auction Ended'
                                                             ) : (
-                                                                <Typography variant="body2" color="error.main" align="center" sx={{ mb: 2 }}>
-                                                                    Auction Ended
-                                                                </Typography>
+                                                                'Place Bid'
                                                             )}
-
-                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    {userCard.bid_count} bid{userCard.bid_count !== 1 ? 's' : ''}
-                                                                </Typography>
-                                                                <Button
-                                                                    variant="contained"
-                                                                    color="secondary"
-                                                                    size="small"
-                                                                    onClick={() => handleBidClick(userCard)}
-                                                                    disabled={!isAuctionActive || isOwnCard || isCardBidding}
-                                                                >
-                                                                    {isCardBidding ? (
-                                                                        <CircularProgress size={20} />
-                                                                    ) : isOwnCard ? (
-                                                                        'Your Auction'
-                                                                    ) : !isAuctionActive ? (
-                                                                        'Auction Ended'
-                                                                    ) : (
-                                                                        'Place Bid'
-                                                                    )}
-                                                                </Button>
-                                                            </Box>
-                                                        </Box>
-                                                    )}
+                                                        </Button>
+                                                    </Box>
                                                 </Box>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                );
-                            })}
-                        </Grid>
-                    )}
-                </>
+                                            )}
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        );
+                    })}
+                </Grid>
             )}
-
-            {/* Bidding Modal */}
             <BiddingModal
                 open={biddingModalOpen}
                 onClose={() => {

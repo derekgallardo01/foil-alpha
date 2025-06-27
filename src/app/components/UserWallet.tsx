@@ -23,12 +23,12 @@ import {
     TrendingDown,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
-import type { ChipProps } from "@mui/material"; // Import ChipProps for typing
+import type { ChipProps } from "@mui/material";
 
 interface WalletData {
-    balance: number;
-    frozen_balance: number;
-    available_balance: number;
+    balance?: number; // Make balance optional
+    frozen_balance?: number;
+    available_balance?: number;
     recent_transactions?: WalletTransaction[];
 }
 
@@ -46,7 +46,6 @@ export default function UserWallet() {
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Memoize fetchWalletData to prevent unnecessary re-renders
     const fetchWalletData = useCallback(async () => {
         try {
             setLoading(true);
@@ -67,15 +66,14 @@ export default function UserWallet() {
         } finally {
             setLoading(false);
         }
-    }, [session?.accessToken]); // Dependency array for useCallback
+    }, [session?.accessToken]);
 
     useEffect(() => {
         if (session?.user?.id) {
             fetchWalletData();
         }
-    }, [session, fetchWalletData]); // Include fetchWalletData in dependency array
+    }, [session, fetchWalletData]);
 
-    // Explicitly type the return value of getTransactionColor
     const getTransactionColor = (type: string): ChipProps['color'] => {
         switch (type) {
             case 'DEPOSIT':
@@ -97,14 +95,14 @@ export default function UserWallet() {
 
     const getTransactionIcon = (type: string, amount: number) => {
         if (type.includes('FREEZE') || type.includes('UNFREEZE')) {
-            return null; // No icon for freeze/unfreeze
+            return null;
         }
         return amount >= 0 ? <TrendingUp sx={{ fontSize: 16 }} /> : <TrendingDown sx={{ fontSize: 16 }} />;
     };
 
     const getTransactionPrefix = (amount: number, type: string) => {
         if (type.includes('UNFREEZE') || type.includes('FREEZE')) {
-            return ''; // No prefix for freeze/unfreeze as they don't change balance
+            return '';
         }
         return amount >= 0 ? '+' : '';
     };
@@ -142,7 +140,6 @@ export default function UserWallet() {
     return (
         <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
             <CardContent>
-                {/* Wallet Balance Header */}
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AccountBalanceWallet sx={{ color: '#96ff9b', fontSize: 28 }} />
@@ -165,7 +162,6 @@ export default function UserWallet() {
                     </Button>
                 </Box>
 
-                {/* Balance Information */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 3, mb: 4 }}>
                     <Box sx={{
                         textAlign: 'center',
@@ -175,7 +171,7 @@ export default function UserWallet() {
                         border: '1px solid rgba(150, 255, 155, 0.3)'
                     }}>
                         <Typography variant="h3" sx={{ color: '#96ff9b', fontWeight: 'bold', mb: 1 }}>
-                            ${wallet.balance.toFixed(2)}
+                            ${typeof wallet.balance === 'number' ? wallet.balance.toFixed(2) : '0.00'}
                         </Typography>
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Total Balance
@@ -187,21 +183,21 @@ export default function UserWallet() {
                         p: 3,
                         bgcolor: 'grey.700',
                         borderRadius: 2,
-                        border: `1px solid ${wallet.available_balance > 0 ? 'rgba(76, 175, 80, 0.3)' : 'rgba(158, 158, 158, 0.3)'}`
+                        border: `1px solid ${typeof wallet.available_balance === 'number' && wallet.available_balance > 0 ? 'rgba(76, 175, 80, 0.3)' : 'rgba(158, 158, 158, 0.3)'}`
                     }}>
                         <Typography variant="h3" sx={{
-                            color: wallet.available_balance > 0 ? 'success.main' : 'text.secondary',
+                            color: typeof wallet.available_balance === 'number' && wallet.available_balance > 0 ? 'success.main' : 'text.secondary',
                             fontWeight: 'bold',
                             mb: 1
                         }}>
-                            ${wallet.available_balance.toFixed(2)}
+                            ${typeof wallet.available_balance === 'number' ? wallet.available_balance.toFixed(2) : '0.00'}
                         </Typography>
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Available to Spend
                         </Typography>
                     </Box>
 
-                    {wallet.frozen_balance > 0 && (
+                    {typeof wallet.frozen_balance === 'number' && wallet.frozen_balance > 0 && (
                         <Box sx={{
                             textAlign: 'center',
                             p: 3,
@@ -219,13 +215,12 @@ export default function UserWallet() {
                     )}
                 </Box>
 
-                {/* Balance Status Message */}
                 <Box sx={{ mb: 3, p: 2, bgcolor: 'rgba(150, 255, 155, 0.05)', borderRadius: 1 }}>
-                    {wallet.available_balance > 50 ? (
+                    {typeof wallet.available_balance === 'number' && wallet.available_balance > 50 ? (
                         <Typography variant="body2" sx={{ color: 'success.main' }}>
                             ✅ Your wallet is ready for purchases and bidding!
                         </Typography>
-                    ) : wallet.available_balance > 0 ? (
+                    ) : typeof wallet.available_balance === 'number' && wallet.available_balance > 0 ? (
                         <Typography variant="body2" sx={{ color: 'warning.main' }}>
                             ⚠️ Low balance - consider adding funds for larger purchases.
                         </Typography>
@@ -238,7 +233,6 @@ export default function UserWallet() {
 
                 <Divider sx={{ my: 3, borderColor: 'rgba(150, 255, 155, 0.2)' }} />
 
-                {/* Recent Transactions */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <History sx={{ color: '#96ff9b' }} />
                     <Typography variant="h6" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
