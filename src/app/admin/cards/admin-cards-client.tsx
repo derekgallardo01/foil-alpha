@@ -40,6 +40,13 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import UploadIcon from "@mui/icons-material/Upload";
 import DownloadIcon from "@mui/icons-material/Download";
+import {
+    Timeline,
+    Sync,
+    TrendingUp,
+    TrendingDown,
+    TrendingFlat
+} from '@mui/icons-material';
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
@@ -72,6 +79,10 @@ interface Card {
     forSaleCount: number;
     soldCount: number;
     uniqueOwners: number;
+    market_price?: number;
+    price_trend?: 'up' | 'down' | 'stable';
+    price_change_24h?: number;
+    last_price_update?: string;
 }
 
 interface CardsResponse {
@@ -82,6 +93,43 @@ interface CardsResponse {
         total: number;
         totalPages: number;
     };
+}
+
+// Price Trend Chip Component
+function PriceTrendChip({ trend, change }: { trend?: string; change?: number }) {
+    const getTrendIcon = () => {
+        switch (trend) {
+            case 'up':
+                return <TrendingUp sx={{ fontSize: 16 }} />;
+            case 'down':
+                return <TrendingDown sx={{ fontSize: 16 }} />;
+            default:
+                return <TrendingFlat sx={{ fontSize: 16 }} />;
+        }
+    };
+
+    const getTrendColor = () => {
+        switch (trend) {
+            case 'up':
+                return 'success' as const;
+            case 'down':
+                return 'error' as const;
+            default:
+                return 'default' as const;
+        }
+    };
+
+    if (!trend) return null;
+
+    return (
+        <Chip
+            icon={getTrendIcon()}
+            label={change !== undefined ? `${change > 0 ? '+' : ''}${change.toFixed(1)}%` : trend}
+            color={getTrendColor()}
+            size="small"
+            variant="outlined"
+        />
+    );
 }
 
 // Pokemon Card Import Modal Component
@@ -479,6 +527,287 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
     );
 }
 
+// Price Sync Modal Component
+function PriceSyncModal({ open, onClose, onSyncComplete }: {
+    open: boolean;
+    onClose: () => void;
+    onSyncComplete?: (results: any) => void;
+}) {
+    const [loading, setLoading] = useState(false);
+    const [syncStrategy, setSyncStrategy] = useState('AUTO');
+    const [batchSize, setBatchSize] = useState(20);
+    const [maxAgeHours, setMaxAgeHours] = useState(24);
+    const [syncResults, setSyncResults] = useState<any>(null);
+    const [error, setError] = useState('');
+
+    const handleStartSync = async () => {
+        try {
+            setLoading(true);
+            setError('');
+            setSyncResults(null);
+
+            const response = await fetch('/api/cards/sync-prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    force: false,
+                    batchSize,
+                    maxAgeHours,
+                    pricingStrategy: syncStrategy,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setSyncResults(data.result);
+                onSyncComplete?.(data.result);
+                toast.success(`Price sync completed! ${data.result.successful_updates} cards updated.`);
+            } else {
+                setError(data.error || 'Sync failed');
+                toast.error(data.error || 'Price sync failed');
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+            setError(errorMsg);
+            toast.error(errorMsg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleForceSync = async () => {
+        if (!confirm('Force sync will update ALL cards regardless of last update time. This may take a while. Continue?')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+
+            const response = await fetch('/api/cards/sync-prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    force: true,
+                    batchSize: 10, // Smaller batches for force sync
+                    pricingStrategy: syncStrategy,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setSyncResults(data.result);
+                onSyncComplete?.(data.result);
+                toast.success(`Force sync completed! ${data.result.successful_updates} cards updated.`);
+            } else {
+                setError(data.error || 'Force sync failed');
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+            setError(errorMsg);
+            toast.error(errorMsg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+            <DialogTitle>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Sync />
+                    Sync Card Prices
+                </Box>
+            </DialogTitle>
+            <DialogContent>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+
+                {!syncResults ? (
+                    <Box>
+                        <Typography variant="body1" sx={{ mb: 3 }}>
+                            Update card prices using the Pokemon Price Tracker API for real-time market data.
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth sx={{ mb: 2 }}>
+                                    <InputLabel>Sync Strategy</InputLabel>
+                                    <Select
+                                        value={syncStrategy}
+                                        label="Sync Strategy"
+                                        onChange={(e) => setSyncStrategy(e.target.value)}
+                                    >
+                                        <MenuItem value="AUTO">Auto (Price Tracker + TCG API)</MenuItem>
+                                        <MenuItem value="PRICE_TRACKER_ONLY">Price Tracker API Only</MenuItem>
+                                        <MenuItem value="TCG_API_ONLY">Pokemon TCG API Only</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    label="Batch Size"
+                                    type="number"
+                                    value={batchSize}
+                                    onChange={(e) => setBatchSize(parseInt(e.target.value) || 20)}
+                                    inputProps={{ min: 5, max: 50 }}
+                                    fullWidth
+                                    sx={{ mb: 2 }}
+                                    helperText="Cards processed per API call"
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Update cards older than (hours)"
+                                    type="number"
+                                    value={maxAgeHours}
+                                    onChange={(e) => setMaxAgeHours(parseInt(e.target.value) || 24)}
+                                    inputProps={{ min: 1, max: 168 }}
+                                    fullWidth
+                                    sx={{ mb: 2 }}
+                                    helperText="Only update cards that haven't been updated in this time period"
+                                />
+                            </Grid>
+                        </Grid>
+
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                            <Typography variant="body2">
+                                <strong>Rate Limits:</strong> The Pokemon Price Tracker API allows 60 requests per minute.
+                                Large syncs will be automatically throttled to respect these limits.
+                            </Typography>
+                        </Alert>
+                    </Box>
+                ) : (
+                    <Box>
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                            Price sync completed successfully!
+                        </Alert>
+
+                        <Grid container spacing={2}>
+                            <Grid item xs={6} md={3}>
+                                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                                    <Typography variant="h4" color="primary">
+                                        {syncResults.successful_updates}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        Cards Updated
+                                    </Typography>
+                                </Paper>
+                            </Grid>
+                            <Grid item xs={6} md={3}>
+                                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                                    <Typography variant="h4" color="warning.main">
+                                        {syncResults.skipped_cards}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        Skipped
+                                    </Typography>
+                                </Paper>
+                            </Grid>
+                            <Grid item xs={6} md={3}>
+                                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                                    <Typography variant="h4" color="error">
+                                        {syncResults.failed_updates}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        Failed
+                                    </Typography>
+                                </Paper>
+                            </Grid>
+                            <Grid item xs={6} md={3}>
+                                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                                    <Typography variant="h4" color="success.main">
+                                        ${syncResults.pricing_summary?.avg_market_price?.toFixed(2) || '0.00'}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        Avg. Price
+                                    </Typography>
+                                </Paper>
+                            </Grid>
+                        </Grid>
+
+                        {syncResults.pricing_summary && (
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="h6" sx={{ mb: 1 }}>Pricing Summary</Typography>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="body2">
+                                            API Pricing Success: {syncResults.pricing_summary.api_pricing_success || 0}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            Fallback Pricing Used: {syncResults.pricing_summary.fallback_pricing_used || 0}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="body2">
+                                            Price Range: ${syncResults.pricing_summary.price_range?.min?.toFixed(2) || '0.00'} - ${syncResults.pricing_summary.price_range?.max?.toFixed(2) || '0.00'}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            Price Increases: {syncResults.pricing_summary.cards_with_increases || 0}
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        )}
+
+                        {syncResults.errors && syncResults.errors.length > 0 && (
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="h6" color="error" sx={{ mb: 1 }}>
+                                    Errors ({syncResults.errors.length})
+                                </Typography>
+                                <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                                    {syncResults.errors.slice(0, 10).map((error: any, index: number) => (
+                                        <Alert severity="error" key={index} sx={{ mb: 1 }}>
+                                            <Typography variant="body2">
+                                                {error.card_name}: {error.error}
+                                            </Typography>
+                                        </Alert>
+                                    ))}
+                                    {syncResults.errors.length > 10 && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            ... and {syncResults.errors.length - 10} more errors
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        )}
+                    </Box>
+                )}
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose} disabled={loading}>
+                    {syncResults ? 'Close' : 'Cancel'}
+                </Button>
+                {!syncResults && (
+                    <>
+                        <Button
+                            variant="outlined"
+                            onClick={handleForceSync}
+                            disabled={loading}
+                            color="warning"
+                        >
+                            {loading ? <CircularProgress size={20} /> : 'Force Sync All'}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleStartSync}
+                            disabled={loading}
+                            sx={{ bgcolor: '#96ff9b', color: 'grey.900' }}
+                        >
+                            {loading ? <CircularProgress size={20} /> : 'Start Sync'}
+                        </Button>
+                    </>
+                )}
+            </DialogActions>
+        </Dialog>
+    );
+}
+
 export default function AdminCardsClient() {
     const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -501,6 +830,8 @@ export default function AdminCardsClient() {
     const [bulkCreateOpen, setBulkCreateOpen] = useState<boolean>(false);
     const [bulkCardsText, setBulkCardsText] = useState<string>("");
     const [pokemonImportOpen, setPokemonImportOpen] = useState<boolean>(false);
+    const [priceSyncOpen, setPriceSyncOpen] = useState<boolean>(false);
+    const [selectedCardsForPriceCheck, setSelectedCardsForPriceCheck] = useState<number[]>([]);
     const [visibleColumns, setVisibleColumns] = useState({
         id: true,
         name: true,
@@ -511,6 +842,7 @@ export default function AdminCardsClient() {
         totalOwned: true,
         forSaleCount: true,
         created_at: true,
+        pricing: true,
     });
     const editDialogRef = useRef<HTMLDivElement>(null);
     const hasFetchedRef = useRef(false);
@@ -564,13 +896,33 @@ export default function AdminCardsClient() {
         }
     }, [status, fetchCards]);
 
-    // Card Stats
-    const stats = useMemo(() => ({
-        total: cards.length,
-        totalOwned: cards.reduce((sum, card) => sum + card.totalOwned, 0),
-        forSale: cards.reduce((sum, card) => sum + card.forSaleCount, 0),
-        uniqueSets: new Set(cards.map(card => card.set_name)).size,
-    }), [cards]);
+    // Enhanced Card Stats with pricing
+    const stats = useMemo(() => {
+        const baseStats = {
+            total: cards.length,
+            totalOwned: cards.reduce((sum, card) => sum + card.totalOwned, 0),
+            forSale: cards.reduce((sum, card) => sum + card.forSaleCount, 0),
+            uniqueSets: new Set(cards.map(card => card.set_name)).size,
+        };
+
+        const enhancedStats = {
+            ...baseStats,
+            totalMarketValue: cards.reduce((sum, card) =>
+                sum + (card.market_price ? Number(card.market_price) * card.totalOwned : 0), 0
+            ),
+            avgMarketPrice: cards.filter(c => c.market_price).length > 0 ?
+                cards.reduce((sum, card) => sum + (Number(card.market_price) || 0), 0) /
+                cards.filter(c => c.market_price).length : 0,
+            cardsWithPricing: cards.filter(c => c.market_price && Number(c.market_price) > 0).length,
+            stalePrice: cards.filter(c => {
+                if (!c.last_price_update) return true;
+                const daysSinceUpdate = (Date.now() - new Date(c.last_price_update).getTime()) / (1000 * 60 * 60 * 24);
+                return daysSinceUpdate > 7;
+            }).length,
+        };
+
+        return enhancedStats;
+    }, [cards]);
 
     // Debounced Search
     const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
@@ -590,6 +942,73 @@ export default function AdminCardsClient() {
             case 'ultra rare': return 'error' as const;
             default: return 'default' as const;
         }
+    };
+
+    // Price sync functions
+    const handlePriceSyncComplete = (results: any) => {
+        fetchCards(); // Refresh the cards list
+        toast.success(`Price sync completed: ${results.successful_updates} cards updated`);
+    };
+
+    const handleBulkPriceCheck = async () => {
+        if (selected.length === 0) {
+            toast.error('Please select cards to check prices');
+            return;
+        }
+
+        try {
+            setActionLoading(true);
+            const response = await fetch('/api/cards/sync-prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cardIds: selected,
+                    force: true,
+                    batchSize: 10,
+                }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                toast.success(`Updated prices for ${data.result.successful_updates} cards`);
+                fetchCards();
+                setSelected([]);
+            } else {
+                toast.error(data.error || 'Failed to update prices');
+            }
+        } catch (error) {
+            toast.error('Failed to update prices');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // Pricing column definition
+    const pricingColumn: GridColDef = {
+        field: "pricing",
+        headerName: "Market Price",
+        width: 180,
+        sortable: true,
+        renderCell: (params: GridRenderCellParams<Card>) => (
+            <Box>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                    ${params.row.market_price ? Number(params.row.market_price).toFixed(2) : 'N/A'}
+                </Typography>
+                {params.row.price_trend && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                        <PriceTrendChip
+                            trend={params.row.price_trend}
+                            change={params.row.price_change_24h}
+                        />
+                    </Box>
+                )}
+                {params.row.last_price_update && (
+                    <Typography variant="caption" color="text.secondary">
+                        Updated: {new Date(params.row.last_price_update).toLocaleDateString()}
+                    </Typography>
+                )}
+            </Box>
+        )
     };
 
     // Table Columns
@@ -636,6 +1055,7 @@ export default function AdminCardsClient() {
         ...(visibleColumns.card_type ? [{ field: "card_type", headerName: "Type", width: 100, sortable: true }] : []),
         ...(visibleColumns.totalOwned ? [{ field: "totalOwned", headerName: "Owned", width: 80, sortable: true }] : []),
         ...(visibleColumns.forSaleCount ? [{ field: "forSaleCount", headerName: "For Sale", width: 80, sortable: true }] : []),
+        ...(visibleColumns.pricing ? [pricingColumn] : []),
         ...(visibleColumns.created_at ? [{
             field: "created_at",
             headerName: "Created",
@@ -897,13 +1317,17 @@ export default function AdminCardsClient() {
                             Admin - Card Management
                         </Typography>
 
-                        {/* Card Stats Dashboard */}
+                        {/* Enhanced Card Stats Dashboard */}
                         <motion.div variants={itemVariants}>
                             <Box sx={{ mb: 2, display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 2 }}>
                                 <Typography sx={{ color: "text.secondary" }}>Total Cards: {stats.total}</Typography>
                                 <Typography sx={{ color: "text.secondary" }}>Total Owned: {stats.totalOwned}</Typography>
                                 <Typography sx={{ color: "text.secondary" }}>For Sale: {stats.forSale}</Typography>
                                 <Typography sx={{ color: "text.secondary" }}>Sets: {stats.uniqueSets}</Typography>
+                                <Typography sx={{ color: "text.secondary" }}>Total Market Value: ${stats.totalMarketValue.toFixed(2)}</Typography>
+                                <Typography sx={{ color: "text.secondary" }}>Avg Price: ${stats.avgMarketPrice.toFixed(2)}</Typography>
+                                <Typography sx={{ color: "text.secondary" }}>With Pricing: {stats.cardsWithPricing}</Typography>
+                                <Typography sx={{ color: "text.secondary" }}>Stale Prices: {stats.stalePrice}</Typography>
                             </Box>
                         </motion.div>
 
@@ -936,6 +1360,15 @@ export default function AdminCardsClient() {
                                         startIcon={<DownloadIcon />}
                                     >
                                         Import Pokemon Cards
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        sx={{ bgcolor: "#ff9696", color: "grey.900" }}
+                                        onClick={() => setPriceSyncOpen(true)}
+                                        disabled={actionLoading}
+                                        startIcon={<Sync />}
+                                    >
+                                        Sync Prices
                                     </Button>
                                     <Button
                                         variant="contained"
@@ -1052,6 +1485,14 @@ export default function AdminCardsClient() {
                                             {selected.length} selected
                                         </Typography>
                                         <IconButton
+                                            color="primary"
+                                            onClick={handleBulkPriceCheck}
+                                            disabled={actionLoading}
+                                            title="Update prices for selected cards"
+                                        >
+                                            <Sync />
+                                        </IconButton>
+                                        <IconButton
                                             color="error"
                                             onClick={() => {
                                                 // Bulk delete logic here
@@ -1110,6 +1551,13 @@ export default function AdminCardsClient() {
                 open={pokemonImportOpen}
                 onClose={() => setPokemonImportOpen(false)}
                 onImportComplete={handlePokemonImportComplete}
+            />
+
+            {/* Price Sync Modal */}
+            <PriceSyncModal
+                open={priceSyncOpen}
+                onClose={() => setPriceSyncOpen(false)}
+                onSyncComplete={handlePriceSyncComplete}
             />
 
             {/* Add/Edit Card Dialog */}

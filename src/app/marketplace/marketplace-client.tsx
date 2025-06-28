@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,6 +24,10 @@ import {
     Paper,
     Divider,
     Badge,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -34,11 +38,20 @@ import {
     FilterList as FilterIcon,
     Notifications as NotificationIcon,
     Refresh as RefreshIcon,
+    TrendingUp,
+    TrendingDown,
+    TrendingFlat,
+    History,
+    PriceCheck,
+    Timeline,
+    LocalOffer as LocalOfferIcon,
+    Add as AddIcon,
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import BiddingModal from '../components/BiddingModal';
+import PriceChart from '../components/PriceChart';
 
 interface Card {
     id: number;
@@ -49,6 +62,10 @@ interface Card {
     card_type: string;
     image_url: string;
     small_image_url: string;
+    market_price?: number;
+    price_trend?: 'up' | 'down' | 'stable';
+    price_change_24h?: number;
+    last_price_update?: string;
     set?: any;
     rarity_info?: any;
     subtype_info?: any;
@@ -74,6 +91,14 @@ interface Listing {
     is_auction_expired?: boolean;
     notes: string | null;
     availability: 'IN_STOCK' | 'FOR_SALE';
+}
+
+interface EnhancedListing extends Listing {
+    market_price?: number;
+    price_trend?: 'up' | 'down' | 'stable';
+    price_change_24h?: number;
+    last_price_update?: string;
+    user_vs_market_diff?: number;
 }
 
 interface MarketplaceResponse {
@@ -115,6 +140,348 @@ interface BiddingUserCard {
     }>;
 }
 
+// Price Comparison Component
+function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
+    const marketPrice = listing.card.market_price || 0;
+    const userPrice = listing.fixed_price || listing.reserve_price || 0;
+    const priceDiff = userPrice > 0 && marketPrice > 0 ?
+        ((userPrice - marketPrice) / marketPrice) * 100 : 0;
+
+    const getPriceStatus = () => {
+        if (Math.abs(priceDiff) < 5) return { color: 'success.main', label: 'Market Price' };
+        if (priceDiff > 0) return { color: 'error.main', label: `${priceDiff.toFixed(1)}% Above Market` };
+        return { color: 'warning.main', label: `${Math.abs(priceDiff).toFixed(1)}% Below Market` };
+    };
+
+    const priceStatus = getPriceStatus();
+
+    return (
+        <Box sx={{
+            p: 1.5,
+            bgcolor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 1,
+            border: `1px solid ${priceStatus.color}`,
+            mb: 1
+        }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                    Market Price
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {listing.card.price_trend === 'up' && <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />}
+                    {listing.card.price_trend === 'down' && <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />}
+                    {listing.card.price_trend === 'stable' && <TrendingFlat sx={{ fontSize: 16, color: 'text.secondary' }} />}
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        ${marketPrice.toFixed(2)}
+                    </Typography>
+                </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                    {listing.sale_type === 'FIXED' ? 'Asking Price' : 'Reserve Price'}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                    ${userPrice.toFixed(2)}
+                </Typography>
+            </Box>
+
+            <Box sx={{ textAlign: 'center' }}>
+                <Chip
+                    label={priceStatus.label}
+                    size="small"
+                    sx={{
+                        color: 'white',
+                        bgcolor: priceStatus.color,
+                        fontWeight: 'bold',
+                        fontSize: '0.7rem'
+                    }}
+                />
+            </Box>
+
+            {listing.card.price_change_24h !== undefined && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
+                    24h: {listing.card.price_change_24h > 0 ? '+' : ''}{listing.card.price_change_24h.toFixed(1)}%
+                </Typography>
+            )}
+        </Box>
+    );
+}
+
+// Price History Modal Component
+function PriceHistoryModal({
+    open,
+    onClose,
+    cardId,
+    userCardId,
+    cardName
+}: {
+    open: boolean;
+    onClose: () => void;
+    cardId?: number;
+    userCardId?: number;
+    cardName: string;
+}) {
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+            <DialogTitle>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <History />
+                    Price History - {cardName}
+                </Box>
+            </DialogTitle>
+            <DialogContent sx={{ height: 600 }}>
+                <PriceChart
+                    cardId={cardId}
+                    userCardId={userCardId}
+                    height={550}
+                    showUserPrice={true}
+                    autoRefresh={false}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Close</Button>
+            </DialogActions>
+        </Dialog>
+    );
+}
+
+// Market Summary Component
+function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
+    const marketStats = useMemo(() => {
+        const cardsWithPrices = cards.filter(c => c.card.market_price && c.card.market_price > 0);
+        const totalValue = cardsWithPrices.reduce((sum, card) => sum + (card.card.market_price || 0), 0);
+        const avgPrice = cardsWithPrices.length > 0 ? totalValue / cardsWithPrices.length : 0;
+
+        const priceRanges = {
+            under_5: cardsWithPrices.filter(c => (c.card.market_price || 0) < 5).length,
+            _5_to_25: cardsWithPrices.filter(c => (c.card.market_price || 0) >= 5 && (c.card.market_price || 0) < 25).length,
+            _25_to_100: cardsWithPrices.filter(c => (c.card.market_price || 0) >= 25 && (c.card.market_price || 0) < 100).length,
+            over_100: cardsWithPrices.filter(c => (c.card.market_price || 0) >= 100).length,
+        };
+
+        const trending = {
+            up: cardsWithPrices.filter(c => c.card.price_trend === 'up').length,
+            down: cardsWithPrices.filter(c => c.card.price_trend === 'down').length,
+            stable: cardsWithPrices.filter(c => c.card.price_trend === 'stable').length,
+        };
+
+        return { totalValue, avgPrice, priceRanges, trending, totalCards: cardsWithPrices.length };
+    }, [cards]);
+
+    return (
+        <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Timeline />
+                Market Summary
+            </Typography>
+
+            <Grid container spacing={2}>
+                <Grid item xs={6} md={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="primary">
+                            {marketStats.totalCards}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Cards Listed
+                        </Typography>
+                    </Box>
+                </Grid>
+
+                <Grid item xs={6} md={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="success.main">
+                            ${marketStats.avgPrice.toFixed(0)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Avg. Price
+                        </Typography>
+                    </Box>
+                </Grid>
+
+                <Grid item xs={6} md={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="warning.main">
+                            ${marketStats.totalValue.toFixed(0)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Total Value
+                        </Typography>
+                    </Box>
+                </Grid>
+
+                <Grid item xs={6} md={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 1 }}>
+                            <Chip
+                                icon={<TrendingUp />}
+                                label={marketStats.trending.up}
+                                size="small"
+                                color="success"
+                            />
+                            <Chip
+                                icon={<TrendingDown />}
+                                label={marketStats.trending.down}
+                                size="small"
+                                color="error"
+                            />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                            Price Trends
+                        </Typography>
+                    </Box>
+                </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Price Distribution</Typography>
+            <Grid container spacing={1}>
+                <Grid item xs={3}>
+                    <Chip label={`Under $5: ${marketStats.priceRanges.under_5}`} size="small" variant="outlined" />
+                </Grid>
+                <Grid item xs={3}>
+                    <Chip label={`$5-$25: ${marketStats.priceRanges._5_to_25}`} size="small" variant="outlined" />
+                </Grid>
+                <Grid item xs={3}>
+                    <Chip label={`$25-$100: ${marketStats.priceRanges._25_to_100}`} size="small" variant="outlined" />
+                </Grid>
+                <Grid item xs={3}>
+                    <Chip label={`$100+: ${marketStats.priceRanges.over_100}`} size="small" variant="outlined" />
+                </Grid>
+            </Grid>
+        </Paper>
+    );
+}
+
+// Daily Deals Component
+function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
+    const deals = useMemo(() => {
+        return cards
+            .filter(card => {
+                const marketPrice = card.card.market_price || 0;
+                const userPrice = card.fixed_price || card.reserve_price || 0;
+                return marketPrice > 0 && userPrice > 0 && ((marketPrice - userPrice) / marketPrice) > 0.15; // 15%+ below market
+            })
+            .sort((a, b) => {
+                const aDiff = ((a.card.market_price || 0) - (a.fixed_price || a.reserve_price || 0)) / (a.card.market_price || 1);
+                const bDiff = ((b.card.market_price || 0) - (b.fixed_price || b.reserve_price || 0)) / (b.card.market_price || 1);
+                return bDiff - aDiff; // Sort by biggest discount first
+            })
+            .slice(0, 6); // Top 6 deals
+    }, [cards]);
+
+    if (deals.length === 0) return null;
+
+    return (
+        <Paper sx={{ p: 3, mb: 3, bgcolor: 'rgba(76, 175, 80, 0.1)', border: '1px solid rgba(76, 175, 80, 0.3)' }}>
+            <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LocalOfferIcon />
+                Daily Deals - Cards Below Market Price
+            </Typography>
+
+            <Grid container spacing={2}>
+                {deals.map((deal) => {
+                    const marketPrice = deal.card.market_price || 0;
+                    const userPrice = deal.fixed_price || deal.reserve_price || 0;
+                    const discount = ((marketPrice - userPrice) / marketPrice) * 100;
+
+                    return (
+                        <Grid item xs={12} sm={6} md={4} key={deal.id}>
+                            <Box sx={{
+                                p: 2,
+                                border: '1px solid rgba(76, 175, 80, 0.5)',
+                                borderRadius: 1,
+                                bgcolor: 'background.paper'
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                    <img
+                                        src={deal.card.small_image_url || '/placeholder-card.png'}
+                                        alt={deal.card.name}
+                                        style={{ width: 40, height: 56, objectFit: 'contain' }}
+                                    />
+                                    <Box sx={{ flexGrow: 1 }}>
+                                        <Typography variant="subtitle2" noWrap>
+                                            {deal.card.name}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {deal.card.set_name}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Box>
+                                        <Typography variant="h6" color="success.main">
+                                            ${userPrice.toFixed(2)}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ textDecoration: 'line-through' }}>
+                                            ${marketPrice.toFixed(2)}
+                                        </Typography>
+                                    </Box>
+                                    <Chip
+                                        label={`${discount.toFixed(0)}% OFF`}
+                                        color="success"
+                                        size="small"
+                                        sx={{ fontWeight: 'bold' }}
+                                    />
+                                </Box>
+                            </Box>
+                        </Grid>
+                    );
+                })}
+            </Grid>
+        </Paper>
+    );
+}
+
+// Price Alerts Component
+function PriceAlertsSection() {
+    const [alerts, setAlerts] = useState<any[]>([]);
+    const [newAlertOpen, setNewAlertOpen] = useState(false);
+
+    return (
+        <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(33, 150, 243, 0.1)', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PriceCheck />
+                    <Typography variant="h6">Price Alerts</Typography>
+                    <Chip label={alerts.length} size="small" />
+                </Box>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setNewAlertOpen(true)}
+                    startIcon={<AddIcon />}
+                >
+                    Set Alert
+                </Button>
+            </Box>
+
+            {alerts.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                    Set price alerts to be notified when cards reach your target price
+                </Typography>
+            ) : (
+                <Grid container spacing={1}>
+                    {alerts.map((alert, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={index}>
+                            <Chip
+                                label={`${alert.card_name}: $${alert.target_price}`}
+                                onDelete={() => {
+                                    // Remove alert logic
+                                }}
+                                color="primary"
+                                variant="outlined"
+                            />
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
+        </Paper>
+    );
+}
+
 export default function MarketplacePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -126,9 +493,19 @@ export default function MarketplacePage() {
     const [selectedSet, setSelectedSet] = useState('');
     const [selectedType, setSelectedType] = useState('');
     const [selectedSaleType, setSelectedSaleType] = useState('');
+    const [priceStatusFilter, setPriceStatusFilter] = useState('');
+    const [sortBy, setSortBy] = useState('newest');
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [availableSets, setAvailableSets] = useState<string[]>([]);
     const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+
+    // Price history modal state
+    const [priceHistoryModalOpen, setPriceHistoryModalOpen] = useState(false);
+    const [selectedCardForHistory, setSelectedCardForHistory] = useState<{
+        cardId?: number;
+        userCardId?: number;
+        cardName: string;
+    } | null>(null);
 
     // Bidding modal state
     const [biddingModalOpen, setBiddingModalOpen] = useState(false);
@@ -170,6 +547,12 @@ export default function MarketplacePage() {
             }
             if (selectedSaleType && ['FIXED', 'AUCTION'].includes(selectedSaleType)) {
                 params.append('sale_type', selectedSaleType);
+            }
+            if (priceStatusFilter && ['below_market', 'at_market', 'above_market', 'good_deals'].includes(priceStatusFilter)) {
+                params.append('price_status', priceStatusFilter);
+            }
+            if (sortBy) {
+                params.append('sort_by', sortBy);
             }
 
             console.log('Fetching marketplace with params:', params.toString());
@@ -263,6 +646,38 @@ export default function MarketplacePage() {
         }
     };
 
+    const showPriceHistory = (listing: Listing) => {
+        setSelectedCardForHistory({
+            cardId: listing.card.id,
+            userCardId: listing.type === 'USER_CARD' ? listing.user_card_id : undefined,
+            cardName: listing.card.name
+        });
+        setPriceHistoryModalOpen(true);
+    };
+
+    const handleMissingPriceData = (listing: Listing) => {
+        toast.info(`Price data not available for ${listing.card.name}. Requesting update...`);
+
+        // Call price sync for this specific card
+        fetch('/api/cards/sync-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cardIds: [listing.card.id],
+                force: true,
+            }),
+        }).then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toast.success('Price data updated! Refreshing...');
+                    fetchCards(); // Refresh the marketplace
+                }
+            })
+            .catch(() => {
+                toast.error('Failed to update price data');
+            });
+    };
+
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
@@ -274,7 +689,7 @@ export default function MarketplacePage() {
             fetchCards();
             fetchNotificationCount();
         }
-    }, [searchTerm, selectedSet, selectedType, selectedSaleType, status]);
+    }, [searchTerm, selectedSet, selectedType, selectedSaleType, priceStatusFilter, sortBy, status]);
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -287,7 +702,7 @@ export default function MarketplacePage() {
     }, [status]);
 
     const formatPrice = (price: number | null) => {
-        return price != null ? `$${Number(price).toFixed(2)}` : 'N/A';
+        return price != null ? `${Number(price).toFixed(2)}` : 'N/A';
     };
 
     const formatTimeLeft = (timeLeftMs: number | null) => {
@@ -461,13 +876,23 @@ export default function MarketplacePage() {
                     Discover and purchase Pokemon cards from other collectors
                 </Typography>
             </Box>
+
+            {/* Market Summary */}
+            <MarketSummarySection cards={cards as EnhancedListing[]} />
+
+            {/* Price Alerts */}
+            <PriceAlertsSection />
+
+            {/* Daily Deals */}
+            <DailyDealsSection cards={cards as EnhancedListing[]} />
+
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <FilterIcon sx={{ mr: 1 }} />
                     <Typography variant="h6">Search & Filters</Typography>
                 </Box>
                 <Grid container spacing={2}>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={2}>
                         <TextField
                             fullWidth
                             label="Search cards"
@@ -482,7 +907,7 @@ export default function MarketplacePage() {
                             }}
                         />
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={2}>
                         <FormControl fullWidth>
                             <InputLabel>Set</InputLabel>
                             <Select
@@ -499,7 +924,7 @@ export default function MarketplacePage() {
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={2}>
                         <FormControl fullWidth>
                             <InputLabel>Type</InputLabel>
                             <Select
@@ -516,7 +941,7 @@ export default function MarketplacePage() {
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={2}>
                         <FormControl fullWidth>
                             <InputLabel>Sale Type</InputLabel>
                             <Select
@@ -530,8 +955,42 @@ export default function MarketplacePage() {
                             </Select>
                         </FormControl>
                     </Grid>
+                    <Grid item xs={12} md={2}>
+                        <FormControl fullWidth>
+                            <InputLabel>Price Status</InputLabel>
+                            <Select
+                                value={priceStatusFilter}
+                                label="Price Status"
+                                onChange={(e) => setPriceStatusFilter(e.target.value as string)}
+                            >
+                                <MenuItem value="">All Prices</MenuItem>
+                                <MenuItem value="below_market">Below Market</MenuItem>
+                                <MenuItem value="at_market">At Market Price</MenuItem>
+                                <MenuItem value="above_market">Above Market</MenuItem>
+                                <MenuItem value="good_deals">Good Deals (10%+ Below)</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                        <FormControl fullWidth>
+                            <InputLabel>Sort By</InputLabel>
+                            <Select
+                                value={sortBy}
+                                label="Sort By"
+                                onChange={(e) => setSortBy(e.target.value as string)}
+                            >
+                                <MenuItem value="newest">Newest First</MenuItem>
+                                <MenuItem value="price_low">Price: Low to High</MenuItem>
+                                <MenuItem value="price_high">Price: High to Low</MenuItem>
+                                <MenuItem value="market_value">Market Value</MenuItem>
+                                <MenuItem value="best_deals">Best Deals</MenuItem>
+                                <MenuItem value="ending_soon">Ending Soon</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
                 </Grid>
             </Paper>
+
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
                     {error.includes('Failed to fetch marketplace cards')
@@ -557,45 +1016,40 @@ export default function MarketplacePage() {
                     {cards.map((listing) => {
                         const isCardPurchasing = purchasingCards.has(listing.id);
                         const isCardBidding = biddingCards.has(listing.id);
-                        const isOwnCard = listing.owner.id && listing.owner.id === parseInt(session?.user?.id || '0');
-                        const isAuctionActive =
-                            listing.sale_type === 'AUCTION' && listing.time_remaining && listing.time_remaining > 0;
+                        const isOwnCard = !!(listing.owner.id && listing.owner.id === parseInt(session?.user?.id || '0'));
+                        const isAuctionActive = listing.sale_type === 'AUCTION' && listing.time_remaining && listing.time_remaining > 0;
+
+                        // Cast to enhanced listing for price comparison
+                        const enhancedListing = listing as EnhancedListing;
+                        enhancedListing.card.market_price = listing.card.market_price;
+                        enhancedListing.card.price_trend = listing.card.price_trend;
+                        enhancedListing.card.price_change_24h = listing.card.price_change_24h;
 
                         return (
                             <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
-                                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                                     <Box sx={{ position: 'relative' }}>
                                         <CardMedia
                                             component="img"
                                             height="200"
-                                            image={
-                                                listing.card.small_image_url ||
-                                                listing.card.image_url ||
-                                                '/placeholder-card.png'
-                                            }
+                                            image={listing.card.small_image_url || listing.card.image_url || '/placeholder-card.png'}
                                             alt={listing.card.name}
                                             sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = '/placeholder-card.png';
                                             }}
                                         />
+
+                                        {/* Sale type badge */}
                                         <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
                                             {listing.sale_type === 'AUCTION' ? (
-                                                <Chip
-                                                    icon={<GavelIcon />}
-                                                    label="Auction"
-                                                    color="secondary"
-                                                    size="small"
-                                                />
+                                                <Chip icon={<GavelIcon />} label="Auction" color="secondary" size="small" />
                                             ) : (
-                                                <Chip
-                                                    icon={<DollarIcon />}
-                                                    label="Fixed"
-                                                    color="primary"
-                                                    size="small"
-                                                />
+                                                <Chip icon={<DollarIcon />} label="Fixed" color="primary" size="small" />
                                             )}
                                         </Box>
+
+                                        {/* Auction status badge */}
                                         {listing.sale_type === 'AUCTION' && (
                                             <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
                                                 <Chip
@@ -606,20 +1060,55 @@ export default function MarketplacePage() {
                                                 />
                                             </Box>
                                         )}
+
+                                        {/* Price history button */}
+                                        <Box sx={{ position: 'absolute', bottom: 8, right: 8 }}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => showPriceHistory(listing)}
+                                                sx={{
+                                                    bgcolor: 'rgba(0, 0, 0, 0.7)',
+                                                    color: 'white',
+                                                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.9)' }
+                                                }}
+                                            >
+                                                <History sx={{ fontSize: 16 }} />
+                                            </IconButton>
+                                        </Box>
                                     </Box>
+
                                     <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                                         <Typography variant="h6" component="h3" gutterBottom noWrap>
                                             {listing.card.name}
                                         </Typography>
+
                                         <Typography variant="body2" color="text.secondary" gutterBottom>
                                             {listing.card.set_name} • {listing.card.set_number}
                                         </Typography>
+
                                         <Chip
                                             label={listing.card.rarity}
                                             color={getRarityColor(listing.card.rarity)}
                                             size="small"
                                             sx={{ mb: 2, alignSelf: 'flex-start' }}
                                         />
+
+                                        {/* Price Comparison Box */}
+                                        {enhancedListing.card.market_price ? (
+                                            <PriceComparisonBox listing={enhancedListing} />
+                                        ) : (
+                                            <Box sx={{ textAlign: 'center', py: 1 }}>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => handleMissingPriceData(listing)}
+                                                    startIcon={<PriceCheck />}
+                                                >
+                                                    Get Price Data
+                                                </Button>
+                                            </Box>
+                                        )}
+
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                                             <Typography variant="body2" color="text.secondary">
                                                 Condition: {listing.condition}
@@ -628,24 +1117,27 @@ export default function MarketplacePage() {
                                                 by {listing.owner.name}
                                             </Typography>
                                         </Box>
+
                                         <Divider sx={{ my: 1 }} />
+
                                         <Box sx={{ mt: 'auto' }}>
                                             {listing.sale_type === 'FIXED' ? (
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                    }}
-                                                >
-                                                    <Typography variant="h6" color="primary.main">
-                                                        {formatPrice(listing.fixed_price)}
-                                                    </Typography>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Box>
+                                                        <Typography variant="h6" color="primary.main">
+                                                            {formatPrice(listing.fixed_price)}
+                                                        </Typography>
+                                                        {enhancedListing.card.market_price && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Market: {formatPrice(enhancedListing.card.market_price)}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
                                                     <Button
                                                         variant="contained"
                                                         size="small"
                                                         onClick={() => handlePurchase(listing)}
-                                                        // disabled={isCardPurchasing || isOwnCard}
+                                                        disabled={isCardPurchasing || isOwnCard}
                                                     >
                                                         {isCardPurchasing ? (
                                                             <CircularProgress size={20} />
@@ -658,9 +1150,7 @@ export default function MarketplacePage() {
                                                 </Box>
                                             ) : (
                                                 <Box>
-                                                    <Box
-                                                        sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}
-                                                    >
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                                         <Typography variant="body2" color="text.secondary">
                                                             Current Bid:
                                                         </Typography>
@@ -668,14 +1158,20 @@ export default function MarketplacePage() {
                                                             {formatPrice(listing.highest_bid || listing.reserve_price)}
                                                         </Typography>
                                                     </Box>
+
+                                                    {enhancedListing.card.market_price && (
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                Market Price:
+                                                            </Typography>
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                {formatPrice(enhancedListing.card.market_price)}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+
                                                     {isAuctionActive ? (
-                                                        <Box
-                                                            sx={{
-                                                                display: 'flex',
-                                                                justifyContent: 'space-between',
-                                                                mb: 2,
-                                                            }}
-                                                        >
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                                                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                                 <ClockIcon sx={{ fontSize: 16, mr: 0.5 }} />
                                                                 <Typography variant="body2" color="text.secondary">
@@ -687,22 +1183,12 @@ export default function MarketplacePage() {
                                                             </Typography>
                                                         </Box>
                                                     ) : (
-                                                        <Typography
-                                                            variant="body2"
-                                                            color="error.main"
-                                                            align="center"
-                                                            sx={{ mb: 2 }}
-                                                        >
+                                                        <Typography variant="body2" color="error.main" align="center" sx={{ mb: 2 }}>
                                                             Auction Ended
                                                         </Typography>
                                                     )}
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'center',
-                                                        }}
-                                                    >
+
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <Typography variant="caption" color="text.secondary">
                                                             {listing.bid_count} bid{listing.bid_count !== 1 ? 's' : ''}
                                                         </Typography>
@@ -734,6 +1220,20 @@ export default function MarketplacePage() {
                     })}
                 </Grid>
             )}
+
+            {/* Price History Modal */}
+            <PriceHistoryModal
+                open={priceHistoryModalOpen}
+                onClose={() => {
+                    setPriceHistoryModalOpen(false);
+                    setSelectedCardForHistory(null);
+                }}
+                cardId={selectedCardForHistory?.cardId}
+                userCardId={selectedCardForHistory?.userCardId}
+                cardName={selectedCardForHistory?.cardName || ''}
+            />
+
+            {/* Bidding Modal */}
             <BiddingModal
                 open={biddingModalOpen}
                 onClose={() => {

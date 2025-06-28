@@ -464,3 +464,327 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 
 
+
+```
+tcg-market
+├─ .eslintrc.json
+├─ backups
+│  ├─ backup-db.mjs
+│  ├─ mysql-backup-2025-06-01_21-01-00.sql
+│  ├─ mysql-backup-simple.ps1
+│  └─ waitlist-backup-2025-06-02T00-58-56-965Z.json
+├─ check-data.js
+├─ check-login.js
+├─ db.ts
+├─ debug-test.js
+├─ eslint.config.mjs
+├─ next.config.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.mjs
+├─ prisma
+│  ├─ create_waitlist.sql
+│  └─ schema.prisma
+├─ public
+│  ├─ favicon.ico
+│  ├─ file.svg
+│  ├─ globe.svg
+│  ├─ next.svg
+│  ├─ vercel.svg
+│  └─ window.svg
+├─ pvtkey.json
+├─ query
+├─ README.md
+├─ reset-test-user.js
+├─ scrape_target.py
+├─ scripts
+│  ├─ callback-server.js
+│  ├─ clear-waitlist.cjs
+│  ├─ clear-waitlist.ts
+│  ├─ exchange-code.js
+│  ├─ generate-refresh-token.cjs
+│  ├─ generate-token.js
+│  ├─ get-gmail-credentials.js
+│  ├─ load-env.js
+│  ├─ seed.ts
+│  ├─ setup-cron.js
+│  ├─ test-oauth-flow.js
+│  ├─ test-waitlist-signup.js
+│  └─ update-waitlist-status.js
+├─ seed-dev-user.js
+├─ seed-simple.ts
+├─ seed.ts
+├─ src
+│  ├─ app
+│  │  ├─ activation-success
+│  │  │  ├─ activation-success-client.tsx
+│  │  │  └─ page.tsx
+│  │  ├─ admin
+│  │  │  ├─ auctions
+│  │  │  │  └─ page.tsx
+│  │  │  ├─ cards
+│  │  │  │  ├─ admin-cards-client.tsx
+│  │  │  │  └─ page.tsx
+│  │  │  ├─ dashboard
+│  │  │  │  └─ page.tsx
+│  │  │  ├─ listings
+│  │  │  │  ├─ admin-listings-client.tsx
+│  │  │  │  └─ page.tsx
+│  │  │  ├─ transactions
+│  │  │  │  ├─ page.tsx
+│  │  │  │  └─ pending
+│  │  │  │     └─ page.tsx
+│  │  │  ├─ users
+│  │  │  │  ├─ admin-user-date.tsx
+│  │  │  │  ├─ admin-users-client.tsx
+│  │  │  │  ├─ page.tsx
+│  │  │  │  └─ types.ts
+│  │  │  ├─ waitlist-signups
+│  │  │  │  └─ page.tsx
+│  │  │  └─ wallet
+│  │  │     └─ page.tsx
+│  │  ├─ api
+│  │  │  ├─ admin
+│  │  │  │  ├─ auctions
+│  │  │  │  │  ├─ end
+│  │  │  │  │  │  └─ route.ts
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ cards
+│  │  │  │  │  ├─ route.ts
+│  │  │  │  │  └─ [id]
+│  │  │  │  │     └─ route.ts
+│  │  │  │  ├─ listings
+│  │  │  │  │  ├─ route.ts
+│  │  │  │  │  └─ [id]
+│  │  │  │  │     └─ route.ts
+│  │  │  │  ├─ pricing
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ transactions
+│  │  │  │  │  ├─ force-complete
+│  │  │  │  │  │  └─ route.ts
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ users
+│  │  │  │  │  ├─ route.ts
+│  │  │  │  │  └─ [id]
+│  │  │  │  │     ├─ activity
+│  │  │  │  │     │  └─ route.ts
+│  │  │  │  │     └─ route.ts
+│  │  │  │  ├─ waitlist
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ wallet
+│  │  │  │     └─ route.ts
+│  │  │  ├─ auth
+│  │  │  │  ├─ forgot-password
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ login.bak
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ register
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ reset-password
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ verify-email
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ [...nextauth]
+│  │  │  │     └─ route.ts
+│  │  │  ├─ bids
+│  │  │  │  ├─ accept
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ confirm-purchase
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ route.ts
+│  │  │  ├─ cards
+│  │  │  │  ├─ price-history
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ route.ts
+│  │  │  │  └─ sync-prices
+│  │  │  │     └─ route.ts
+│  │  │  ├─ discord
+│  │  │  │  └─ messages
+│  │  │  │     ├─ route.ts
+│  │  │  │     └─ stream
+│  │  │  │        └─ route.ts
+│  │  │  ├─ fetchProduct
+│  │  │  │  └─ route.ts
+│  │  │  ├─ marketplace
+│  │  │  │  ├─ purchase
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ route.ts
+│  │  │  ├─ notifications
+│  │  │  │  └─ route.ts
+│  │  │  ├─ pokemon-tcg
+│  │  │  │  ├─ import
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ search
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ sets
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ types
+│  │  │  │     └─ route.ts
+│  │  │  ├─ price-history
+│  │  │  │  └─ route.ts
+│  │  │  ├─ process-auctions
+│  │  │  │  └─ route.ts
+│  │  │  ├─ products
+│  │  │  │  └─ route.ts
+│  │  │  ├─ proxy-target
+│  │  │  │  └─ route.ts
+│  │  │  ├─ scrapeTarget
+│  │  │  │  └─ route.ts
+│  │  │  ├─ subscribe
+│  │  │  │  └─ route.ts
+│  │  │  ├─ tasks
+│  │  │  │  └─ route.ts
+│  │  │  ├─ test
+│  │  │  │  └─ email
+│  │  │  │     └─ route.ts
+│  │  │  ├─ test-email
+│  │  │  │  └─ route.ts
+│  │  │  ├─ transactions
+│  │  │  │  └─ route.ts
+│  │  │  ├─ user
+│  │  │  │  ├─ collection
+│  │  │  │  │  ├─ route.ts
+│  │  │  │  │  └─ [id]
+│  │  │  │  │     └─ sell
+│  │  │  │  │        └─ route.ts
+│  │  │  │  └─ wallet
+│  │  │  │     └─ route.ts
+│  │  │  ├─ user-cards
+│  │  │  │  ├─ my-sales
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ route.ts
+│  │  │  │  └─ [id]
+│  │  │  │     └─ route.ts
+│  │  │  ├─ users
+│  │  │  │  └─ route.ts
+│  │  │  ├─ visitor-count
+│  │  │  │  └─ route.ts
+│  │  │  ├─ waitlist
+│  │  │  │  └─ route.ts
+│  │  │  └─ watchlist
+│  │  │     ├─ route.ts
+│  │  │     └─ [id]
+│  │  │        └─ route.ts
+│  │  ├─ bids
+│  │  │  └─ my-auctions
+│  │  │     └─ page.tsx
+│  │  ├─ chat
+│  │  │  └─ page.tsx
+│  │  ├─ client-layout.tsx
+│  │  ├─ collection
+│  │  │  ├─ collection-client.tsx
+│  │  │  └─ page.tsx
+│  │  ├─ components
+│  │  │  ├─ AdminSidebar.tsx
+│  │  │  ├─ AuctionNotifications.tsx
+│  │  │  ├─ BiddingModal.tsx
+│  │  │  ├─ CountdownTimer.tsx
+│  │  │  ├─ DevLogin.tsx
+│  │  │  ├─ DevUserSwitcher.tsx
+│  │  │  ├─ DynamicBackground.tsx
+│  │  │  ├─ icons
+│  │  │  │  ├─ DiscordIcon.tsx
+│  │  │  │  └─ PurchaseConfirmationModal.tsx
+│  │  │  ├─ ManualWatchlist.tsx
+│  │  │  ├─ ParticlesBackground.tsx
+│  │  │  ├─ PendingPurchaseModal.tsx
+│  │  │  ├─ PriceChart.tsx
+│  │  │  ├─ PurchaseConfirmationModal.tsx
+│  │  │  ├─ PurchaseModal.tsx
+│  │  │  ├─ Settings.tsx
+│  │  │  ├─ Sidebar.tsx
+│  │  │  ├─ TaskManagement.tsx
+│  │  │  ├─ TransactionTracker.tsx
+│  │  │  ├─ UserWallet.tsx
+│  │  │  ├─ VisitorCount.tsx
+│  │  │  └─ Watchlist.tsx
+│  │  ├─ dashboard
+│  │  │  └─ page.tsx
+│  │  ├─ forgot-password
+│  │  │  ├─ forgot-password-client.tsx
+│  │  │  └─ page.tsx
+│  │  ├─ globals.css
+│  │  ├─ layout.tsx
+│  │  ├─ lib
+│  │  │  ├─ api-client.ts
+│  │  │  ├─ auth-helper.ts
+│  │  │  ├─ constant-contact.ts
+│  │  │  ├─ db.ts
+│  │  │  ├─ dev-auth.ts
+│  │  │  ├─ dev-bypass.ts
+│  │  │  ├─ dev-user.ts
+│  │  │  ├─ email-backup.ts
+│  │  │  ├─ email.ts
+│  │  │  ├─ email.ts.backup
+│  │  │  ├─ google-sheets.ts
+│  │  │  ├─ notification.ts
+│  │  │  ├─ pokemon-price-tracker-api.ts
+│  │  │  ├─ pokemon-tcg-api.ts
+│  │  │  ├─ prisma.ts
+│  │  │  ├─ releaseNotifier-backup.ts
+│  │  │  ├─ releaseNotifier.ts
+│  │  │  ├─ test-email.ts
+│  │  │  ├─ test-gmail.js
+│  │  │  └─ test-gmail.ts
+│  │  ├─ login
+│  │  │  ├─ login-client.tsx
+│  │  │  └─ page.tsx
+│  │  ├─ marketplace
+│  │  │  ├─ marketplace-client.tsx
+│  │  │  └─ page.tsx
+│  │  ├─ metadata.ts
+│  │  ├─ middleware.ts
+│  │  ├─ next-favicon.ico
+│  │  ├─ notification
+│  │  │  └─ page.tsx
+│  │  ├─ page.tsx
+│  │  ├─ protected
+│  │  │  └─ page.tsx
+│  │  ├─ register
+│  │  │  ├─ page.tsx
+│  │  │  └─ register-client.tsx
+│  │  ├─ reset-password
+│  │  │  ├─ page.tsx
+│  │  │  └─ reset-password-client.tsx
+│  │  ├─ selling
+│  │  │  └─ dashboard
+│  │  │     └─ page.tsx
+│  │  ├─ settings
+│  │  │  └─ page.tsx
+│  │  ├─ stock-checker
+│  │  │  └─ page.tsx
+│  │  ├─ styles
+│  │  │  └─ StockChecker.module.css
+│  │  ├─ tasks
+│  │  │  └─ page.tsx
+│  │  ├─ test
+│  │  │  └─ page.js
+│  │  ├─ theme.ts
+│  │  ├─ verify-email
+│  │  │  ├─ page.tsx
+│  │  │  └─ verify-email-client.tsx
+│  │  ├─ waitlist
+│  │  │  └─ page.tsx
+│  │  └─ wallet
+│  │     └─ page.tsx
+│  └─ middleware.ts
+├─ t
+├─ tailwind.config.ts
+├─ tcg-market.code-workspace
+├─ test-api.js
+├─ test-connection.js
+├─ test-data.cjs
+├─ test-db.js
+├─ test-gmail.js
+├─ test-mysql12.js
+├─ test-prisma.js
+├─ test-wallet.js
+├─ token.json
+├─ tsconfig.json
+├─ types
+│  ├─ google-sheets.d.ts
+│  ├─ he.d.ts
+│  └─ next-auth.d.ts
+└─ visitorDB_dump.sql
+
+```

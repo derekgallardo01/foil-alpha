@@ -1,52 +1,14 @@
-// src/app/api/pokemon-tcg/import/route.ts - Fixed TypeScript version
+// src/app/api/pokemon-tcg/import/route.ts - Updated with Pokemon Price Tracker API
 import { NextRequest, NextResponse } from 'next/server';
 import { pokemonTCGAPI, PokemonTCGAPI } from '../../../lib/pokemon-tcg-api';
+import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from '../../../lib/pokemon-price-tracker-api';
 import { prisma } from '../../../lib/prisma';
 import { CardSource } from '@prisma/client';
-
-// Pricing configuration
-const PRICING_CONFIG = {
-    RARITY_BASE_PRICES: {
-        'Common': 0.25,
-        'Uncommon': 0.75,
-        'Rare': 3.00,
-        'Holo Rare': 8.00,
-        'Ultra Rare': 25.00,
-        'Secret Rare': 45.00,
-        'Rainbow Rare': 75.00,
-        'Gold Rare': 60.00,
-        'Radiant Rare': 15.00,
-        'Amazing Rare': 20.00,
-        'Shining Rare': 30.00,
-        'Prime': 40.00,
-        'Legend': 50.00,
-        'BREAK': 12.00,
-        'GX': 18.00,
-        'EX': 15.00,
-        'V': 12.00,
-        'VMAX': 25.00,
-        'VSTAR': 22.00,
-        'TAG TEAM': 35.00,
-    },
-    SET_AGE_MULTIPLIERS: {
-        '2024': 1.5, '2023': 1.3, '2022': 1.1, '2021': 1.0, '2020': 0.9,
-        '2019': 0.8, '2018': 0.7, '2017': 0.6, '2016': 0.7, '2015': 0.8,
-        '2014': 0.9, '2013': 1.0, '2012': 1.1, '2011': 1.2, '2010': 1.3,
-        '2009': 1.4, '2008': 1.5, '2007': 1.6, '2006': 1.7, '2005': 1.8,
-        '2004': 1.9, '2003': 2.0, '2002': 2.1, '2001': 2.2, '2000': 2.3,
-        '1999': 2.5, '1998': 2.7,
-    },
-    POPULAR_POKEMON_MULTIPLIERS: {
-        'Charizard': 3.0, 'Pikachu': 2.0, 'Mewtwo': 1.8, 'Mew': 1.7,
-        'Lugia': 1.6, 'Ho-Oh': 1.5, 'Rayquaza': 1.5, 'Arceus': 1.4,
-    },
-    MARKETPLACE_MARKUP: 1.15,
-};
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { cardIds, setId, pricingStrategy = 'AUTO' } = body;
+        const { cardIds, setId, pricingStrategy = 'REAL_API' } = body;
 
         if (!cardIds && !setId) {
             return NextResponse.json(
@@ -65,14 +27,18 @@ export async function POST(request: NextRequest) {
             supertypes_created: [] as any[],
             pricing_summary: {
                 total_cards_priced: 0,
-                avg_calculated_price: 0,
+                api_pricing_success: 0,
+                fallback_pricing_used: 0,
+                avg_market_price: 0,
                 price_range: { min: 0, max: 0 },
                 pricing_strategy_used: pricingStrategy,
+                rate_limit_encountered: false,
             }
         };
 
         let cardsToImport: any[] = [];
 
+        // Get cards from Pokemon TCG API
         if (setId) {
             console.log(`Importing entire set: ${setId}`);
             const setInfo = await pokemonTCGAPI.getSet(setId);
@@ -94,9 +60,42 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        const calculatedPrices: number[] = [];
+        const marketPrices: number[] = [];
 
-        // Process each card with enhanced pricing
+        // Group cards for batch pricing lookup
+        const priceTrackerIds = cardsToImport
+            .map(card => ({
+                apiCard: card,
+                priceTrackerId: card.set?.id && card.number ?
+                    PokemonPriceTrackerAPI.convertTCGCardIdToPriceTrackerId(card.set.id, card.number) : null
+            }))
+            .filter(item => item.priceTrackerId !== null);
+
+        console.log(`Fetching pricing for ${priceTrackerIds.length} cards...`);
+
+        // Fetch pricing data in batches
+        let pricingDataMap = new Map<string, any>();
+
+        if (pricingStrategy === 'REAL_API' && priceTrackerIds.length > 0) {
+            try {
+                const ids = priceTrackerIds.map(item => item.priceTrackerId!);
+                const pricingResponse = await pokemonPriceTrackerAPI.getBatchPricing(ids, false);
+
+                if (pricingResponse.success && pricingResponse.data) {
+                    pricingResponse.data.forEach(priceData => {
+                        pricingDataMap.set(priceData.id, priceData);
+                    });
+                    console.log(`Successfully fetched pricing for ${pricingDataMap.size} cards`);
+                } else {
+                    console.warn('Pricing API failed, falling back to calculated pricing:', pricingResponse.error);
+                    results.pricing_summary.rate_limit_encountered = pricingResponse.error?.includes('Rate limited') || false;
+                }
+            } catch (error) {
+                console.error('Error fetching batch pricing:', error);
+            }
+        }
+
+        // Process each card
         for (const apiCard of cardsToImport) {
             try {
                 // Ensure all related data exists first
@@ -105,17 +104,50 @@ export async function POST(request: NextRequest) {
                 const supertypeId = await ensureSupertypeExists(apiCard.supertype, results);
                 const subtypeId = apiCard.subtypes?.[0] ? await ensureSubtypeExists(apiCard.subtypes[0], apiCard.supertype, results) : null;
 
-                // Calculate intelligent price for the card
-                const calculatedPrice = calculateIntelligentPrice(apiCard, pricingStrategy);
-                calculatedPrices.push(calculatedPrice);
+                // Get real market price
+                let marketPrice: number | null = null;
+                let pricingSource = 'calculated';
 
-                // Convert API card to our database format with pricing
+                const priceTrackerId = apiCard.set?.id && apiCard.number ?
+                    PokemonPriceTrackerAPI.convertTCGCardIdToPriceTrackerId(apiCard.set.id, apiCard.number) : null;
+
+                if (priceTrackerId && pricingDataMap.has(priceTrackerId)) {
+                    const pricingData = pricingDataMap.get(priceTrackerId);
+                    marketPrice = PokemonPriceTrackerAPI.getBestMarketPrice(pricingData);
+
+                    if (marketPrice && marketPrice > 0) {
+                        pricingSource = 'pokemon_price_tracker';
+                        results.pricing_summary.api_pricing_success++;
+                    }
+                }
+
+                // Fallback to Pokemon TCG API pricing
+                if (!marketPrice || marketPrice <= 0) {
+                    marketPrice = PokemonTCGAPI.getMarketPrice(apiCard);
+                    if (marketPrice && marketPrice > 0) {
+                        pricingSource = 'pokemon_tcg_api';
+                    }
+                }
+
+                // Final fallback to calculated pricing
+                if (!marketPrice || marketPrice <= 0) {
+                    marketPrice = calculateFallbackPrice(apiCard);
+                    pricingSource = 'calculated';
+                    results.pricing_summary.fallback_pricing_used++;
+                }
+
+                if (marketPrice && marketPrice > 0) {
+                    marketPrices.push(marketPrice);
+                }
+
+                // Convert API card to our database format
                 const dbCardData = convertApiCardToDbCardEnhanced(apiCard, {
                     setId: apiCard.set.id,
                     rarityId,
                     supertypeId,
                     subtypeId,
-                    calculatedPrice,
+                    marketPrice,
+                    pricingSource,
                 });
 
                 // Check if card already exists by API ID
@@ -124,7 +156,7 @@ export async function POST(request: NextRequest) {
                 });
 
                 if (existingCard) {
-                    // Prepare update data with proper types
+                    // Update existing card
                     const updateData: any = {
                         name: dbCardData.name,
                         set_name: dbCardData.set_name,
@@ -164,8 +196,10 @@ export async function POST(request: NextRequest) {
                         source: existingCard.source === CardSource.MANUAL ? CardSource.MIXED : CardSource.API,
                         api_updated_at: new Date(),
                         last_sync: new Date(),
-                        // Only update price if it's not manually set
-                        market_price: existingCard.source === CardSource.MANUAL ? existingCard.market_price : calculatedPrice,
+                        // Update market price and pricing metadata
+                        market_price: marketPrice,
+                        price_trend: pricingSource === 'pokemon_price_tracker' ?
+                            PokemonPriceTrackerAPI.getPriceTrend(pricingDataMap.get(priceTrackerId!)) : 'stable',
                         last_price_update: new Date(),
                     };
 
@@ -179,12 +213,25 @@ export async function POST(request: NextRequest) {
                             supertype_ref: true,
                         }
                     });
+
+                    // Create price history entry
+                    if (marketPrice && pricingSource !== 'calculated') {
+                        await prisma.$executeRaw`
+                            INSERT INTO price_history (card_id, price, source, recorded_at, metadata) 
+                            VALUES (${existingCard.id}, ${marketPrice}, ${pricingSource}, NOW(), ${JSON.stringify({
+                            pricing_source: pricingSource,
+                            api_update: true,
+                            price_tracker_id: priceTrackerId
+                        })})
+                        `;
+                    }
+
                     results.updated.push(updatedCard);
                 } else {
-                    // Create new card with proper types
+                    // Create new card
                     const createData: any = {
                         ...dbCardData,
-                        source: CardSource.API, // Use proper enum value
+                        source: CardSource.API,
                     };
 
                     const newCard = await prisma.card.create({
@@ -196,6 +243,19 @@ export async function POST(request: NextRequest) {
                             supertype_ref: true,
                         }
                     });
+
+                    // Create initial price history entry
+                    if (marketPrice && pricingSource !== 'calculated') {
+                        await prisma.$executeRaw`
+                            INSERT INTO price_history (card_id, price, source, recorded_at, metadata) 
+                            VALUES (${newCard.id}, ${marketPrice}, ${pricingSource}, NOW(), ${JSON.stringify({
+                            pricing_source: pricingSource,
+                            initial_import: true,
+                            price_tracker_id: priceTrackerId
+                        })})
+                        `;
+                    }
+
                     results.imported.push(newCard);
                 }
 
@@ -210,15 +270,15 @@ export async function POST(request: NextRequest) {
         }
 
         // Calculate pricing summary
-        if (calculatedPrices.length > 0) {
+        if (marketPrices.length > 0) {
             results.pricing_summary = {
-                total_cards_priced: calculatedPrices.length,
-                avg_calculated_price: calculatedPrices.reduce((a, b) => a + b, 0) / calculatedPrices.length,
+                ...results.pricing_summary,
+                total_cards_priced: marketPrices.length,
+                avg_market_price: marketPrices.reduce((a, b) => a + b, 0) / marketPrices.length,
                 price_range: {
-                    min: Math.min(...calculatedPrices),
-                    max: Math.max(...calculatedPrices)
+                    min: Math.min(...marketPrices),
+                    max: Math.max(...marketPrices)
                 },
-                pricing_strategy_used: pricingStrategy,
             };
         }
 
@@ -253,50 +313,26 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// Helper functions remain the same...
-function calculateIntelligentPrice(apiCard: any, strategy: string = 'AUTO'): number {
-    let basePrice = 1.00;
+// Fallback pricing calculation (simplified version of original)
+function calculateFallbackPrice(apiCard: any): number {
+    const RARITY_BASE_PRICES: { [key: string]: number } = {
+        'Common': 0.25,
+        'Uncommon': 0.75,
+        'Rare': 3.00,
+        'Holo Rare': 8.00,
+        'Ultra Rare': 25.00,
+        'Secret Rare': 45.00,
+        'Rainbow Rare': 75.00,
+    };
 
-    try {
-        if (strategy === 'API_PRIORITY' || strategy === 'AUTO') {
-            const apiPrice = PokemonTCGAPI.getMarketPrice(apiCard);
-            if (apiPrice && apiPrice > 0) {
-                return Math.round((apiPrice * PRICING_CONFIG.MARKETPLACE_MARKUP) * 100) / 100;
-            }
-        }
+    const basePrice = RARITY_BASE_PRICES[apiCard.rarity] || 1.00;
+    const setYear = apiCard.set.releaseDate ? apiCard.set.releaseDate.substring(0, 4) : '2024';
+    const yearMultiplier = setYear < '2020' ? 1.5 : 1.0;
 
-        const rarity = apiCard.rarity || 'Common';
-        basePrice = PRICING_CONFIG.RARITY_BASE_PRICES[rarity as keyof typeof PRICING_CONFIG.RARITY_BASE_PRICES] || 1.00;
-
-        const setYear = apiCard.set.releaseDate ? apiCard.set.releaseDate.substring(0, 4) : '2024';
-        const ageMultiplier = PRICING_CONFIG.SET_AGE_MULTIPLIERS[setYear as keyof typeof PRICING_CONFIG.SET_AGE_MULTIPLIERS] || 1.0;
-        basePrice *= ageMultiplier;
-
-        const pokemonName = apiCard.name.split(' ')[0];
-        const popularityMultiplier = PRICING_CONFIG.POPULAR_POKEMON_MULTIPLIERS[pokemonName as keyof typeof PRICING_CONFIG.POPULAR_POKEMON_MULTIPLIERS] || 1.0;
-        basePrice *= popularityMultiplier;
-
-        if (apiCard.rarity?.toLowerCase().includes('holo')) {
-            basePrice *= 1.8;
-        }
-
-        if (apiCard.rarity?.toLowerCase().includes('secret')) {
-            basePrice *= 2.0;
-        }
-
-        if (apiCard.rarity?.toLowerCase().includes('rainbow')) {
-            basePrice *= 1.5;
-        }
-
-        basePrice *= PRICING_CONFIG.MARKETPLACE_MARKUP;
-        return Math.max(0.25, Math.round(basePrice * 100) / 100);
-
-    } catch (error) {
-        console.error('Error calculating price for card:', apiCard.name, error);
-        return 1.00;
-    }
+    return Math.max(0.25, basePrice * yearMultiplier);
 }
 
+// Helper functions (keeping existing ones)
 async function ensureSetExists(setData: any, results: any) {
     try {
         const existingSet = await prisma.pokemonSet.findUnique({
@@ -347,7 +383,6 @@ async function ensureRarityExists(rarityName: string, results: any): Promise<num
                 }
             });
             results.rarities_created.push(rarity);
-            console.log(`Created new rarity: ${rarity.name}`);
         }
 
         return rarity.id;
@@ -377,7 +412,6 @@ async function ensureSupertypeExists(supertypeName: string, results: any): Promi
                 }
             });
             results.supertypes_created.push(supertype);
-            console.log(`Created new supertype: ${supertype.name}`);
         }
 
         return supertype.id;
@@ -408,7 +442,6 @@ async function ensureSubtypeExists(subtypeName: string, supertypeName: string, r
                 }
             });
             results.subtypes_created.push(subtype);
-            console.log(`Created new subtype: ${subtype.name} (${category})`);
         }
 
         return subtype.id;
@@ -423,7 +456,8 @@ function convertApiCardToDbCardEnhanced(apiCard: any, foreignKeys: {
     rarityId: number | null;
     supertypeId: number | null;
     subtypeId: number | null;
-    calculatedPrice: number;
+    marketPrice: number | null;
+    pricingSource: string;
 }) {
     const parseHP = (hp?: string): number | null => {
         if (!hp) return null;
@@ -494,10 +528,10 @@ function convertApiCardToDbCardEnhanced(apiCard: any, foreignKeys: {
         abilities: safeJsonField(apiCard.abilities),
         attacks: safeJsonField(apiCard.attacks),
 
-        // Market data - ENHANCED WITH CALCULATED PRICE
+        // Market data - REAL PRICING FROM API
         tcgplayer_prices: safeJsonField(apiCard.tcgplayer),
         cardmarket_prices: safeJsonField(apiCard.cardmarket),
-        market_price: foreignKeys.calculatedPrice,
+        market_price: foreignKeys.marketPrice,
         last_price_update: new Date(),
         legalities: safeJsonField(apiCard.legalities),
 

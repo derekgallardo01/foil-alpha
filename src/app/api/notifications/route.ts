@@ -1,13 +1,12 @@
-// src/app/api/notifications/route.ts - Fixed to match schema
+// src/app/api/notifications/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from '@/app/lib/auth-helper';
 import { prisma } from '../../lib/prisma';
 
 // GET /api/notifications - Get user notifications
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getServerSession();
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,39 +20,34 @@ export async function GET(request: NextRequest) {
 
         const whereCondition = {
             user_id: parseInt(session.user.id),
-            ...(unreadOnly ? { read: false } : {}), 
+            ...(unreadOnly ? { read: false } : {}),
         };
 
-        const notifications = await prisma.notification.findMany({
-            where: whereCondition,
-            orderBy: { created_at: 'desc' },
-            take: limit,
-            skip: offset,
-            select: {
-                id: true,
-                type: true,
-                title: true,
-                message: true,
-                data: true,
-                read: true,        
-                created_at: true,
-                updated_at: true,
-            },
-        });
+        const [notifications, totalCount] = await Promise.all([
+            prisma.notification.findMany({
+                where: whereCondition,
+                orderBy: { created_at: 'desc' },
+                take: limit,
+                skip: offset,
+                select: {
+                    id: true,
+                    type: true,
+                    title: true,
+                    message: true,
+                    data: true,
+                    read: true,
+                    created_at: true,
+                    updated_at: true,
+                },
+            }),
+            prisma.notification.count({
+                where: whereCondition,
+            })
+        ]);
 
-        const totalCount = await prisma.notification.count({
-            where: whereCondition,
-        });
+        // Return array directly for backward compatibility
+        return NextResponse.json(notifications);
 
-        return NextResponse.json({
-            notifications,
-            pagination: {
-                page,
-                limit,
-                total: totalCount,
-                totalPages: Math.ceil(totalCount / limit),
-            },
-        });
     } catch (error) {
         console.error('Error fetching notifications:', error);
         return NextResponse.json(
@@ -66,7 +60,7 @@ export async function GET(request: NextRequest) {
 // PUT /api/notifications - Mark notification as read
 export async function PUT(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getServerSession();
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -76,14 +70,13 @@ export async function PUT(request: NextRequest) {
         const { notificationId, markAllAsRead } = body;
 
         if (markAllAsRead) {
-            // Mark all notifications as read for the user
             await prisma.notification.updateMany({
                 where: {
                     user_id: parseInt(session.user.id),
-                    read: false     // Fixed: use 'read' instead of 'is_read'
+                    read: false
                 },
                 data: {
-                    read: true      // Fixed: use 'read' instead of 'is_read'
+                    read: true
                 },
             });
 
@@ -97,14 +90,13 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        // Mark specific notification as read
         const notification = await prisma.notification.update({
             where: {
                 id: notificationId,
-                user_id: parseInt(session.user.id), // Ensure user owns this notification
+                user_id: parseInt(session.user.id),
             },
             data: {
-                read: true      // Fixed: use 'read' instead of 'is_read'
+                read: true
             },
         });
 
@@ -118,10 +110,10 @@ export async function PUT(request: NextRequest) {
     }
 }
 
-// POST /api/notifications - Create new notification (for admin/system use)
+// POST /api/notifications - Create new notification
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getServerSession();
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -130,7 +122,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { user_id, type, title, message, data } = body;
 
-        // Only allow admins to create notifications for other users
         if (session.user.role !== 'admin' && user_id !== parseInt(session.user.id)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
@@ -142,7 +133,7 @@ export async function POST(request: NextRequest) {
                 title,
                 message,
                 data: data || null,
-                read: false,    // Fixed: use 'read' instead of 'is_read'
+                read: false,
             },
         });
 
@@ -159,7 +150,7 @@ export async function POST(request: NextRequest) {
 // DELETE /api/notifications - Delete notification
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getServerSession();
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -175,11 +166,10 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        // Delete notification (only if user owns it)
         await prisma.notification.delete({
             where: {
                 id: parseInt(notificationId),
-                user_id: parseInt(session.user.id), // Ensure user owns this notification
+                user_id: parseInt(session.user.id),
             },
         });
 
