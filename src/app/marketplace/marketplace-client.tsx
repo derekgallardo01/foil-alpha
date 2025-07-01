@@ -534,6 +534,7 @@ export default function MarketplacePage() {
         try {
             setLoading(true);
             setError(null);
+
             const params = new URLSearchParams();
 
             if (searchTerm.trim()) {
@@ -557,38 +558,59 @@ export default function MarketplacePage() {
 
             console.log('Fetching marketplace with params:', params.toString());
 
-            const response = await fetch(`/api/marketplace?${params.toString()}`);
+            const response = await fetch(`/api/marketplace?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
 
             if (!response.ok) {
-                const contentType = response.headers.get('content-type');
                 let errorData;
                 try {
                     errorData = await response.json();
                 } catch (jsonError) {
-                    errorData = { rawBody: await response.text() };
+                    console.error('Could not parse error response:', jsonError);
+                    errorData = {
+                        rawBody: await response.text(),
+                        status: response.status,
+                        statusText: response.statusText
+                    };
                 }
-                console.error('API Error:', {
+
+                console.error('Marketplace API Error:', {
                     status: response.status,
                     statusText: response.statusText,
-                    contentType,
                     errorData,
                     url: response.url,
                 });
+
                 throw new Error(
-                    errorData.details
-                        ? `Failed to fetch marketplace cards: ${errorData.details}`
-                        : `Failed to fetch marketplace cards: ${response.status} ${response.statusText}`
+                    errorData.details || errorData.error ||
+                    `Failed to fetch marketplace cards: ${response.status} ${response.statusText}`
                 );
             }
 
             const data: MarketplaceResponse = await response.json();
-            console.log('Marketplace data:', data);
+            console.log('Marketplace data received:', {
+                listingsCount: data.listings?.length || 0,
+                pagination: data.pagination,
+                hasFilters: !!data.filters
+            });
+
             setCards(data.listings || []);
-            setAvailableSets(data.filters.sets.map((s) => s.name).sort());
-            setAvailableTypes(data.filters.types.map((t) => t.name).sort());
+            setAvailableSets(data.filters?.sets?.map((s) => s.name).sort() || []);
+            setAvailableTypes(data.filters?.types?.map((t) => t.name).sort() || []);
+
+            // Debug the data
+            if (data.listings?.length > 0) {
+                console.log('Sample listing:', data.listings[0]);
+            }
+
         } catch (err) {
             console.error('Marketplace fetch error:', err);
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : 'Unknown error occurred');
         } finally {
             setLoading(false);
         }
@@ -694,7 +716,7 @@ export default function MarketplacePage() {
     useEffect(() => {
         if (status === 'authenticated') {
             const interval = setInterval(() => {
-                fetchCards();
+                // fetchCards();
                 fetchNotificationCount();
             }, 30000);
             return () => clearInterval(interval);
@@ -720,66 +742,115 @@ export default function MarketplacePage() {
             toast.error('Please login to purchase cards');
             return;
         }
+
         if (listing.owner.id && listing.owner.id === parseInt(session.user.id)) {
             toast.error('You cannot buy your own card');
             return;
         }
-        if (listing.type === 'CATALOG') {
-            setPurchasingCards((prev) => new Set(prev).add(listing.id));
-            try {
-                const response = await fetch('/api/marketplace/purchase-catalog', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ card_id: listing.card.id }),
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    toast.success(`Successfully purchased ${data.card_name} for ${data.purchase_price}!`);
-                    fetchCards();
-                    fetchNotificationCount();
-                } else {
-                    toast.error(data.error || 'Failed to purchase catalog card');
+
+        // Add the card to purchasing state
+        setPurchasingCards((prev) => new Set(prev).add(listing.id));
+
+        try {
+            let requestBody: any;
+
+            // Determine request body based on listing type
+            if (listing.type === 'CATALOG') {
+                requestBody = {
+                    catalog_card_id: listing.card.id,
+                    quantity: 1
+                };
+                console.log('Preparing catalog purchase:', requestBody);
+            } else if (listing.type === 'USER_CARD') {
+                if (!listing.user_card_id) {
+                    throw new Error('User card ID is missing');
                 }
-            } catch (error) {
-                console.error('Catalog purchase error:', error);
-                toast.error('Failed to purchase catalog card');
-            } finally {
-                setPurchasingCards((prev) => {
-                    const newSet = new Set(prev);
-                    newSet.delete(listing.id);
-                    return newSet;
-                });
+                requestBody = {
+                    user_card_id: listing.user_card_id
+                };
+                console.log('Preparing user card purchase:', requestBody);
+            } else {
+                throw new Error(`Invalid listing type: ${listing.type}`);
             }
-        } else {
-            if (!listing.user_card_id) {
-                toast.error('Invalid user card ID');
-                return;
-            }
-            setPurchasingCards((prev) => new Set(prev).add(listing.id));
-            try {
-                const response = await fetch('/api/marketplace/purchase', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_card_id: listing.user_card_id }),
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    toast.success(`Successfully purchased ${data.card_name} for ${data.purchase_price}!`);
-                    fetchCards();
-                    fetchNotificationCount();
-                } else {
-                    toast.error(data.error || 'Failed to purchase card');
+
+            console.log('Sending purchase request:', {
+                listingId: listing.id,
+                listingType: listing.type,
+                cardName: listing.card.name,
+                requestBody
+            });
+
+            const response = await fetch('/api/marketplace/purchase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            console.log('Purchase response status:', response.status);
+
+            // Check if response is ok
+            if (!response.ok) {
+                let errorMessage = `Failed to purchase: ${response.status} ${response.statusText}`;
+
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.details || errorMessage;
+                } catch (parseError) {
+                    console.error('Could not parse error response:', parseError);
+                    // Use the default error message if JSON parsing fails
                 }
-            } catch (error) {
-                console.error('Purchase error:', error);
-                toast.error('Failed to purchase card');
-            } finally {
-                setPurchasingCards((prev) => {
-                    const newSet = new Set(prev);
-                    newSet.delete(listing.id);
-                    return newSet;
-                });
+
+                throw new Error(errorMessage);
             }
+
+            // Parse successful response
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                console.error('Could not parse success response:', parseError);
+                throw new Error('Purchase may have succeeded but response could not be parsed');
+            }
+
+            console.log('Purchase response data:', data);
+
+            if (data.success) {
+                const cardName = data.purchase_details?.card_name || listing.card.name;
+                const purchasePrice = data.purchase_details?.total_price || data.purchase_details?.purchase_price || 'N/A';
+                const quantity = data.purchase_details?.quantity || 1;
+
+                if (quantity > 1) {
+                    toast.success(`Successfully purchased ${quantity}x ${cardName} for $${purchasePrice}!`);
+                } else {
+                    toast.success(`Successfully purchased ${cardName} for $${purchasePrice}!`);
+                }
+
+                // Refresh the marketplace and notifications
+                fetchCards();
+                fetchNotificationCount();
+            } else {
+                throw new Error(data.error || data.message || 'Purchase failed');
+            }
+
+        } catch (error) {
+            console.error('Purchase error:', error);
+
+            let errorMessage = 'Failed to purchase card';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+
+            toast.error(errorMessage);
+        } finally {
+            // Remove the card from purchasing state
+            setPurchasingCards((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(listing.id);
+                return newSet;
+            });
         }
     };
 

@@ -8,260 +8,211 @@ datasource db {
 }
 
 model User {
-  id                    Int                    @id @default(autoincrement())
-  email                 String                 @unique(map: "email") @db.VarChar(255)
-  name                  String                 @db.VarChar(255)
-  password              String                 @db.VarChar(255)
-  role                  String                 @default("user") @db.VarChar(50)
-  subscriptionStatus    String                 @default("inactive") @map("subscriptionStatus") @db.VarChar(50)
-  last_login_at         DateTime?              @map("last_login_at") @db.DateTime(0)
-  discord_access_token  String?                @map("discord_access_token") @db.VarChar(255)
-  discord_refresh_token String?                @map("discord_refresh_token") @db.VarChar(255)
-  google_access_token   String?                @map("google_access_token") @db.VarChar(255)
-  google_refresh_token  String?                @map("google_refresh_token") @db.VarChar(255)
-  google_scopes         String?                @map("google_scopes") @db.VarChar(255)
-  registeredAt          DateTime               @default(now()) @map("registeredAt") @db.DateTime(0)
-  is_verified           Int?                   @default(0) @map("is_verified") @db.TinyInt
-  verification_code     String?                @map("verification_code") @db.VarChar(10)
-  
-  // Relations
-  watchlistItems        Watchlist[]            @relation("UserWatchlist")
-  userCards             UserCard[]             @relation("UserToUserCard")
-  activityLogs          ActivityLog[]          @relation("UserActivity")
-  bids                  Bid[]                  @relation("BidToUser")
-  historyFrom           CardTransactionHistory[] @relation("HistoryFromUser")
-  historyTo             CardTransactionHistory[] @relation("HistoryToUser")
-  wallet                UserWallet?            @relation
-  walletTransactions    WalletTransaction[]    @relation("UserWalletTransaction")
-  notifications         Notification[]         @relation("UserNotifications")
-  
+  id                    Int       @id @default(autoincrement())
+  email                 String    @unique(map: "email") @db.VarChar(255)
+  name                  String    @db.VarChar(255)
+  password              String    @db.VarChar(255)
+  role                  String    @default("user") @db.VarChar(50)
+  subscriptionStatus    String    @default("inactive") @map("subscriptionStatus") @db.VarChar(50)
+  last_login_at         DateTime? @map("last_login_at") @db.DateTime(0)
+  discord_access_token  String?   @map("discord_access_token") @db.VarChar(255)
+  discord_refresh_token String?   @map("discord_refresh_token") @db.VarChar(255)
+  google_access_token   String?   @map("google_access_token") @db.VarChar(255)
+  google_refresh_token  String?   @map("google_refresh_token") @db.VarChar(255)
+  google_scopes         String?   @map("google_scopes") @db.VarChar(255)
+  registeredAt          DateTime  @default(now()) @map("registeredAt") @db.DateTime(0)
+  is_verified           Int?      @default(0) @map("is_verified") @db.TinyInt
+  verification_code     String?   @map("verification_code") @db.VarChar(10)
+
+  // Relationships
+  userCards             UserCard[]
+  wallet                UserWallet?
+  activityLogs          ActivityLog[]
+  bids                  Bid[]
+  cardTransactionsFrom  CardTransactionHistory[] @relation("FromUser")
+  cardTransactionsTo    CardTransactionHistory[] @relation("ToUser")
+  walletTransactions    WalletTransaction[]
+  notifications         Notification[]
+  watchlist             Watchlist[]
+
   @@map("users")
 }
 
-// NEW: Pokemon Set table
 model PokemonSet {
-  id              String    @id                 // "base1", "jungle", etc. from API
-  name            String    @unique             // "Base Set", "Jungle", etc.
-  series          String                        // "Base", "Neo", "E-Card", etc.
-  printed_total   Int?                          // Number on cards (e.g., "102")
-  total           Int?                          // Actual total including secret rares
-  legalities      Json?                         // {"standard": "Legal", "expanded": "Legal"}
-  ptcgo_code      String?                       // "BAS", "JUN" - PTCGO code
-  release_date    String                        // "1999/01/09"
-  images          Json?                         // {"symbol": "url", "logo": "url"}
-  api_updated_at  DateTime?                     // Last API sync
-  created_at      DateTime  @default(now()) @db.DateTime(0)
-  updated_at      DateTime  @updatedAt @db.DateTime(0)
-  
-  // Relations
-  cards           Card[]    @relation("SetCards")
-  
+  id             String    @id
+  name           String    @unique
+  series         String
+  printed_total  Int?
+  total          Int?
+  legalities     Json?
+  ptcgo_code     String?
+  release_date   String
+  images         Json?
+  api_updated_at DateTime?
+  created_at     DateTime  @default(now()) @db.DateTime(0)
+  updated_at     DateTime  @updatedAt @db.DateTime(0)
+
+  // Relationships
+  cards          Card[]
+
   @@index([series])
   @@index([release_date])
   @@map("pokemon_sets")
 }
 
-// NEW: Rarity table
 model Rarity {
   id          Int      @id @default(autoincrement())
-  name        String   @unique                 // "Common", "Uncommon", "Rare", "Holo Rare"
-  symbol      String?  @db.VarChar(20)         // "●", "◆", "★", "☆"
-  order_index Int?     @default(0)             // For sorting (Common=1, Rare=5, etc.)
-  color       String?  @db.VarChar(20)         // "#000000" for UI
-  description String?  @db.Text                // Description
-  is_active   Boolean  @default(true)          // Is this rarity still used?
+  name        String   @unique
+  symbol      String?  @db.VarChar(20)
+  order_index Int?     @default(0)
+  color       String?  @db.VarChar(20)
+  description String?  @db.Text
+  is_active   Boolean  @default(true)
   created_at  DateTime @default(now()) @db.DateTime(0)
   updated_at  DateTime @updatedAt @db.DateTime(0)
-  
-  // Relations
-  cards       Card[]   @relation("CardRarity")
-  
+
+  // Relationships
+  cards       Card[]
+
   @@index([order_index])
   @@index([is_active])
   @@map("rarities")
 }
 
-// NEW: Subtype table
 model Subtype {
   id          Int      @id @default(autoincrement())
-  name        String   @unique                 // "Basic", "Stage 1", "Stage 2", "GX", "EX", "V", "VMAX"
-  category    String   @db.VarChar(50)         // "Pokemon", "Trainer", "Energy"
-  description String?  @db.Text                // What this subtype means
-  order_index Int?     @default(0)             // For sorting
-  is_active   Boolean  @default(true)          // Is this subtype still used?
+  name        String   @unique
+  category    String   @db.VarChar(50)
+  description String?  @db.Text
+  order_index Int?     @default(0)
+  is_active   Boolean  @default(true)
   created_at  DateTime @default(now()) @db.DateTime(0)
   updated_at  DateTime @updatedAt @db.DateTime(0)
-  
-  // Relations
-  cards       Card[]   @relation("CardSubtype")
-  
+
+  // Relationships
+  cards       Card[]
+
   @@index([category])
   @@index([is_active])
   @@map("subtypes")
 }
 
-// NEW: Supertype table
 model Supertype {
   id          Int      @id @default(autoincrement())
-  name        String   @unique                 // "Pokémon", "Trainer", "Energy"
-  description String?  @db.Text                // Description
-  order_index Int?     @default(0)             // For sorting
-  is_active   Boolean  @default(true)          // Is this supertype still used?
+  name        String   @unique
+  description String?  @db.Text
+  order_index Int?     @default(0)
+  is_active   Boolean  @default(true)
   created_at  DateTime @default(now()) @db.DateTime(0)
   updated_at  DateTime @updatedAt @db.DateTime(0)
-  
-  // Relations
-  cards       Card[]   @relation("CardSupertype")
-  
+
+  // Relationships
+  cards       Card[]
+
   @@index([order_index])
   @@index([is_active])
   @@map("supertypes")
 }
 
-// CARD TYPE MODEL - Separate table for type properties
 model CardType {
   id              Int      @id @default(autoincrement())
-  name            String   @unique @db.VarChar(50)    // "Fire", "Water", "Grass", etc.
-  category        String   @db.VarChar(50)            // "Energy", "Pokemon", "Trainer"
-  color           String?  @db.VarChar(20)            // "#FF6666" - hex color for UI
-  symbol          String?  @db.VarChar(10)            // "🔥", "💧", "🌿" - emoji or symbol
-  description     String?  @db.Text                   // Type description
-  weakness_to     String?  @db.VarChar(50)            // What type this is weak to
-  resistant_to    String?  @db.VarChar(50)            // What type this resists
-  super_effective Json?                               // ["Grass", "Bug"] - types this is strong against
-  not_effective   Json?                               // ["Fire"] - types this is weak against
-  energy_symbol   String?  @db.VarChar(255)           // URL to energy symbol image
-  type_order      Int?     @default(0)                // Order for UI display
-  is_active       Boolean  @default(true)             // Is this type currently active?
+  name            String   @unique @db.VarChar(50)
+  category        String   @db.VarChar(50)
+  color           String?  @db.VarChar(20)
+  symbol          String?  @db.VarChar(10)
+  description     String?  @db.Text
+  weakness_to     String?  @db.VarChar(50)
+  resistant_to    String?  @db.VarChar(50)
+  super_effective Json?
+  not_effective   Json?
+  energy_symbol   String?  @db.VarChar(255)
+  type_order      Int?     @default(0)
+  is_active       Boolean  @default(true)
   created_at      DateTime @default(now()) @db.DateTime(0)
   updated_at      DateTime @updatedAt @db.DateTime(0)
-  
-  // Relations
-  primaryCards    Card[]   @relation("CardPrimaryType")
-  secondaryCards  Card[]   @relation("CardSecondaryType")
-  
+
   @@index([category])
   @@index([is_active])
   @@index([type_order])
   @@map("card_types")
 }
 
-enum CardSource {
-  API
-  MANUAL
-  MIXED
-}
-
-// ENHANCED CARD MODEL with new foreign key relationships
 model Card {
-  id              Int        @id @default(autoincrement())
-  
-  // Basic card info
-  name            String     @db.VarChar(255)
-  set_name        String     @db.VarChar(255)
-  set_number      String?    @db.VarChar(50)
-  rarity          String     @db.VarChar(50)     // Keep as string for display
-  card_type       String?    @db.VarChar(50)     // Keep as string for display
-  hp              Int?
-  image_url       String?    @db.VarChar(500)
-  small_image_url String?    @db.VarChar(500)
-  tcg_id          String?    @db.VarChar(255)
-  
-  // Pokemon TCG API fields
-  api_id          String?    @unique @db.VarChar(100)
-  supertype       String?    @db.VarChar(50)     // Keep as string for display
-  subtypes        Json?                          // Array of subtypes from API
-  
-  // NEW: Foreign key relationships to new tables
-  set_id          String?                        // Reference to PokemonSet.id
-  rarity_id       Int?                           // Reference to Rarity.id
-  subtype_id      Int?                           // Reference to Subtype.id (primary subtype)
-  supertype_id    Int?                           // Reference to Supertype.id
-  
-  // NEW: Relations to new tables
-  pokemonSet      PokemonSet? @relation("SetCards", fields: [set_id], references: [id])
-  rarity_ref      Rarity?     @relation("CardRarity", fields: [rarity_id], references: [id])
-  subtype_ref     Subtype?    @relation("CardSubtype", fields: [subtype_id], references: [id])
-  supertype_ref   Supertype?  @relation("CardSupertype", fields: [supertype_id], references: [id])
-  
-  // TYPE RELATIONSHIPS - Link to CardType table
-  primary_type_id   Int?                         // Main type (Fire, Water, etc.)
-  primary_type      CardType? @relation("CardPrimaryType", fields: [primary_type_id], references: [id])
-  secondary_type_id Int?                         // Secondary type for dual-type Pokemon
-  secondary_type    CardType? @relation("CardSecondaryType", fields: [secondary_type_id], references: [id])
-  
-  // TYPE PROPERTIES from API (as backup/additional data)
-  types           Json?                          // ["Fire", "Flying"] - raw API data
-  weakness_type   String?    @db.VarChar(50)     // "Water" - weakness type
-  weakness_value  String?    @db.VarChar(20)     // "×2", "+20" - weakness modifier
-  resistance_type String?    @db.VarChar(50)     // "Fighting" - resistance type  
-  resistance_value String?   @db.VarChar(20)     // "-20", "-30" - resistance modifier
-  retreat_cost    Json?                          // ["Colorless", "Colorless"] - retreat energy types
-  retreat_cost_count Int?                        // 2 - number of energy needed to retreat
-  
-  // POKEMON-SPECIFIC PROPERTIES
-  evolves_from    String?    @db.VarChar(255)    // "Charmeleon" - evolution source
-  evolves_to      Json?                          // ["Charizard"] - what this evolves into
-  evolution_stage String?    @db.VarChar(50)     // "Basic", "Stage 1", "Stage 2"
-  pokemon_type    String?    @db.VarChar(100)    // "Flame Pokémon", "Mouse Pokémon" - species type
-  
-  // ABILITIES AND ATTACKS
-  abilities       Json?                          // [{"name": "Blaze", "text": "...", "type": "Ability"}]
-  attacks         Json?                          // [{"name": "Fire Blast", "cost": ["Fire", "Fire"], "damage": "120", "text": "..."}]
-  
-  // CARD DETAILS
-  artist          String?    @db.VarChar(255)
-  flavor_text     String?    @db.Text
-  national_pokedex_numbers Json?                 // [6] - Pokedex numbers
-  regulation_mark String?    @db.VarChar(10)     // "D", "E", "F" - tournament regulation
-  
-  // MARKET DATA
-  tcgplayer_prices Json?                         // Complete TCGPlayer pricing data
-  cardmarket_prices Json?                        // Complete Cardmarket pricing data
-  market_price    Decimal?   @db.Decimal(10, 2) // Current market price
-  price_trend     String?    @db.VarChar(20)     // "up", "down", "stable"
-  last_price_update DateTime?                    // When price was last updated
-  
-  // LEGALITIES AND FORMATS
-  legalities      Json?                          // {"standard": "Legal", "expanded": "Legal"}
-  tournament_legal Boolean   @default(true)      // Is this card tournament legal?
-  banned_formats  Json?                          // ["Standard"] - formats where banned
-  
-  // CARD CONDITION AND GRADING
-  condition_notes String?    @db.Text           // Detailed condition description
-  grading_company String?    @db.VarChar(50)    // "PSA", "BGS", "CGC"
-  grade_score     String?    @db.VarChar(10)    // "10", "9.5", "Mint"
-  grade_date      DateTime?                     // When card was graded
-  
-  // RARITY AND COLLECTIBILITY
-  rarity_symbol   String?    @db.VarChar(20)    // "●", "◆", "★" - rarity symbols
-  holographic     Boolean    @default(false)    // Is this a holo card?
-  reverse_holo    Boolean    @default(false)    // Is this reverse holo?
-  first_edition   Boolean    @default(false)    // Is this first edition?
-  shadowless      Boolean    @default(false)    // Is this shadowless (Base Set)
-  promo           Boolean    @default(false)    // Is this a promo card?
-  secret_rare     Boolean    @default(false)    // Is this a secret rare?
-  
-  // SOURCE AND SYNC INFO
-  source          CardSource @default(MANUAL)
-  api_updated_at  DateTime?
-  sync_enabled    Boolean    @default(true)     // Should this card sync with API?
-  last_sync       DateTime?                     // Last successful API sync
-  
-  // METADATA
-  tags            Json?                          // ["popular", "meta", "vintage"] - custom tags
-  notes           String?    @db.Text          // Admin/owner notes
-  featured        Boolean    @default(false)    // Featured card on homepage?
-  view_count      Int        @default(0)        // How many times viewed
-  
-  // Timestamps
-  created_at      DateTime   @default(now()) @db.DateTime(0)
-  updated_at      DateTime   @updatedAt @db.DateTime(0)
-  
-  // Relations
-  userCards       UserCard[] @relation("CardUserCards")
-  
-  // Indexes
+  id                       Int        @id @default(autoincrement())
+  name                     String     @db.VarChar(255)
+  set_name                 String     @db.VarChar(255)
+  set_number               String?    @db.VarChar(50)
+  rarity                   String     @db.VarChar(50)
+  card_type                String?    @db.VarChar(50)
+  subtype                  String?    @db.VarChar(255)
+  hp                       Int?
+  image_url                String?    @db.VarChar(500)
+  small_image_url          String?    @db.VarChar(500)
+  tcg_id                   String?    @db.VarChar(255)
+  api_id                   String?    @unique @db.VarChar(100)
+  supertype                String?    @db.VarChar(50)
+  subtypes                 Json?
+  set_id                   String?
+  rarity_id                Int?
+  subtype_id               Int?
+  supertype_id             Int?
+  primary_type_id          Int?
+  secondary_type_id        Int?
+  types                    Json?
+  weakness_type            String?    @db.VarChar(50)
+  weakness_value           String?    @db.VarChar(20)
+  resistance_type          String?    @db.VarChar(50)
+  resistance_value         String?    @db.VarChar(20)
+  retreat_cost             Json?
+  retreat_cost_count       Int?
+  evolves_from             String?    @db.VarChar(255)
+  evolves_to               Json?
+  evolution_stage          String?    @db.VarChar(50)
+  pokemon_type             String?    @db.VarChar(100)
+  abilities                Json?
+  attacks                  Json?
+  artist                   String?    @db.VarChar(255)
+  flavor_text              String?    @db.Text
+  national_pokedex_numbers Json?
+  regulation_mark          String?    @db.VarChar(10)
+  tcgplayer_prices         Json?
+  cardmarket_prices        Json?
+  market_price             Decimal?   @db.Decimal(10, 2)
+  price_trend              String?    @db.VarChar(20)
+  last_price_update        DateTime?
+  legalities               Json?
+  tournament_legal         Boolean    @default(true)
+  banned_formats           Json?
+  condition_notes          String?    @db.Text
+  grading_company          String?    @db.VarChar(50)
+  grade_score              String?    @db.VarChar(10)
+  grade_date               DateTime?
+  rarity_symbol            String?    @db.VarChar(20)
+  holographic              Boolean    @default(false)
+  reverse_holo             Boolean    @default(false)
+  first_edition            Boolean    @default(false)
+  shadowless               Boolean    @default(false)
+  promo                    Boolean    @default(false)
+  secret_rare              Boolean    @default(false)
+  source                   CardSource @default(MANUAL)
+  api_updated_at           DateTime?
+  sync_enabled             Boolean    @default(true)
+  last_sync                DateTime?
+  tags                     Json?
+  notes                    String?    @db.Text
+  featured                 Boolean    @default(false)
+  view_count               Int        @default(0)
+  created_at               DateTime   @default(now()) @db.DateTime(0)
+  updated_at               DateTime   @updatedAt @db.DateTime(0)
+
+  // Relationships - THIS IS WHAT WAS MISSING!
+  pokemonSet      PokemonSet?   @relation(fields: [set_id], references: [id])
+  rarity_ref      Rarity?       @relation(fields: [rarity_id], references: [id])
+  subtype_ref     Subtype?      @relation(fields: [subtype_id], references: [id])
+  supertype_ref   Supertype?    @relation(fields: [supertype_id], references: [id])
+  userCards       UserCard[]    // This relationship was missing!
+  priceHistory    price_history[]
+
   @@index([api_id])
   @@index([name])
   @@index([set_name])
@@ -277,35 +228,37 @@ model Card {
   @@index([rarity_id])
   @@index([subtype_id])
   @@index([supertype_id])
+  @@index([sync_enabled])
+  @@index([last_price_update])
   @@map("cards")
-}
-
-model Product {
-  product_id   Int            @id @default(autoincrement()) @map("product_id")
-  retailer     String         @db.VarChar(255)
-  title        String         @db.VarChar(255)
-  url          String         @db.VarChar(255)
-  image        String?        @db.VarChar(255)
-  screenshot   String?        @db.VarChar(255)
-  stock_status String         @map("stock_status") @db.VarChar(50)
-  release_date DateTime?      @map("release_date") @db.Date
-  tcin         String?        @unique(map: "tcin") @db.VarChar(20)
-  priceHistory PriceHistory[]
-  @@map("products")
 }
 
 model PriceHistory {
   id             Int      @id @default(autoincrement())
-  product_id     Int      @map("product_id")
+  product_id     Int
   retailer       String   @default("Unknown") @db.VarChar(50)
   price          Decimal  @db.Decimal(10, 2)
   recorded_at    DateTime @default(now()) @map("recorded_at") @db.DateTime(0)
   stock_status   String?  @map("stock_status") @db.VarChar(50)
-  store_quantity Int?     @map("store_quantity")
-  ship_quantity  Int?     @map("ship_quantity")
-  product        Product  @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: NoAction, map: "priceHistory_ibfk_1")
+  store_quantity Int?
+  ship_quantity  Int?
+
   @@index([product_id, retailer, recorded_at], map: "idx_product_retailer_date")
   @@map("pricehistory")
+}
+
+model Product {
+  product_id   Int       @id @default(autoincrement()) @map("product_id")
+  retailer     String    @db.VarChar(255)
+  title        String    @db.VarChar(255)
+  url          String    @db.VarChar(255)
+  image        String?   @db.VarChar(255)
+  screenshot   String?   @db.VarChar(255)
+  stock_status String    @map("stock_status") @db.VarChar(50)
+  release_date DateTime? @map("release_date") @db.Date
+  tcin         String?   @unique(map: "tcin") @db.VarChar(20)
+
+  @@map("products")
 }
 
 model Watchlist {
@@ -317,7 +270,10 @@ model Watchlist {
   stock_quantity Int?    @map("stock_quantity")
   stock_status   String? @map("stock_status") @db.VarChar(50)
   user_id        Int     @map("user_id")
-  user           User    @relation("UserWatchlist", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "watchlist_ibfk_1")
+
+  // Relationships
+  user           User    @relation(fields: [user_id], references: [id])
+
   @@index([user_id], map: "user_id")
   @@map("watchlist")
 }
@@ -331,6 +287,7 @@ model Waitlist {
   status       String?   @default("PENDING") @db.VarChar(50)
   source       String?   @default("WEBSITE") @db.VarChar(50)
   metadata     Json?
+
   @@map("waitlist")
 }
 
@@ -339,7 +296,10 @@ model ActivityLog {
   userId    Int      @map("userId")
   action    String
   timestamp DateTime @default(now())
-  user      User     @relation("UserActivity", fields: [userId], references: [id], onDelete: Cascade, map: "ActivityLog_userId_fkey")
+
+  // Relationships
+  user      User     @relation(fields: [userId], references: [id])
+
   @@index([userId], map: "ActivityLog_userId_fkey")
   @@map("activitylog")
 }
@@ -349,32 +309,33 @@ model ResetToken {
   email   String   @db.VarChar(255)
   token   String   @unique(map: "token") @db.VarChar(64)
   expires DateTime @db.DateTime(0)
+
   @@index([expires], map: "idx_expires")
   @@index([token], map: "idx_token")
   @@map("reset_tokens")
 }
 
 model UserCard {
-  id            Int                  @id @default(autoincrement())
-  owner_id      Int                  @map("owner_id")
-  card_id       Int                  @map("card_id")
-  condition     String?              @db.VarChar(50)
-  is_for_sale   Boolean              @default(false) @map("is_for_sale")
-  sale_type     String?              @map("sale_type") @db.VarChar(50)
-  fixed_price   Decimal?             @map("fixed_price") @db.Decimal(10, 2)
-  reserve_price Decimal?             @map("reserve_price") @db.Decimal(10, 2)
-  auction_end   DateTime?            @map("auction_end") @db.DateTime(0)
-  is_sold       Boolean              @default(false) @map("is_sold")
-  notes         String?              @db.VarChar(255)
-  acquired_date DateTime?            @map("acquired_date") @db.DateTime(0)
-  created_at    DateTime             @default(now()) @db.DateTime(0)
-  
-  // Relations
-  owner         User                 @relation("UserToUserCard", fields: [owner_id], references: [id], onDelete: Cascade, map: "userCard_ibfk_1")
-  card          Card                 @relation("CardUserCards", fields: [card_id], references: [id], onDelete: Cascade, map: "userCard_ibfk_2")
-  bids          Bid[]                @relation("UserCardBids")
-  history       CardTransactionHistory[] @relation("UserCardHistory")
-  
+  id            Int       @id @default(autoincrement())
+  owner_id      Int       @map("owner_id")
+  card_id       Int       @map("card_id")
+  condition     String?   @db.VarChar(50)
+  is_for_sale   Boolean   @default(false) @map("is_for_sale")
+  sale_type     String?   @map("sale_type") @db.VarChar(50)
+  fixed_price   Decimal?  @map("fixed_price") @db.Decimal(10, 2)
+  reserve_price Decimal?  @map("reserve_price") @db.Decimal(10, 2)
+  auction_end   DateTime? @map("auction_end") @db.DateTime(0)
+  is_sold       Boolean   @default(false) @map("is_sold")
+  notes         String?   @db.VarChar(255)
+  acquired_date DateTime? @map("acquired_date") @db.DateTime(0)
+  created_at    DateTime  @default(now()) @db.DateTime(0)
+
+  // Relationships
+  owner         User      @relation(fields: [owner_id], references: [id])
+  card          Card      @relation(fields: [card_id], references: [id])
+  bids          Bid[]
+  transactionHistory CardTransactionHistory[]
+
   @@index([owner_id], map: "owner_id")
   @@index([card_id], map: "card_id")
   @@index([is_for_sale])
@@ -383,73 +344,119 @@ model UserCard {
 }
 
 model Bid {
-  id          Int      @id @default(autoincrement())
-  userCardId  Int
-  userCard    UserCard @relation("UserCardBids", fields: [userCardId], references: [id])
-  bidderId    Int
-  bidder      User     @relation("BidToUser", fields: [bidderId], references: [id])
-  amount      Float
-  is_active   Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  userCardId Int
+  bidderId   Int
+  amount     Float
+  is_active  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  // Relationships
+  userCard   UserCard @relation(fields: [userCardId], references: [id])
+  bidder     User     @relation(fields: [bidderId], references: [id])
+
+  @@index([bidderId], map: "bids_bidderId_fkey")
+  @@index([userCardId], map: "bids_userCardId_fkey")
   @@map("bids")
 }
 
 model CardTransactionHistory {
-  id          Int      @id @default(autoincrement())
-  userCardId  Int
-  userCard    UserCard @relation("UserCardHistory", fields: [userCardId], references: [id], onDelete: Cascade)
-  fromUserId  Int?
-  fromUser    User?    @relation("HistoryFromUser", fields: [fromUserId], references: [id])
-  toUserId    Int?
-  toUser      User?    @relation("HistoryToUser", fields: [toUserId], references: [id])
-  created_at  DateTime @default(now()) @db.DateTime(0)
-  action      String   @db.VarChar(50)
-  notes       String?  @db.VarChar(255)
+  id         Int      @id @default(autoincrement())
+  userCardId Int
+  fromUserId Int?
+  toUserId   Int?
+  created_at DateTime @default(now()) @db.DateTime(0)
+  action     String   @db.VarChar(50)
+  notes      String?  @db.VarChar(255)
+
+  // Relationships
+  userCard   UserCard @relation(fields: [userCardId], references: [id])
+  fromUser   User?    @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser     User?    @relation("ToUser", fields: [toUserId], references: [id])
+
+  @@index([fromUserId], map: "card_transaction_history_fromUserId_fkey")
+  @@index([toUserId], map: "card_transaction_history_toUserId_fkey")
+  @@index([userCardId], map: "card_transaction_history_userCardId_fkey")
   @@map("card_transaction_history")
 }
 
 model UserWallet {
-  id             Int               @id @default(autoincrement())
-  user_id        Int               @unique
-  user           User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  balance        Decimal           @db.Decimal(10, 2)
-  frozen_balance Decimal           @db.Decimal(10, 2)
-  created_at     DateTime          @default(now()) @db.DateTime(0)
-  updated_at     DateTime          @updatedAt @db.DateTime(0)
-  transactions   WalletTransaction[] @relation("UserWalletTransactions")
+  id             Int      @id @default(autoincrement())
+  user_id        Int      @unique
+  balance        Decimal  @db.Decimal(10, 2)
+  frozen_balance Decimal  @db.Decimal(10, 2)
+  created_at     DateTime @default(now()) @db.DateTime(0)
+  updated_at     DateTime @updatedAt @db.DateTime(0)
+
+  // Relationships
+  user           User     @relation(fields: [user_id], references: [id])
+  transactions   WalletTransaction[]
+
   @@map("user_wallets")
 }
 
 model WalletTransaction {
-  id              Int      @id @default(autoincrement())
-  user_id         Int
-  user            User     @relation("UserWalletTransaction", fields: [user_id], references: [id], onDelete: Cascade)
-  wallet_id       Int
-  wallet          UserWallet @relation("UserWalletTransactions", fields: [wallet_id], references: [id], onDelete: Cascade)
+  id               Int      @id @default(autoincrement())
+  user_id          Int
+  wallet_id        Int
   transaction_type String   @db.VarChar(50)
-  amount          Decimal  @db.Decimal(10, 2)
-  balance_before  Decimal  @db.Decimal(10, 2)
-  balance_after   Decimal  @db.Decimal(10, 2)
-  description     String?  @db.VarChar(255)
-  reference_type  String   @db.VarChar(50)
-  reference_id    Int?
-  admin_id        Int?
-  created_at      DateTime @default(now()) @db.DateTime(0)
+  amount           Decimal  @db.Decimal(10, 2)
+  balance_before   Decimal  @db.Decimal(10, 2)
+  balance_after    Decimal  @db.Decimal(10, 2)
+  description      String?  @db.VarChar(255)
+  reference_type   String   @db.VarChar(50)
+  reference_id     Int?
+  admin_id         Int?
+  created_at       DateTime @default(now()) @db.DateTime(0)
+
+  // Relationships
+  user             User       @relation(fields: [user_id], references: [id])
+  wallet           UserWallet @relation(fields: [wallet_id], references: [id])
+
+  @@index([user_id], map: "wallet_transactions_user_id_fkey")
+  @@index([wallet_id], map: "wallet_transactions_wallet_id_fkey")
   @@map("wallet_transactions")
 }
 
 model Notification {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  user        User     @relation("UserNotifications", fields: [user_id], references: [id], onDelete: Cascade)
-  type        String   @db.VarChar(50)
-  title       String   @db.VarChar(255)
-  message     String   @db.Text
-  data        Json?
-  read        Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  type       String   @db.VarChar(50)
+  title      String   @db.VarChar(255)
+  message    String   @db.Text
+  data       Json?
+  read       Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relationships
+  user       User     @relation(fields: [user_id], references: [id])
+
   @@index([user_id, read])
   @@index([created_at])
   @@map("notifications")
+}
+
+model price_history {
+  id          Int      @id @default(autoincrement())
+  card_id     Int
+  price       Decimal  @db.Decimal(10, 2)
+  source      String   @default("manual") @db.VarChar(50)
+  recorded_at DateTime @default(now()) @db.DateTime(0)
+  metadata    Json?
+  created_at  DateTime @default(now()) @db.DateTime(0)
+
+  // Relationships
+  card        Card     @relation(fields: [card_id], references: [id])
+
+  @@index([card_id, recorded_at], map: "idx_card_date")
+  @@index([card_id], map: "idx_card_id")
+  @@index([recorded_at], map: "idx_recorded_at")
+  @@index([source], map: "idx_source")
+}
+
+enum CardSource {
+  API
+  MANUAL
+  MIXED
 }

@@ -1,6 +1,6 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
 
 // Interface for update data
@@ -15,73 +15,140 @@ interface UpdateCardData {
 }
 
 // GET /api/user-cards/[id] - Get specific user card details
-export async function GET(request: NextRequest, context: unknown) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const params = (context as { params: { id: string } }).params;
-    const userCardId = parseInt(params.id);
+    // Always use real session (ignore dev mode)
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const { id } = await context.params;
+    const userCardId = parseInt(id);
+
+    console.log(`📋 Fetching user card ${userCardId} for user ${session.user.name} (ID: ${session.user.id})`);
 
     const userCard = await prisma.userCard.findUnique({
       where: { id: userCardId },
       include: {
         card: true,
         owner: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true }
         },
         bids: {
           where: { is_active: true },
           orderBy: { amount: 'desc' },
           include: {
             bidder: {
-              select: { id: true, name: true },
-            },
-          },
+              select: { id: true, name: true }
+            }
+          }
         },
         history: {
           orderBy: { created_at: 'desc' },
           include: {
             fromUser: {
-              select: { id: true, name: true },
+              select: { id: true, name: true }
             },
             toUser: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-      },
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
     });
 
     if (!userCard) {
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
-    return NextResponse.json(userCard);
+    // Get current price
+    let currentPrice = null;
+    if (userCard.sale_type === 'FIXED') {
+      currentPrice = Number(userCard.fixed_price || 0);
+    } else if (userCard.sale_type === 'AUCTION') {
+      // Get highest bid
+      const highestBid = userCard.bids[0]; // Already ordered by amount desc
+      currentPrice = highestBid ? Number(highestBid.amount) : Number(userCard.reserve_price || 0);
+    }
+
+    // Calculate time remaining for auctions
+    let timeRemaining = null;
+    let isAuctionActive = false;
+    if (userCard.sale_type === 'AUCTION' && userCard.auction_end) {
+      const endTime = new Date(userCard.auction_end).getTime();
+      const now = Date.now();
+      timeRemaining = Math.max(0, endTime - now);
+      isAuctionActive = timeRemaining > 0;
+    }
+
+    const result = {
+      id: userCard.id,
+      card: userCard.card,
+      owner: userCard.owner,
+      condition: userCard.condition,
+      sale_type: userCard.sale_type,
+      fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
+      reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
+      auction_end: userCard.auction_end,
+      is_for_sale: userCard.is_for_sale,
+      is_sold: userCard.is_sold,
+      notes: userCard.notes,
+      current_price: currentPrice,
+      current_highest_bid: userCard.bids[0] ? Number(userCard.bids[0].amount) : null,
+      bid_count: userCard.bids.length,
+      time_left_ms: timeRemaining,
+      is_auction_active: isAuctionActive,
+      bids: userCard.bids.map(bid => ({
+        id: bid.id,
+        amount: Number(bid.amount),
+        bidder: bid.bidder,
+        created_at: bid.createdAt
+      })),
+      history: userCard.history,
+      created_at: userCard.created_at,
+      // updated_at: userCard.updated_at
+    };
+
+    console.log(`✅ Returning card data:`, {
+      cardId: result.id,
+      cardName: result.card.name,
+      owner: result.owner.name,
+      saleType: result.sale_type,
+      currentPrice: result.current_price,
+      bidCount: result.bid_count,
+      isAuctionActive: result.is_auction_active
+    });
+
+    return NextResponse.json(result);
+
   } catch (error) {
-    console.error('Error fetching user card:', error);
+    console.error('❌ Error fetching user card:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch card details' },
-      { status: 500 },
+      { error: 'Failed to fetch user card details' },
+      { status: 500 }
     );
   }
 }
 
 // PUT /api/user-cards/[id] - Update user's card (listing, condition, notes)
-export async function PUT(request: NextRequest, context: unknown) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const params = (context as { params: { id: string } }).params;
-    const userCardId = parseInt(params.id);
-    const session = await getServerSession();
-
-    if (!session?.user?.email) {
+    // Always use real session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    const { id } = await context.params;
+    const userCardId = parseInt(id);
+    const userId = parseInt(session.user.id);
 
     const body = await request.json();
 
@@ -89,7 +156,7 @@ export async function PUT(request: NextRequest, context: unknown) {
     const existingUserCard = await prisma.userCard.findFirst({
       where: {
         id: userCardId,
-        owner_id: user.id,
+        owner_id: userId,
       },
     });
 
@@ -115,7 +182,7 @@ export async function PUT(request: NextRequest, context: unknown) {
         updateData.reserve_price = null;
         updateData.auction_end = null;
       } else if (body.sale_type === 'AUCTION') {
-        const auctionDurationHours = parseInt(body.auction_duration_hours || '168'); // Default 7 days
+        const auctionDurationHours = parseInt(body.auction_duration_hours || '168');
         const auctionEnd = new Date();
         auctionEnd.setHours(auctionEnd.getHours() + auctionDurationHours);
 
@@ -126,7 +193,7 @@ export async function PUT(request: NextRequest, context: unknown) {
         // Cancel any existing bids if re-listing
         await prisma.bid.updateMany({
           where: {
-            userCardId: userCardId, // Fixed: user_card_id → userCardId
+            userCardId: userCardId,
             is_active: true,
           },
           data: {
@@ -144,7 +211,7 @@ export async function PUT(request: NextRequest, context: unknown) {
       // Cancel any active bids
       await prisma.bid.updateMany({
         where: {
-          userCardId: userCardId, // Fixed: user_card_id → userCardId
+          userCardId: userCardId,
           is_active: true,
         },
         data: {
@@ -175,18 +242,18 @@ export async function PUT(request: NextRequest, context: unknown) {
     if (body.is_for_sale && !existingUserCard.is_for_sale) {
       await prisma.cardTransactionHistory.create({
         data: {
-          userCardId: userCardId, // Fixed: user_card_id → userCardId
-          toUserId: user.id, // Fixed: to_user_id → toUserId
-          action: 'LISTING', // Fixed: transaction_type → action
+          userCardId: userCardId,
+          toUserId: userId,
+          action: 'LISTING',
           notes: `Listed for ${body.sale_type === 'FIXED' ? 'fixed price sale' : 'auction'}`,
         },
       });
     } else if (!body.is_for_sale && existingUserCard.is_for_sale) {
       await prisma.cardTransactionHistory.create({
         data: {
-          userCardId: userCardId, // Fixed: user_card_id → userCardId
-          toUserId: user.id, // Fixed: to_user_id → toUserId
-          action: 'DELISTING', // Fixed: transaction_type → action
+          userCardId: userCardId,
+          toUserId: userId,
+          action: 'DELISTING',
           notes: 'Removed from sale',
         },
       });
@@ -205,109 +272,27 @@ export async function PUT(request: NextRequest, context: unknown) {
   }
 }
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
+// DELETE /api/user-cards/[id] - Remove card from collection
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const session = await getServerSession();
-        if (!session?.user?.email) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const userCardId = parseInt(params.id);
-
-        const userCard = await prisma.userCard.findUnique({
-            where: { id: userCardId },
-            include: {
-                card: true,
-                owner: {
-                    select: { id: true, name: true, email: true }
-                }
-            }
-        });
-
-        if (!userCard) {
-            return NextResponse.json({ error: 'Card not found' }, { status: 404 });
-        }
-
-        // Get current price
-        let currentPrice = null;
-        if (userCard.sale_type === 'FIXED') {
-            currentPrice = Number(userCard.fixed_price || 0);
-        } else if (userCard.sale_type === 'AUCTION') {
-            // Get highest bid
-            const highestBid = await prisma.bid.findFirst({
-                where: {
-                    user_card_id: userCardId,
-                    is_active: true
-                },
-                orderBy: { amount: 'desc' }
-            });
-            currentPrice = highestBid ? Number(highestBid.amount) : Number(userCard.reserve_price || 0);
-        }
-
-        // Calculate time remaining for auctions
-        let timeRemaining = null;
-        if (userCard.sale_type === 'AUCTION' && userCard.auction_end) {
-            const endTime = new Date(userCard.auction_end).getTime();
-            const now = Date.now();
-            timeRemaining = Math.max(0, endTime - now);
-        }
-
-        const result = {
-            id: userCard.id,
-            card: userCard.card,
-            owner: userCard.owner,
-            condition: userCard.condition,
-            sale_type: userCard.sale_type,
-            fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
-            reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
-            auction_end: userCard.auction_end,
-            is_for_sale: userCard.is_for_sale,
-            is_sold: userCard.is_sold,
-            notes: userCard.notes,
-            current_price: currentPrice,
-            time_remaining: timeRemaining,
-            created_at: userCard.created_at,
-            updated_at: userCard.updated_at
-        };
-
-        return NextResponse.json(result);
-
-    } catch (error) {
-        console.error('Error fetching user card:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch user card' },
-            { status: 500 }
-        );
-    }
-}
-
-// DELETE /api/user-cards/[id] - Remove card from collection (admin only or special cases)
-export async function DELETE(request: NextRequest, context: unknown) {
   try {
-    const params = (context as { params: { id: string } }).params;
-    const userCardId = parseInt(params.id);
-    const session = await getServerSession();
-
-    if (!session?.user?.email) {
+    // Always use real session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    const { id } = await context.params;
+    const userCardId = parseInt(id);
+    const userId = parseInt(session.user.id);
 
     // Verify user owns this card
     const userCard = await prisma.userCard.findFirst({
       where: {
         id: userCardId,
-        owner_id: user.id,
+        owner_id: userId,
       },
     });
 
@@ -321,7 +306,7 @@ export async function DELETE(request: NextRequest, context: unknown) {
     // Check if card has active bids
     const activeBids = await prisma.bid.count({
       where: {
-        userCardId: userCardId, // Fixed: user_card_id → userCardId
+        userCardId: userCardId,
         is_active: true,
       },
     });
@@ -337,16 +322,16 @@ export async function DELETE(request: NextRequest, context: unknown) {
     await prisma.$transaction(async (tx) => {
       // Deactivate any bids
       await tx.bid.updateMany({
-        where: { userCardId: userCardId }, // Fixed: user_card_id → userCardId
+        where: { userCardId: userCardId },
         data: { is_active: false },
       });
 
       // Create deletion history
       await tx.cardTransactionHistory.create({
         data: {
-          userCardId: userCardId, // Fixed: user_card_id → userCardId
-          toUserId: user.id, // Fixed: to_user_id → toUserId
-          action: 'DELETION', // Fixed: transaction_type → action
+          userCardId: userCardId,
+          toUserId: userId,
+          action: 'DELETION',
           notes: 'Card removed from collection',
         },
       });

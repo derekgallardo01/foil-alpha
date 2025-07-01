@@ -1,167 +1,109 @@
-// src/app/api/admin/auctions/route.ts - Admin auction management
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
-import { prisma } from '../../../lib/prisma';
+// scripts/start-cron.js
+// Main cron job system for daily price updates
 
-export async function POST(request: NextRequest) {
+const cron = require('node-cron');
+require('dotenv').config();
+
+const CRON_SECRET = process.env.CRON_SECRET || 'default_secret';
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
+console.log('🚀 Starting Pokemon TCG Card Price Tracking Cron Jobs...');
+console.log(`📍 Target URL: ${NEXTAUTH_URL}`);
+
+// Daily Card Price Update Job - Runs at midnight every day
+const dailyPriceUpdateJob = cron.schedule('0 0 * * *', async () => {
+    console.log('🕛 [CRON] Running daily card price update at midnight UTC...');
+
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const fetch = require('node-fetch');
 
-        // Check admin role
-        const user = await prisma.user.findUnique({
-            where: { id: parseInt(session.user.id) }
+        const response = await fetch(`${NEXTAUTH_URL}/api/admin/pricing/daily-update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CRON_SECRET}`,
+                'User-Agent': 'TCG-Marketplace-Cron/1.0'
+            },
         });
 
-        if (!user || user.role !== 'admin') {
-            return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const body = await request.json();
-        const { action, auction_id, winner_id } = body;
+        const result = await response.json();
 
-        switch (action) {
-            case 'FORCE_END':
-                return await forceEndAuction(auction_id, parseInt(session.user.id));
-
-            case 'OVERRIDE_WINNER':
-                return await overrideWinner(auction_id, winner_id, parseInt(session.user.id));
-
-            case 'CANCEL_AUCTION':
-                return await cancelAuction(auction_id, parseInt(session.user.id));
-
-            default:
-                return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        if (result.success) {
+            console.log('✅ [CRON] Daily card price update completed:', {
+                updated: result.results?.updated || 0,
+                failed: result.results?.failed || 0,
+                new_prices: result.results?.price_changes?.new_prices || 0,
+                processing_time: `${(result.results?.processing_time / 60000 || 0).toFixed(2)}min`,
+            });
+        } else {
+            console.error('❌ [CRON] Daily card price update failed:', result.error);
         }
-
     } catch (error) {
-        console.error('Error in admin auction management:', error);
-        return NextResponse.json(
-            { error: 'Failed to process admin action' },
-            { status: 500 }
-        );
+        console.error('💥 [CRON] Error in daily card price update:', error.message);
     }
-}
+}, {
+    scheduled: true,
+    timezone: "UTC"
+});
 
-async function forceEndAuction(auctionId: number, adminId: number) {
-    const auction = await prisma.userCard.findUnique({
-        where: { id: auctionId },
-        include: { card: true, owner: true }
-    });
+// Health check job - Runs every 6 hours
+const healthCheckJob = cron.schedule('0 */6 * * *', async () => {
+    console.log('🔍 [CRON] Running health check...');
 
-    if (!auction || auction.sale_type !== 'AUCTION') {
-        return NextResponse.json({ error: 'Auction not found' }, { status: 404 });
-    }
+    try {
+        const fetch = require('node-fetch');
 
-    if (auction.is_sold) {
-        return NextResponse.json({ error: 'Auction already completed' }, { status: 400 });
-    }
-
-    // Force end by updating auction_end to current time
-    await prisma.userCard.update({
-        where: { id: auctionId },
-        data: { auction_end: new Date() }
-    });
-
-    // Log admin action
-    await prisma.activityLog.create({
-        data: {
-            userId: adminId,
-            action: `Force ended auction for ${auction.card.name} (ID: ${auctionId})`,
-            timestamp: new Date()
-        }
-    });
-
-    return NextResponse.json({
-        success: true,
-        message: 'Auction force ended successfully'
-    });
-}
-
-async function overrideWinner(auctionId: number, winnerId: number, adminId: number) {
-    // This would be a complex operation to override the auction winner
-    // Implementation would involve transferring the card and handling payments
-
-    const auction = await prisma.userCard.findUnique({
-        where: { id: auctionId },
-        include: { card: true }
-    });
-
-    if (!auction) {
-        return NextResponse.json({ error: 'Auction not found' }, { status: 404 });
-    }
-
-    // Cancel auction and unfreeze all bids
-    await prisma.$transaction(async (tx) => {
-        // Get all active bids
-        const activeBids = await tx.bid.findMany({
-            where: {
-                user_card_id: auctionId,
-                is_active: true
-            }
+        const response = await fetch(`${NEXTAUTH_URL}/api/health`, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'TCG-Marketplace-Cron/1.0'
+            },
         });
 
-        // Unfreeze all bidder funds
-        for (const bid of activeBids) {
-            const bidderWallet = await tx.userWallet.findUnique({
-                where: { user_id: bid.bidder_id }
+        if (response.ok) {
+            const health = await response.json();
+            console.log('✅ [CRON] Health check passed:', {
+                status: health.status,
+                tracked_cards: health.stats?.tracked_cards || 0,
+                recent_updates: health.stats?.recent_updates || 0,
             });
-
-            if (bidderWallet) {
-                await tx.userWallet.update({
-                    where: { user_id: bid.bidder_id },
-                    data: {
-                        frozen_balance: { decrement: Number(bid.amount) }
-                    }
-                });
-
-                // Record unfreeze transaction
-                await tx.walletTransaction.create({
-                    data: {
-                        user_id: bid.bidder_id,
-                        transaction_type: 'UNFREEZE_FUNDS',
-                        amount: Number(bid.amount),
-                        balance_before: Number(bidderWallet.balance),
-                        balance_after: Number(bidderWallet.balance),
-                        description: `Admin cancelled auction for ${auction.card.name}`,
-                        reference_id: bid.id,
-                        reference_type: 'ADMIN_AUCTION_CANCELLED',
-                        admin_id: adminId
-                    }
-                });
-            }
-
-            // Deactivate bid
-            await tx.bid.update({
-                where: { id: bid.id },
-                data: { is_active: false }
-            });
+        } else {
+            console.warn('⚠️ [CRON] Health check failed:', response.status);
         }
+    } catch (error) {
+        console.error('💥 [CRON] Health check error:', error.message);
+    }
+}, {
+    scheduled: true,
+    timezone: "UTC"
+});
 
-        // Remove from sale
-        await tx.userCard.update({
-            where: { id: auctionId },
-            data: {
-                is_for_sale: false,
-                auction_end: null
-            }
-        });
-    });
+console.log('⏰ Card price tracking cron jobs scheduled:');
+console.log('  💰 Daily Price Update: Every day at 00:00 UTC');
+console.log('  🧹 Weekly Cleanup: Every Sunday at 02:00 UTC');
+console.log('  🔍 Health Check: Every 6 hours');
+console.log('\n🚀 Cron system is now running...');
 
-    // Log admin action
-    await prisma.activityLog.create({
-        data: {
-            userId: adminId,
-            action: `Admin cancelled auction for ${auction.card.name} (ID: ${auctionId})`,
-            timestamp: new Date()
-        }
-    });
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\n🛑 Shutting down cron jobs...');
+    dailyPriceUpdateJob.stop();
+    weeklyCleanupJob.stop();
+    healthCheckJob.stop();
+    console.log('✅ All cron jobs stopped');
+    process.exit(0);
+});
 
-    return NextResponse.json({
-        success: true,
-        message: 'Auction cancelled successfully'
-    });
-}
+process.on('SIGTERM', () => {
+    console.log('\n🛑 Received SIGTERM, shutting down cron jobs...');
+    dailyPriceUpdateJob.stop();
+    weeklyCleanupJob.stop();
+    healthCheckJob.stop();
+    console.log('✅ All cron jobs stopped');
+    process.exit(0);
+});
+

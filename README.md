@@ -463,8 +463,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 
 
-
-
 ```
 tcg-market
 ├─ .eslintrc.json
@@ -558,7 +556,9 @@ tcg-market
 │  │  │  │  │  └─ [id]
 │  │  │  │  │     └─ route.ts
 │  │  │  │  ├─ pricing
-│  │  │  │  │  └─ route.ts
+│  │  │  │  │  ├─ route.ts
+│  │  │  │  │  └─ update
+│  │  │  │  │     └─ route.ts
 │  │  │  │  ├─ transactions
 │  │  │  │  │  ├─ force-complete
 │  │  │  │  │  │  └─ route.ts
@@ -604,6 +604,8 @@ tcg-market
 │  │  │  │     └─ stream
 │  │  │  │        └─ route.ts
 │  │  │  ├─ fetchProduct
+│  │  │  │  └─ route.ts
+│  │  │  ├─ health
 │  │  │  │  └─ route.ts
 │  │  │  ├─ marketplace
 │  │  │  │  ├─ purchase

@@ -11,7 +11,10 @@
     "lint": "next lint",
     "deploy": "npm run build && pm2 reload tcgmarket",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx seed.ts"
+    "seed": "tsx seed.ts",
+
+    "start-cron": "node scripts/setup-cron.js",
+    "test-price-update": "node scripts/test-price-update.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",

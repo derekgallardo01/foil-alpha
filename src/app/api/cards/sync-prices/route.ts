@@ -1,4 +1,4 @@
-// src/app/api/cards/sync-prices/route.ts
+// src/app/api/cards/sync-prices/route.ts - Updated with proper price_history table
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from '../../../lib/pokemon-price-tracker-api';
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
         // Build query to get cards that need pricing updates
         let whereClause: any = {
             api_id: { not: null }, // Only cards with API IDs
+            sync_enabled: true, // Only sync enabled cards
         };
 
         if (cardIds && Array.isArray(cardIds)) {
@@ -118,12 +119,6 @@ export async function POST(request: NextRequest) {
                 set_number: true,
                 market_price: true,
                 last_price_update: true,
-                pokemonSet: {
-                    select: {
-                        id: true,
-                        name: true,
-                    }
-                }
             },
             orderBy: [
                 { last_price_update: 'asc' }, // Prioritize cards never updated
@@ -234,21 +229,32 @@ export async function POST(request: NextRequest) {
                             market_price: marketPrice,
                             price_trend: priceSummary.trend,
                             last_price_update: new Date(),
-                            tcgplayer_prices: pricingData.prices.tcgplayer ? JSON.parse(JSON.stringify(pricingData.prices.tcgplayer)) : null,
-                            cardmarket_prices: pricingData.prices.cardmarket ? JSON.parse(JSON.stringify(pricingData.prices.cardmarket)) : null,
+                            tcgplayer_prices: pricingData.prices.tcgplayer ?
+                                JSON.parse(JSON.stringify(pricingData.prices.tcgplayer)) : null,
+                            cardmarket_prices: pricingData.prices.cardmarket ?
+                                JSON.parse(JSON.stringify(pricingData.prices.cardmarket)) : null,
                         }
                     });
 
-                    // Create price history entry
-                    await prisma.$executeRaw`
-            INSERT INTO price_history (card_id, price, source, recorded_at, metadata) 
-            VALUES (${card.id}, ${marketPrice}, 'pokemon_price_tracker', NOW(), ${JSON.stringify({
-                        price_change_24h: pricingData.price_change_24h,
-                        price_change_7d: pricingData.price_change_7d,
-                        volume_24h: pricingData.volume_24h,
-                        sources: priceSummary.sources
-                    })})
-          `;
+                    // Create price history entry using the correct price_history table
+                    await prisma.price_history.create({
+                        data: {
+                            card_id: card.id,
+                            price: marketPrice,
+                            source: 'pokemon_price_tracker',
+                            recorded_at: new Date(),
+                            metadata: {
+                                price_change_24h: pricingData.price_change_24h,
+                                price_change_7d: pricingData.price_change_7d,
+                                volume_24h: pricingData.volume_24h,
+                                sources: priceSummary.sources,
+                                price_change_percent: priceChange,
+                                old_price: oldPrice,
+                                new_price: marketPrice,
+                                sync_batch: true
+                            }
+                        }
+                    });
 
                     result.successful_updates++;
                     result.pricing_summary.total_market_value += marketPrice;
@@ -304,19 +310,19 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
 
         if (status === 'summary') {
-            // Get pricing summary statistics
+            // Get pricing summary statistics using correct table names
             const result = await prisma.$queryRaw`
-        SELECT 
-          COUNT(*) as total_cards,
-          COUNT(CASE WHEN market_price IS NOT NULL THEN 1 END) as cards_with_prices,
-          COUNT(CASE WHEN last_price_update IS NULL THEN 1 END) as never_updated,
-          COUNT(CASE WHEN last_price_update < DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN 1 END) as stale_prices,
-          AVG(market_price) as avg_market_price,
-          MAX(market_price) as max_price,
-          MIN(market_price) as min_price
-        FROM cards 
-        WHERE api_id IS NOT NULL
-      ` as any[];
+                SELECT 
+                  COUNT(*) as total_cards,
+                  COUNT(CASE WHEN market_price IS NOT NULL THEN 1 END) as cards_with_prices,
+                  COUNT(CASE WHEN last_price_update IS NULL THEN 1 END) as never_updated,
+                  COUNT(CASE WHEN last_price_update < DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN 1 END) as stale_prices,
+                  AVG(market_price) as avg_market_price,
+                  MAX(market_price) as max_price,
+                  MIN(market_price) as min_price
+                FROM cards 
+                WHERE api_id IS NOT NULL AND sync_enabled = 1
+            ` as any[];
 
             const stats = result[0];
 

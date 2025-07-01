@@ -1,10 +1,7 @@
-
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 
 // Development authentication helpers
-// Make sure this file is created at: src/app/lib/dev-auth.ts
-
 export interface DevUser {
   id: number;
   email: string;
@@ -13,41 +10,35 @@ export interface DevUser {
   password: string;
 }
 
+// Updated to match your actual database users
 export const DEV_USERS: DevUser[] = [
   {
-    id: 999,
+    id: 1,
     email: 'admin@test.com',
     name: 'Admin User',
     role: 'admin',
-    password: 'admin12345', // 8+ characters
+    password: 'admin123',
   },
   {
-    id: 998,
-    email: 'user1@test.com',
-    name: 'Test User 1',
+    id: 2,
+    email: 'bob@test.com',
+    name: 'Bob Smith',
     role: 'user',
-    password: 'user12345', // 8+ characters
+    password: 'user123',
   },
   {
-    id: 997,
-    email: 'user2@test.com',
-    name: 'Test User 2',
+    id: 3,
+    email: 'john@test.com',
+    name: 'John Doe',
     role: 'user',
-    password: 'user12345', // 8+ characters
+    password: 'user123',
   },
   {
-    id: 996,
-    email: 'buyer@test.com',
-    name: 'Buyer User',
+    id: 4,
+    email: 'charley@test.com',
+    name: 'Charley Brown',
     role: 'user',
-    password: 'buyer12345', // 8+ characters
-  },
-  {
-    id: 995,
-    email: 'seller@test.com',
-    name: 'Seller User',
-    role: 'user',
-    password: 'seller12345', // 8+ characters
+    password: 'user123',
   },
 ];
 
@@ -59,55 +50,48 @@ export function isDevMode(): boolean {
   return process.env.NODE_ENV === 'development' && process.env.ENABLE_DEV_AUTH === 'true';
 }
 
-// Return the current dev user for API calls
+// FIXED: Return the current dev user based on who's actually logged in
 export function getCurrentDevUserForAPI(): DevUser | null {
   if (!isDevMode()) {
     return null;
   }
 
-  // Use environment variable DEV_USER_EMAIL to select a user, default to admin
-  const devUserEmail = process.env.DEV_USER_EMAIL || 'admin@test.com';
+  // Use John Doe by default (the user you're logged in as)
+  const devUserEmail = process.env.DEV_USER_EMAIL || 'john@test.com';
   return getDevUser(devUserEmail);
 }
 
-// Insert dev users into database if they don't exist
+// Simplified - just ensure wallets exist for existing users
 export async function seedDevUsers() {
   if (!isDevMode()) return;
 
   for (const devUser of DEV_USERS) {
     try {
+      // Check if user exists
       const existingUser = await prisma.user.findUnique({
-        where: { email: devUser.email },
+        where: { id: devUser.id },
       });
 
-      if (!existingUser) {
-        const hashedPassword = await bcrypt.hash(devUser.password, 10);
-
-        await prisma.user.create({
-          data: {
-            id: devUser.id,
-            email: devUser.email,
-            name: devUser.name,
-            password: hashedPassword,
-            role: devUser.role,
-            is_verified: 1,
-            subscriptionStatus: 'active',
-          },
+      if (existingUser) {
+        // Check if wallet exists
+        const existingWallet = await prisma.userWallet.findUnique({
+          where: { user_id: devUser.id },
         });
 
-        // Create wallet for user
-        await prisma.userWallet.create({
-          data: {
-            user_id: devUser.id,
-            balance: devUser.role === 'admin' ? 10000.00 : 1000.00,
-            frozen_balance: 0.00, // Added to match schema
-          },
-        });
-
-        console.log(`✅ Created dev user: ${devUser.email}`);
+        if (!existingWallet) {
+          // Create wallet for existing user
+          await prisma.userWallet.create({
+            data: {
+              user_id: devUser.id,
+              balance: devUser.role === 'admin' ? 10000.00 : 1000.00,
+              frozen_balance: 0.00,
+            },
+          });
+          console.log(`✅ Created wallet for existing user: ${devUser.email}`);
+        }
       }
     } catch (error) {
-      console.error(`⚠️ Dev user ${devUser.email} already exists or error:`, error);
+      console.error(`⚠️ Error setting up user ${devUser.email}:`, error);
     }
   }
 }

@@ -723,23 +723,45 @@ export default function CollectionPage() {
         }
     }, [status]);
 
+
     const fetchUserCards = async () => {
         try {
             setLoading(true);
+            console.log('Fetching user collection...');
+
             const response = await fetch("/api/user/collection", {
                 headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
+                    "Content-Type": "application/json",
                 },
             });
 
-            if (!response.ok) throw new Error("Failed to fetch collection");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to fetch collection");
+            }
 
             const data = await response.json();
-            setUserCards(data);
+            console.log('Collection response:', data);
+
+            // Handle both old and new response formats
+            const cards = data.cards || data; // New format has 'cards' property
+
+            if (Array.isArray(cards)) {
+                setUserCards(cards);
+                console.log(`✅ Loaded ${cards.length} cards in collection`);
+
+                if (cards.length === 0) {
+                    console.log('🔍 Collection is empty - check if user has made any purchases');
+                }
+            } else {
+                console.error('❌ Invalid response format:', data);
+                setUserCards([]);
+            }
 
         } catch (error) {
-            console.error("Error fetching collection:", error);
-            toast.error("Failed to load collection");
+            console.error("❌ Error fetching collection:", error);
+            toast.error(error instanceof Error ? error.message : "Failed to load collection");
+            setUserCards([]);
         } finally {
             setLoading(false);
         }

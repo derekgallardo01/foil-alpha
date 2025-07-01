@@ -1,9 +1,8 @@
-// src/app/api/user/collection/[id]/sell/route.ts - Updated with NextAuth integration
+// src/app/api/user/collection/[id]/sell/route.ts - Fixed to use real session
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { prisma } from '../../../../../lib/prisma';
-import { getCurrentDevUserForAPI, isDevMode } from '../../../../../lib/dev-auth';
 
 // POST /api/user/collection/[id]/sell - List a card for sale
 export async function POST(
@@ -11,39 +10,30 @@ export async function POST(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        // Get user session with dev mode support
-        let userId: number;
-        let userEmail: string;
-
-        if (isDevMode()) {
-            const devUser = getCurrentDevUserForAPI();
-            if (!devUser) {
-                return NextResponse.json({ error: 'Dev mode: No dev user configured' }, { status: 401 });
-            }
-            userId = devUser.id;
-            userEmail = devUser.email;
-            console.log(`🚧 DEV MODE: Sell API using ${userEmail} (ID: ${userId})`);
-        } else {
-            const session = await getServerSession(authOptions);
-            if (!session?.user?.id) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-            }
-            userId = parseInt(session.user.id);
-            userEmail = session.user.email || 'unknown';
+        // Always use real session (ignore dev mode)
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 });
         }
+
+        const userId = parseInt(session.user.id);
+        const userName = session.user.name || 'Unknown User';
+        const userEmail = session.user.email || 'unknown';
+
+        console.log(`🏷️ Sell API: ${userName} (${userEmail}) - ID: ${userId}`);
 
         const { id: userCardId } = await context.params;
         const body = await request.json();
         const { sale_type, fixed_price, reserve_price, auction_duration_hours } = body;
 
-        console.log('Sell API received:', {
+        console.log('Sell request:', {
             sale_type,
             fixed_price,
             reserve_price,
             auction_duration_hours,
             userCardId,
             userId,
-            userEmail
+            userName
         });
 
         // Validate sale type
@@ -64,7 +54,7 @@ export async function POST(
             }
             if (!auction_duration_hours || auction_duration_hours < 1 || auction_duration_hours > 168) {
                 return NextResponse.json({
-                    error: `auction_duration_hours is required and must be between 1 and 168 hours. Received: ${auction_duration_hours}`
+                    error: `auction_duration_hours must be between 1 and 168 hours. Received: ${auction_duration_hours}`
                 }, { status: 400 });
             }
         }
@@ -75,15 +65,18 @@ export async function POST(
             include: {
                 card: {
                     select: { name: true, id: true }
+                },
+                owner: {
+                    select: { id: true, name: true, email: true }
                 }
             }
         });
 
-        console.log('Found userCard:', {
-            id: userCard?.id,
-            owner_id: userCard?.owner_id,
-            expected_userId: userId,
-            card_name: userCard?.card?.name
+        console.log('Card ownership check:', {
+            userCardId: userCard?.id,
+            cardOwner: userCard?.owner,
+            currentUser: { id: userId, name: userName, email: userEmail },
+            cardName: userCard?.card?.name
         });
 
         if (!userCard) {
@@ -91,14 +84,15 @@ export async function POST(
         }
 
         if (userCard.owner_id !== userId) {
-            console.error('Ownership mismatch:', {
-                userCard_owner_id: userCard.owner_id,
-                userId: userId,
-                card_name: userCard.card.name,
-                user_email: userEmail
+            console.error('❌ Ownership mismatch:', {
+                cardOwnerID: userCard.owner_id,
+                cardOwnerName: userCard.owner.name,
+                currentUserID: userId,
+                currentUserName: userName,
+                cardName: userCard.card.name
             });
             return NextResponse.json({
-                error: `You can only sell your own cards. Card owner: ${userCard.owner_id}, Your ID: ${userId}`
+                error: `Access denied. This card belongs to ${userCard.owner.name} (ID: ${userCard.owner_id}), but you are ${userName} (ID: ${userId})`
             }, { status: 403 });
         }
 
@@ -110,7 +104,7 @@ export async function POST(
             return NextResponse.json({ error: 'This card has already been sold' }, { status: 400 });
         }
 
-        console.log('Validation passed, updating card...');
+        console.log('✅ Ownership verified! Updating card...');
 
         // Prepare update data
         const updateData: any = {
@@ -137,7 +131,13 @@ export async function POST(
             data: updateData
         });
 
-        console.log('Card updated successfully:', updatedCard);
+        console.log('✅ Card listed successfully:', {
+            id: updatedCard.id,
+            cardName: userCard.card.name,
+            saleType: sale_type,
+            price: sale_type === 'FIXED' ? Number(fixed_price) : Number(reserve_price),
+            owner: userName
+        });
 
         return NextResponse.json({
             success: true,
@@ -147,12 +147,13 @@ export async function POST(
                 card_name: userCard.card.name,
                 sale_type: sale_type,
                 price: sale_type === 'FIXED' ? Number(fixed_price) : Number(reserve_price),
-                auction_end: updateData.auction_end
+                auction_end: updateData.auction_end,
+                owner: userName
             }
         });
 
     } catch (error) {
-        console.error('Error listing card for sale:', error);
+        console.error('❌ Error listing card for sale:', error);
         return NextResponse.json(
             {
                 error: 'Failed to list card for sale',
@@ -169,27 +170,18 @@ export async function DELETE(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        // Get user session with dev mode support
-        let userId: number;
-        let userEmail: string;
-
-        if (isDevMode()) {
-            const devUser = getCurrentDevUserForAPI();
-            if (!devUser) {
-                return NextResponse.json({ error: 'Dev mode: No dev user configured' }, { status: 401 });
-            }
-            userId = devUser.id;
-            userEmail = devUser.email;
-        } else {
-            const session = await getServerSession(authOptions);
-            if (!session?.user?.id) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-            }
-            userId = parseInt(session.user.id);
-            userEmail = session.user.email || 'unknown';
+        // Always use real session (ignore dev mode)
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 });
         }
 
+        const userId = parseInt(session.user.id);
+        const userName = session.user.name || 'Unknown User';
+
         const { id: userCardId } = await context.params;
+
+        console.log(`🗑️ Remove from sale: ${userName} removing card ${userCardId}`);
 
         // Get the card
         const userCard = await prisma.userCard.findUnique({
@@ -207,7 +199,14 @@ export async function DELETE(
 
         // Verify ownership
         if (userCard.owner_id !== userId) {
-            return NextResponse.json({ error: 'You can only manage your own cards' }, { status: 403 });
+            console.error('❌ Ownership mismatch on remove from sale:', {
+                cardOwnerID: userCard.owner_id,
+                currentUserID: userId,
+                cardName: userCard.card.name
+            });
+            return NextResponse.json({
+                error: 'You can only manage your own cards'
+            }, { status: 403 });
         }
 
         // Check if not for sale
@@ -243,6 +242,8 @@ export async function DELETE(
             }
         });
 
+        console.log('✅ Card removed from sale successfully');
+
         return NextResponse.json({
             success: true,
             message: 'Card removed from sale',
@@ -250,7 +251,7 @@ export async function DELETE(
         });
 
     } catch (error) {
-        console.error('Error removing card from sale:', error);
+        console.error('❌ Error removing card from sale:', error);
         return NextResponse.json(
             {
                 error: 'Failed to remove card from sale',
