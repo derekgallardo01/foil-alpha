@@ -1,28 +1,44 @@
-# TCG Market
+# TCG Market - Pokemon Card Auction Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-13.4.12-000000?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6.10.1-2D3748?logo=prisma)](https://www.prisma.io/)
+[![Node.js](https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js)](https://nodejs.org/)
 
-A comprehensive trading card game (TCG) marketplace application built with Next.js 13+, TypeScript, and modern technologies. This platform provides tools for tracking, analyzing, and trading TCG cards with real-time market data integration.
+A comprehensive Pokemon TCG marketplace and auction platform built with Next.js 13+, TypeScript, and modern technologies. This platform provides tools for buying, selling, and auctioning Pokemon cards with real-time market data integration and secure transactions.
 
-> **Last Updated**: June 22, 2025
+> **Last Updated**: June 28, 2025
 
 ## Features
 
 ### Core Functionality
 - **User Management**
-  - Secure authentication with NextAuth.js and Google OAuth2
+  - Secure authentication with NextAuth.js, Google OAuth2, and Discord OAuth
   - Role-based access control (Admin/User)
   - Email verification & password reset
-  - User activity tracking
+  - User activity tracking and audit logs
+  - Wallet system with transaction history
 
-- **Marketplace**
-  - Advanced card search and filtering
-  - Real-time price tracking
-  - Buy/Sell order management
-  - Watchlist functionality
+- **Pokemon Card Marketplace**
+  - Advanced card search with filters for sets, rarities, types, and more
+  - Real-time price tracking and historical price data
+  - Buy/Sell order management with secure transactions
+  - Watchlist and collection tracking
+  - Card condition grading (Mint, Near Mint, Played, etc.)
+
+- **### 🎯 Auction System
+  - **Real-time Bidding**: Live updates with WebSockets for instant bid notifications
+  - **Buy It Now (BIN)**: Instant purchase option at a premium price
+  - **Proxy Bidding**: Automatic bid increments up to your maximum
+  - **Bid History**: Complete audit trail of all bids
+  - **Escrow Service**: Secure payment handling for high-value transactions
+  - **Scheduling**: Set future start/end times for auctions
+  - **Reserve Prices**: Optional minimum price requirements
+  - **Admin Tools**: Comprehensive management interface
+  - **Automation**: Automatic winner selection and notifications
+  - **Anti-Sniping**: Automatic extension for last-minute bids
+  - **Bulk Listing**: List multiple cards in a single auction
 
 - **Admin Dashboard**
   - User management
@@ -30,102 +46,88 @@ A comprehensive trading card game (TCG) marketplace application built with Next.
   - System configuration
   - Waitlist management
 
-### Technical Stack
+## Technical Stack
 
-**Frontend**
-- Next.js 13+ (App Router)
-- React 19
-- TypeScript
-- Material-UI (MUI) v6
-- Tailwind CSS
-- Framer Motion
+### Frontend
+- **Framework**: Next.js 13+ (App Router)
+- **UI**: React 19, Material-UI (MUI) v6, Tailwind CSS
+- **State Management**: React Query, Zustand
+- **Animation**: Framer Motion
+- **Form Handling**: React Hook Form with Zod validation
+- **Charts**: Chart.js for price history visualization
 
-**Backend**
-- Next.js API Routes
-- Prisma ORM
-- MySQL
-- NextAuth.js
+### Backend
+- **Runtime**: Node.js 18+, TypeScript 5.0
+- **API**: Next.js API Routes
+- **Database**: MySQL with Prisma ORM
+- **Authentication**: NextAuth.js with multiple OAuth providers
+- **Real-time**: WebSockets for live auctions and bidding
+- **Payments**: Integration with Stripe for secure transactions
 
-**DevOps**
+### DevOps
 - ESLint + Prettier
 - TypeScript type checking
 - PM2 process management
 - GitHub Actions (CI/CD)
 
-## Installation
+## Getting Started
 
-1. Clone the repository:
+### Prerequisites
+- Node.js 18+
+- MySQL 8.0+
+- npm 9+ or yarn 1.22+
+- Redis (for real-time features and rate limiting)
+- Stripe account (for payment processing)
+- Google OAuth credentials (for authentication)
+- Discord OAuth credentials (for authentication)
+
+### Installation
+
+1. Clone the repository and install dependencies:
    ```bash
    git clone https://github.com/yourusername/tcg-market.git
    cd tcg-market
-   ```
-
-2. Install dependencies:
-   ```bash
    npm install
    ```
 
-3. Set up environment variables:
+2. Set up environment variables:
    ```bash
    cp .env.example .env.local
    # Update the environment variables in .env.local
    ```
+   Required environment variables:
+   - `DATABASE_URL`: MySQL connection string
+   - `NEXTAUTH_SECRET`: Random string for session encryption
+   - `NEXTAUTH_URL`: Your application URL
+   - `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: For Google OAuth
+   - `DISCORD_CLIENT_ID` & `DISCORD_CLIENT_SECRET`: For Discord OAuth
+   - `STRIPE_SECRET_KEY`: For payment processing
 
-4. Set up the database:
+3. Set up the database:
    ```bash
    npx prisma migrate dev
+   npx prisma db seed  # Optional: Seed with initial data
    ```
 
-5. Run the development server:
+4. Start the development server:
    ```bash
    npm run dev
    ```
+   The application will be available at `http://localhost:3000`
 
 ## Deployment
 
 ### Production Build
+
 ## Database Management
 
 ### Backup Scripts
 The project includes several backup scripts for managing the database:
+{{ ... }}
 
-1. **MySQL Database Backup**
-   - Run `powershell -ExecutionPolicy Bypass -File backups/mysql-backup-simple.ps1` to create a full MySQL database backup
-   - Backup files are stored in the `backups/` directory with timestamps
-   - Backup files are plain SQL dumps that can be restored using MySQL
-
-2. **Waitlist Backup**
-   - Run `node backups/backup-db.mjs` to create a JSON backup of the waitlist entries
-   - Backup files are stored in the `backups/` directory with timestamps
-   - Contains all waitlist entries with their metadata
-
-### Restore Instructions
-To restore the MySQL database from a backup:
-```bash
-mysql -u username -p database_name < backups/mysql-backup-YYYY-MM-DD_HH-MM-SS.sql
-```
-
-To restore the waitlist from a backup:
-```javascript
-// Use the Prisma client to insert the backup data
-const prisma = new PrismaClient();
-await prisma.waitlist.createMany({
-  data: JSON.parse(backupData)
-});
-```
-
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) to get started.
-
-## 📬 Contact
-
-For inquiries, please contact [your-email@example.com](mailto:your-email@example.com).
-
 ---
 
 <div align="center">
@@ -175,6 +177,18 @@ For inquiries, please contact [your-email@example.com](mailto:your-email@example
 - `/api/auth/register`
 - `/api/auth/forgot-password`
 - `/api/auth/reset-password`
+
+#### Auction Endpoints
+- `GET /api/auctions` - List active auctions with filters
+- `POST /api/auctions/bid` - Place a bid on an auction
+- `GET /api/auctions/:id` - Get auction details and bid history
+- `POST /api/auctions/buy-now` - Instant purchase with Buy It Now
+- `GET /api/user/auctions` - Get user's auction activity
+
+#### Admin Auction Endpoints
+- `GET /api/admin/auctions` - List all auctions (admin only)
+- `POST /api/admin/auctions/end` - End an auction early (admin only)
+- `GET /api/admin/auction-stats` - Auction statistics and metrics
 
 #### Market Data
 - `/api/products`
