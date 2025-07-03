@@ -19,23 +19,42 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'transaction_id is required' }, { status: 400 });
         }
 
-        // Get the transaction
+        // Get the transaction (without problematic includes)
         const transaction = await prisma.transaction.findUnique({
-            where: { id: transaction_id },
-            include: {
-                userCard: {
-                    include: {
-                        card: true,
-                        owner: true
-                    }
-                },
-                buyer: true,
-                seller: true
-            }
+            where: { id: transaction_id }
         });
 
         if (!transaction) {
             return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+        }
+
+        // Get related data separately
+        const userCard = await prisma.userCard.findUnique({
+            where: { id: transaction.user_card_id }
+        });
+
+        if (!userCard) {
+            return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+        }
+
+        const card = await prisma.card.findUnique({
+            where: { id: userCard.card_id }
+        });
+
+        const owner = await prisma.user.findUnique({
+            where: { id: userCard.owner_id }
+        });
+
+        const buyer = await prisma.user.findUnique({
+            where: { id: transaction.buyer_id }
+        });
+
+        const seller = await prisma.user.findUnique({
+            where: { id: transaction.seller_id }
+        });
+
+        if (!card || !owner || !buyer || !seller) {
+            return NextResponse.json({ error: 'Related data not found' }, { status: 404 });
         }
 
         if (transaction.status !== 'PENDING_BUYER_CONFIRMATION') {
@@ -64,13 +83,12 @@ export async function POST(request: NextRequest) {
 
         // Force complete the transaction
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Complete the transaction
+            // 1. Complete the transaction (remove completed_at field if it doesn't exist)
             const completedTransaction = await tx.transaction.update({
                 where: { id: transaction_id },
                 data: {
                     status: 'COMPLETED',
                     transaction_type: 'ADMIN_FORCE_COMPLETED',
-                    completed_at: new Date(),
                     notes: `Force completed by admin ${session.user.name} - Buyer failed to confirm within 24 hours`
                 }
             });
@@ -112,17 +130,18 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            // Create wallet transaction records
+            // Create wallet transaction records (add wallet_id)
             await Promise.all([
                 // Buyer transaction
                 tx.walletTransaction.create({
                     data: {
                         user_id: transaction.buyer_id,
+                        wallet_id: currentBuyerWallet.id, // Add required wallet_id
                         transaction_type: 'PURCHASE',
                         amount: -purchaseAmount,
                         balance_before: Number(currentBuyerWallet.balance),
                         balance_after: Number(updatedBuyerWallet.balance),
-                        description: `Force completed purchase: ${transaction.userCard.card.name} (Admin: ${session.user.name})`,
+                        description: `Force completed purchase: ${card.name} (Admin: ${session.user.name})`,
                         reference_id: transaction_id,
                         reference_type: 'TRANSACTION',
                         admin_id: parseInt(session.user.id)
@@ -132,11 +151,12 @@ export async function POST(request: NextRequest) {
                 tx.walletTransaction.create({
                     data: {
                         user_id: transaction.seller_id,
+                        wallet_id: currentSellerWallet.id, // Add required wallet_id
                         transaction_type: 'SALE',
                         amount: purchaseAmount,
                         balance_before: Number(currentSellerWallet.balance),
                         balance_after: Number(updatedSellerWallet.balance),
-                        description: `Force completed sale: ${transaction.userCard.card.name} (Admin: ${session.user.name})`,
+                        description: `Force completed sale: ${card.name} (Admin: ${session.user.name})`,
                         reference_id: transaction_id,
                         reference_type: 'TRANSACTION',
                         admin_id: parseInt(session.user.id)
@@ -144,30 +164,29 @@ export async function POST(request: NextRequest) {
                 })
             ]);
 
-            // 4. Deactivate all other bids for this card
+            // 4. Deactivate all other bids for this card (fix field name)
             await tx.bid.updateMany({
                 where: {
-                    user_card_id: transaction.user_card_id,
+                    userCardId: transaction.user_card_id, // Fix: user_card_id → userCardId
                     is_active: true
                 },
                 data: { is_active: false }
             });
 
-            // 5. Create card history record
-            await tx.cardHistory.create({
+            // 5. Create card history record (use cardTransactionHistory instead of cardHistory)
+            await tx.cardTransactionHistory.create({
                 data: {
-                    user_card_id: transaction.user_card_id,
-                    from_user_id: transaction.seller_id,
-                    to_user_id: transaction.buyer_id,
-                    transaction_type: 'ADMIN_FORCE_COMPLETED',
-                    price: purchaseAmount,
+                    userCardId: transaction.user_card_id,
+                    fromUserId: transaction.seller_id,
+                    toUserId: transaction.buyer_id,
+                    action: 'ADMIN_FORCE_COMPLETED', // Use action instead of transaction_type
                     notes: `Force completed by admin ${session.user.name} - Original buyer failed to confirm`
                 }
             });
 
             return {
                 transaction: completedTransaction,
-                card: transaction.userCard.card,
+                card: card,
                 amount: purchaseAmount
             };
         });
@@ -177,7 +196,7 @@ export async function POST(request: NextRequest) {
             await createPurchaseConfirmedNotifications(
                 transaction.buyer_id,
                 transaction.seller_id,
-                transaction.userCard.card.name,
+                card.name,
                 purchaseAmount,
                 transaction_id
             );
@@ -192,8 +211,8 @@ export async function POST(request: NextRequest) {
                 id: result.transaction.id,
                 card_name: result.card.name,
                 amount: result.amount,
-                buyer_name: transaction.buyer.name,
-                seller_name: transaction.seller.name,
+                buyer_name: buyer.name,
+                seller_name: seller.name,
                 status: 'COMPLETED'
             }
         });

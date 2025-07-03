@@ -24,17 +24,6 @@ model User {
   is_verified           Int?      @default(0) @map("is_verified") @db.TinyInt
   verification_code     String?   @map("verification_code") @db.VarChar(10)
 
-  // Relationships
-  userCards             UserCard[]
-  wallet                UserWallet?
-  activityLogs          ActivityLog[]
-  bids                  Bid[]
-  cardTransactionsFrom  CardTransactionHistory[] @relation("FromUser")
-  cardTransactionsTo    CardTransactionHistory[] @relation("ToUser")
-  walletTransactions    WalletTransaction[]
-  notifications         Notification[]
-  watchlist             Watchlist[]
-
   @@map("users")
 }
 
@@ -52,9 +41,6 @@ model PokemonSet {
   created_at     DateTime  @default(now()) @db.DateTime(0)
   updated_at     DateTime  @updatedAt @db.DateTime(0)
 
-  // Relationships
-  cards          Card[]
-
   @@index([series])
   @@index([release_date])
   @@map("pokemon_sets")
@@ -71,9 +57,6 @@ model Rarity {
   created_at  DateTime @default(now()) @db.DateTime(0)
   updated_at  DateTime @updatedAt @db.DateTime(0)
 
-  // Relationships
-  cards       Card[]
-
   @@index([order_index])
   @@index([is_active])
   @@map("rarities")
@@ -89,9 +72,6 @@ model Subtype {
   created_at  DateTime @default(now()) @db.DateTime(0)
   updated_at  DateTime @updatedAt @db.DateTime(0)
 
-  // Relationships
-  cards       Card[]
-
   @@index([category])
   @@index([is_active])
   @@map("subtypes")
@@ -105,9 +85,6 @@ model Supertype {
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now()) @db.DateTime(0)
   updated_at  DateTime @updatedAt @db.DateTime(0)
-
-  // Relationships
-  cards       Card[]
 
   @@index([order_index])
   @@index([is_active])
@@ -205,14 +182,6 @@ model Card {
   created_at               DateTime   @default(now()) @db.DateTime(0)
   updated_at               DateTime   @updatedAt @db.DateTime(0)
 
-  // Relationships - THIS IS WHAT WAS MISSING!
-  pokemonSet      PokemonSet?   @relation(fields: [set_id], references: [id])
-  rarity_ref      Rarity?       @relation(fields: [rarity_id], references: [id])
-  subtype_ref     Subtype?      @relation(fields: [subtype_id], references: [id])
-  supertype_ref   Supertype?    @relation(fields: [supertype_id], references: [id])
-  userCards       UserCard[]    // This relationship was missing!
-  priceHistory    price_history[]
-
   @@index([api_id])
   @@index([name])
   @@index([set_name])
@@ -271,9 +240,6 @@ model Watchlist {
   stock_status   String? @map("stock_status") @db.VarChar(50)
   user_id        Int     @map("user_id")
 
-  // Relationships
-  user           User    @relation(fields: [user_id], references: [id])
-
   @@index([user_id], map: "user_id")
   @@map("watchlist")
 }
@@ -296,9 +262,6 @@ model ActivityLog {
   userId    Int      @map("userId")
   action    String
   timestamp DateTime @default(now())
-
-  // Relationships
-  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "ActivityLog_userId_fkey")
   @@map("activitylog")
@@ -330,12 +293,6 @@ model UserCard {
   acquired_date DateTime? @map("acquired_date") @db.DateTime(0)
   created_at    DateTime  @default(now()) @db.DateTime(0)
 
-  // Relationships
-  owner         User      @relation(fields: [owner_id], references: [id])
-  card          Card      @relation(fields: [card_id], references: [id])
-  bids          Bid[]
-  transactionHistory CardTransactionHistory[]
-
   @@index([owner_id], map: "owner_id")
   @@index([card_id], map: "card_id")
   @@index([is_for_sale])
@@ -351,10 +308,6 @@ model Bid {
   is_active  Boolean  @default(true)
   createdAt  DateTime @default(now())
 
-  // Relationships
-  userCard   UserCard @relation(fields: [userCardId], references: [id])
-  bidder     User     @relation(fields: [bidderId], references: [id])
-
   @@index([bidderId], map: "bids_bidderId_fkey")
   @@index([userCardId], map: "bids_userCardId_fkey")
   @@map("bids")
@@ -369,11 +322,6 @@ model CardTransactionHistory {
   action     String   @db.VarChar(50)
   notes      String?  @db.VarChar(255)
 
-  // Relationships
-  userCard   UserCard @relation(fields: [userCardId], references: [id])
-  fromUser   User?    @relation("FromUser", fields: [fromUserId], references: [id])
-  toUser     User?    @relation("ToUser", fields: [toUserId], references: [id])
-
   @@index([fromUserId], map: "card_transaction_history_fromUserId_fkey")
   @@index([toUserId], map: "card_transaction_history_toUserId_fkey")
   @@index([userCardId], map: "card_transaction_history_userCardId_fkey")
@@ -387,10 +335,6 @@ model UserWallet {
   frozen_balance Decimal  @db.Decimal(10, 2)
   created_at     DateTime @default(now()) @db.DateTime(0)
   updated_at     DateTime @updatedAt @db.DateTime(0)
-
-  // Relationships
-  user           User     @relation(fields: [user_id], references: [id])
-  transactions   WalletTransaction[]
 
   @@map("user_wallets")
 }
@@ -409,10 +353,6 @@ model WalletTransaction {
   admin_id         Int?
   created_at       DateTime @default(now()) @db.DateTime(0)
 
-  // Relationships
-  user             User       @relation(fields: [user_id], references: [id])
-  wallet           UserWallet @relation(fields: [wallet_id], references: [id])
-
   @@index([user_id], map: "wallet_transactions_user_id_fkey")
   @@index([wallet_id], map: "wallet_transactions_wallet_id_fkey")
   @@map("wallet_transactions")
@@ -429,9 +369,6 @@ model Notification {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  // Relationships
-  user       User     @relation(fields: [user_id], references: [id])
-
   @@index([user_id, read])
   @@index([created_at])
   @@map("notifications")
@@ -446,13 +383,29 @@ model price_history {
   metadata    Json?
   created_at  DateTime @default(now()) @db.DateTime(0)
 
-  // Relationships
-  card        Card     @relation(fields: [card_id], references: [id])
-
   @@index([card_id, recorded_at], map: "idx_card_date")
   @@index([card_id], map: "idx_card_id")
   @@index([recorded_at], map: "idx_recorded_at")
   @@index([source], map: "idx_source")
+}
+
+model Transaction {
+  id               Int      @id @default(autoincrement())
+  user_card_id     Int      @map("user_card_id")
+  buyer_id         Int      @map("buyer_id")
+  seller_id        Int      @map("seller_id")
+  amount           Decimal  @db.Decimal(10, 2)
+  transaction_type String   @map("transaction_type") @db.VarChar(50)
+  status           String   @db.VarChar(50)
+  notes            String?  @db.Text
+  created_at       DateTime @default(now()) @db.DateTime(0)
+  updated_at       DateTime @updatedAt @db.DateTime(0)
+
+  @@index([user_card_id])
+  @@index([buyer_id])
+  @@index([seller_id])
+  @@index([status])
+  @@map("transactions")
 }
 
 enum CardSource {

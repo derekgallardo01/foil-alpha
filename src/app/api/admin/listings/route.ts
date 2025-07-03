@@ -3,15 +3,7 @@ import { prisma } from '../../../lib/prisma';
 
 // Interface for the where clause in GET request
 interface WhereClause {
-  owner: {
-    role: string;
-  };
-  card?: {
-    name: {
-      contains: string;
-      mode?: 'insensitive'; // Add case-insensitive mode for search
-    };
-  };
+  owner_id: number;
   sale_type?: string;
   is_for_sale?: boolean;
   is_sold?: boolean;
@@ -61,13 +53,10 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
+    // Build where clause for user cards (admin owned)
     const where: WhereClause = {
-      owner: { role: 'admin' },
+      owner_id: user.id, // Direct owner_id filter instead of relationship
     };
-
-    if (search) {
-      where.card = { name: { contains: search, mode: 'insensitive' } };
-    }
 
     if (saleType) {
       where.sale_type = saleType;
@@ -83,49 +72,161 @@ export async function GET(request: NextRequest) {
       where.is_sold = false;
     }
 
+    // Get listings without problematic includes
     const [listings, totalCount] = await Promise.all([
       prisma.userCard.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' }, // Supported by UserCard.created_at
-        include: {
-          card: true,
-          owner: { select: { id: true, name: true, role: true } },
-          bids: {
-            where: { is_active: true },
-            orderBy: { amount: 'desc' },
-            take: 5,
-            include: { bidder: { select: { id: true, name: true } } },
-          },
-          history: {
-            orderBy: { created_at: 'desc' },
-            take: 1,
-            include: {
-              fromUser: { select: { id: true, name: true } },
-              toUser: { select: { id: true, name: true } },
-            },
-          },
-        },
+        orderBy: { created_at: 'desc' },
       }),
       prisma.userCard.count({ where }),
     ]);
 
-    const listingsWithStats = listings.map((listing) => {
-      const currentHighestBid = listing.bids[0];
+    if (listings.length === 0) {
+      return NextResponse.json({
+        listings: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+        },
+      });
+    }
+
+    // Get related data separately
+    const cardIds = [...new Set(listings.map(l => l.card_id))];
+    const userCardIds = listings.map(l => l.id);
+
+    // Apply search filter to cards if needed
+    let filteredListings = listings;
+    if (search) {
+      const matchingCards = await prisma.card.findMany({
+        where: {
+          id: { in: cardIds },
+          name: { contains: search }
+        },
+        select: { id: true }
+      });
+      const matchingCardIds = new Set(matchingCards.map(c => c.id));
+      filteredListings = listings.filter(l => matchingCardIds.has(l.card_id));
+    }
+
+    if (filteredListings.length === 0) {
+      return NextResponse.json({
+        listings: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+        },
+      });
+    }
+
+    // Get related data
+    const [cards, owner, allBids, allHistory] = await Promise.all([
+      // Get cards
+      prisma.card.findMany({
+        where: { id: { in: cardIds } }
+      }),
+      // Get owner (just the admin user)
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, name: true, role: true }
+      }),
+      // Get bids for these user cards
+      prisma.bid.findMany({
+        where: {
+          userCardId: { in: userCardIds },
+          is_active: true
+        },
+        orderBy: { amount: 'desc' },
+        take: userCardIds.length * 5 // Max 5 bids per listing
+      }),
+      // Get transaction history
+      prisma.cardTransactionHistory.findMany({
+        where: {
+          userCardId: { in: userCardIds }
+        },
+        orderBy: { created_at: 'desc' },
+        take: userCardIds.length // Latest history per listing
+      })
+    ]);
+
+    // Get bidders for the bids
+    const bidderIds = [...new Set(allBids.map(bid => bid.bidderId))];
+    const bidders = bidderIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: bidderIds } },
+      select: { id: true, name: true }
+    }) : [];
+
+    // Get history users (filter out nulls properly)
+    const historyUserIds = [...new Set([
+      ...allHistory.map(h => h.fromUserId).filter((id): id is number => id !== null),
+      ...allHistory.map(h => h.toUserId).filter((id): id is number => id !== null)
+    ])];
+    const historyUsers = historyUserIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: historyUserIds } },
+      select: { id: true, name: true }
+    }) : [];
+
+    // Create lookup maps
+    const cardMap = new Map(cards.map(c => [c.id, c]));
+    const bidderMap = new Map(bidders.map(b => [b.id, b]));
+    const historyUserMap = new Map(historyUsers.map(u => [u.id, u]));
+
+    // Group bids and history by user card ID
+    const bidsByUserCard = new Map();
+    const historyByUserCard = new Map();
+
+    allBids.forEach(bid => {
+      if (!bidsByUserCard.has(bid.userCardId)) {
+        bidsByUserCard.set(bid.userCardId, []);
+      }
+      bidsByUserCard.get(bid.userCardId).push({
+        ...bid,
+        amount: Number(bid.amount),
+        bidder: bidderMap.get(bid.bidderId)
+      });
+    });
+
+    allHistory.forEach(history => {
+      if (!historyByUserCard.has(history.userCardId)) {
+        historyByUserCard.set(history.userCardId, []);
+      }
+      historyByUserCard.get(history.userCardId).push({
+        ...history,
+        fromUser: history.fromUserId ? historyUserMap.get(history.fromUserId) : null,
+        toUser: history.toUserId ? historyUserMap.get(history.toUserId) : null
+      });
+    });
+
+    // Build listings with stats
+    const listingsWithStats = filteredListings.map((listing) => {
+      const card = cardMap.get(listing.card_id);
+      const bids = bidsByUserCard.get(listing.id) || [];
+      const history = historyByUserCard.get(listing.id) || [];
+
+      const currentHighestBid = bids[0];
       const timeLeft = listing.auction_end
         ? Math.max(0, listing.auction_end.getTime() - Date.now())
         : null;
 
       return {
         ...listing,
+        card,
+        owner,
+        bids: bids.slice(0, 5), // Top 5 bids
+        history: history.slice(0, 1), // Latest history
         current_highest_bid: currentHighestBid?.amount ?? null,
-        bid_count: listing.bids.length,
+        bid_count: bids.length,
         time_left_ms: timeLeft,
         is_auction_active:
           listing.sale_type === 'AUCTION' &&
           (!listing.auction_end || listing.auction_end > new Date()),
-        latest_activity: listing.history[0] ?? null,
+        latest_activity: history[0] ?? null,
       };
     });
 
@@ -134,8 +235,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total: totalCount,
-        totalPages: Math.ceil(totalCount / limit),
+        total: filteredListings.length,
+        totalPages: Math.ceil(filteredListings.length / limit),
       },
     });
   } catch (error) {
@@ -262,24 +363,35 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await prisma.$transaction(async (tx) => {
+        // Create user card without problematic include
         const userCard = await tx.userCard.create({
           data: listingData,
-          include: {
-            card: true,
-            owner: { select: { id: true, name: true, role: true } },
-          },
         });
 
+        // Create transaction history
         await tx.cardTransactionHistory.create({
           data: {
             userCardId: userCard.id,
             toUserId: user.id,
-            action: 'INITIAL', // Changed from transaction_type to action
+            action: 'INITIAL',
             notes: `Admin created marketplace listing - ${sale_type} sale`,
           },
         });
 
-        return userCard;
+        // Get related data separately for response
+        const [cardData, ownerData] = await Promise.all([
+          tx.card.findUnique({ where: { id: cardIdNum } }),
+          tx.user.findUnique({
+            where: { id: user.id },
+            select: { id: true, name: true, role: true }
+          })
+        ]);
+
+        return {
+          ...userCard,
+          card: cardData,
+          owner: ownerData
+        };
       });
 
       createdListings.push(result);

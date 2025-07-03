@@ -162,18 +162,16 @@ export async function POST(request: NextRequest) {
                             }
                         });
 
-                        // Create price history entry
+                        // Create price history entry using product_id instead of card_id
                         await tx.priceHistory.create({
                             data: {
-                                card_id: card.id,
+                                product_id: card.id, // Fix: use product_id instead of card_id
                                 price: newMarketPrice,
                                 recorded_at: new Date(),
-                                source: 'pokemon_price_tracker',
-                                price_type: 'market',
-                                condition: 'NM',
                                 retailer: 'pokemon_price_tracker',
                                 stock_status: 'available',
-                                raw_data: cardPricing,
+                                store_quantity: null,
+                                ship_quantity: null,
                             }
                         });
 
@@ -183,14 +181,13 @@ export async function POST(request: NextRequest) {
                             if (prices.tcgplayer.low && prices.tcgplayer.low !== newMarketPrice) {
                                 await tx.priceHistory.create({
                                     data: {
-                                        card_id: card.id,
+                                        product_id: card.id, // Fix: use product_id instead of card_id
                                         price: prices.tcgplayer.low,
                                         recorded_at: new Date(),
-                                        source: 'pokemon_price_tracker',
-                                        price_type: 'low',
-                                        condition: 'NM',
-                                        retailer: 'tcgplayer',
+                                        retailer: 'tcgplayer_low',
                                         stock_status: 'available',
+                                        store_quantity: null,
+                                        ship_quantity: null,
                                     }
                                 });
                             }
@@ -198,14 +195,13 @@ export async function POST(request: NextRequest) {
                             if (prices.tcgplayer.high && prices.tcgplayer.high !== newMarketPrice) {
                                 await tx.priceHistory.create({
                                     data: {
-                                        card_id: card.id,
+                                        product_id: card.id, // Fix: use product_id instead of card_id
                                         price: prices.tcgplayer.high,
                                         recorded_at: new Date(),
-                                        source: 'pokemon_price_tracker',
-                                        price_type: 'high',
-                                        condition: 'NM',
-                                        retailer: 'tcgplayer',
+                                        retailer: 'tcgplayer_high',
                                         stock_status: 'available',
+                                        store_quantity: null,
+                                        ship_quantity: null,
                                     }
                                 });
                             }

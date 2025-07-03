@@ -20,43 +20,51 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'bid_id is required' }, { status: 400 });
         }
 
-        // OPTIMIZED: Get bid with minimal data first
+        // Get bid without problematic includes
         const bid = await prisma.bid.findUnique({
-            where: { id: bid_id },
-            include: {
-                userCard: {
-                    select: {
-                        id: true,
-                        owner_id: true,
-                        is_sold: true,
-                        card: {
-                            select: {
-                                id: true,
-                                name: true
-                            }
-                        }
-                    }
-                },
-                bidder: {
-                    select: {
-                        id: true,
-                        name: true
-                    }
-                }
-            }
+            where: { id: bid_id }
         });
 
         if (!bid || !bid.is_active) {
             return NextResponse.json({ error: 'Bid not found or not active' }, { status: 404 });
         }
 
+        // Get related data separately
+        const userCard = await prisma.userCard.findUnique({
+            where: { id: bid.userCardId }
+        });
+
+        if (!userCard) {
+            return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+        }
+
+        const card = await prisma.card.findUnique({
+            where: { id: userCard.card_id },
+            select: {
+                id: true,
+                name: true
+            }
+        });
+
+        const bidder = await prisma.user.findUnique({
+            where: { id: bid.bidderId },
+            select: {
+                id: true,
+                name: true
+            }
+        });
+
+        if (!card || !bidder) {
+            return NextResponse.json({ error: 'Card or bidder not found' }, { status: 404 });
+        }
+
         // Verify ownership
-        if (bid.userCard.owner_id !== sellerId) {
+        if (userCard.owner_id !== sellerId) {
             return NextResponse.json({ error: 'Only card owner can accept bids' }, { status: 403 });
         }
 
         // Check if card is still available
-        if (bid.userCard.is_sold) {
+        if (userCard.is_sold) {
             return NextResponse.json({ error: 'Card has already been sold' }, { status: 400 });
         }
 
@@ -64,11 +72,11 @@ export async function POST(request: NextRequest) {
         const result = await prisma.$transaction(async (tx) => {
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-            // 1. Create pending transaction (single operation)
+            // 1. Create pending transaction (single operation) - fix field names
             const pendingTransaction = await tx.transaction.create({
                 data: {
-                    user_card_id: bid.user_card_id,
-                    buyer_id: bid.bidder_id,
+                    user_card_id: bid.userCardId, // Fix: use userCardId from bid
+                    buyer_id: bid.bidderId, // Fix: use bidderId from bid
                     seller_id: sellerId,
                     amount: bid.amount,
                     transaction_type: 'BID_ACCEPTED_PENDING',
@@ -77,9 +85,9 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            // 2. Update card status (single operation)
+            // 2. Update card status (single operation) - fix field name
             await tx.userCard.update({
-                where: { id: bid.user_card_id },
+                where: { id: bid.userCardId }, // Fix: use userCardId from bid
                 data: {
                     notes: `Pending buyer confirmation - Transaction #${pendingTransaction.id}`
                 }
@@ -105,9 +113,9 @@ export async function POST(request: NextRequest) {
         setImmediate(async () => {
             try {
                 await createBidAcceptedNotifications(
-                    bid.bidder_id,
+                    bid.bidderId, // Fix: use bidderId from bid
                     sellerId,
-                    bid.userCard.card.name,
+                    card.name, // Use separately fetched card data
                     Number(bid.amount),
                     result.transaction.id
                 );
@@ -121,8 +129,8 @@ export async function POST(request: NextRequest) {
             message: 'Bid accepted! Buyer has 24 hours to confirm purchase.',
             transaction: {
                 id: result.transaction.id,
-                card_name: bid.userCard.card.name,
-                buyer_name: bid.bidder.name,
+                card_name: card.name, // Use separately fetched card data
+                buyer_name: bidder.name, // Use separately fetched bidder data
                 amount: result.amount,
                 status: 'PENDING_BUYER_CONFIRMATION',
                 expires_at: result.expiresAt

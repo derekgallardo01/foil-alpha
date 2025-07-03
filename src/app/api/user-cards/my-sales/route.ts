@@ -13,145 +13,154 @@ export async function GET(request: NextRequest) {
 
         const userId = parseInt(session.user.id);
 
-        // OPTIMIZED: Use Promise.all for parallel queries
-        const [activeSales, soldItems] = await Promise.all([
-            // Active sales query - optimized with select
+        // OPTIMIZED: Use Promise.all for parallel queries (without problematic includes)
+        const [activeSales, soldTransactions] = await Promise.all([
+            // Active sales query - without includes
             prisma.userCard.findMany({
                 where: {
                     owner_id: userId,
                     is_for_sale: true,
                     is_sold: false
                 },
-                select: {
-                    id: true,
-                    condition: true,
-                    sale_type: true,
-                    fixed_price: true,
-                    reserve_price: true,
-                    auction_end: true,
-                    created_at: true,
-                    card: {
-                        select: {
-                            id: true,
-                            name: true,
-                            set_name: true,
-                            set_number: true,
-                            rarity: true,
-                            image_url: true,
-                            small_image_url: true
-                        }
-                    },
-                    // OPTIMIZED: Only get active bids, limit to 10 most recent
-                    bids: {
-                        where: { is_active: true },
-                        take: 10,
-                        orderBy: { amount: 'desc' },
-                        select: {
-                            id: true,
-                            amount: true,
-                            created_at: true,
-                            is_active: true,
-                            bidder: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true
-                                }
-                            }
-                        }
-                    }
-                },
                 orderBy: { created_at: 'desc' },
                 take: 50 // Limit results
             }),
 
-            // Sold items query - optimized with select
+            // Sold items query - without includes (remove completed_at field)
             prisma.transaction.findMany({
                 where: {
                     seller_id: userId,
                     status: 'COMPLETED'
                 },
-                select: {
-                    id: true,
-                    amount: true,
-                    transaction_type: true,
-                    completed_at: true,
-                    created_at: true,
-                    notes: true,
-                    userCard: {
-                        select: {
-                            id: true,
-                            condition: true,
-                            card: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    set_name: true,
-                                    set_number: true,
-                                    rarity: true,
-                                    image_url: true,
-                                    small_image_url: true
-                                }
-                            }
-                        }
-                    },
-                    buyer: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true
-                        }
-                    }
-                },
-                orderBy: { completed_at: 'desc' },
+                orderBy: { created_at: 'desc' }, // Use created_at instead of completed_at
                 take: 50 // Limit results
             })
         ]);
 
-        // OPTIMIZED: Process data efficiently
-        const activeSalesProcessed = activeSales.map(sale => {
-            const now = new Date();
-            const auctionEnd = sale.auction_end ? new Date(sale.auction_end) : null;
-            const timeRemaining = auctionEnd ? Math.max(0, auctionEnd.getTime() - now.getTime()) : null;
-            const highestBid = sale.bids.length > 0 ? Number(sale.bids[0].amount) : null;
+        // Get related data separately for active sales
+        const activeSalesProcessed = await Promise.all(
+            activeSales.map(async (sale) => {
+                // Get card details
+                const card = await prisma.card.findUnique({
+                    where: { id: sale.card_id },
+                    select: {
+                        id: true,
+                        name: true,
+                        set_name: true,
+                        set_number: true,
+                        rarity: true,
+                        image_url: true,
+                        small_image_url: true
+                    }
+                });
 
-            return {
-                id: sale.id,
-                card: sale.card,
-                condition: sale.condition,
-                sale_type: sale.sale_type,
-                fixed_price: sale.fixed_price ? Number(sale.fixed_price) : null,
-                reserve_price: sale.reserve_price ? Number(sale.reserve_price) : null,
-                auction_end: sale.auction_end,
-                bids: sale.bids.map(bid => ({
-                    id: bid.id,
-                    amount: Number(bid.amount),
-                    bidder: bid.bidder,
-                    created_at: bid.created_at,
-                    is_active: bid.is_active
-                })),
-                highest_bid: highestBid,
-                bid_count: sale.bids.length,
-                time_remaining: timeRemaining,
-                created_at: sale.created_at
-            };
-        });
+                // Get active bids
+                const bids = await prisma.bid.findMany({
+                    where: {
+                        userCardId: sale.id,
+                        is_active: true
+                    },
+                    take: 10,
+                    orderBy: { amount: 'desc' }
+                });
 
-        const soldItemsProcessed = soldItems.map(item => ({
-            id: item.id,
-            card: item.userCard.card,
-            condition: item.userCard.condition,
-            sale_type: item.transaction_type,
-            sale_price: Number(item.amount),
-            buyer: item.buyer,
-            completed_at: item.completed_at,
-            created_at: item.created_at,
-            notes: item.notes
-        }));
+                // Get bidder details for each bid
+                const bidsWithBidders = await Promise.all(
+                    bids.map(async (bid) => {
+                        const bidder = await prisma.user.findUnique({
+                            where: { id: bid.bidderId },
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        });
+
+                        return {
+                            id: bid.id,
+                            amount: Number(bid.amount),
+                            bidder: bidder,
+                            created_at: bid.createdAt,
+                            is_active: bid.is_active
+                        };
+                    })
+                );
+
+                const now = new Date();
+                const auctionEnd = sale.auction_end ? new Date(sale.auction_end) : null;
+                const timeRemaining = auctionEnd ? Math.max(0, auctionEnd.getTime() - now.getTime()) : null;
+                const highestBid = bidsWithBidders.length > 0 ? bidsWithBidders[0].amount : null;
+
+                return {
+                    id: sale.id,
+                    card: card,
+                    condition: sale.condition,
+                    sale_type: sale.sale_type,
+                    fixed_price: sale.fixed_price ? Number(sale.fixed_price) : null,
+                    reserve_price: sale.reserve_price ? Number(sale.reserve_price) : null,
+                    auction_end: sale.auction_end,
+                    bids: bidsWithBidders,
+                    highest_bid: highestBid,
+                    bid_count: bidsWithBidders.length,
+                    time_remaining: timeRemaining,
+                    created_at: sale.created_at
+                };
+            })
+        );
+
+        // Get related data separately for sold items
+        const soldItemsProcessed = await Promise.all(
+            soldTransactions.map(async (transaction) => {
+                // Get user card details
+                const userCard = await prisma.userCard.findUnique({
+                    where: { id: transaction.user_card_id }
+                });
+
+                // Get card details
+                const card = userCard ? await prisma.card.findUnique({
+                    where: { id: userCard.card_id },
+                    select: {
+                        id: true,
+                        name: true,
+                        set_name: true,
+                        set_number: true,
+                        rarity: true,
+                        image_url: true,
+                        small_image_url: true
+                    }
+                }) : null;
+
+                // Get buyer details
+                const buyer = await prisma.user.findUnique({
+                    where: { id: transaction.buyer_id },
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                });
+
+                return {
+                    id: transaction.id,
+                    card: card,
+                    condition: userCard?.condition,
+                    sale_type: transaction.transaction_type,
+                    sale_price: Number(transaction.amount),
+                    buyer: buyer,
+                    completed_at: transaction.updated_at, // Use updated_at as completion date
+                    created_at: transaction.created_at,
+                    notes: transaction.notes
+                };
+            })
+        );
+
+        // Filter out items with missing data
+        const validActiveSales = activeSalesProcessed.filter(sale => sale.card !== null);
+        const validSoldItems = soldItemsProcessed.filter(item => item.card !== null);
 
         return NextResponse.json({
-            activeSales: activeSalesProcessed,
-            soldItems: soldItemsProcessed
+            activeSales: validActiveSales,
+            soldItems: validSoldItems
         });
 
     } catch (error) {

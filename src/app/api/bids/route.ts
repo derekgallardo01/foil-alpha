@@ -20,48 +20,60 @@ export async function GET(request: NextRequest) {
         let where: any = {};
 
         if (userCardId) {
-            where.user_card_id = parseInt(userCardId);
+            where.userCardId = parseInt(userCardId);
         } else if (userId) {
-            where.bidder_id = parseInt(userId);
+            where.bidderId = parseInt(userId);
         } else {
-            where.bidder_id = parseInt(session.user.id);
+            where.bidderId = parseInt(session.user.id);
         }
 
         const bids = await prisma.bid.findMany({
             where,
-            include: {
-                userCard: {
-                    include: {
-                        card: true,
-                        owner: {
-                            select: { id: true, name: true, email: true }
-                        }
-                    }
-                },
-                bidder: {
-                    select: { id: true, name: true, email: true }
-                }
-            },
-            orderBy: { created_at: 'desc' }
+            orderBy: { createdAt: 'desc' }
         });
 
-        return NextResponse.json(bids.map(bid => ({
-            id: bid.id,
-            user_card_id: bid.user_card_id,
-            bidder: bid.bidder,
-            amount: Number(bid.amount),
-            is_active: bid.is_active,
-            created_at: bid.created_at,
-            card: {
-                id: bid.userCard.card.id,
-                name: bid.userCard.card.name,
-                set_name: bid.userCard.card.set_name,
-                image_url: bid.userCard.card.image_url
-            },
-            owner: bid.userCard.owner,
-            auction_end: bid.userCard.auction_end,
-            current_highest_bid: Number(bid.amount)
-        })));
+        // Get related data separately for each bid
+        const bidsWithDetails = await Promise.all(
+            bids.map(async (bid) => {
+                const userCard = await prisma.userCard.findUnique({
+                    where: { id: bid.userCardId }
+                });
+
+                const card = userCard ? await prisma.card.findUnique({
+                    where: { id: userCard.card_id }
+                }) : null;
+
+                const owner = userCard ? await prisma.user.findUnique({
+                    where: { id: userCard.owner_id },
+                    select: { id: true, name: true, email: true }
+                }) : null;
+
+                const bidder = await prisma.user.findUnique({
+                    where: { id: bid.bidderId },
+                    select: { id: true, name: true, email: true }
+                });
+
+                return {
+                    id: bid.id,
+                    user_card_id: bid.userCardId,
+                    bidder: bidder,
+                    amount: Number(bid.amount),
+                    is_active: bid.is_active,
+                    created_at: bid.createdAt,
+                    card: card ? {
+                        id: card.id,
+                        name: card.name,
+                        set_name: card.set_name,
+                        image_url: card.image_url
+                    } : null,
+                    owner: owner,
+                    auction_end: userCard?.auction_end,
+                    current_highest_bid: Number(bid.amount)
+                };
+            })
+        );
+
+        return NextResponse.json(bidsWithDetails.filter(bid => bid.card !== null));
 
     } catch (error) {
         console.error('Error fetching bids:', error);
@@ -94,17 +106,26 @@ export async function POST(request: NextRequest) {
 
         // Get the card being bid on
         const userCard = await prisma.userCard.findUnique({
-            where: { id: user_card_id },
-            include: {
-                card: true,
-                owner: {
-                    select: { id: true, name: true }
-                }
-            }
+            where: { id: user_card_id }
         });
 
         if (!userCard) {
             return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+        }
+
+        // Get card details
+        const card = await prisma.card.findUnique({
+            where: { id: userCard.card_id }
+        });
+
+        // Get owner details
+        const owner = await prisma.user.findUnique({
+            where: { id: userCard.owner_id },
+            select: { id: true, name: true }
+        });
+
+        if (!card || !owner) {
+            return NextResponse.json({ error: 'Card or owner not found' }, { status: 404 });
         }
 
         // Validation checks
@@ -135,16 +156,22 @@ export async function POST(request: NextRequest) {
         // Get current highest bid
         const currentHighestBid = await prisma.bid.findFirst({
             where: {
-                user_card_id,
+                userCardId: user_card_id,
                 is_active: true
             },
-            orderBy: { amount: 'desc' },
-            include: {
-                bidder: {
-                    select: { id: true, name: true }
-                }
-            }
+            orderBy: { amount: 'desc' }
         });
+
+        // Get bidder details for the highest bid
+        const currentHighestBidder = currentHighestBid ? await prisma.user.findUnique({
+            where: { id: currentHighestBid.bidderId },
+            select: { id: true, name: true }
+        }) : null;
+
+        const currentHighestBidWithBidder = currentHighestBid ? {
+            ...currentHighestBid,
+            bidder: currentHighestBidder
+        } : null;
 
         if (currentHighestBid && bidAmount <= Number(currentHighestBid.amount)) {
             return NextResponse.json({
@@ -173,8 +200,8 @@ export async function POST(request: NextRequest) {
             // 1. If there's a previous bid from this user, deactivate it
             const previousBidFromUser = await tx.bid.findFirst({
                 where: {
-                    user_card_id,
-                    bidder_id: bidderId,
+                    userCardId: user_card_id,
+                    bidderId: bidderId,
                     is_active: true
                 }
             });
@@ -189,8 +216,8 @@ export async function POST(request: NextRequest) {
             // 2. Create the new bid (NO fund freezing)
             const newBid = await tx.bid.create({
                 data: {
-                    user_card_id,
-                    bidder_id: bidderId,
+                    userCardId: user_card_id,
+                    bidderId: bidderId,
                     amount: bidAmount,
                     is_active: true
                 }
@@ -198,7 +225,7 @@ export async function POST(request: NextRequest) {
 
             return {
                 bid: newBid,
-                previousHighestBid: currentHighestBid
+                previousHighestBid: currentHighestBidWithBidder
             };
         });
 
@@ -208,16 +235,16 @@ export async function POST(request: NextRequest) {
             await createBidNotifications(
                 userCard.owner_id,
                 bidderId,
-                userCard.card.name,
+                card.name,
                 bidAmount,
                 result.bid.id
             );
 
             // Notify previous highest bidder if they were outbid
-            if (result.previousHighestBid && result.previousHighestBid.bidder_id !== bidderId) {
+            if (result.previousHighestBid && result.previousHighestBid.bidderId !== bidderId) {
                 await createBidOutbidNotification(
-                    result.previousHighestBid.bidder_id,
-                    userCard.card.name,
+                    result.previousHighestBid.bidderId,
+                    card.name,
                     Number(result.previousHighestBid.amount),
                     bidAmount,
                     result.bid.id
@@ -232,10 +259,10 @@ export async function POST(request: NextRequest) {
             success: true,
             bid: {
                 id: result.bid.id,
-                user_card_id,
+                user_card_id: user_card_id,
                 amount: bidAmount,
-                card_name: userCard.card.name,
-                created_at: result.bid.created_at
+                card_name: card.name,
+                created_at: result.bid.createdAt
             },
             message: 'Bid placed successfully! No funds have been reserved.'
         });
@@ -269,21 +296,14 @@ export async function DELETE(request: NextRequest) {
         }
 
         const bid = await prisma.bid.findUnique({
-            where: { id: parseInt(bidId) },
-            include: {
-                userCard: {
-                    include: {
-                        card: true
-                    }
-                }
-            }
+            where: { id: parseInt(bidId) }
         });
 
         if (!bid) {
             return NextResponse.json({ error: 'Bid not found' }, { status: 404 });
         }
 
-        if (bid.bidder_id !== userId) {
+        if (bid.bidderId !== userId) {
             return NextResponse.json({ error: 'Can only cancel your own bids' }, { status: 403 });
         }
 
@@ -291,8 +311,17 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Bid is not active' }, { status: 400 });
         }
 
+        // Get the user card to check auction end
+        const userCard = await prisma.userCard.findUnique({
+            where: { id: bid.userCardId }
+        });
+
+        if (!userCard) {
+            return NextResponse.json({ error: 'Associated card not found' }, { status: 404 });
+        }
+
         // Check if auction has ended
-        if (bid.userCard.auction_end && new Date() > bid.userCard.auction_end) {
+        if (userCard.auction_end && new Date() > userCard.auction_end) {
             return NextResponse.json({ error: 'Cannot cancel bid after auction has ended' }, { status: 400 });
         }
 

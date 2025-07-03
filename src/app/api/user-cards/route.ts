@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '../../lib/prisma';
@@ -40,31 +39,55 @@ export async function GET(request: NextRequest) {
       where.is_sold = false;
     }
 
-    // Get user's cards
+    // Get user's cards (without includes that cause issues)
     const [userCards, totalCount] = await Promise.all([
       prisma.userCard.findMany({
         where,
         skip,
         take: limit,
-        include: {
-          card: true,
-          bids: {
-            where: { is_active: true },
-            orderBy: { amount: 'desc' },
-            include: {
-              bidder: {
-                select: { id: true, name: true },
-              },
-            },
-          },
-        },
         orderBy: { acquired_date: 'desc' },
       }),
       prisma.userCard.count({ where }),
     ]);
 
+    // Get related data separately for each user card
+    const enrichedUserCards = await Promise.all(
+      userCards.map(async (userCard) => {
+        // Get card details
+        const card = await prisma.card.findUnique({
+          where: { id: userCard.card_id }
+        });
+
+        // Get active bids
+        const bids = await prisma.bid.findMany({
+          where: {
+            userCardId: userCard.id,
+            is_active: true
+          },
+          orderBy: { amount: 'desc' }
+        });
+
+        // Get bidder details for each bid
+        const bidsWithBidder = await Promise.all(
+          bids.map(async (bid) => {
+            const bidder = await prisma.user.findUnique({
+              where: { id: bid.bidderId },
+              select: { id: true, name: true }
+            });
+            return { ...bid, bidder };
+          })
+        );
+
+        return {
+          ...userCard,
+          card,
+          bids: bidsWithBidder
+        };
+      })
+    );
+
     return NextResponse.json({
-      userCards,
+      userCards: enrichedUserCards,
       pagination: {
         page,
         limit,
@@ -117,16 +140,13 @@ export async function POST(request: NextRequest) {
 
     // Create user card and history record in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create user card
+      // Create user card (without include that causes issues)
       const userCard = await tx.userCard.create({
         data: {
           card_id,
           owner_id: user.id,
           condition,
           notes,
-        },
-        include: {
-          card: true,
         },
       });
 
@@ -142,7 +162,15 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return userCard;
+      // Get card details separately and return combined result
+      const cardDetails = await tx.card.findUnique({
+        where: { id: card_id }
+      });
+
+      return {
+        ...userCard,
+        card: cardDetails
+      };
     });
 
     return NextResponse.json(result, { status: 201 });

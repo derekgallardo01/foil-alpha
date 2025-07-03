@@ -53,32 +53,104 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    // Get card without problematic includes
     const card = await prisma.card.findUnique({
-      where: { id: cardId },
-      include: {
-        userCards: {
-          include: {
-            owner: { select: { id: true, name: true, email: true } },
-            bids: {
-              where: { is_active: true },
-              include: { bidder: { select: { id: true, name: true } } },
-            },
-          },
-        },
-        _count: { select: { userCards: true } },
-      },
+      where: { id: cardId }
     });
 
     if (!card) {
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
+    // Get user cards for this card
+    const userCards = await prisma.userCard.findMany({
+      where: { card_id: cardId },
+      select: {
+        id: true,
+        owner_id: true,
+        card_id: true,
+        condition: true,
+        is_for_sale: true,
+        sale_type: true,
+        fixed_price: true,
+        reserve_price: true,
+        auction_end: true,
+        is_sold: true,
+        notes: true,
+        acquired_date: true,
+        created_at: true
+      }
+    });
+
+    // Get unique owner IDs and user card IDs
+    const ownerIds = [...new Set(userCards.map(uc => uc.owner_id))];
+    const userCardIds = userCards.map(uc => uc.id);
+
+    // Get related data separately
+    const [owners, allBids] = await Promise.all([
+      // Get owners
+      ownerIds.length > 0 ? prisma.user.findMany({
+        where: { id: { in: ownerIds } },
+        select: { id: true, name: true, email: true }
+      }) : [],
+      // Get bids for these user cards
+      userCardIds.length > 0 ? prisma.bid.findMany({
+        where: {
+          userCardId: { in: userCardIds },
+          is_active: true
+        },
+        select: {
+          id: true,
+          userCardId: true,
+          bidderId: true,
+          amount: true,
+          is_active: true,
+          createdAt: true
+        }
+      }) : []
+    ]);
+
+    // Get bidders for the bids
+    const bidderIds = [...new Set(allBids.map(bid => bid.bidderId))];
+    const bidders = bidderIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: bidderIds } },
+      select: { id: true, name: true }
+    }) : [];
+
+    // Create lookup maps
+    const ownerMap = new Map(owners.map(o => [o.id, o]));
+    const bidderMap = new Map(bidders.map(b => [b.id, b]));
+
+    // Group bids by user card ID
+    const bidsByUserCard = new Map();
+    allBids.forEach(bid => {
+      if (!bidsByUserCard.has(bid.userCardId)) {
+        bidsByUserCard.set(bid.userCardId, []);
+      }
+      bidsByUserCard.get(bid.userCardId).push({
+        id: bid.id,
+        amount: Number(bid.amount),
+        is_active: bid.is_active,
+        createdAt: bid.createdAt,
+        bidder: bidderMap.get(bid.bidderId)
+      });
+    });
+
+    // Combine user cards with their related data
+    const userCardsWithRelations = userCards.map(uc => ({
+      ...uc,
+      owner: ownerMap.get(uc.owner_id),
+      bids: bidsByUserCard.get(uc.id) || []
+    }));
+
     const cardWithStats = {
       ...card,
-      totalOwned: card._count.userCards,
-      forSaleCount: card.userCards.filter((uc) => uc.is_for_sale && !uc.is_sold).length,
-      soldCount: card.userCards.filter((uc) => uc.is_sold).length,
-      uniqueOwners: new Set(card.userCards.map((uc) => uc.owner_id)).size,
+      userCards: userCardsWithRelations,
+      _count: { userCards: userCards.length },
+      totalOwned: userCards.length,
+      forSaleCount: userCards.filter((uc) => uc.is_for_sale && !uc.is_sold).length,
+      soldCount: userCards.filter((uc) => uc.is_sold).length,
+      uniqueOwners: new Set(userCards.map((uc) => uc.owner_id)).size,
     };
 
     return NextResponse.json(cardWithStats);
@@ -128,6 +200,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
+    // Update card without problematic include
     const updatedCard = await prisma.card.update({
       where: { id: cardId },
       data: {
@@ -141,18 +214,21 @@ export async function PUT(req: NextRequest) {
         image_url: body.image_url,
         small_image_url: body.small_image_url,
         tcg_id: body.tcg_id,
-      },
-      include: {
-        _count: { select: { userCards: true } },
-      },
+      }
+    });
+
+    // Get user cards count separately
+    const userCardsCount = await prisma.userCard.count({
+      where: { card_id: cardId }
     });
 
     const cardWithStats = {
       ...updatedCard,
-      totalOwned: updatedCard._count.userCards,
-      forSaleCount: 0,
-      soldCount: 0,
-      uniqueOwners: 0,
+      _count: { userCards: userCardsCount },
+      totalOwned: userCardsCount,
+      forSaleCount: 0, // We could calculate this if needed
+      soldCount: 0,    // We could calculate this if needed
+      uniqueOwners: 0, // We could calculate this if needed
     };
 
     return NextResponse.json(cardWithStats);
@@ -181,20 +257,26 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    // Check if card exists
     const existingCard = await prisma.card.findUnique({
-      where: { id: cardId },
-      include: { userCards: true },
+      where: { id: cardId }
     });
 
     if (!existingCard) {
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
-    if (existingCard.userCards.length > 0) {
+    // Check user cards separately to avoid include issues
+    const userCards = await prisma.userCard.findMany({
+      where: { card_id: cardId },
+      select: { id: true }
+    });
+
+    if (userCards.length > 0) {
       return NextResponse.json(
         {
           error: 'Cannot delete card that is owned by users',
-          details: `This card is owned by ${existingCard.userCards.length} user(s)`,
+          details: `This card is owned by ${userCards.length} user(s)`,
         },
         { status: 400 }
       );

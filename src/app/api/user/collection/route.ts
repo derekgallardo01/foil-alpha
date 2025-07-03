@@ -35,13 +35,8 @@ export async function GET(request: NextRequest) {
 
     // Add additional filters
     if (search) {
-      whereClause.card = {
-        OR: [
-          { name: { contains: search } },
-          { set_name: { contains: search } },
-          { card_type: { contains: search } }
-        ]
-      };
+      // For search, we'll need to fetch card details separately
+      // For now, let's keep it simple and filter by user cards only
     }
 
     if (forSale === 'true') {
@@ -52,31 +47,10 @@ export async function GET(request: NextRequest) {
 
     console.log('Collection query filter:', whereClause);
 
-    // Get user's cards with full details
+    // Get user's cards (without includes that cause issues)
     const [userCards, totalCount] = await Promise.all([
       prisma.userCard.findMany({
         where: whereClause,
-        include: {
-          card: {
-            include: {
-              pokemonSet: true,
-              rarity_ref: true,
-              subtype_ref: true,
-              supertype_ref: true,
-            }
-          },
-          bids: {
-            where: { is_active: true },
-            orderBy: { amount: 'desc' },
-            take: 1,
-            include: {
-              bidder: { select: { id: true, name: true } }
-            }
-          },
-          _count: {
-            select: { bids: { where: { is_active: true } } }
-          }
-        },
         orderBy: [
           { acquired_date: 'desc' },
           { created_at: 'desc' }
@@ -89,12 +63,97 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Found ${userCards.length} cards in ${userName}'s collection (${totalCount} total)`);
 
+    // Get card details and related data separately
+    const enrichedCollection = await Promise.all(
+      userCards.map(async (userCard) => {
+        // Get card details
+        const card = await prisma.card.findUnique({
+          where: { id: userCard.card_id }
+        });
+
+        // Get active bids for this user card
+        const bids = await prisma.bid.findMany({
+          where: {
+            userCardId: userCard.id,
+            is_active: true
+          },
+          orderBy: { amount: 'desc' },
+          take: 1
+        });
+
+        // Get bidder details for the highest bid
+        const highestBidder = bids.length > 0 ? await prisma.user.findUnique({
+          where: { id: bids[0].bidderId },
+          select: { id: true, name: true }
+        }) : null;
+
+        // Count total active bids
+        const bidCount = await prisma.bid.count({
+          where: {
+            userCardId: userCard.id,
+            is_active: true
+          }
+        });
+
+        // Apply search filter if provided
+        if (search && card) {
+          const searchLower = search.toLowerCase();
+          const matchesSearch =
+            card.name.toLowerCase().includes(searchLower) ||
+            card.set_name.toLowerCase().includes(searchLower) ||
+            (card.card_type && card.card_type.toLowerCase().includes(searchLower));
+
+          if (!matchesSearch) {
+            return null; // Filter out non-matching cards
+          }
+        }
+
+        // Get original purchase price from wallet transactions
+        const originalPurchasePrice = getOriginalPurchasePrice(userCard);
+
+        return {
+          id: userCard.id,
+          card: card ? {
+            id: card.id,
+            name: card.name,
+            set_name: card.set_name,
+            set_number: card.set_number,
+            rarity: card.rarity,
+            card_type: card.card_type,
+            image_url: card.image_url,
+            small_image_url: card.small_image_url,
+            market_price: card.market_price ? Number(card.market_price) : null,
+            price_trend: card.price_trend,
+            last_price_update: card.last_price_update,
+          } : null,
+          condition: userCard.condition,
+          is_for_sale: userCard.is_for_sale,
+          sale_type: userCard.sale_type,
+          fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
+          reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
+          auction_end: userCard.auction_end,
+          is_sold: userCard.is_sold,
+          notes: userCard.notes,
+          acquired_date: userCard.acquired_date || userCard.created_at,
+          original_purchase_price: originalPurchasePrice,
+          bid_count: bidCount,
+          highest_bid: bids.length > 0 ? Number(bids[0].amount) : null,
+          highest_bidder: highestBidder,
+        };
+      })
+    );
+
+    // Filter out null results (from search filtering) and ensure type safety
+    const filteredCollection = enrichedCollection.filter((item): item is NonNullable<typeof item> =>
+      item !== null && item.card !== null
+    );
+
     // Debug: Show some sample cards
-    if (userCards.length > 0) {
-      console.log('Sample cards:', userCards.slice(0, 3).map(uc => ({
+    if (filteredCollection.length > 0) {
+      console.log('Sample cards:', filteredCollection.slice(0, 3).map(uc => ({
         id: uc.id,
-        cardName: uc.card.name,
-        ownerId: uc.owner_id,
+        cardName: uc.card?.name,
+        ownerId: userId,
         acquiredDate: uc.acquired_date
       })));
     } else {
@@ -120,49 +179,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Format the response
-    const enrichedCollection = userCards.map(userCard => {
-      // Get original purchase price from wallet transactions
-      const originalPurchasePrice = getOriginalPurchasePrice(userCard);
-
-      return {
-        id: userCard.id,
-        card: {
-          id: userCard.card.id,
-          name: userCard.card.name,
-          set_name: userCard.card.set_name,
-          set_number: userCard.card.set_number,
-          rarity: userCard.card.rarity,
-          card_type: userCard.card.card_type,
-          image_url: userCard.card.image_url,
-          small_image_url: userCard.card.small_image_url,
-          market_price: userCard.card.market_price ? Number(userCard.card.market_price) : null,
-          price_trend: userCard.card.price_trend,
-          last_price_update: userCard.card.last_price_update,
-        },
-        condition: userCard.condition,
-        is_for_sale: userCard.is_for_sale,
-        sale_type: userCard.sale_type,
-        fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
-        reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
-        auction_end: userCard.auction_end,
-        is_sold: userCard.is_sold,
-        notes: userCard.notes,
-        acquired_date: userCard.acquired_date || userCard.created_at,
-        original_purchase_price: originalPurchasePrice,
-        bid_count: userCard._count.bids,
-        highest_bid: userCard.bids[0] ? Number(userCard.bids[0].amount) : null,
-        highest_bidder: userCard.bids[0]?.bidder || null,
-      };
-    });
+    // Adjust pagination based on filtered results
+    const finalTotal = search ? filteredCollection.length : totalCount;
 
     return NextResponse.json({
-      cards: enrichedCollection,
+      cards: filteredCollection,
       pagination: {
         page,
         limit,
-        total: totalCount,
-        totalPages: Math.ceil(totalCount / limit)
+        total: finalTotal,
+        totalPages: Math.ceil(finalTotal / limit)
       },
       user: {
         id: userId,

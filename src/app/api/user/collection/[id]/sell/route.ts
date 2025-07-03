@@ -59,40 +59,48 @@ export async function POST(
             }
         }
 
-        // Get the card and verify ownership
+        // Get the card and verify ownership (without problematic includes)
         const userCard = await prisma.userCard.findUnique({
-            where: { id: parseInt(userCardId) },
-            include: {
-                card: {
-                    select: { name: true, id: true }
-                },
-                owner: {
-                    select: { id: true, name: true, email: true }
-                }
-            }
-        });
-
-        console.log('Card ownership check:', {
-            userCardId: userCard?.id,
-            cardOwner: userCard?.owner,
-            currentUser: { id: userId, name: userName, email: userEmail },
-            cardName: userCard?.card?.name
+            where: { id: parseInt(userCardId) }
         });
 
         if (!userCard) {
             return NextResponse.json({ error: 'Card not found' }, { status: 404 });
         }
 
+        // Get card details separately
+        const card = await prisma.card.findUnique({
+            where: { id: userCard.card_id },
+            select: { name: true, id: true }
+        });
+
+        // Get owner details separately
+        const owner = await prisma.user.findUnique({
+            where: { id: userCard.owner_id },
+            select: { id: true, name: true, email: true }
+        });
+
+        if (!card || !owner) {
+            return NextResponse.json({ error: 'Card or owner not found' }, { status: 404 });
+        }
+
+        console.log('Card ownership check:', {
+            userCardId: userCard.id,
+            cardOwner: owner,
+            currentUser: { id: userId, name: userName, email: userEmail },
+            cardName: card.name
+        });
+
         if (userCard.owner_id !== userId) {
             console.error('❌ Ownership mismatch:', {
                 cardOwnerID: userCard.owner_id,
-                cardOwnerName: userCard.owner.name,
+                cardOwnerName: owner.name,
                 currentUserID: userId,
                 currentUserName: userName,
-                cardName: userCard.card.name
+                cardName: card.name
             });
             return NextResponse.json({
-                error: `Access denied. This card belongs to ${userCard.owner.name} (ID: ${userCard.owner_id}), but you are ${userName} (ID: ${userId})`
+                error: `Access denied. This card belongs to ${owner.name} (ID: ${owner.id}), but you are ${userName} (ID: ${userId})`
             }, { status: 403 });
         }
 
@@ -133,7 +141,7 @@ export async function POST(
 
         console.log('✅ Card listed successfully:', {
             id: updatedCard.id,
-            cardName: userCard.card.name,
+            cardName: card.name,
             saleType: sale_type,
             price: sale_type === 'FIXED' ? Number(fixed_price) : Number(reserve_price),
             owner: userName
@@ -141,10 +149,10 @@ export async function POST(
 
         return NextResponse.json({
             success: true,
-            message: `${userCard.card.name} listed for ${sale_type.toLowerCase()} sale`,
+            message: `${card.name} listed for ${sale_type.toLowerCase()} sale`,
             listing: {
                 id: parseInt(userCardId),
-                card_name: userCard.card.name,
+                card_name: card.name,
                 sale_type: sale_type,
                 price: sale_type === 'FIXED' ? Number(fixed_price) : Number(reserve_price),
                 auction_end: updateData.auction_end,
@@ -183,18 +191,23 @@ export async function DELETE(
 
         console.log(`🗑️ Remove from sale: ${userName} removing card ${userCardId}`);
 
-        // Get the card
+        // Get the card (without problematic includes)
         const userCard = await prisma.userCard.findUnique({
-            where: { id: parseInt(userCardId) },
-            include: {
-                card: {
-                    select: { name: true }
-                }
-            }
+            where: { id: parseInt(userCardId) }
         });
 
         if (!userCard) {
             return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+        }
+
+        // Get card details separately
+        const card = await prisma.card.findUnique({
+            where: { id: userCard.card_id },
+            select: { name: true }
+        });
+
+        if (!card) {
+            return NextResponse.json({ error: 'Card details not found' }, { status: 404 });
         }
 
         // Verify ownership
@@ -202,7 +215,7 @@ export async function DELETE(
             console.error('❌ Ownership mismatch on remove from sale:', {
                 cardOwnerID: userCard.owner_id,
                 currentUserID: userId,
-                cardName: userCard.card.name
+                cardName: card.name
             });
             return NextResponse.json({
                 error: 'You can only manage your own cards'
@@ -247,7 +260,7 @@ export async function DELETE(
         return NextResponse.json({
             success: true,
             message: 'Card removed from sale',
-            card_name: userCard.card.name
+            card_name: card.name
         });
 
     } catch (error) {

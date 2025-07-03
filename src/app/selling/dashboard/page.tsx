@@ -198,8 +198,9 @@ export default function SellingDashboard() {
         }
     }, [status]);
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
+    // Fix: Update formatPrice to handle undefined values
+    const formatPrice = (price: number | null | undefined) => {
+        if (price === null || price === undefined) return 'N/A';
         return `$${Number(price).toFixed(2)}`;
     };
 
@@ -893,4 +894,4 @@ export default function SellingDashboard() {
             </Dialog>
         </Container>
     );
-}
+ }

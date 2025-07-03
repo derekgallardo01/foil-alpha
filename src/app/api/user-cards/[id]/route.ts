@@ -31,39 +31,81 @@ export async function GET(
 
     console.log(`📋 Fetching user card ${userCardId} for user ${session.user.name} (ID: ${session.user.id})`);
 
+    // Get user card without problematic includes
     const userCard = await prisma.userCard.findUnique({
-      where: { id: userCardId },
-      include: {
-        card: true,
-        owner: {
-          select: { id: true, name: true, email: true }
-        },
-        bids: {
-          where: { is_active: true },
-          orderBy: { amount: 'desc' },
-          include: {
-            bidder: {
-              select: { id: true, name: true }
-            }
-          }
-        },
-        history: {
-          orderBy: { created_at: 'desc' },
-          include: {
-            fromUser: {
-              select: { id: true, name: true }
-            },
-            toUser: {
-              select: { id: true, name: true }
-            }
-          }
-        }
-      }
+      where: { id: userCardId }
     });
 
     if (!userCard) {
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
+
+    // Get related data separately
+    const [card, owner, bids, history] = await Promise.all([
+      // Get card
+      prisma.card.findUnique({
+        where: { id: userCard.card_id }
+      }),
+      // Get owner
+      prisma.user.findUnique({
+        where: { id: userCard.owner_id },
+        select: { id: true, name: true, email: true }
+      }),
+      // Get bids
+      prisma.bid.findMany({
+        where: {
+          userCardId: userCardId,
+          is_active: true
+        },
+        orderBy: { amount: 'desc' }
+      }),
+      // Get history
+      prisma.cardTransactionHistory.findMany({
+        where: { userCardId: userCardId },
+        orderBy: { created_at: 'desc' }
+      })
+    ]);
+
+    if (!card || !owner) {
+      return NextResponse.json({ error: 'Card or owner data not found' }, { status: 404 });
+    }
+
+    // Get bidders for the bids
+    const bidderIds = [...new Set(bids.map(bid => bid.bidderId))];
+    const bidders = bidderIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: bidderIds } },
+      select: { id: true, name: true }
+    }) : [];
+
+    // Get history users
+    const historyUserIds = [...new Set([
+      ...history.map(h => h.fromUserId).filter((id): id is number => id !== null),
+      ...history.map(h => h.toUserId).filter((id): id is number => id !== null)
+    ])];
+    const historyUsers = historyUserIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: historyUserIds } },
+      select: { id: true, name: true }
+    }) : [];
+
+    // Create lookup maps
+    const bidderMap = new Map(bidders.map(b => [b.id, b]));
+    const historyUserMap = new Map(historyUsers.map(u => [u.id, u]));
+
+    // Combine bids with bidder data
+    const bidsWithBidders = bids.map(bid => ({
+      id: bid.id,
+      amount: Number(bid.amount),
+      bidder: bidderMap.get(bid.bidderId),
+      createdAt: bid.createdAt,
+      is_active: bid.is_active
+    }));
+
+    // Combine history with user data
+    const historyWithUsers = history.map(h => ({
+      ...h,
+      fromUser: h.fromUserId ? historyUserMap.get(h.fromUserId) : null,
+      toUser: h.toUserId ? historyUserMap.get(h.toUserId) : null
+    }));
 
     // Get current price
     let currentPrice = null;
@@ -71,7 +113,7 @@ export async function GET(
       currentPrice = Number(userCard.fixed_price || 0);
     } else if (userCard.sale_type === 'AUCTION') {
       // Get highest bid
-      const highestBid = userCard.bids[0]; // Already ordered by amount desc
+      const highestBid = bidsWithBidders[0]; // Already ordered by amount desc
       currentPrice = highestBid ? Number(highestBid.amount) : Number(userCard.reserve_price || 0);
     }
 
@@ -87,8 +129,8 @@ export async function GET(
 
     const result = {
       id: userCard.id,
-      card: userCard.card,
-      owner: userCard.owner,
+      card,
+      owner,
       condition: userCard.condition,
       sale_type: userCard.sale_type,
       fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
@@ -98,17 +140,12 @@ export async function GET(
       is_sold: userCard.is_sold,
       notes: userCard.notes,
       current_price: currentPrice,
-      current_highest_bid: userCard.bids[0] ? Number(userCard.bids[0].amount) : null,
-      bid_count: userCard.bids.length,
+      current_highest_bid: bidsWithBidders[0] ? Number(bidsWithBidders[0].amount) : null,
+      bid_count: bidsWithBidders.length,
       time_left_ms: timeRemaining,
       is_auction_active: isAuctionActive,
-      bids: userCard.bids.map(bid => ({
-        id: bid.id,
-        amount: Number(bid.amount),
-        bidder: bid.bidder,
-        created_at: bid.createdAt
-      })),
-      history: userCard.history,
+      bids: bidsWithBidders,
+      history: historyWithUsers,
       created_at: userCard.created_at,
       // updated_at: userCard.updated_at
     };
@@ -220,23 +257,43 @@ export async function PUT(
       });
     }
 
-    // Update the card
+    // Update the card without problematic include
     const updatedUserCard = await prisma.userCard.update({
       where: { id: userCardId },
       data: updateData,
-      include: {
-        card: true,
-        bids: {
-          where: { is_active: true },
-          orderBy: { amount: 'desc' },
-          include: {
-            bidder: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-      },
     });
+
+    // Get related data separately
+    const [card, bids] = await Promise.all([
+      prisma.card.findUnique({
+        where: { id: updatedUserCard.card_id }
+      }),
+      prisma.bid.findMany({
+        where: {
+          userCardId: userCardId,
+          is_active: true
+        },
+        orderBy: { amount: 'desc' }
+      })
+    ]);
+
+    // Get bidders for the bids
+    const bidderIds = [...new Set(bids.map(bid => bid.bidderId))];
+    const bidders = bidderIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: bidderIds } },
+      select: { id: true, name: true }
+    }) : [];
+
+    const bidderMap = new Map(bidders.map(b => [b.id, b]));
+
+    // Combine bids with bidder data
+    const bidsWithBidders = bids.map(bid => ({
+      id: bid.id,
+      amount: Number(bid.amount),
+      bidder: bidderMap.get(bid.bidderId),
+      createdAt: bid.createdAt,
+      is_active: bid.is_active
+    }));
 
     // Create history entry for significant changes
     if (body.is_for_sale && !existingUserCard.is_for_sale) {
@@ -259,7 +316,14 @@ export async function PUT(
       });
     }
 
-    return NextResponse.json(updatedUserCard);
+    // Return combined data
+    const response = {
+      ...updatedUserCard,
+      card,
+      bids: bidsWithBidders
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error updating user card:', error);
     return NextResponse.json(

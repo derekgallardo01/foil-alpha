@@ -25,9 +25,9 @@ interface PrismaCard {
   id: number;
   name: string;
   set_name: string;
-  set_number: string | null; // Change to nullable
+  set_number: string | null;
   rarity: string;
-  card_type: string | null; // Also nullable to match schema
+  card_type: string | null;
   subtype: string | null;
   hp: number | null;
   image_url: string | null;
@@ -80,40 +80,56 @@ export async function GET(request: NextRequest) {
       where.card_type = cardType;
     }
 
-    // Fetch cards and count
+    // Fetch cards without problematic includes
     const [cards, totalCount] = await Promise.all([
       prisma.card.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
-        include: {
-          userCards: {
-            select: {
-              id: true,
-              owner_id: true,
-              is_for_sale: true,
-              is_sold: true,
-              condition: true
-            }
-          },
-          _count: {
-            select: {
-              userCards: true
-            }
-          }
-        }
+        orderBy: { created_at: 'desc' }
       }),
       prisma.card.count({ where })
     ]);
 
-    const cardsWithStats = cards.map(card => ({
-      ...card,
-      totalOwned: card._count.userCards,
-      forSaleCount: card.userCards.filter(uc => uc.is_for_sale && !uc.is_sold).length,
-      soldCount: card.userCards.filter(uc => uc.is_sold).length,
-      uniqueOwners: new Set(card.userCards.map(uc => uc.owner_id)).size
-    }));
+    // Get related user cards data separately
+    const cardIds = cards.map(card => card.id);
+    const userCards = cardIds.length > 0 ? await prisma.userCard.findMany({
+      where: {
+        card_id: { in: cardIds }
+      },
+      select: {
+        id: true,
+        card_id: true,
+        owner_id: true,
+        is_for_sale: true,
+        is_sold: true,
+        condition: true
+      }
+    }) : [];
+
+    // Group user cards by card_id
+    const userCardsByCardId = new Map<number, typeof userCards>();
+    userCards.forEach(uc => {
+      if (!userCardsByCardId.has(uc.card_id)) {
+        userCardsByCardId.set(uc.card_id, []);
+      }
+      userCardsByCardId.get(uc.card_id)!.push(uc);
+    });
+
+    // Add stats to cards
+    const cardsWithStats = cards.map(card => {
+      const cardUserCards = userCardsByCardId.get(card.id) || [];
+
+      return {
+        ...card,
+        totalOwned: cardUserCards.length,
+        forSaleCount: cardUserCards.filter(uc => uc.is_for_sale && !uc.is_sold).length,
+        soldCount: cardUserCards.filter(uc => uc.is_sold).length,
+        uniqueOwners: new Set(cardUserCards.map(uc => uc.owner_id)).size,
+        userCards: cardUserCards, // Include the user cards data
+        _count: { userCards: cardUserCards.length }
+      };
+    });
 
     return NextResponse.json({
       cards: cardsWithStats,
@@ -176,6 +192,7 @@ export async function POST(request: NextRequest) {
 
     const hpNumber = hp !== undefined && hp !== null && hp !== '' ? parseInt(hp, 10) : null;
 
+    // Create card without problematic include
     const newCard = await prisma.card.create({
       data: {
         name,
@@ -188,19 +205,19 @@ export async function POST(request: NextRequest) {
         image_url: image_url ?? null,
         small_image_url: small_image_url ?? null,
         tcg_id: tcg_id ?? null
-      },
-      include: {
-        _count: { select: { userCards: true } }
       }
     });
 
+    // Return card with stats (all zeros since it's new)
     return NextResponse.json(
       {
         ...newCard,
         totalOwned: 0,
         forSaleCount: 0,
         soldCount: 0,
-        uniqueOwners: 0
+        uniqueOwners: 0,
+        userCards: [],
+        _count: { userCards: 0 }
       },
       { status: 201 }
     );
@@ -265,6 +282,7 @@ export async function PUT(request: NextRequest) {
 
         const hpNumber = hp !== undefined && hp !== null && hp !== '' ? parseInt(hp, 10) : null;
 
+        // Create card without problematic include
         const newCard = await prisma.card.create({
           data: {
             name,

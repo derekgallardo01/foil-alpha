@@ -360,17 +360,13 @@ async function bulkUpdateBySet(data: { set_name: string; price_multiplier?: numb
 async function recalculateAllPrices(data: { strategy?: string; force_overwrite?: boolean }) {
     const { strategy = 'AUTO', force_overwrite = false } = data;
 
-    // Get all cards that need price recalculation
+    // Get all cards that need price recalculation (without problematic includes)
     const whereCondition = force_overwrite
         ? {}
         : { OR: [{ market_price: null }, { market_price: 0 }] };
 
     const cards = await prisma.card.findMany({
-        where: whereCondition,
-        include: {
-            pokemonSet: true,
-            rarity_ref: true
-        }
+        where: whereCondition
     });
 
     let updatedCount = 0;
@@ -378,8 +374,21 @@ async function recalculateAllPrices(data: { strategy?: string; force_overwrite?:
 
     for (const card of cards) {
         try {
+            // Get related data separately if needed
+            const pokemonSet = card.set_id ? await prisma.pokemonSet.findUnique({
+                where: { id: card.set_id }
+            }) : null;
+
+            const rarity_ref = card.rarity_id ? await prisma.rarity.findUnique({
+                where: { id: card.rarity_id }
+            }) : null;
+
             // Recalculate price using the same logic as import
-            const calculatedPrice = calculateIntelligentPrice(card, strategy);
+            const calculatedPrice = calculateIntelligentPrice({
+                ...card,
+                pokemonSet,
+                rarity_ref
+            }, strategy);
 
             await prisma.card.update({
                 where: { id: card.id },

@@ -25,23 +25,42 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Get the pending transaction
+        // Get the pending transaction (without problematic includes)
         const transaction = await prisma.transaction.findUnique({
-            where: { id: transaction_id },
-            include: {
-                userCard: {
-                    include: {
-                        card: true,
-                        owner: true
-                    }
-                },
-                buyer: true,
-                seller: true
-            }
+            where: { id: transaction_id }
         });
 
         if (!transaction) {
             return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+        }
+
+        // Get related data separately
+        const userCard = await prisma.userCard.findUnique({
+            where: { id: transaction.user_card_id }
+        });
+
+        if (!userCard) {
+            return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+        }
+
+        const card = await prisma.card.findUnique({
+            where: { id: userCard.card_id }
+        });
+
+        const owner = await prisma.user.findUnique({
+            where: { id: userCard.owner_id }
+        });
+
+        const buyer = await prisma.user.findUnique({
+            where: { id: transaction.buyer_id }
+        });
+
+        const seller = await prisma.user.findUnique({
+            where: { id: transaction.seller_id }
+        });
+
+        if (!card || !owner || !buyer || !seller) {
+            return NextResponse.json({ error: 'Related data not found' }, { status: 404 });
         }
 
         if (transaction.buyer_id !== buyerId) {
@@ -85,13 +104,12 @@ export async function POST(request: NextRequest) {
 
             // Process the purchase
             const result = await prisma.$transaction(async (tx) => {
-                // 1. Complete the transaction
+                // 1. Complete the transaction (remove completed_at field if it doesn't exist)
                 const completedTransaction = await tx.transaction.update({
                     where: { id: transaction_id },
                     data: {
                         status: 'COMPLETED',
                         transaction_type: 'BID_PURCHASE_CONFIRMED',
-                        completed_at: new Date(),
                         notes: 'Purchase confirmed by buyer'
                     }
                 });
@@ -133,17 +151,18 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                // Create wallet transaction records
+                // Create wallet transaction records (add wallet_id)
                 await Promise.all([
                     // Buyer transaction
                     tx.walletTransaction.create({
                         data: {
                             user_id: buyerId,
+                            wallet_id: buyerWallet.id, // Add required wallet_id
                             transaction_type: 'PURCHASE',
                             amount: -purchaseAmount,
                             balance_before: Number(buyerWallet.balance),
                             balance_after: Number(updatedBuyerWallet.balance),
-                            description: `Purchased ${transaction.userCard.card.name}`,
+                            description: `Purchased ${card.name}`,
                             reference_id: transaction_id,
                             reference_type: 'TRANSACTION'
                         }
@@ -152,41 +171,41 @@ export async function POST(request: NextRequest) {
                     tx.walletTransaction.create({
                         data: {
                             user_id: transaction.seller_id,
+                            wallet_id: sellerWallet.id, // Add required wallet_id
                             transaction_type: 'SALE',
                             amount: purchaseAmount,
                             balance_before: Number(sellerWallet.balance),
                             balance_after: Number(updatedSellerWallet.balance),
-                            description: `Sold ${transaction.userCard.card.name}`,
+                            description: `Sold ${card.name}`,
                             reference_id: transaction_id,
                             reference_type: 'TRANSACTION'
                         }
                     })
                 ]);
 
-                // 4. Deactivate all other bids for this card
+                // 4. Deactivate all other bids for this card (fix field name)
                 await tx.bid.updateMany({
                     where: {
-                        user_card_id: transaction.user_card_id,
+                        userCardId: transaction.user_card_id, // Fix: user_card_id → userCardId
                         is_active: true
                     },
                     data: { is_active: false }
                 });
 
-                // 5. Create card history record
-                await tx.cardHistory.create({
+                // 5. Create card history record (use cardTransactionHistory instead of cardHistory)
+                await tx.cardTransactionHistory.create({
                     data: {
-                        user_card_id: transaction.user_card_id,
-                        from_user_id: transaction.seller_id,
-                        to_user_id: buyerId,
-                        transaction_type: 'BID_SALE_CONFIRMED',
-                        price: purchaseAmount,
+                        userCardId: transaction.user_card_id,
+                        fromUserId: transaction.seller_id,
+                        toUserId: buyerId,
+                        action: 'BID_SALE_CONFIRMED', // Use action instead of transaction_type
                         notes: `Bid accepted and confirmed for ${purchaseAmount.toFixed(2)}`
                     }
                 });
 
                 return {
                     transaction: completedTransaction,
-                    card: transaction.userCard.card,
+                    card: card,
                     amount: purchaseAmount
                 };
             });
@@ -196,7 +215,7 @@ export async function POST(request: NextRequest) {
                 await createPurchaseConfirmedNotifications(
                     buyerId,
                     transaction.seller_id,
-                    transaction.userCard.card.name,
+                    card.name,
                     purchaseAmount,
                     transaction_id
                 );
@@ -237,17 +256,17 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                // 3. Reactivate other bids (they can still compete)
+                // 3. Reactivate other bids (they can still compete) - fix field name
                 await tx.bid.updateMany({
                     where: {
-                        user_card_id: transaction.user_card_id,
-                        bidder_id: { not: buyerId } // Don't reactivate decliner's bids
+                        userCardId: transaction.user_card_id, // Fix: user_card_id → userCardId
+                        bidderId: { not: buyerId } // Don't reactivate decliner's bids
                     },
                     data: { is_active: true }
                 });
 
                 return {
-                    card: transaction.userCard.card,
+                    card: card,
                     amount: Number(transaction.amount)
                 };
             });
@@ -257,7 +276,7 @@ export async function POST(request: NextRequest) {
                 await createPurchaseDeclinedNotifications(
                     buyerId,
                     transaction.seller_id,
-                    transaction.userCard.card.name,
+                    card.name,
                     Number(transaction.amount),
                     transaction.user_card_id
                 );

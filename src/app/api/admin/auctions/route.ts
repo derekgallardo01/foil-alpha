@@ -31,41 +31,78 @@ export async function GET(request: NextRequest) {
             ];
         }
 
+        // Fetch auctions without includes to avoid type issues
         const auctions = await prisma.userCard.findMany({
             where,
-            include: {
-                card: {
-                    select: {
-                        id: true,
-                        name: true,
-                        set_name: true,
-                        image_url: true,
-                        small_image_url: true
-                    }
-                },
-                owner: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                },
-                bids: {
-                    where: { is_active: true },
-                    include: {
-                        bidder: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    },
-                    orderBy: { amount: 'desc' }
-                }
-            },
             orderBy: { created_at: 'desc' },
             take: limit
+        });
+
+        // Get all unique card IDs and owner IDs
+        const cardIds = [...new Set(auctions.map(auction => auction.card_id))];
+        const ownerIds = [...new Set(auctions.map(auction => auction.owner_id))];
+        const auctionIds = auctions.map(auction => auction.id);
+
+        // Fetch related data separately
+        const [cards, owners, allBids] = await Promise.all([
+            prisma.card.findMany({
+                where: { id: { in: cardIds } },
+                select: {
+                    id: true,
+                    name: true,
+                    set_name: true,
+                    image_url: true,
+                    small_image_url: true
+                }
+            }),
+            prisma.user.findMany({
+                where: { id: { in: ownerIds } },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true
+                }
+            }),
+            prisma.bid.findMany({
+                where: {
+                    userCardId: { in: auctionIds },
+                    is_active: true
+                },
+                orderBy: { amount: 'desc' }
+            })
+        ]);
+
+        // Get bidder IDs from bids
+        const bidderIds = [...new Set(allBids.map(bid => bid.bidderId))];
+
+        // Fetch bidders
+        const bidders = await prisma.user.findMany({
+            where: { id: { in: bidderIds } },
+            select: {
+                id: true,
+                name: true,
+                email: true
+            }
+        });
+
+        // Create lookup maps for better performance
+        const cardMap = new Map(cards.map(card => [card.id, card]));
+        const ownerMap = new Map(owners.map(owner => [owner.id, owner]));
+        const bidderMap = new Map(bidders.map(bidder => [bidder.id, bidder]));
+
+        // Group bids by auction ID
+        const bidsByAuction = new Map();
+        allBids.forEach(bid => {
+            if (!bidsByAuction.has(bid.userCardId)) {
+                bidsByAuction.set(bid.userCardId, []);
+            }
+            bidsByAuction.get(bid.userCardId).push({
+                id: bid.id,
+                amount: Number(bid.amount),
+                bidder: bidderMap.get(bid.bidderId),
+                created_at: bid.createdAt,
+                is_active: bid.is_active
+            });
         });
 
         // Calculate additional fields
@@ -73,27 +110,23 @@ export async function GET(request: NextRequest) {
             const now = new Date();
             const auctionEnd = auction.auction_end ? new Date(auction.auction_end) : null;
             const timeRemaining = auctionEnd ? Math.max(0, auctionEnd.getTime() - now.getTime()) : null;
-            const highestBid = auction.bids.length > 0 ? Number(auction.bids[0].amount) : null;
+
+            const auctionBids = bidsByAuction.get(auction.id) || [];
+            const highestBid = auctionBids.length > 0 ? auctionBids[0].amount : null;
 
             return {
                 id: auction.id,
-                card: auction.card,
-                owner: auction.owner,
+                card: cardMap.get(auction.card_id),
+                owner: ownerMap.get(auction.owner_id),
                 condition: auction.condition,
                 reserve_price: Number(auction.reserve_price),
                 auction_end: auction.auction_end,
                 is_sold: auction.is_sold,
                 is_for_sale: auction.is_for_sale,
                 time_remaining: timeRemaining,
-                bids: auction.bids.map(bid => ({
-                    id: bid.id,
-                    amount: Number(bid.amount),
-                    bidder: bid.bidder,
-                    created_at: bid.created_at,
-                    is_active: bid.is_active
-                })),
+                bids: auctionBids,
                 highest_bid: highestBid,
-                bid_count: auction.bids.length,
+                bid_count: auctionBids.length,
                 created_at: auction.created_at
             };
         });

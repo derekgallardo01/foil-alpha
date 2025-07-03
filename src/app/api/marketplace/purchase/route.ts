@@ -81,16 +81,26 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
   return await prisma.$transaction(async (tx) => {
     console.log(`Processing user card purchase: Buyer ${buyerId}, UserCard ${userCardId}`);
 
+    // Get user card without problematic includes
     const userCard = await tx.userCard.findUnique({
-      where: { id: userCardId },
-      include: {
-        card: true,
-        owner: true
-      }
+      where: { id: userCardId }
     });
 
     if (!userCard) {
       throw new Error('Card not found');
+    }
+
+    // Get related data separately
+    const card = await tx.card.findUnique({
+      where: { id: userCard.card_id }
+    });
+
+    const owner = await tx.user.findUnique({
+      where: { id: userCard.owner_id }
+    });
+
+    if (!card || !owner) {
+      throw new Error('Card or owner not found');
     }
 
     if (!userCard.is_for_sale) {
@@ -178,7 +188,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
         sale_type: null,
         fixed_price: null,
         auction_end: null,
-        notes: `Purchased from ${userCard.owner.name} for $${purchasePrice.toFixed(2)}`
+        notes: `Purchased from ${owner.name} for $${purchasePrice.toFixed(2)}`
       }
     });
 
@@ -192,7 +202,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
           amount: -purchasePrice,
           balance_before: buyerBalance,
           balance_after: buyerBalance - purchasePrice,
-          description: `Purchased ${userCard.card.name} from ${userCard.owner.name}`,
+          description: `Purchased ${card.name} from ${owner.name}`,
           reference_type: 'USER_CARD',
           reference_id: userCardId
         }
@@ -205,7 +215,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
           amount: sellerReceives,
           balance_before: Number(sellerWallet.balance),
           balance_after: Number(sellerWallet.balance) + sellerReceives,
-          description: `Sold ${userCard.card.name} (after 5% marketplace fee)`,
+          description: `Sold ${card.name} (after 5% marketplace fee)`,
           reference_type: 'USER_CARD',
           reference_id: userCardId
         }
@@ -227,11 +237,11 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       success: true,
       message: 'Card purchased successfully!',
       purchase_details: {
-        card_name: userCard.card.name,
+        card_name: card.name,
         purchase_price: purchasePrice.toFixed(2),
         marketplace_fee: marketplaceFee.toFixed(2),
         seller_receives: sellerReceives.toFixed(2),
-        seller_name: userCard.owner.name,
+        seller_name: owner.name,
         transaction_id: userCardId
       }
     });

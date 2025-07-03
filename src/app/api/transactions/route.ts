@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -26,14 +25,23 @@ export async function POST(request: NextRequest) {
     // Get the card being purchased
     const userCard = await prisma.userCard.findUnique({
       where: { id: user_card_id },
-      include: {
-        card: true,
-        owner: true,
-      },
     });
 
     if (!userCard) {
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+    }
+
+    // Get card details and owner separately
+    const card = await prisma.card.findUnique({
+      where: { id: userCard.card_id }
+    });
+
+    const owner = await prisma.user.findUnique({
+      where: { id: userCard.owner_id }
+    });
+
+    if (!card || !owner) {
+      return NextResponse.json({ error: 'Card or owner not found' }, { status: 404 });
     }
 
     // Validation checks
@@ -74,7 +82,7 @@ export async function POST(request: NextRequest) {
           card_id: userCard.card_id,
           owner_id: user.id,
           condition: userCard.condition,
-          notes: `Purchased from ${userCard.owner.name} for $${purchasePrice.toFixed(2)}`,
+          notes: `Purchased from ${owner.name} for $${purchasePrice.toFixed(2)}`,
           is_for_sale: false,
           is_sold: false,
         },
@@ -98,7 +106,7 @@ export async function POST(request: NextRequest) {
           fromUserId: userCard.owner_id,
           toUserId: user.id,
           action: 'PURCHASE',
-          notes: `Purchased from ${userCard.owner.name} for $${purchasePrice.toFixed(2)}`,
+          notes: `Purchased from ${owner.name} for $${purchasePrice.toFixed(2)}`,
         },
       });
 
@@ -106,8 +114,8 @@ export async function POST(request: NextRequest) {
         transaction: {
           id: newUserCard.id,
           buyer: user,
-          seller: userCard.owner,
-          card: userCard.card,
+          seller: owner,
+          card: card,
           price: purchasePrice,
           transaction_type: 'PURCHASE',
         },
@@ -156,32 +164,56 @@ export async function GET(request: NextRequest) {
       where.action = type;
     }
 
-    // Get transaction history
+    // Get transaction history (without includes that cause issues)
     const [transactions, totalCount] = await Promise.all([
       prisma.cardTransactionHistory.findMany({
         where,
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
-        include: {
-          userCard: {
-            include: {
-              card: true,
-            },
-          },
-          fromUser: {
-            select: { id: true, name: true },
-          },
-          toUser: {
-            select: { id: true, name: true },
-          },
-        },
       }),
       prisma.cardTransactionHistory.count({ where }),
     ]);
 
+    // Get related data separately for each transaction
+    const enrichedTransactions = await Promise.all(
+      transactions.map(async (transaction) => {
+        // Get user card details
+        const userCard = await prisma.userCard.findUnique({
+          where: { id: transaction.userCardId }
+        });
+
+        // Get card details
+        const card = userCard ? await prisma.card.findUnique({
+          where: { id: userCard.card_id }
+        }) : null;
+
+        // Get from user details
+        const fromUser = transaction.fromUserId ? await prisma.user.findUnique({
+          where: { id: transaction.fromUserId },
+          select: { id: true, name: true }
+        }) : null;
+
+        // Get to user details
+        const toUser = transaction.toUserId ? await prisma.user.findUnique({
+          where: { id: transaction.toUserId },
+          select: { id: true, name: true }
+        }) : null;
+
+        return {
+          ...transaction,
+          userCard: userCard ? {
+            ...userCard,
+            card: card
+          } : null,
+          fromUser,
+          toUser
+        };
+      })
+    );
+
     return NextResponse.json({
-      transactions,
+      transactions: enrichedTransactions,
       pagination: {
         page,
         limit,

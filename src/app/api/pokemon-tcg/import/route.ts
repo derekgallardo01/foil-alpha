@@ -205,14 +205,25 @@ export async function POST(request: NextRequest) {
 
                     const updatedCard = await prisma.card.update({
                         where: { id: existingCard.id },
-                        data: updateData,
-                        include: {
-                            pokemonSet: true,
-                            rarity_ref: true,
-                            subtype_ref: true,
-                            supertype_ref: true,
-                        }
+                        data: updateData
                     });
+
+                    // Get related data separately to maintain the same response structure
+                    const pokemonSet = await prisma.pokemonSet.findUnique({
+                        where: { id: dbCardData.set_id }
+                    });
+
+                    const rarity_ref = dbCardData.rarity_id ? await prisma.rarity.findUnique({
+                        where: { id: dbCardData.rarity_id }
+                    }) : null;
+
+                    const subtype_ref = dbCardData.subtype_id ? await prisma.subtype.findUnique({
+                        where: { id: dbCardData.subtype_id }
+                    }) : null;
+
+                    const supertype_ref = dbCardData.supertype_id ? await prisma.supertype.findUnique({
+                        where: { id: dbCardData.supertype_id }
+                    }) : null;
 
                     // Create price history entry
                     if (marketPrice && pricingSource !== 'calculated') {
@@ -226,7 +237,13 @@ export async function POST(request: NextRequest) {
                         `;
                     }
 
-                    results.updated.push(updatedCard);
+                    results.updated.push({
+                        ...updatedCard,
+                        pokemonSet,
+                        rarity_ref,
+                        subtype_ref,
+                        supertype_ref
+                    });
                 } else {
                     // Create new card
                     const createData: any = {
@@ -235,14 +252,25 @@ export async function POST(request: NextRequest) {
                     };
 
                     const newCard = await prisma.card.create({
-                        data: createData,
-                        include: {
-                            pokemonSet: true,
-                            rarity_ref: true,
-                            subtype_ref: true,
-                            supertype_ref: true,
-                        }
+                        data: createData
                     });
+
+                    // Get related data separately to maintain the same response structure
+                    const pokemonSet = await prisma.pokemonSet.findUnique({
+                        where: { id: dbCardData.set_id }
+                    });
+
+                    const rarity_ref = dbCardData.rarity_id ? await prisma.rarity.findUnique({
+                        where: { id: dbCardData.rarity_id }
+                    }) : null;
+
+                    const subtype_ref = dbCardData.subtype_id ? await prisma.subtype.findUnique({
+                        where: { id: dbCardData.subtype_id }
+                    }) : null;
+
+                    const supertype_ref = dbCardData.supertype_id ? await prisma.supertype.findUnique({
+                        where: { id: dbCardData.supertype_id }
+                    }) : null;
 
                     // Create initial price history entry
                     if (marketPrice && pricingSource !== 'calculated') {
@@ -256,7 +284,13 @@ export async function POST(request: NextRequest) {
                         `;
                     }
 
-                    results.imported.push(newCard);
+                    results.imported.push({
+                        ...newCard,
+                        pokemonSet,
+                        rarity_ref,
+                        subtype_ref,
+                        supertype_ref
+                    });
                 }
 
             } catch (error) {

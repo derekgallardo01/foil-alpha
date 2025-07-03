@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
         console.log('Processing ended auctions...');
 
-        // Find ended auctions that haven't been processed
+        // Find ended auctions that haven't been processed - without problematic includes
         const endedAuctions = await prisma.userCard.findMany({
             where: {
                 sale_type: 'AUCTION',
@@ -26,51 +26,88 @@ export async function POST(request: NextRequest) {
                 auction_end: {
                     lte: new Date()
                 }
-            },
-            include: {
-                card: true,
-                owner: true
             }
         });
 
         console.log(`Found ${endedAuctions.length} ended auctions to process`);
 
-        // Also process expired purchase confirmations
+        // Get cards and owners for these auctions
+        const cardIds = [...new Set(endedAuctions.map(a => a.card_id))];
+        const ownerIds = [...new Set(endedAuctions.map(a => a.owner_id))];
+
+        const [cards, owners] = await Promise.all([
+            cardIds.length > 0 ? prisma.card.findMany({
+                where: { id: { in: cardIds } }
+            }) : [],
+            ownerIds.length > 0 ? prisma.user.findMany({
+                where: { id: { in: ownerIds } }
+            }) : []
+        ]);
+
+        const cardMap = new Map(cards.map(c => [c.id, c]));
+        const ownerMap = new Map(owners.map(o => [o.id, o]));
+
+        // Also process expired purchase confirmations - without problematic includes
         const expiredTransactions = await prisma.transaction.findMany({
             where: {
                 status: 'PENDING_BUYER_CONFIRMATION',
                 created_at: {
                     lte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
                 }
-            },
-            include: {
-                userCard: {
-                    include: {
-                        card: true
-                    }
-                },
-                buyer: true,
-                seller: true
             }
         });
 
         console.log(`Found ${expiredTransactions.length} expired purchase confirmations`);
+
+        // Get related data for expired transactions
+        const expiredUserCardIds = [...new Set(expiredTransactions.map(t => t.user_card_id))];
+        const expiredBuyerIds = [...new Set(expiredTransactions.map(t => t.buyer_id))];
+        const expiredSellerIds = [...new Set(expiredTransactions.map(t => t.seller_id))];
+
+        // Get expired user cards and then their related cards separately
+        const [expiredUserCards, expiredBuyers, expiredSellers] = await Promise.all([
+            expiredUserCardIds.length > 0 ? prisma.userCard.findMany({
+                where: { id: { in: expiredUserCardIds } }
+            }) : [],
+            expiredBuyerIds.length > 0 ? prisma.user.findMany({
+                where: { id: { in: expiredBuyerIds } }
+            }) : [],
+            expiredSellerIds.length > 0 ? prisma.user.findMany({
+                where: { id: { in: expiredSellerIds } }
+            }) : []
+        ]);
+
+        // Get cards for expired user cards
+        const expiredCardIds = [...new Set(expiredUserCards.map(uc => uc.card_id))];
+        const expiredCards = expiredCardIds.length > 0 ? await prisma.card.findMany({
+            where: { id: { in: expiredCardIds } }
+        }) : [];
+
+        const expiredUserCardMap = new Map(expiredUserCards.map(uc => [uc.id, uc]));
+        const expiredCardMap = new Map(expiredCards.map(c => [c.id, c]));
+        const expiredBuyerMap = new Map(expiredBuyers.map(b => [b.id, b]));
+        const expiredSellerMap = new Map(expiredSellers.map(s => [s.id, s]));
 
         const results = [];
 
         // Process ended auctions
         for (const auction of endedAuctions) {
             try {
-                // Get highest bid
+                const card = cardMap.get(auction.card_id);
+                const owner = ownerMap.get(auction.owner_id);
+
+                if (!card || !owner) {
+                    console.error(`Missing card or owner data for auction ${auction.id}`);
+                    continue;
+                }
+
+                // Get highest bid - fixed field name
                 const highestBid = await prisma.bid.findFirst({
                     where: {
-                        user_card_id: auction.id,
+                        userCardId: auction.id, // Fixed: was user_card_id
                         is_active: true
                     },
-                    orderBy: { amount: 'desc' },
-                    include: {
-                        bidder: true
-                    }
+                    orderBy: { amount: 'desc' }
                 });
 
                 if (!highestBid) {
@@ -82,9 +119,19 @@ export async function POST(request: NextRequest) {
 
                     results.push({
                         auction_id: auction.id,
-                        card_name: auction.card.name,
+                        card_name: card.name,
                         status: 'ended_no_bids'
                     });
+                    continue;
+                }
+
+                // Get bidder separately
+                const bidder = await prisma.user.findUnique({
+                    where: { id: highestBid.bidderId } // Fixed: was bidder_id
+                });
+
+                if (!bidder) {
+                    console.error(`Bidder not found for bid ${highestBid.id}`);
                     continue;
                 }
 
@@ -97,10 +144,10 @@ export async function POST(request: NextRequest) {
                         data: { is_for_sale: false }
                     });
 
-                    // Deactivate all bids
+                    // Deactivate all bids - fixed field name
                     await prisma.bid.updateMany({
                         where: {
-                            user_card_id: auction.id,
+                            userCardId: auction.id, // Fixed: was user_card_id
                             is_active: true
                         },
                         data: { is_active: false }
@@ -108,7 +155,7 @@ export async function POST(request: NextRequest) {
 
                     results.push({
                         auction_id: auction.id,
-                        card_name: auction.card.name,
+                        card_name: card.name,
                         status: 'ended_reserve_not_met',
                         highest_bid: Number(highestBid.amount),
                         reserve_price: reservePrice
@@ -122,7 +169,7 @@ export async function POST(request: NextRequest) {
                     const pendingTransaction = await tx.transaction.create({
                         data: {
                             user_card_id: auction.id,
-                            buyer_id: highestBid.bidder_id,
+                            buyer_id: highestBid.bidderId, // Fixed: was bidder_id
                             seller_id: auction.owner_id,
                             amount: highestBid.amount,
                             transaction_type: 'AUCTION_WIN_PENDING',
@@ -140,22 +187,19 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
-                    // Get all losing bidders
+                    // Get all losing bidders - fixed field name
                     const losingBids = await tx.bid.findMany({
                         where: {
-                            user_card_id: auction.id,
+                            userCardId: auction.id, // Fixed: was user_card_id
                             is_active: true,
                             id: { not: highestBid.id }
-                        },
-                        include: {
-                            bidder: true
                         }
                     });
 
-                    // Deactivate all bids (auction is over)
+                    // Deactivate all bids (auction is over) - fixed field name
                     await tx.bid.updateMany({
                         where: {
-                            user_card_id: auction.id,
+                            userCardId: auction.id, // Fixed: was user_card_id
                             is_active: true
                         },
                         data: { is_active: false }
@@ -163,7 +207,7 @@ export async function POST(request: NextRequest) {
 
                     return {
                         transaction: pendingTransaction,
-                        losingBidders: losingBids.map(bid => bid.bidder_id)
+                        losingBidders: losingBids.map(bid => bid.bidderId) // Fixed: was bidder_id
                     };
                 });
 
@@ -171,9 +215,9 @@ export async function POST(request: NextRequest) {
                 try {
                     // Notify winner (they need to confirm within 24 hours)
                     await createAuctionWonNotifications(
-                        highestBid.bidder_id,
+                        highestBid.bidderId, // Fixed: was bidder_id
                         auction.owner_id,
-                        auction.card.name,
+                        card.name,
                         Number(highestBid.amount),
                         auction.id
                     );
@@ -182,7 +226,7 @@ export async function POST(request: NextRequest) {
                     if (result.losingBidders.length > 0) {
                         await createAuctionLostNotifications(
                             result.losingBidders,
-                            auction.card.name,
+                            card.name,
                             Number(highestBid.amount),
                             auction.id
                         );
@@ -193,8 +237,8 @@ export async function POST(request: NextRequest) {
 
                 results.push({
                     auction_id: auction.id,
-                    card_name: auction.card.name,
-                    winner: highestBid.bidder.name,
+                    card_name: card.name,
+                    winner: bidder.name,
                     winning_bid: Number(highestBid.amount),
                     status: 'winner_needs_confirmation',
                     transaction_id: result.transaction.id
@@ -204,7 +248,7 @@ export async function POST(request: NextRequest) {
                 console.error(`Error processing auction ${auction.id}:`, error);
                 results.push({
                     auction_id: auction.id,
-                    card_name: auction.card.name,
+                    card_name: cardMap.get(auction.card_id)?.name || 'Unknown',
                     status: 'error',
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
@@ -214,6 +258,16 @@ export async function POST(request: NextRequest) {
         // Process expired purchase confirmations
         for (const expiredTransaction of expiredTransactions) {
             try {
+                const userCard = expiredUserCardMap.get(expiredTransaction.user_card_id);
+                const card = userCard ? expiredCardMap.get(userCard.card_id) : null;
+                const buyer = expiredBuyerMap.get(expiredTransaction.buyer_id);
+                const seller = expiredSellerMap.get(expiredTransaction.seller_id);
+
+                if (!userCard || !card || !buyer || !seller) {
+                    console.error(`Missing data for expired transaction ${expiredTransaction.id}`);
+                    continue;
+                }
+
                 await prisma.$transaction(async (tx) => {
                     // Mark transaction as expired
                     await tx.transaction.update({
@@ -237,11 +291,11 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
-                    // Reactivate other bids (excluding the expired winner)
+                    // Reactivate other bids (excluding the expired winner) - fixed field name
                     await tx.bid.updateMany({
                         where: {
-                            user_card_id: expiredTransaction.user_card_id,
-                            bidder_id: { not: expiredTransaction.buyer_id }
+                            userCardId: expiredTransaction.user_card_id, // Fixed: was user_card_id
+                            bidderId: { not: expiredTransaction.buyer_id } // Fixed: was bidder_id
                         },
                         data: { is_active: true }
                     });
@@ -252,7 +306,7 @@ export async function POST(request: NextRequest) {
                     await createPurchaseExpiredNotifications(
                         expiredTransaction.buyer_id,
                         expiredTransaction.seller_id,
-                        expiredTransaction.userCard.card.name,
+                        card.name,
                         Number(expiredTransaction.amount),
                         expiredTransaction.user_card_id
                     );
@@ -262,17 +316,20 @@ export async function POST(request: NextRequest) {
 
                 results.push({
                     transaction_id: expiredTransaction.id,
-                    card_name: expiredTransaction.userCard.card.name,
-                    expired_buyer: expiredTransaction.buyer.name,
+                    card_name: card.name,
+                    expired_buyer: buyer.name,
                     expired_amount: Number(expiredTransaction.amount),
                     status: 'confirmation_expired_relisted'
                 });
 
             } catch (error) {
                 console.error(`Error processing expired transaction ${expiredTransaction.id}:`, error);
+                const userCard = expiredUserCardMap.get(expiredTransaction.user_card_id);
+                const card = userCard ? expiredCardMap.get(userCard.card_id) : null;
+
                 results.push({
                     transaction_id: expiredTransaction.id,
-                    card_name: expiredTransaction.userCard.card.name,
+                    card_name: card?.name || 'Unknown',
                     status: 'expiration_error',
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });

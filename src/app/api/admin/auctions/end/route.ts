@@ -22,13 +22,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'auction_id is required' }, { status: 400 });
         }
 
-        // Get the auction
+        // Get the auction with explicit typing
         const auction = await prisma.userCard.findUnique({
-            where: { id: auction_id },
-            include: {
-                card: true,
-                owner: true
-            }
+            where: { id: auction_id }
         });
 
         if (!auction) {
@@ -39,16 +35,26 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Card is not an active auction' }, { status: 400 });
         }
 
+        // Get the card and owner separately to avoid type issues
+        const card = await prisma.card.findUnique({
+            where: { id: auction.card_id }
+        });
+
+        const owner = await prisma.user.findUnique({
+            where: { id: auction.owner_id }
+        });
+
+        if (!card || !owner) {
+            return NextResponse.json({ error: 'Card or owner not found' }, { status: 404 });
+        }
+
         // Get highest bid
         const highestBid = await prisma.bid.findFirst({
             where: {
-                user_card_id: auction_id,
+                userCardId: auction_id,
                 is_active: true
             },
-            orderBy: { amount: 'desc' },
-            include: {
-                bidder: true
-            }
+            orderBy: { amount: 'desc' }
         });
 
         if (!highestBid) {
@@ -65,8 +71,17 @@ export async function POST(request: NextRequest) {
                 success: true,
                 message: 'Auction ended - no bids received',
                 auction_id,
-                card_name: auction.card.name
+                card_name: card.name
             });
+        }
+
+        // Get the bidder separately
+        const bidder = await prisma.user.findUnique({
+            where: { id: highestBid.bidderId }
+        });
+
+        if (!bidder) {
+            return NextResponse.json({ error: 'Bidder not found' }, { status: 404 });
         }
 
         // Check reserve price
@@ -85,7 +100,7 @@ export async function POST(request: NextRequest) {
                 // Deactivate all bids
                 await tx.bid.updateMany({
                     where: {
-                        user_card_id: auction_id,
+                        userCardId: auction_id,
                         is_active: true
                     },
                     data: { is_active: false }
@@ -96,7 +111,7 @@ export async function POST(request: NextRequest) {
                 success: true,
                 message: 'Auction ended - reserve price not met',
                 auction_id,
-                card_name: auction.card.name,
+                card_name: card.name,
                 highest_bid: Number(highestBid.amount),
                 reserve_price: reservePrice
             });
@@ -108,7 +123,7 @@ export async function POST(request: NextRequest) {
             const pendingTransaction = await tx.transaction.create({
                 data: {
                     user_card_id: auction_id,
-                    buyer_id: highestBid.bidder_id,
+                    buyer_id: highestBid.bidderId,
                     seller_id: auction.owner_id,
                     amount: highestBid.amount,
                     transaction_type: 'AUCTION_WIN_PENDING',
@@ -129,17 +144,16 @@ export async function POST(request: NextRequest) {
             // Get losing bidders
             const losingBids = await tx.bid.findMany({
                 where: {
-                    user_card_id: auction_id,
+                    userCardId: auction_id,
                     is_active: true,
                     id: { not: highestBid.id }
-                },
-                include: { bidder: true }
+                }
             });
 
             // Deactivate all bids
             await tx.bid.updateMany({
                 where: {
-                    user_card_id: auction_id,
+                    userCardId: auction_id,
                     is_active: true
                 },
                 data: { is_active: false }
@@ -147,7 +161,7 @@ export async function POST(request: NextRequest) {
 
             return {
                 transaction: pendingTransaction,
-                losingBidders: losingBids.map(bid => bid.bidder_id)
+                losingBidders: losingBids.map(bid => bid.bidderId)
             };
         });
 
@@ -155,9 +169,9 @@ export async function POST(request: NextRequest) {
         try {
             // Notify winner
             await createAuctionWonNotifications(
-                highestBid.bidder_id,
+                highestBid.bidderId,
                 auction.owner_id,
-                auction.card.name,
+                card.name,
                 Number(highestBid.amount),
                 auction_id
             );
@@ -166,7 +180,7 @@ export async function POST(request: NextRequest) {
             if (result.losingBidders.length > 0) {
                 await createAuctionLostNotifications(
                     result.losingBidders,
-                    auction.card.name,
+                    card.name,
                     Number(highestBid.amount),
                     auction_id
                 );
@@ -179,8 +193,8 @@ export async function POST(request: NextRequest) {
             success: true,
             message: 'Auction ended successfully',
             auction_id,
-            card_name: auction.card.name,
-            winner: highestBid.bidder.name,
+            card_name: card.name,
+            winner: bidder.name,
             winning_bid: Number(highestBid.amount),
             transaction_id: result.transaction.id
         });
