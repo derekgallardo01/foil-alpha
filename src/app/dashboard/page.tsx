@@ -233,7 +233,7 @@ const Watchlist = () => {
         }}
       >
         <Typography variant="h2" color="#ffffff" sx={{ marginBottom: "20px", fontSize: "2rem" }}>
-          Product Watchlist
+          My Dashboard
         </Typography>
         <Button
           variant="contained"

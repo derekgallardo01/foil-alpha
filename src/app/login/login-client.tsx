@@ -30,11 +30,11 @@ import { GoogleAnalytics } from "nextjs-google-analytics";
 
 // DEV MODE: Available test users
 const DEV_USERS = [
-  { email: 'admin@test.com', password: 'admin12345', name: 'Admin User', role: 'admin' },
-  { email: 'user@test.com', password: 'user12345', name: 'Test User', role: 'user' },
-  { email: 'user1@test.com', password: 'user12345', name: 'Test User 1', role: 'user' },
-  { email: 'buyer@test.com', password: 'buyer12345', name: 'Buyer User', role: 'user' },
-  { email: 'seller@test.com', password: 'seller12345', name: 'Seller User', role: 'user' },
+  { email: 'admin@test.com', password: 'admin123', name: 'Admin User', role: 'admin' },
+  { email: 'user@test.com', password: 'user123', name: 'Test User', role: 'user' },
+  { email: 'user1@test.com', password: 'user123', name: 'Test User 1', role: 'user' },
+  { email: 'buyer@test.com', password: 'buyer123', name: 'Buyer User', role: 'user' },
+  { email: 'seller@test.com', password: 'seller123', name: 'Seller User', role: 'user' },
 ];
 
 // Custom error type
