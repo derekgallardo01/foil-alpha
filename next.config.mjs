@@ -5,19 +5,19 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "target.scene7.com",
-        pathname: "/**", // Allows all paths under this hostname
+        pathname: "/**",
       },
       {
         protocol: "https",
         hostname: "i.ibb.co",
-        pathname: "/**", // Allows all paths under this hostname
+        pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "**", // Allows all HTTPS domains
+        hostname: "**",
       },
     ],
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
     Container,
     Typography,
@@ -960,7 +961,9 @@ export default function MarketplacePage() {
                 <IconButton onClick={toggleSidebar}>
                     <MenuIcon />
                 </IconButton>
-                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" width={120} height={60} priority />
+                <Link href="/dashboard">
+                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" width={120} height={60} priority />
+                </Link>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     {/* Currency Selector - Only for non-admin users */}
                     {!isAdmin && (

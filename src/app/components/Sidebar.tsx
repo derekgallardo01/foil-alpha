@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
             alt="Logo"
             width={120}
-            height={40}
+            height={60}
             priority
           />
           <IconButton onClick={toggleSidebar}>
@@ -134,6 +134,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             </ListItemIcon>
             <ListItemText primary="Marketplace" />
           </ListItem>
+
+          <ListItem
+            component="div"
+            onClick={() => handleNavigation("/watchlist")}
+            sx={{
+              cursor: 'pointer',
+              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+            }}
+          >
+            <ListItemIcon>
+              <TaskIcon />
+            </ListItemIcon>
+            <ListItemText primary="My Watchlist" />
+          </ListItem>
+
 
           <ListItem
             component="div"
