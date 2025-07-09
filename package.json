@@ -19,6 +19,7 @@
     "@auth/prisma-adapter": "^2.9.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@everapi/freecurrencyapi-js": "^1.0.1",
     "@fontsource/cabin": "^5.1.1",
     "@fontsource/raleway": "^5.1.1",
     "@fontsource/ubuntu": "^5.1.1",

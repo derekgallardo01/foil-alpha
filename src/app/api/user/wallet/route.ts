@@ -13,8 +13,13 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = parseInt(session.user.id);
+    const userName = session.user.name || 'Unknown';
 
-    // Check if user is admin - admins don't have wallets
+    console.log(`🔍 DEBUG: Wallet API called`);
+    console.log(`👤 User: ${userName} (ID: ${userId})`);
+    console.log(`🕐 Timestamp: ${new Date().toISOString()}`);
+
+    // Check if user is admin
     if (session.user.role === 'admin') {
       return NextResponse.json({
         error: 'Admins do not have wallets',
@@ -22,21 +27,29 @@ export async function GET(request: NextRequest) {
       }, { status: 403 });
     }
 
-    console.log(`Fetching wallet for user ${userId}`);
-
-    // Get user's wallet
+    // Get user's wallet with explicit logging
     const wallet = await prisma.userWallet.findUnique({
       where: { user_id: userId }
     });
 
+    console.log(`👛 Raw wallet from database:`, {
+      found: !!wallet,
+      wallet_id: wallet?.id,
+      balance: wallet ? Number(wallet.balance) : 'N/A',
+      frozen_balance: wallet ? Number(wallet.frozen_balance) : 'N/A',
+      created_at: wallet?.created_at,
+      updated_at: wallet?.updated_at
+    });
+
     if (!wallet) {
+      console.log(`❌ No wallet found for user ${userId}`);
       return NextResponse.json({
         error: 'Wallet not found',
         message: 'Contact admin to create your wallet'
       }, { status: 404 });
     }
 
-    // Parse query parameters for transactions
+    // Parse query parameters
     const { searchParams } = new URL(request.url);
     const includeTransactions = searchParams.get('include_transactions') === 'true';
     const transactionLimit = parseInt(searchParams.get('limit') || '10');
@@ -53,8 +66,23 @@ export async function GET(request: NextRequest) {
           amount: true,
           description: true,
           created_at: true,
-          reference_type: true
+          reference_type: true,
+          balance_before: true,
+          balance_after: true
         }
+      });
+
+      console.log(`📊 Recent transactions:`, {
+        count: recentTransactions.length,
+        latest: recentTransactions[0] ? {
+          id: recentTransactions[0].id,
+          type: recentTransactions[0].transaction_type,
+          amount: Number(recentTransactions[0].amount),
+          description: recentTransactions[0].description,
+          balance_before: Number(recentTransactions[0].balance_before),
+          balance_after: Number(recentTransactions[0].balance_after),
+          created_at: recentTransactions[0].created_at
+        } : 'None'
       });
     }
 
@@ -68,16 +96,25 @@ export async function GET(request: NextRequest) {
         amount: Number(tx.amount),
         description: tx.description || '',
         created_at: tx.created_at,
-        reference_type: tx.reference_type || ''
+        reference_type: tx.reference_type || '',
+        balance_before: Number(tx.balance_before || 0),
+        balance_after: Number(tx.balance_after || 0)
       }))
     };
+
+    console.log(`📤 Sending wallet data:`, {
+      balance: walletData.balance,
+      frozen_balance: walletData.frozen_balance,
+      available_balance: walletData.available_balance,
+      transaction_count: walletData.recent_transactions.length
+    });
 
     return NextResponse.json(walletData);
 
   } catch (error) {
-    console.error('Error fetching wallet:', error);
+    console.error('❌ Wallet API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch wallet data' },
+      { error: 'Failed to fetch wallet data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

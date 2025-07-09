@@ -223,7 +223,11 @@ export default function PriceChart({
                             )}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            {cardInfo?.set_name} • Updated {lastUpdate.toLocaleTimeString()}
+                            {cardInfo?.set_name} • Updated {lastUpdate.toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                            })}
                         </Typography>
                     </Box>
 

@@ -79,9 +79,11 @@ export async function POST(request: NextRequest) {
 // Purchase user-owned card
 async function purchaseUserCard(buyerId: number, userCardId: number) {
   return await prisma.$transaction(async (tx) => {
-    console.log(`Processing user card purchase: Buyer ${buyerId}, UserCard ${userCardId}`);
+    console.log(`🔍 DEBUG: Starting purchase transaction`);
+    console.log(`👤 Buyer ID: ${buyerId}`);
+    console.log(`🎴 User Card ID: ${userCardId}`);
 
-    // Get user card without problematic includes
+    // Get user card
     const userCard = await tx.userCard.findUnique({
       where: { id: userCardId }
     });
@@ -90,46 +92,28 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       throw new Error('Card not found');
     }
 
-    // Get related data separately
-    const card = await tx.card.findUnique({
-      where: { id: userCard.card_id }
-    });
-
-    const owner = await tx.user.findUnique({
-      where: { id: userCard.owner_id }
-    });
+    // Get related data
+    const [card, owner] = await Promise.all([
+      tx.card.findUnique({ where: { id: userCard.card_id } }),
+      tx.user.findUnique({ where: { id: userCard.owner_id } })
+    ]);
 
     if (!card || !owner) {
       throw new Error('Card or owner not found');
     }
 
-    if (!userCard.is_for_sale) {
-      throw new Error('Card is not for sale');
-    }
-
-    if (userCard.is_sold) {
-      throw new Error('Card has already been sold');
-    }
-
-    if (userCard.owner_id === buyerId) {
-      throw new Error('You cannot buy your own card');
-    }
-
-    if (userCard.sale_type === 'AUCTION') {
-      if (!userCard.auction_end || new Date(userCard.auction_end) <= new Date()) {
-        throw new Error('Auction has ended');
-      }
-      throw new Error('This is an auction card. Please place a bid instead.');
-    }
-
     const purchasePrice = Number(userCard.fixed_price || 0);
-    if (purchasePrice <= 0) {
-      throw new Error('Invalid purchase price');
-    }
+    console.log(`💰 Purchase price: $${purchasePrice}`);
 
-    // Get or create buyer's wallet
+    // Get buyer's wallet BEFORE transaction
     let buyerWallet = await tx.userWallet.findUnique({
       where: { user_id: buyerId }
+    });
+
+    console.log(`👛 Buyer wallet BEFORE purchase:`, {
+      found: !!buyerWallet,
+      balance: buyerWallet ? Number(buyerWallet.balance) : 'N/A',
+      frozen: buyerWallet ? Number(buyerWallet.frozen_balance) : 'N/A'
     });
 
     if (!buyerWallet) {
@@ -140,15 +124,22 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
           frozen_balance: 0
         }
       });
-      console.log(`Created new wallet for user ${buyerId} with $1000`);
+      console.log(`✅ Created new wallet for user ${buyerId} with $1000`);
     }
 
     const buyerBalance = Number(buyerWallet.balance);
+
+    console.log(`💵 Balance check:`, {
+      buyerBalance,
+      purchasePrice,
+      sufficient: buyerBalance >= purchasePrice
+    });
+
     if (buyerBalance < purchasePrice) {
       throw new Error(`Insufficient funds. Required: $${purchasePrice.toFixed(2)}, Available: $${buyerBalance.toFixed(2)}`);
     }
 
-    // Get or create seller's wallet
+    // Get seller's wallet
     let sellerWallet = await tx.userWallet.findUnique({
       where: { user_id: userCard.owner_id }
     });
@@ -163,19 +154,46 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       });
     }
 
-    // Calculate fees (5% marketplace fee)
+    const sellerBalanceBefore = Number(sellerWallet.balance);
+    console.log(`👛 Seller wallet BEFORE:`, {
+      balance: sellerBalanceBefore
+    });
+
+    // Calculate fees
     const marketplaceFee = purchasePrice * 0.05;
     const sellerReceives = purchasePrice - marketplaceFee;
 
-    // Update wallets
-    await tx.userWallet.update({
-      where: { user_id: buyerId },
-      data: { balance: { decrement: purchasePrice } }
+    console.log(`📊 Transaction breakdown:`, {
+      purchasePrice,
+      marketplaceFee,
+      sellerReceives,
+      buyerNewBalance: buyerBalance - purchasePrice,
+      sellerNewBalance: sellerBalanceBefore + sellerReceives
     });
 
-    await tx.userWallet.update({
-      where: { user_id: userCard.owner_id },
-      data: { balance: { increment: sellerReceives } }
+    // Update wallets
+    const [updatedBuyerWallet, updatedSellerWallet] = await Promise.all([
+      tx.userWallet.update({
+        where: { user_id: buyerId },
+        data: { balance: { decrement: purchasePrice } }
+      }),
+      tx.userWallet.update({
+        where: { user_id: userCard.owner_id },
+        data: { balance: { increment: sellerReceives } }
+      })
+    ]);
+
+    console.log(`✅ Wallets updated:`, {
+      buyer: {
+        before: buyerBalance,
+        after: Number(updatedBuyerWallet.balance),
+        difference: Number(updatedBuyerWallet.balance) - buyerBalance
+      },
+      seller: {
+        before: sellerBalanceBefore,
+        after: Number(updatedSellerWallet.balance),
+        difference: Number(updatedSellerWallet.balance) - sellerBalanceBefore
+      }
     });
 
     // Transfer card ownership
@@ -213,8 +231,8 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
           wallet_id: sellerWallet.id,
           transaction_type: 'SALE',
           amount: sellerReceives,
-          balance_before: Number(sellerWallet.balance),
-          balance_after: Number(sellerWallet.balance) + sellerReceives,
+          balance_before: sellerBalanceBefore,
+          balance_after: sellerBalanceBefore + sellerReceives,
           description: `Sold ${card.name} (after 5% marketplace fee)`,
           reference_type: 'USER_CARD',
           reference_id: userCardId
@@ -222,16 +240,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       })
     ]);
 
-    // Record history
-    await tx.cardTransactionHistory.create({
-      data: {
-        userCardId: userCardId,
-        fromUserId: userCard.owner_id,
-        toUserId: buyerId,
-        action: 'PURCHASED',
-        notes: `Card purchased for $${purchasePrice.toFixed(2)}`
-      }
-    });
+    console.log(`✅ Transaction completed successfully`);
 
     return NextResponse.json({
       success: true,
@@ -242,7 +251,8 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
         marketplace_fee: marketplaceFee.toFixed(2),
         seller_receives: sellerReceives.toFixed(2),
         seller_name: owner.name,
-        transaction_id: userCardId
+        transaction_id: userCardId,
+        buyer_new_balance: (buyerBalance - purchasePrice).toFixed(2)
       }
     });
   });

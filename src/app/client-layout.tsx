@@ -5,6 +5,7 @@ import { ThemeProvider, CssBaseline, Box, Typography } from "@mui/material";
 import darkTheme from "./theme";
 import { SessionProvider, useSession } from "next-auth/react";
 import AuctionNotifications from "./components/AuctionNotifications";
+import { CurrencyProvider } from "./lib/currency-context";
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
@@ -65,8 +66,10 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         <SessionProvider>
           <ThemeProvider theme={darkTheme}>
             <CssBaseline />
-            <HeaderStatus />
-            {children}
+            <CurrencyProvider>
+              <HeaderStatus />
+              {children}
+            </CurrencyProvider>
           </ThemeProvider>
         </SessionProvider>
       )}

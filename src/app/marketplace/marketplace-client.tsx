@@ -46,12 +46,16 @@ import {
     Timeline,
     LocalOffer as LocalOfferIcon,
     Add as AddIcon,
+    CurrencyExchange,
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import BiddingModal from '../components/BiddingModal';
 import PriceChart from '../components/PriceChart';
+import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../components/PriceDisplay';
+import CurrencySelector from '../components/CurrencySelector';
+import { useCurrencyContext } from '../lib/currency-context';
 
 interface Card {
     id: number;
@@ -140,8 +144,10 @@ interface BiddingUserCard {
     }>;
 }
 
-// Price Comparison Component
+// Price Comparison Component with Currency Support
 function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === 'admin';
     const marketPrice = listing.card.market_price || 0;
     const userPrice = listing.fixed_price || listing.reserve_price || 0;
     const priceDiff = userPrice > 0 && marketPrice > 0 ?
@@ -171,9 +177,11 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
                     {listing.card.price_trend === 'up' && <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />}
                     {listing.card.price_trend === 'down' && <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />}
                     {listing.card.price_trend === 'stable' && <TrendingFlat sx={{ fontSize: 16, color: 'text.secondary' }} />}
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        ${marketPrice.toFixed(2)}
-                    </Typography>
+                    <PriceDisplay
+                        usdAmount={marketPrice}
+                        variant="body2"
+                        sx={{ fontWeight: 'bold' }}
+                    />
                 </Box>
             </Box>
 
@@ -181,9 +189,12 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
                 <Typography variant="body2" color="text.secondary">
                     {listing.sale_type === 'FIXED' ? 'Asking Price' : 'Reserve Price'}
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    ${userPrice.toFixed(2)}
-                </Typography>
+                <PriceDisplay
+                    usdAmount={userPrice}
+                    variant="body2"
+                    color="primary.main"
+                    sx={{ fontWeight: 'bold' }}
+                />
             </Box>
 
             <Box sx={{ textAlign: 'center' }}>
@@ -246,8 +257,12 @@ function PriceHistoryModal({
     );
 }
 
-// Market Summary Component
+// Market Summary Component with Currency Support
 function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
+    const { convertPrice, formatPrice, selectedCurrency } = useCurrencyContext();
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === 'admin';
+
     const marketStats = useMemo(() => {
         const cardsWithPrices = cards.filter(c => c.card.market_price && c.card.market_price > 0);
         const totalValue = cardsWithPrices.reduce((sum, card) => sum + (card.card.market_price || 0), 0);
@@ -274,6 +289,14 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
             <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Timeline />
                 Market Summary
+                {!isAdmin && selectedCurrency !== 'USD' && (
+                    <Chip
+                        label={`Prices in ${selectedCurrency}`}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                    />
+                )}
             </Typography>
 
             <Grid container spacing={2}>
@@ -290,9 +313,11 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
 
                 <Grid item xs={6} md={3}>
                     <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" color="success.main">
-                            ${marketStats.avgPrice.toFixed(0)}
-                        </Typography>
+                        <PriceDisplay
+                            usdAmount={marketStats.avgPrice}
+                            variant="h4"
+                            color="success.main"
+                        />
                         <Typography variant="body2" color="text.secondary">
                             Avg. Price
                         </Typography>
@@ -301,9 +326,11 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
 
                 <Grid item xs={6} md={3}>
                     <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" color="warning.main">
-                            ${marketStats.totalValue.toFixed(0)}
-                        </Typography>
+                        <PriceDisplay
+                            usdAmount={marketStats.totalValue}
+                            variant="h4"
+                            color="warning.main"
+                        />
                         <Typography variant="body2" color="text.secondary">
                             Total Value
                         </Typography>
@@ -354,7 +381,7 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
     );
 }
 
-// Daily Deals Component
+// Daily Deals Component with Currency Support
 function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
     const deals = useMemo(() => {
         return cards
@@ -412,12 +439,18 @@ function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
 
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
-                                        <Typography variant="h6" color="success.main">
-                                            ${userPrice.toFixed(2)}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ textDecoration: 'line-through' }}>
-                                            ${marketPrice.toFixed(2)}
-                                        </Typography>
+                                        <PriceDisplay
+                                            usdAmount={userPrice}
+                                            variant="h6"
+                                            color="success.main"
+                                        />
+                                        <Box sx={{ textDecoration: 'line-through' }}>
+                                            <PriceDisplay
+                                                usdAmount={marketPrice}
+                                                variant="caption"
+                                                color="text.secondary"
+                                            />
+                                        </Box>
                                     </Box>
                                     <Chip
                                         label={`${discount.toFixed(0)}% OFF`}
@@ -485,6 +518,7 @@ function PriceAlertsSection() {
 export default function MarketplacePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const { selectedCurrency, isUSDFallback } = useCurrencyContext();
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
     const [cards, setCards] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
@@ -514,6 +548,8 @@ export default function MarketplacePage() {
     // Individual loading states for each card
     const [purchasingCards, setPurchasingCards] = useState<Set<string>>(new Set());
     const [biddingCards, setBiddingCards] = useState<Set<string>>(new Set());
+
+    const isAdmin = session?.user?.role === 'admin';
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -723,10 +759,6 @@ export default function MarketplacePage() {
         }
     }, [status]);
 
-    const formatPrice = (price: number | null) => {
-        return price != null ? `${Number(price).toFixed(2)}` : 'N/A';
-    };
-
     const formatTimeLeft = (timeLeftMs: number | null) => {
         if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
         const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
@@ -748,19 +780,24 @@ export default function MarketplacePage() {
             return;
         }
 
-        // Add the card to purchasing state
+        const listingPrice = listing.fixed_price || listing.reserve_price || 0;
+        console.log('🛒 Starting purchase:', {
+            cardName: listing.card.name,
+            priceUSD: listingPrice,
+            listingType: listing.type,
+            timestamp: new Date().toISOString()
+        });
+
         setPurchasingCards((prev) => new Set(prev).add(listing.id));
 
         try {
             let requestBody: any;
 
-            // Determine request body based on listing type
             if (listing.type === 'CATALOG') {
                 requestBody = {
                     catalog_card_id: listing.card.id,
                     quantity: 1
                 };
-                console.log('Preparing catalog purchase:', requestBody);
             } else if (listing.type === 'USER_CARD') {
                 if (!listing.user_card_id) {
                     throw new Error('User card ID is missing');
@@ -768,17 +805,11 @@ export default function MarketplacePage() {
                 requestBody = {
                     user_card_id: listing.user_card_id
                 };
-                console.log('Preparing user card purchase:', requestBody);
             } else {
                 throw new Error(`Invalid listing type: ${listing.type}`);
             }
 
-            console.log('Sending purchase request:', {
-                listingId: listing.id,
-                listingType: listing.type,
-                cardName: listing.card.name,
-                requestBody
-            });
+            console.log('📤 Sending purchase request:', requestBody);
 
             const response = await fetch('/api/marketplace/purchase', {
                 method: 'POST',
@@ -789,63 +820,73 @@ export default function MarketplacePage() {
                 body: JSON.stringify(requestBody),
             });
 
-            console.log('Purchase response status:', response.status);
+            console.log('📨 Purchase response status:', response.status);
 
-            // Check if response is ok
             if (!response.ok) {
                 let errorMessage = `Failed to purchase: ${response.status} ${response.statusText}`;
-
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || errorData.details || errorMessage;
                 } catch (parseError) {
                     console.error('Could not parse error response:', parseError);
-                    // Use the default error message if JSON parsing fails
                 }
-
                 throw new Error(errorMessage);
             }
 
-            // Parse successful response
-            let data;
-            try {
-                data = await response.json();
-            } catch (parseError) {
-                console.error('Could not parse success response:', parseError);
-                throw new Error('Purchase may have succeeded but response could not be parsed');
-            }
-
-            console.log('Purchase response data:', data);
+            const data = await response.json();
+            console.log('✅ Purchase response data:', data);
 
             if (data.success) {
                 const cardName = data.purchase_details?.card_name || listing.card.name;
                 const purchasePrice = data.purchase_details?.total_price || data.purchase_details?.purchase_price || 'N/A';
-                const quantity = data.purchase_details?.quantity || 1;
+                const newBalance = data.purchase_details?.buyer_new_balance;
 
-                if (quantity > 1) {
-                    toast.success(`Successfully purchased ${quantity}x ${cardName} for $${purchasePrice}!`);
-                } else {
-                    toast.success(`Successfully purchased ${cardName} for $${purchasePrice}!`);
-                }
+                console.log('🎉 Purchase successful:', {
+                    cardName,
+                    purchasePrice,
+                    newBalance,
+                    timestamp: new Date().toISOString()
+                });
 
-                // Refresh the marketplace and notifications
-                fetchCards();
-                fetchNotificationCount();
+                toast.success(`Successfully purchased ${cardName} for $${purchasePrice}!`);
+
+                // 🔄 IMPORTANT: Refresh all data after purchase
+                console.log('🔄 Refreshing all data after purchase...');
+
+                // Force refresh with a small delay to ensure database commit
+                setTimeout(async () => {
+                    try {
+                        await Promise.all([
+                            fetchCards(),
+                            fetchNotificationCount(),
+                            // If you have access to wallet refresh function, call it
+                            // fetchWalletData?.(true)
+                        ]);
+
+                        // Dispatch custom event for wallet refresh
+                        window.dispatchEvent(new CustomEvent('purchaseComplete', {
+                            detail: {
+                                cardName,
+                                purchasePrice,
+                                newBalance,
+                                timestamp: new Date().toISOString()
+                            }
+                        }));
+
+                        console.log('✅ All data refreshed after purchase');
+                    } catch (refreshError) {
+                        console.error('❌ Error refreshing data:', refreshError);
+                    }
+                }, 500); // 500ms delay to ensure DB commit
+
             } else {
                 throw new Error(data.error || data.message || 'Purchase failed');
             }
 
         } catch (error) {
-            console.error('Purchase error:', error);
-
-            let errorMessage = 'Failed to purchase card';
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-
-            toast.error(errorMessage);
+            console.error('❌ Purchase error:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to purchase card');
         } finally {
-            // Remove the card from purchasing state
             setPurchasingCards((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(listing.id);
@@ -913,12 +954,20 @@ export default function MarketplacePage() {
     return (
         <Container sx={{ marginTop: 4, marginBottom: 4 }}>
             <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+
+            {/* Header with Currency Selector */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
                 <IconButton onClick={toggleSidebar}>
                     <MenuIcon />
                 </IconButton>
                 <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" width={120} height={60} priority />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {/* Currency Selector - Only for non-admin users */}
+                    {!isAdmin && (
+                        <Box sx={{ minWidth: 120 }}>
+                            <CurrencySelector size="small" />
+                        </Box>
+                    )}
                     <IconButton
                         onClick={() => router.push('/notifications')}
                         color={unreadNotifications > 0 ? 'primary' : 'default'}
@@ -939,14 +988,40 @@ export default function MarketplacePage() {
                     <Typography variant="body2">Welcome, {session?.user?.name}</Typography>
                 </Box>
             </Box>
+
             <Box sx={{ my: 3 }}>
                 <Typography variant="h4" gutterBottom>
                     Card Marketplace
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                    Discover and purchase Pokemon cards from other collectors
+                    Discover and purchase Pokémon cards from other collectors
                 </Typography>
             </Box>
+
+            {/* Currency Info Banners */}
+            {!isAdmin && selectedCurrency !== 'USD' && !isUSDFallback && (
+                <Alert severity="info" sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2">
+                            Displaying prices in {selectedCurrency}. All transactions are processed in USD.
+                        </Typography>
+                        <Chip
+                            icon={<CurrencyExchange />}
+                            label={`Viewing in ${selectedCurrency}`}
+                            size="small"
+                            color="primary"
+                        />
+                    </Box>
+                </Alert>
+            )}
+
+            {isUSDFallback && (
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                    <Typography variant="body2">
+                        Currency service is currently unavailable. Showing USD prices.
+                    </Typography>
+                </Alert>
+            )}
 
             {/* Market Summary */}
             <MarketSummarySection cards={cards as EnhancedListing[]} />
@@ -1069,6 +1144,7 @@ export default function MarketplacePage() {
                         : `Error: ${error}`}
                 </Alert>
             )}
+
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
@@ -1195,13 +1271,22 @@ export default function MarketplacePage() {
                                             {listing.sale_type === 'FIXED' ? (
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <Box>
-                                                        <Typography variant="h6" color="primary.main">
-                                                            {formatPrice(listing.fixed_price)}
-                                                        </Typography>
+                                                        <PriceDisplay
+                                                            usdAmount={listing.fixed_price || 0}
+                                                            variant="h6"
+                                                            color="primary.main"
+                                                        />
                                                         {enhancedListing.card.market_price && (
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                Market: {formatPrice(enhancedListing.card.market_price)}
-                                                            </Typography>
+                                                            <Box>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    Market:
+                                                                </Typography>
+                                                                <PriceDisplay
+                                                                    usdAmount={enhancedListing.card.market_price}
+                                                                    variant="caption"
+                                                                    color="text.secondary"
+                                                                />
+                                                            </Box>
                                                         )}
                                                     </Box>
                                                     <Button
@@ -1225,9 +1310,11 @@ export default function MarketplacePage() {
                                                         <Typography variant="body2" color="text.secondary">
                                                             Current Bid:
                                                         </Typography>
-                                                        <Typography variant="subtitle1" color="primary.main">
-                                                            {formatPrice(listing.highest_bid || listing.reserve_price)}
-                                                        </Typography>
+                                                        <PriceDisplay
+                                                            usdAmount={listing.highest_bid || listing.reserve_price || 0}
+                                                            variant="subtitle1"
+                                                            color="primary.main"
+                                                        />
                                                     </Box>
 
                                                     {enhancedListing.card.market_price && (
@@ -1235,9 +1322,11 @@ export default function MarketplacePage() {
                                                             <Typography variant="body2" color="text.secondary">
                                                                 Market Price:
                                                             </Typography>
-                                                            <Typography variant="body2" color="text.secondary">
-                                                                {formatPrice(enhancedListing.card.market_price)}
-                                                            </Typography>
+                                                            <PriceDisplay
+                                                                usdAmount={enhancedListing.card.market_price}
+                                                                variant="body2"
+                                                                color="text.secondary"
+                                                            />
                                                         </Box>
                                                     )}
 

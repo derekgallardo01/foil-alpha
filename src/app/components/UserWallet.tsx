@@ -1,3 +1,4 @@
+// src/app/components/UserWallet.tsx - Updated with Currency Support
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -15,6 +16,7 @@ import {
     CircularProgress,
     Divider,
     Alert,
+    Tooltip,
 } from "@mui/material";
 import {
     AccountBalanceWallet,
@@ -23,9 +25,13 @@ import {
     TrendingUp,
     TrendingDown,
     AdminPanelSettings,
+    CurrencyExchange,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import type { ChipProps } from "@mui/material";
+import PriceDisplay, { LargePriceDisplay } from "./PriceDisplay";
+import CurrencySelector from "./CurrencySelector";
+import { useCurrencyContext } from "../lib/currency-context";
 
 interface WalletData {
     balance: number;
@@ -45,6 +51,7 @@ interface WalletTransaction {
 
 export default function UserWallet() {
     const { data: session, status } = useSession();
+    const { selectedCurrency, isUSDFallback } = useCurrencyContext();
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -146,8 +153,11 @@ export default function UserWallet() {
                     <Typography variant="h5" sx={{ color: '#96ff9b', mb: 2 }}>
                         Admin Account
                     </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                         Admins don't have personal wallets. Use the admin panel to manage user wallets.
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        All prices shown in USD for administrative purposes.
                     </Typography>
                     <Button
                         variant="contained"
@@ -207,22 +217,48 @@ export default function UserWallet() {
                         <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
                             My Wallet
                         </Typography>
+                        {isUSDFallback && (
+                            <Tooltip title="Currency service unavailable, showing USD prices">
+                                <Chip
+                                    icon={<CurrencyExchange />}
+                                    label="USD Fallback"
+                                    size="small"
+                                    color="warning"
+                                />
+                            </Tooltip>
+                        )}
                     </Box>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={loading ? <CircularProgress size={16} /> : <Refresh />}
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-                        }}
-                    >
-                        Refresh
-                    </Button>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ minWidth: 120 }}>
+                            <CurrencySelector size="small" />
+                        </Box>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={loading ? <CircularProgress size={16} /> : <Refresh />}
+                            onClick={handleRefresh}
+                            disabled={loading}
+                            sx={{
+                                borderColor: '#96ff9b',
+                                color: '#96ff9b',
+                                '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            }}
+                        >
+                            Refresh
+                        </Button>
+                    </Box>
                 </Box>
+
+                {/* Currency Info Banner */}
+                {selectedCurrency !== 'USD' && !isUSDFallback && (
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="body2">
+                                Displaying prices in {selectedCurrency}. All transactions are processed in USD.
+                            </Typography>
+                        </Box>
+                    </Alert>
+                )}
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 3, mb: 4 }}>
                     <Box sx={{
@@ -232,12 +268,18 @@ export default function UserWallet() {
                         borderRadius: 2,
                         border: '1px solid rgba(150, 255, 155, 0.3)'
                     }}>
-                        <Typography variant="h3" sx={{ color: '#96ff9b', fontWeight: 'bold', mb: 1 }}>
-                            ${wallet.balance.toFixed(2)}
-                        </Typography>
+                        <LargePriceDisplay
+                            usdAmount={wallet.balance}
+                            sx={{ color: '#96ff9b', fontWeight: 'bold', mb: 1 }}
+                        />
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Total Balance
                         </Typography>
+                        {selectedCurrency !== 'USD' && !isUSDFallback && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                ${wallet.balance.toFixed(2)} USD
+                            </Typography>
+                        )}
                     </Box>
 
                     <Box sx={{
@@ -245,18 +287,20 @@ export default function UserWallet() {
                         p: 3,
                         bgcolor: 'grey.700',
                         borderRadius: 2,
-                        border: `1px solid ${wallet.available_balance > 0 ? 'rgba(76, 175, 80, 0.3)' : 'rgba(158, 158, 158, 0.3)'}`
+                        border: '1px solid rgba(150, 255, 155, 0.3)'
                     }}>
-                        <Typography variant="h3" sx={{
-                            color: wallet.available_balance > 0 ? 'success.main' : 'text.secondary',
-                            fontWeight: 'bold',
-                            mb: 1
-                        }}>
-                            ${wallet.available_balance.toFixed(2)}
-                        </Typography>
+                        <LargePriceDisplay
+                            usdAmount={wallet.available_balance}
+                            sx={{ color: '#96ff9b', fontWeight: 'bold', mb: 1 }}
+                        />
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Available to Spend
                         </Typography>
+                        {selectedCurrency !== 'USD' && !isUSDFallback && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                ${wallet.available_balance.toFixed(2)} USD
+                            </Typography>
+                        )}
                     </Box>
 
                     {wallet.frozen_balance > 0 && (
@@ -267,12 +311,18 @@ export default function UserWallet() {
                             borderRadius: 2,
                             border: '1px solid rgba(255, 152, 0, 0.3)'
                         }}>
-                            <Typography variant="h3" sx={{ color: 'warning.main', fontWeight: 'bold', mb: 1 }}>
-                                ${wallet.frozen_balance.toFixed(2)}
-                            </Typography>
+                            <LargePriceDisplay
+                                usdAmount={wallet.frozen_balance}
+                                sx={{ color: 'warning.main', fontWeight: 'bold', mb: 1 }}
+                            />
                             <Typography variant="body1" color="text.primary" fontWeight="bold">
                                 Frozen (Active Bids)
                             </Typography>
+                            {selectedCurrency !== 'USD' && !isUSDFallback && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                    ${wallet.frozen_balance.toFixed(2)} USD
+                                </Typography>
+                            )}
                         </Box>
                     )}
                 </Box>
@@ -335,15 +385,19 @@ export default function UserWallet() {
                                                 />
                                             </Box>
                                             {transaction.amount !== 0 && (
-                                                <Typography
-                                                    variant="h6"
-                                                    sx={{
-                                                        color: transaction.amount >= 0 ? 'success.main' : 'error.main',
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                >
-                                                    {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
-                                                </Typography>
+                                                <Box sx={{ textAlign: 'right' }}>
+                                                    <PriceDisplay
+                                                        usdAmount={Math.abs(transaction.amount)}
+                                                        variant="h6"
+                                                        color={transaction.amount >= 0 ? 'success.main' : 'error.main'}
+                                                        sx={{ fontWeight: 'bold' }}
+                                                    />
+                                                    {selectedCurrency !== 'USD' && !isUSDFallback && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                                            {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)} USD
+                                                        </Typography>
+                                                    )}
+                                                </Box>
                                             )}
                                         </Box>
                                     }
