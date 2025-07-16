@@ -1,4 +1,4 @@
-// src/lib/notification.ts - Updated with new bidding flow notifications
+// src/app/lib/notification.ts - Enhanced with seller name and card image data
 import { prisma } from './prisma';
 
 export interface CreateNotificationData {
@@ -6,7 +6,7 @@ export interface CreateNotificationData {
     type: string;
     title: string;
     message: string;
-    data?: any; // Changed from reference_id, reference_type, metadata to just data
+    data?: any;
 }
 
 export async function createNotification(notificationData: CreateNotificationData) {
@@ -17,8 +17,8 @@ export async function createNotification(notificationData: CreateNotificationDat
                 type: notificationData.type,
                 title: notificationData.title,
                 message: notificationData.message,
-                data: notificationData.data, // Use data field instead of reference fields
-                read: false // Use read instead of is_read
+                data: notificationData.data,
+                read: false
             }
         });
         return notification;
@@ -37,17 +37,24 @@ export async function createBidNotifications(
 ) {
     const notifications = [];
 
+    // Get bidder info for seller notification
+    const bidder = await prisma.user.findUnique({
+        where: { id: bidderId },
+        select: { name: true }
+    });
+
     // Notify seller of new bid
     notifications.push(
         createNotification({
             user_id: sellerId,
             type: 'BID_RECEIVED',
             title: 'New Bid Received',
-            message: `Someone placed a bid of $${bidAmount.toFixed(2)} on your ${cardName}`,
+            message: `${bidder?.name || 'Someone'} placed a bid of $${bidAmount.toFixed(2)} on your ${cardName}`,
             data: {
                 card_name: cardName,
                 bid_amount: bidAmount,
                 bidder_id: bidderId,
+                bidder_name: bidder?.name,
                 reference_id: bidId,
                 reference_type: 'BID'
             }
@@ -66,6 +73,28 @@ export async function createBidAcceptedNotifications(
 ) {
     const notifications = [];
 
+    // Get seller and card info for enhanced notification data
+    const [seller, userCard] = await Promise.all([
+        prisma.user.findUnique({
+            where: { id: sellerId },
+            select: { name: true }
+        }),
+        prisma.transaction.findUnique({
+            where: { id: transactionId },
+            select: { user_card_id: true }
+        }).then(async (transaction) => {
+            if (!transaction) return null;
+            const userCard = await prisma.userCard.findUnique({
+                where: { id: transaction.user_card_id }
+            });
+            if (!userCard) return null;
+            return prisma.card.findUnique({
+                where: { id: userCard.card_id },
+                select: { image_url: true, small_image_url: true }
+            });
+        })
+    ]);
+
     // Notify buyer that their bid was accepted - they need to confirm purchase
     notifications.push(
         createNotification({
@@ -75,7 +104,9 @@ export async function createBidAcceptedNotifications(
             message: `Your bid of $${amount.toFixed(2)} for ${cardName} was accepted! You have 24 hours to confirm your purchase.`,
             data: {
                 card_name: cardName,
+                card_image: userCard?.small_image_url || userCard?.image_url,
                 amount,
+                seller_name: seller?.name,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                 action_required: true,
                 reference_id: transactionId,
@@ -96,6 +127,23 @@ export async function createAuctionWonNotifications(
 ) {
     const notifications = [];
 
+    // Get seller and card info
+    const [seller, userCard] = await Promise.all([
+        prisma.user.findUnique({
+            where: { id: sellerId },
+            select: { name: true }
+        }),
+        prisma.userCard.findUnique({
+            where: { id: auctionId }
+        }).then(async (userCard) => {
+            if (!userCard) return null;
+            return prisma.card.findUnique({
+                where: { id: userCard.card_id },
+                select: { image_url: true, small_image_url: true }
+            });
+        })
+    ]);
+
     // Notify winner - they need to confirm purchase within 24 hours
     notifications.push(
         createNotification({
@@ -105,7 +153,9 @@ export async function createAuctionWonNotifications(
             message: `Congratulations! You won the auction for ${cardName} with a bid of $${winningAmount.toFixed(2)}. You have 24 hours to confirm your purchase.`,
             data: {
                 card_name: cardName,
+                card_image: userCard?.small_image_url || userCard?.image_url,
                 winning_amount: winningAmount,
+                seller_name: seller?.name,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                 action_required: true,
                 reference_id: auctionId,
@@ -192,6 +242,18 @@ export async function createPurchaseConfirmedNotifications(
 ) {
     const notifications = [];
 
+    // Get names for notifications
+    const [buyer, seller] = await Promise.all([
+        prisma.user.findUnique({
+            where: { id: buyerId },
+            select: { name: true }
+        }),
+        prisma.user.findUnique({
+            where: { id: sellerId },
+            select: { name: true }
+        })
+    ]);
+
     // Notify buyer of successful purchase
     notifications.push(
         createNotification({
@@ -202,6 +264,7 @@ export async function createPurchaseConfirmedNotifications(
             data: {
                 card_name: cardName,
                 amount,
+                seller_name: seller?.name,
                 reference_id: transactionId,
                 reference_type: 'TRANSACTION'
             }
@@ -214,10 +277,11 @@ export async function createPurchaseConfirmedNotifications(
             user_id: sellerId,
             type: 'SALE_COMPLETED',
             title: 'Sale Completed',
-            message: `Your ${cardName} was sold for $${amount.toFixed(2)}. Funds have been added to your wallet.`,
+            message: `Your ${cardName} was sold to ${buyer?.name} for $${amount.toFixed(2)}. Funds have been added to your wallet.`,
             data: {
                 card_name: cardName,
                 amount,
+                buyer_name: buyer?.name,
                 reference_id: transactionId,
                 reference_type: 'TRANSACTION'
             }
@@ -236,16 +300,23 @@ export async function createPurchaseDeclinedNotifications(
 ) {
     const notifications = [];
 
+    // Get buyer name for seller notification
+    const buyer = await prisma.user.findUnique({
+        where: { id: buyerId },
+        select: { name: true }
+    });
+
     // Notify seller that buyer declined
     notifications.push(
         createNotification({
             user_id: sellerId,
             type: 'PURCHASE_DECLINED',
             title: 'Purchase Declined',
-            message: `The winning bidder declined to purchase ${cardName}. Your auction will be relisted.`,
+            message: `${buyer?.name || 'The winning bidder'} declined to purchase ${cardName}. Your auction will continue with other bidders.`,
             data: {
                 card_name: cardName,
                 declined_amount: amount,
+                buyer_name: buyer?.name,
                 reference_id: auctionId,
                 reference_type: 'AUCTION'
             }
@@ -263,6 +334,12 @@ export async function createPurchaseExpiredNotifications(
     auctionId: number
 ) {
     const notifications = [];
+
+    // Get buyer name for seller notification
+    const buyer = await prisma.user.findUnique({
+        where: { id: buyerId },
+        select: { name: true }
+    });
 
     // Notify buyer they missed the deadline
     notifications.push(
@@ -286,10 +363,11 @@ export async function createPurchaseExpiredNotifications(
             user_id: sellerId,
             type: 'PURCHASE_EXPIRED',
             title: 'Purchase Window Expired',
-            message: `The winning bidder did not confirm purchase of ${cardName} within 24 hours. Your auction will be relisted.`,
+            message: `${buyer?.name || 'The winning bidder'} did not confirm purchase of ${cardName} within 24 hours. Your auction will continue with other bidders.`,
             data: {
                 card_name: cardName,
                 expired_amount: amount,
+                buyer_name: buyer?.name,
                 reference_id: auctionId,
                 reference_type: 'AUCTION'
             }

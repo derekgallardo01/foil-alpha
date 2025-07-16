@@ -1,7 +1,7 @@
-// src/app/components/PendingPurchaseModal.tsx
+// src/app/components/PendingPurchaseModal.tsx - Fixed API endpoints and modal closing
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -20,15 +20,15 @@ import {
     CheckCircle,
     Warning,
     AttachMoney,
-    Timer
+    Timer,
+    Cancel
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { useSession } from 'next-auth/react';
 
 interface PendingPurchase {
     transaction_id: number;
     card_name: string;
-    card_image: string;
+    card_image?: string;
     amount: number;
     seller_name: string;
     expires_at: string;
@@ -48,9 +48,52 @@ export default function PendingPurchaseModal({
     purchaseData,
     onConfirmationComplete
 }: PendingPurchaseModalProps) {
-    const { data: session } = useSession();
     const [confirming, setConfirming] = useState(false);
+    const [declining, setDeclining] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [timeLeft, setTimeLeft] = useState<string>('');
+
+    // Update countdown timer
+    useEffect(() => {
+        if (!purchaseData?.expires_at) return;
+
+        const updateTimer = () => {
+            const now = new Date();
+            const expires = new Date(purchaseData.expires_at);
+            const diffMs = expires.getTime() - now.getTime();
+
+            if (diffMs <= 0) {
+                setTimeLeft('Expired');
+                return;
+            }
+
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+            if (hours > 0) {
+                setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+            } else if (minutes > 0) {
+                setTimeLeft(`${minutes}m ${seconds}s`);
+            } else {
+                setTimeLeft(`${seconds}s`);
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+
+        return () => clearInterval(interval);
+    }, [purchaseData?.expires_at]);
+
+    // Reset state when modal opens
+    useEffect(() => {
+        if (open) {
+            setError(null);
+            setConfirming(false);
+            setDeclining(false);
+        }
+    }, [open]);
 
     const handleConfirmPurchase = async () => {
         if (!purchaseData) return;
@@ -59,33 +102,51 @@ export default function PendingPurchaseModal({
         setError(null);
 
         try {
-            const response = await fetch(`/api/transactions/${purchaseData.transaction_id}/confirm`, {
+            console.log('Confirming purchase for transaction:', purchaseData.transaction_id);
+
+            // FIXED: Use the correct API endpoint
+            const response = await fetch('/api/bids/confirm-purchase', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken}`,
                 },
+                body: JSON.stringify({
+                    transaction_id: purchaseData.transaction_id,
+                    confirm_purchase: true
+                })
             });
 
             const data = await response.json();
+            console.log('Confirm purchase response:', data);
 
-            if (response.ok) {
+            if (response.ok && data.success) {
                 toast.success(`Successfully confirmed purchase of ${purchaseData.card_name}!`);
 
                 // Mark notification as read if it exists
                 if (purchaseData.notification_id) {
-                    await fetch(`/api/notifications/${purchaseData.notification_id}/read`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${session?.accessToken}`,
-                        },
-                    });
+                    try {
+                        await fetch(`/api/notifications`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                notificationId: purchaseData.notification_id,
+                                read: true
+                            })
+                        });
+                        console.log('Notification marked as read');
+                    } catch (notifError) {
+                        console.error('Error marking notification as read:', notifError);
+                    }
                 }
 
+                // Close modal and refresh data
                 onConfirmationComplete();
                 onClose();
             } else {
                 setError(data.error || 'Failed to confirm purchase');
+                console.error('Purchase confirmation failed:', data);
             }
         } catch (error) {
             console.error('Confirmation error:', error);
@@ -95,29 +156,75 @@ export default function PendingPurchaseModal({
         }
     };
 
-    const formatTimeLeft = (expiresAt: string) => {
-        const now = new Date();
-        const expires = new Date(expiresAt);
-        const diffMs = expires.getTime() - now.getTime();
+    const handleDeclinePurchase = async () => {
+        if (!purchaseData) return;
 
-        if (diffMs <= 0) return 'Expired';
+        setDeclining(true);
+        setError(null);
 
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        try {
+            console.log('Declining purchase for transaction:', purchaseData.transaction_id);
 
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
+            // FIXED: Use the correct API endpoint
+            const response = await fetch('/api/bids/confirm-purchase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    transaction_id: purchaseData.transaction_id,
+                    confirm_purchase: false
+                })
+            });
+
+            const data = await response.json();
+            console.log('Decline purchase response:', data);
+
+            if (response.ok && data.success) {
+                toast.info(`Purchase declined. The auction will continue with other bidders.`);
+
+                // Mark notification as read
+                if (purchaseData.notification_id) {
+                    try {
+                        await fetch(`/api/notifications`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                notificationId: purchaseData.notification_id,
+                                read: true
+                            })
+                        });
+                        console.log('Notification marked as read');
+                    } catch (notifError) {
+                        console.error('Error marking notification as read:', notifError);
+                    }
+                }
+
+                // Close modal and refresh data
+                onConfirmationComplete();
+                onClose();
+            } else {
+                setError(data.error || 'Failed to decline purchase');
+                console.error('Purchase decline failed:', data);
+            }
+        } catch (error) {
+            console.error('Decline error:', error);
+            setError('Failed to decline purchase. Please try again.');
+        } finally {
+            setDeclining(false);
+        }
     };
 
     if (!purchaseData) return null;
 
-    const timeLeft = formatTimeLeft(purchaseData.expires_at);
     const isExpired = timeLeft === 'Expired';
 
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={!confirming && !declining ? onClose : undefined} // Prevent closing while processing
             maxWidth="sm"
             fullWidth
             PaperProps={{
@@ -212,10 +319,10 @@ export default function PendingPurchaseModal({
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="body2" color="text.secondary">
-                            Marketplace Fee (5%):
+                            Marketplace Fee (0%):
                         </Typography>
                         <Typography variant="body2" color="text.primary">
-                            ${(purchaseData.amount * 0.05).toFixed(2)}
+                            $0.00
                         </Typography>
                     </Box>
 
@@ -239,6 +346,7 @@ export default function PendingPurchaseModal({
                 >
                     <Typography variant="body2">
                         You won this auction! Please confirm the purchase within 24 hours to complete the transaction.
+                        If you decline, other bidders can still compete for this card.
                     </Typography>
                 </Alert>
             </DialogContent>
@@ -249,20 +357,25 @@ export default function PendingPurchaseModal({
                 gap: 2
             }}>
                 <Button
-                    onClick={onClose}
-                    disabled={confirming}
                     variant="outlined"
+                    onClick={handleDeclinePurchase}
+                    disabled={confirming || declining || isExpired}
+                    startIcon={declining ? <CircularProgress size={20} /> : <Cancel />}
                     sx={{
-                        borderColor: 'text.secondary',
-                        color: 'text.secondary'
+                        borderColor: 'error.main',
+                        color: 'error.main',
+                        '&:hover': {
+                            borderColor: 'error.dark',
+                            bgcolor: 'rgba(244, 67, 54, 0.1)'
+                        }
                     }}
                 >
-                    Cancel
+                    {declining ? 'Declining...' : 'Decline'}
                 </Button>
                 <Button
                     variant="contained"
                     onClick={handleConfirmPurchase}
-                    disabled={confirming || isExpired}
+                    disabled={confirming || declining || isExpired}
                     startIcon={confirming ? <CircularProgress size={20} /> : <AttachMoney />}
                     sx={{
                         bgcolor: '#96ff9b',

@@ -1,4 +1,4 @@
-// src/app/notifications/page.tsx - Notifications page with plural route
+// src/app/notifications/page.tsx - Enhanced with pending purchase handling
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -32,11 +32,14 @@ import {
     Error as ErrorIcon,
     Gavel as AuctionIcon,
     AttachMoney as MoneyIcon,
-    ShoppingCart as SaleIcon
+    ShoppingCart as SaleIcon,
+    Timer as TimerIcon,
+    PriorityHigh as UrgentIcon
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
+import PendingPurchaseModal from '../components/PendingPurchaseModal';
 
 interface Notification {
     id: number;
@@ -49,14 +52,14 @@ interface Notification {
     updated_at: string;
 }
 
-interface NotificationResponse {
-    notifications: Notification[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
+interface PendingPurchase {
+    transaction_id: number;
+    card_name: string;
+    card_image?: string;
+    amount: number;
+    seller_name: string;
+    expires_at: string;
+    notification_id?: number;
 }
 
 export default function NotificationsPage() {
@@ -69,6 +72,15 @@ export default function NotificationsPage() {
     const [markingRead, setMarkingRead] = useState<Set<number>>(new Set());
     const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
 
+    // Pending purchase modal state
+    const [pendingPurchaseModal, setPendingPurchaseModal] = useState<{
+        open: boolean;
+        purchaseData: PendingPurchase | null;
+    }>({
+        open: false,
+        purchaseData: null
+    });
+
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Fetch notifications
@@ -77,20 +89,18 @@ export default function NotificationsPage() {
             setLoading(true);
             setError(null);
 
-            const response = await fetch('/api/notifications');
+            const response = await fetch('/api/notifications?unread_only=true');
 
             if (!response.ok) {
                 throw new Error('Failed to fetch notifications');
             }
 
-            const data: NotificationResponse = await response.json();
-
-            // Extract notifications array from response
-            setNotifications(data.notifications || []);
+            const data = await response.json();
+            setNotifications(Array.isArray(data) ? data : data.notifications || []);
         } catch (err) {
             console.error('Error fetching notifications:', err);
             setError(err instanceof Error ? err.message : 'Failed to load notifications');
-            setNotifications([]); // Set empty array on error
+            setNotifications([]);
         } finally {
             setLoading(false);
         }
@@ -113,7 +123,6 @@ export default function NotificationsPage() {
                 throw new Error('Failed to mark notification as read');
             }
 
-            // Update local state
             setNotifications(prev =>
                 prev.map(notification =>
                     notification.id === notificationId
@@ -150,7 +159,6 @@ export default function NotificationsPage() {
                 throw new Error('Failed to mark all notifications as read');
             }
 
-            // Update local state
             setNotifications(prev =>
                 prev.map(notification => ({ ...notification, read: true }))
             );
@@ -175,7 +183,6 @@ export default function NotificationsPage() {
                 throw new Error('Failed to delete notification');
             }
 
-            // Remove from local state
             setNotifications(prev =>
                 prev.filter(notification => notification.id !== notificationId)
             );
@@ -193,8 +200,28 @@ export default function NotificationsPage() {
         }
     };
 
-    // Handle notification click (navigate based on type)
+    // Handle notification click
     const handleNotificationClick = (notification: Notification) => {
+        // Special handling for bid accepted notifications (pending purchase)
+        if (notification.type === 'BID_ACCEPTED' && notification.data) {
+            const purchaseData: PendingPurchase = {
+                transaction_id: notification.data.reference_id,
+                card_name: notification.data.card_name,
+                card_image: notification.data.card_image,
+                amount: notification.data.amount,
+                seller_name: notification.data.seller_name || 'Unknown Seller',
+                expires_at: notification.data.expires_at,
+                notification_id: notification.id
+            };
+
+            setPendingPurchaseModal({
+                open: true,
+                purchaseData
+            });
+            return;
+        }
+
+        // Mark as read if not already read
         if (!notification.read) {
             markAsRead(notification.id);
         }
@@ -202,8 +229,7 @@ export default function NotificationsPage() {
         // Navigate based on notification type
         switch (notification.type) {
             case 'BID_RECEIVED':
-            case 'BID_ACCEPTED':
-                router.push('/selling/dashboard');
+                router.push('/bids/my-auctions');
                 break;
             case 'AUCTION_WON':
             case 'AUCTION_LOST':
@@ -216,8 +242,11 @@ export default function NotificationsPage() {
             case 'PURCHASE_CONFIRMED':
                 router.push('/wallet');
                 break;
+            case 'PURCHASE_DECLINED':
+            case 'PURCHASE_EXPIRED':
+                router.push('/bids/my-auctions');
+                break;
             default:
-                // Stay on notifications page
                 break;
         }
     };
@@ -226,17 +255,19 @@ export default function NotificationsPage() {
     const getNotificationIcon = (type: string) => {
         switch (type) {
             case 'BID_RECEIVED':
-            case 'BID_ACCEPTED':
             case 'BID_OUTBID':
                 return <AuctionIcon />;
+            case 'BID_ACCEPTED':
+                return <UrgentIcon />;
             case 'SALE_COMPLETED':
             case 'PURCHASE_CONFIRMED':
                 return <MoneyIcon />;
             case 'AUCTION_WON':
             case 'AUCTION_LOST':
                 return <SaleIcon />;
-            case 'INFO':
-                return <InfoIcon />;
+            case 'PURCHASE_DECLINED':
+            case 'PURCHASE_EXPIRED':
+                return <TimerIcon />;
             case 'WARNING':
                 return <WarningIcon />;
             case 'ERROR':
@@ -252,16 +283,48 @@ export default function NotificationsPage() {
             case 'BID_RECEIVED':
             case 'AUCTION_WON':
             case 'SALE_COMPLETED':
-            case 'BID_ACCEPTED':
+            case 'PURCHASE_CONFIRMED':
                 return 'success';
+            case 'BID_ACCEPTED':
+                return 'warning'; // Urgent action required
             case 'BID_OUTBID':
             case 'AUCTION_LOST':
+            case 'PURCHASE_DECLINED':
+            case 'PURCHASE_EXPIRED':
                 return 'warning';
             case 'ERROR':
                 return 'error';
             default:
                 return 'info';
         }
+    };
+
+    // Check if notification is time-sensitive
+    const isTimeSensitive = (notification: Notification) => {
+        return notification.type === 'BID_ACCEPTED' &&
+            notification.data?.action_required === true;
+    };
+
+    // Get time remaining for time-sensitive notifications
+    const getTimeRemaining = (notification: Notification) => {
+        if (!notification.data?.expires_at) return null;
+
+        const now = new Date();
+        const expires = new Date(notification.data.expires_at);
+        const diffMs = expires.getTime() - now.getTime();
+
+        if (diffMs <= 0) return 'Expired';
+
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (hours > 0) return `${hours}h ${minutes}m left`;
+        return `${minutes}m left`;
+    };
+
+    const handlePendingPurchaseComplete = () => {
+        fetchNotifications(); // Refresh notifications
+        setPendingPurchaseModal({ open: false, purchaseData: null });
     };
 
     useEffect(() => {
@@ -271,6 +334,14 @@ export default function NotificationsPage() {
             fetchNotifications();
         }
     }, [status, router]);
+
+    // Auto-refresh notifications every 30 seconds
+    useEffect(() => {
+        if (status === 'authenticated') {
+            const interval = setInterval(fetchNotifications, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [status]);
 
     if (status === 'loading') {
         return (
@@ -287,6 +358,7 @@ export default function NotificationsPage() {
     }
 
     const unreadCount = notifications.filter(n => !n.read).length;
+    const urgentNotifications = notifications.filter(n => isTimeSensitive(n) && !n.read);
 
     return (
         <Container sx={{ marginTop: 4, marginBottom: 4 }}>
@@ -320,6 +392,22 @@ export default function NotificationsPage() {
                 </Box>
             </Box>
 
+            {/* Urgent Notifications Alert */}
+            {urgentNotifications.length > 0 && (
+                <Alert
+                    severity="warning"
+                    sx={{ mb: 3 }}
+                    icon={<UrgentIcon />}
+                >
+                    <Typography variant="subtitle2" gutterBottom>
+                        Action Required: You have {urgentNotifications.length} pending purchase confirmation{urgentNotifications.length > 1 ? 's' : ''}
+                    </Typography>
+                    <Typography variant="body2">
+                        Click on the notifications below to confirm your purchases within 24 hours.
+                    </Typography>
+                </Alert>
+            )}
+
             {/* Content */}
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
@@ -343,91 +431,125 @@ export default function NotificationsPage() {
                 </Paper>
             ) : (
                 <Stack spacing={2}>
-                    {notifications.map((notification) => (
-                        <Card
-                            key={notification.id}
-                            sx={{
-                                cursor: 'pointer',
-                                opacity: notification.read ? 0.7 : 1,
-                                border: notification.read ? 'none' : '2px solid',
-                                borderColor: notification.read ? 'none' : 'primary.main',
-                                '&:hover': {
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: 4,
-                                },
-                                transition: 'all 0.2s ease-in-out',
-                            }}
-                            onClick={() => handleNotificationClick(notification)}
-                        >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
-                                        <Box sx={{ color: `${getNotificationColor(notification.type)}.main` }}>
-                                            {getNotificationIcon(notification.type)}
-                                        </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                <Typography variant="h6" component="h3">
-                                                    {notification.title}
-                                                </Typography>
-                                                <Chip
-                                                    label={notification.type.replace('_', ' ')}
-                                                    color={getNotificationColor(notification.type) as any}
-                                                    size="small"
-                                                />
-                                                {!notification.read && (
-                                                    <Chip label="New" color="primary" size="small" />
-                                                )}
+                    {notifications.map((notification) => {
+                        const isUrgent = isTimeSensitive(notification);
+                        const timeRemaining = isUrgent ? getTimeRemaining(notification) : null;
+
+                        return (
+                            <Card
+                                key={notification.id}
+                                sx={{
+                                    cursor: 'pointer',
+                                    opacity: notification.read ? 0.7 : 1,
+                                    border: notification.read ? 'none' : '2px solid',
+                                    borderColor: notification.read ? 'none' :
+                                        isUrgent ? 'warning.main' : 'primary.main',
+                                    backgroundColor: isUrgent && !notification.read ?
+                                        'rgba(255, 152, 0, 0.1)' : 'background.paper',
+                                    '&:hover': {
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: 4,
+                                    },
+                                    transition: 'all 0.2s ease-in-out',
+                                }}
+                                onClick={() => handleNotificationClick(notification)}
+                            >
+                                <CardContent>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
+                                            <Box sx={{ color: `${getNotificationColor(notification.type)}.main` }}>
+                                                {getNotificationIcon(notification.type)}
                                             </Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                                {notification.message}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                                            </Typography>
+                                            <Box sx={{ flex: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                    <Typography variant="h6" component="h3">
+                                                        {notification.title}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={notification.type.replace('_', ' ')}
+                                                        color={getNotificationColor(notification.type) as any}
+                                                        size="small"
+                                                    />
+                                                    {!notification.read && (
+                                                        <Chip label="New" color="primary" size="small" />
+                                                    )}
+                                                    {isUrgent && (
+                                                        <Chip
+                                                            label="ACTION REQUIRED"
+                                                            color="warning"
+                                                            size="small"
+                                                            icon={<UrgentIcon />}
+                                                        />
+                                                    )}
+                                                </Box>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                    {notification.message}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                                                    </Typography>
+                                                    {timeRemaining && (
+                                                        <Chip
+                                                            label={timeRemaining}
+                                                            color={timeRemaining === 'Expired' ? 'error' : 'warning'}
+                                                            size="small"
+                                                            icon={<TimerIcon />}
+                                                        />
+                                                    )}
+                                                </Box>
+                                            </Box>
                                         </Box>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        {!notification.read && (
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            {!notification.read && (
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        markAsRead(notification.id);
+                                                    }}
+                                                    disabled={markingRead.has(notification.id)}
+                                                    title="Mark as read"
+                                                >
+                                                    {markingRead.has(notification.id) ? (
+                                                        <CircularProgress size={20} />
+                                                    ) : (
+                                                        <CheckIcon />
+                                                    )}
+                                                </IconButton>
+                                            )}
                                             <IconButton
                                                 size="small"
+                                                color="error"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    markAsRead(notification.id);
+                                                    deleteNotification(notification.id);
                                                 }}
-                                                disabled={markingRead.has(notification.id)}
-                                                title="Mark as read"
+                                                disabled={deletingIds.has(notification.id)}
+                                                title="Delete notification"
                                             >
-                                                {markingRead.has(notification.id) ? (
+                                                {deletingIds.has(notification.id) ? (
                                                     <CircularProgress size={20} />
                                                 ) : (
-                                                    <CheckIcon />
+                                                    <DeleteIcon />
                                                 )}
                                             </IconButton>
-                                        )}
-                                        <IconButton
-                                            size="small"
-                                            color="error"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteNotification(notification.id);
-                                            }}
-                                            disabled={deletingIds.has(notification.id)}
-                                            title="Delete notification"
-                                        >
-                                            {deletingIds.has(notification.id) ? (
-                                                <CircularProgress size={20} />
-                                            ) : (
-                                                <DeleteIcon />
-                                            )}
-                                        </IconButton>
+                                        </Box>
                                     </Box>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </Stack>
             )}
+
+            {/* Pending Purchase Modal */}
+            <PendingPurchaseModal
+                open={pendingPurchaseModal.open}
+                onClose={() => setPendingPurchaseModal({ open: false, purchaseData: null })}
+                purchaseData={pendingPurchaseModal.purchaseData}
+                onConfirmationComplete={handlePendingPurchaseComplete}
+            />
         </Container>
     );
 }

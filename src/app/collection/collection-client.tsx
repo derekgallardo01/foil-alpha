@@ -55,6 +55,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
+import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
 
 interface UserCard {
     id: number;
@@ -291,6 +292,8 @@ function EnhancedCardDisplay({
     const marketPrice = userCard.card.market_price || 0;
     const purchasePrice = userCard.original_purchase_price || 0;
     const currentListingPrice = userCard.fixed_price || userCard.reserve_price || 0;
+    const displayPrice = purchasePrice > 0 ? purchasePrice : marketPrice; // Show purchase price if available
+
 
     const profitLoss = marketPrice > 0 && purchasePrice > 0 ? marketPrice - purchasePrice : 0;
     const profitLossPercentage = purchasePrice > 0 ? (profitLoss / purchasePrice) * 100 : 0;
@@ -380,28 +383,30 @@ function EnhancedCardDisplay({
 
                 {/* Price Information */}
                 <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(150, 255, 155, 0.05)', borderRadius: 1 }}>
-                    {/* Market Price */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="body2" color="text.secondary">
-                            Market Price
+                            {purchasePrice > 0 ? 'Purchase Price' : 'Market Price'}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            {getTrendIcon()}
+                            {purchasePrice === 0 && getTrendIcon()} {/* Only show trend for market price */}
                             <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                                ${marketPrice.toFixed(2)}
+                                ${displayPrice.toFixed(2)}
                             </Typography>
                         </Box>
                     </Box>
 
-                    {/* Purchase Price */}
-                    {purchasePrice > 0 && (
+                    {/* Show market price separately if user has purchase price */}
+                    {purchasePrice > 0 && marketPrice > 0 && (
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="body2" color="text.secondary">
-                                Purchase Price
+                                Current Market Price
                             </Typography>
-                            <Typography variant="body2">
-                                ${purchasePrice.toFixed(2)}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                {getTrendIcon()}
+                                <Typography variant="body2">
+                                    ${marketPrice.toFixed(2)}
+                                </Typography>
+                            </Box>
                         </Box>
                     )}
 
@@ -769,11 +774,7 @@ export default function CollectionPage() {
 
     const fetchPendingPurchases = async () => {
         try {
-            const response = await fetch('/api/notifications?unread_only=true', {
-                headers: {
-                    Authorization: `Bearer ${session?.accessToken}`,
-                },
-            });
+            const response = await fetch('/api/notifications?unread_only=true');
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch notifications: ${response.statusText}`);
@@ -795,7 +796,7 @@ export default function CollectionPage() {
             );
 
             const purchaseData = purchaseNotifications.map((notif: any) => ({
-                transaction_id: notif.reference_id,
+                transaction_id: notif.data?.reference_id,
                 card_name: notif.data?.card_name || 'Unknown Card',
                 card_image: notif.data?.card_image || '/placeholder-card.png',
                 amount: notif.data?.winning_amount || notif.data?.amount || 0,
@@ -888,11 +889,14 @@ export default function CollectionPage() {
     const handleConfirmPurchase = (purchase: PendingPurchase) => {
         setSelectedPurchase(purchase);
         setConfirmationModalOpen(true);
+    
     };
 
     const handleConfirmationComplete = () => {
         fetchPendingPurchases();
         fetchUserCards();
+        setConfirmationModalOpen(false);
+        setSelectedPurchase(null);
     };
 
     const handleShowPriceHistory = (userCard: EnhancedUserCard) => {
@@ -1079,6 +1083,13 @@ export default function CollectionPage() {
                         You have {pendingPurchases.length} pending purchase confirmation{pendingPurchases.length > 1 ? 's' : ''} that require your attention!
                     </Alert>
                 )}
+
+                <PendingPurchasesWidget
+                    onPurchaseComplete={() => {
+                        fetchPendingPurchases();
+                        fetchUserCards();
+                    }}
+                />
 
                 {/* Collection Analytics */}
                 <CollectionAnalytics userCards={enhancedUserCards} />

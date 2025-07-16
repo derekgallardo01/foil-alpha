@@ -1,12 +1,13 @@
-// src/app/api/notifications/route.ts
+// src/app/api/notifications/route.ts - Fixed auth import
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '@/app/lib/auth-helper';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '../../lib/prisma';
 
 // GET /api/notifications - Get user notifications
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession();
+        const session = await getServerSession(authOptions);
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
 // PUT /api/notifications - Mark notification as read
 export async function PUT(request: NextRequest) {
     try {
-        const session = await getServerSession();
+        const session = await getServerSession(authOptions);
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -113,7 +114,7 @@ export async function PUT(request: NextRequest) {
 // POST /api/notifications - Create new notification
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession();
+        const session = await getServerSession(authOptions);
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
 // DELETE /api/notifications - Delete notification
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await getServerSession();
+        const session = await getServerSession(authOptions);
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
