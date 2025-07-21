@@ -408,8 +408,73 @@ model Transaction {
   @@map("transactions")
 }
 
+model admin_wallet {
+  id                      Int                       @id @default(autoincrement())
+  wallet_type             admin_wallet_wallet_type? @default(PLATFORM)
+  balance                 Decimal?                  @default(0.00) @db.Decimal(12, 2)
+  total_commissions       Decimal?                  @default(0.00) @db.Decimal(12, 2)
+  total_marketplace_sales Decimal?                  @default(0.00) @db.Decimal(12, 2)
+  created_at              DateTime?                 @default(now()) @db.DateTime(0)
+  updated_at              DateTime?                 @default(now()) @db.DateTime(0)
+}
+
+model admin_wallet_transactions {
+  id               Int                                        @id @default(autoincrement())
+  admin_wallet_id  Int
+  transaction_type admin_wallet_transactions_transaction_type
+  amount           Decimal                                    @db.Decimal(10, 2)
+  balance_before   Decimal                                    @db.Decimal(12, 2)
+  balance_after    Decimal                                    @db.Decimal(12, 2)
+  description      String?                                    @db.VarChar(255)
+  reference_type   String?                                    @db.VarChar(50)
+  reference_id     Int?
+  user_card_id     Int?
+  buyer_id         Int?
+  seller_id        Int?
+  card_id          Int?
+  commission_rate  Decimal?                                   @db.Decimal(5, 2)
+  admin_id         Int?
+  created_at       DateTime?                                  @default(now()) @db.DateTime(0)
+
+  @@index([admin_wallet_id], map: "admin_wallet_id")
+  @@index([created_at], map: "idx_created_at")
+  @@index([reference_type, reference_id], map: "idx_reference")
+  @@index([transaction_type], map: "idx_transaction_type")
+}
+
+model commission_settings {
+  id              Int                              @id @default(autoincrement())
+  setting_type    commission_settings_setting_type
+  setting_key     String                           @db.VarChar(50)
+  commission_rate Decimal                          @db.Decimal(5, 2)
+  is_active       Boolean?                         @default(true)
+  created_by      Int?
+  created_at      DateTime?                        @default(now()) @db.DateTime(0)
+  updated_at      DateTime?                        @default(now()) @db.DateTime(0)
+
+  @@unique([setting_type, setting_key], map: "unique_setting")
+  @@index([is_active], map: "idx_active")
+  @@index([setting_type], map: "idx_setting_type")
+}
+
 enum CardSource {
   API
   MANUAL
   MIXED
+}
+
+enum admin_wallet_wallet_type {
+  PLATFORM
+}
+
+enum commission_settings_setting_type {
+  GLOBAL
+  RARITY
+}
+
+enum admin_wallet_transactions_transaction_type {
+  COMMISSION
+  MARKETPLACE_SALE
+  WITHDRAWAL
+  ADJUSTMENT
 }

@@ -1,4 +1,4 @@
-// src/app/api/marketplace/route.ts - Fixed TypeScript issues
+// src/app/api/marketplace/route.ts - Updated with proper inventory management
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -40,10 +40,11 @@ export async function GET(request: NextRequest) {
         if (cardType) cardFilter.card_type = cardType;
         if (rarity) cardFilter.rarity = rarity;
 
-        // Build user card filter
+        // Updated user card filter - only show available cards
         const userCardFilter: Prisma.UserCardWhereInput = {
             is_for_sale: true,
-            is_sold: false,
+            is_sold: false, // IMPORTANT: Only show unsold cards
+            // Add additional checks to ensure card is still available
         };
 
         if (saleType) {
@@ -51,7 +52,10 @@ export async function GET(request: NextRequest) {
         } else {
             userCardFilter.OR = [
                 { sale_type: 'FIXED' },
-                { sale_type: 'AUCTION', auction_end: { gt: new Date() } },
+                {
+                    sale_type: 'AUCTION',
+                    auction_end: { gt: new Date() } // Only active auctions
+                },
             ];
         }
 
@@ -59,27 +63,45 @@ export async function GET(request: NextRequest) {
             search, setName, cardType, saleType, rarity, priceMin, priceMax, priceStatus, sortBy, page, limit,
         });
 
-        // Get catalog cards without problematic includes
+        // Get catalog cards - these have unlimited stock
         const catalogCards = await prisma.card.findMany({
             where: {
                 ...cardFilter,
                 market_price: { not: null, gt: 0 },
+                // Add a flag to identify catalog cards (you might need to add this field)
+                // OR check if this card has any active user listings to avoid duplicates
             },
             take: limit * 2,
             orderBy: getOrderBy(sortBy),
         });
 
-        // Get user cards for sale without problematic includes
+        // Get AVAILABLE user cards for sale (not sold, not expired)
         const userCardsForSale = await prisma.userCard.findMany({
             where: userCardFilter,
             take: limit * 2,
             orderBy: { created_at: 'desc' },
         });
 
+        // Double-check that user cards are still available
+        const availableUserCards = [];
+        for (const userCard of userCardsForSale) {
+            // Extra validation to ensure card is really available
+            if (!userCard.is_sold && userCard.is_for_sale) {
+                // For auctions, check if not expired
+                if (userCard.sale_type === 'AUCTION' && userCard.auction_end) {
+                    if (new Date(userCard.auction_end) > new Date()) {
+                        availableUserCards.push(userCard);
+                    }
+                } else if (userCard.sale_type === 'FIXED') {
+                    availableUserCards.push(userCard);
+                }
+            }
+        }
+
         // Filter user cards that match our card filter
         const userCardsWithMatchingCards = [];
-        if (userCardsForSale.length > 0) {
-            const userCardIds = userCardsForSale.map(uc => uc.card_id);
+        if (availableUserCards.length > 0) {
+            const userCardIds = availableUserCards.map(uc => uc.card_id);
             const matchingCards = await prisma.card.findMany({
                 where: {
                     id: { in: userCardIds },
@@ -88,7 +110,7 @@ export async function GET(request: NextRequest) {
             });
             const matchingCardIds = new Set(matchingCards.map(c => c.id));
 
-            for (const userCard of userCardsForSale) {
+            for (const userCard of availableUserCards) {
                 if (matchingCardIds.has(userCard.card_id)) {
                     userCardsWithMatchingCards.push(userCard);
                 }
@@ -116,20 +138,14 @@ export async function GET(request: NextRequest) {
             totalCatalogCount,
             totalUserCardsCount
         ] = await Promise.all([
-            // Get Pokemon sets - fetch all since we need them for lookup
             prisma.pokemonSet.findMany(),
-            // Get rarities
             uniqueCardIds.length > 0 ? prisma.rarity.findMany() : [],
-            // Get subtypes
             uniqueCardIds.length > 0 ? prisma.subtype.findMany() : [],
-            // Get supertypes
             uniqueCardIds.length > 0 ? prisma.supertype.findMany() : [],
-            // Get owners
             ownerIds.length > 0 ? prisma.user.findMany({
                 where: { id: { in: ownerIds } },
                 select: { id: true, name: true, role: true }
             }) : [],
-            // Get bids
             userCardIds.length > 0 ? prisma.bid.findMany({
                 where: {
                     userCardId: { in: userCardIds },
@@ -137,15 +153,18 @@ export async function GET(request: NextRequest) {
                 },
                 orderBy: { amount: 'desc' }
             }) : [],
-            // Get counts
             prisma.card.count({
                 where: {
                     ...cardFilter,
                     market_price: { not: null, gt: 0 },
                 },
             }),
+            // Updated count to only include available cards
             prisma.userCard.count({
-                where: userCardFilter,
+                where: {
+                    ...userCardFilter,
+                    is_sold: false, // Ensure we only count unsold cards
+                },
             })
         ]);
 
@@ -179,12 +198,15 @@ export async function GET(request: NextRequest) {
         // Convert to listings format
         const listings = [];
 
-        // Process catalog cards
+        // Process catalog cards - these are always available
         for (const card of catalogCards) {
             const marketPrice = Number(card.market_price || 0);
 
             if (priceMin !== null && marketPrice < priceMin) continue;
             if (priceMax !== null && marketPrice > priceMax) continue;
+
+            // Check if this card is already being sold by users to avoid confusion
+            const hasUserListings = userCardsWithMatchingCards.some(uc => uc.card_id === card.id);
 
             const listing = {
                 id: `catalog-${card.id}`,
@@ -219,6 +241,7 @@ export async function GET(request: NextRequest) {
                 is_auction_expired: false,
                 notes: 'New card from Pokemon TCG catalog',
                 availability: 'IN_STOCK' as const,
+                has_user_listings: hasUserListings, // Flag to indicate user competition
             };
 
             // Apply price status filter for catalog cards
@@ -227,7 +250,7 @@ export async function GET(request: NextRequest) {
             listings.push(listing);
         }
 
-        // Process user cards
+        // Process available user cards
         for (const userCard of userCardsWithMatchingCards) {
             try {
                 // Get the card data
@@ -235,6 +258,20 @@ export async function GET(request: NextRequest) {
                     await prisma.card.findUnique({ where: { id: userCard.card_id } });
 
                 if (!card) continue;
+
+                // Extra check: verify this card is really still available
+                const cardStillAvailable = await prisma.userCard.findUnique({
+                    where: {
+                        id: userCard.id,
+                        is_for_sale: true,
+                        is_sold: false
+                    }
+                });
+
+                if (!cardStillAvailable) {
+                    console.log(`Skipping card ${userCard.id} - no longer available`);
+                    continue;
+                }
 
                 const userCardBids = bidsByUserCard.get(userCard.id) || [];
                 const highestBid = userCardBids.length > 0 ? Number(userCardBids[0].amount) : null;
@@ -253,6 +290,12 @@ export async function GET(request: NextRequest) {
                     const now = Date.now();
                     time_remaining = Math.max(0, endTime - now);
                     is_auction_expired = time_remaining <= 0;
+
+                    // Skip expired auctions
+                    if (is_auction_expired) {
+                        console.log(`Skipping expired auction ${userCard.id}`);
+                        continue;
+                    }
                 }
 
                 const listing = {
@@ -308,7 +351,7 @@ export async function GET(request: NextRequest) {
         // Apply pagination
         const paginatedListings = listings.slice(skip, skip + limit);
 
-        console.log(`Returning ${paginatedListings.length} listings (Total found: ${listings.length})`);
+        console.log(`Returning ${paginatedListings.length} available listings (Total found: ${listings.length})`);
 
         return NextResponse.json({
             listings: paginatedListings,

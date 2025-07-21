@@ -46,6 +46,7 @@ import {
     Storefront as Store,
     HistoryToggleOff as History,
     TrendingUp,
+    Percent as PercentIcon,
 } from "@mui/icons-material";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
@@ -68,7 +69,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
     const router = useRouter();
     const pathname = usePathname();
     const { data: session } = useSession();
-    const [expandedItems, setExpandedItems] = useState<string[]>(['users', 'cards', 'transactions']);
+    const [expandedItems, setExpandedItems] = useState<string[]>(['users', 'cards', 'transactions', 'commissionmanagement']);
 
     // Sample data - replace with real data from APIs
     const [stats] = useState({
@@ -143,6 +144,29 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                     title: "Wallet Transactions",
                     icon: <PaymentIcon />,
                     path: "/admin/wallets/transactions",
+                },
+            ],
+        },
+
+        // COMMISSION MANAGEMENT
+        {
+            title: "Commission Management",
+            icon: <PercentIcon />,
+            children: [
+                {
+                    title: "Commission Settings",
+                    icon: <PercentIcon />,
+                    path: "/admin/commission",
+                },
+                {
+                    title: "Platform Wallet",
+                    icon: <MoneyIcon />,
+                    path: "/admin/commission/wallet",
+                },
+                {
+                    title: "Commission Reports",
+                    icon: <AnalyticsIcon />,
+                    path: "/admin/commission/reports",
                 },
             ],
         },

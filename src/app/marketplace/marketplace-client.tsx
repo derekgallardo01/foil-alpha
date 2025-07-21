@@ -57,6 +57,7 @@ import PriceChart from '../components/PriceChart';
 import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../components/PriceDisplay';
 import CurrencySelector from '../components/CurrencySelector';
 import { useCurrencyContext } from '../lib/currency-context';
+import PurchaseConfirmationModal from '../components/PurchaseConfirmationModal';    
 
 interface Card {
     id: number;
@@ -159,6 +160,7 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
         if (priceDiff > 0) return { color: 'error.main', label: `${priceDiff.toFixed(1)}% Above Market` };
         return { color: 'warning.main', label: `${Math.abs(priceDiff).toFixed(1)}% Below Market` };
     };
+    
 
     const priceStatus = getPriceStatus();
 

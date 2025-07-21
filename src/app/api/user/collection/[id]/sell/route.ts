@@ -1,8 +1,9 @@
-// src/app/api/user/collection/[id]/sell/route.ts - Fixed to use real session
+// src/app/api/user/collection/[id]/sell/route.ts - Updated with Commission System
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { prisma } from '../../../../../lib/prisma';
+import { calculateCommission } from '../../../../../lib/commission-utils';
 
 // POST /api/user/collection/[id]/sell - List a card for sale
 export async function POST(
@@ -20,7 +21,7 @@ export async function POST(
         const userName = session.user.name || 'Unknown User';
         const userEmail = session.user.email || 'unknown';
 
-        console.log(`🏷️ Sell API: ${userName} (${userEmail}) - ID: ${userId}`);
+        console.log(`🏷️ Sell API with Commission: ${userName} (${userEmail}) - ID: ${userId}`);
 
         const { id: userCardId } = await context.params;
         const body = await request.json();
@@ -71,7 +72,7 @@ export async function POST(
         // Get card details separately
         const card = await prisma.card.findUnique({
             where: { id: userCard.card_id },
-            select: { name: true, id: true }
+            select: { name: true, id: true, rarity: true }
         });
 
         // Get owner details separately
@@ -88,7 +89,8 @@ export async function POST(
             userCardId: userCard.id,
             cardOwner: owner,
             currentUser: { id: userId, name: userName, email: userEmail },
-            cardName: card.name
+            cardName: card.name,
+            cardRarity: card.rarity
         });
 
         if (userCard.owner_id !== userId) {
@@ -112,7 +114,52 @@ export async function POST(
             return NextResponse.json({ error: 'This card has already been sold' }, { status: 400 });
         }
 
-        console.log('✅ Ownership verified! Updating card...');
+        console.log('✅ Ownership verified! Calculating commission and updating card...');
+
+        // Calculate commission for the card price to show user what they'll receive
+        let commissionInfo = null;
+        let sellerWillReceive = null;
+        let buyerWillPay = null;
+
+        if (sale_type === 'FIXED' && fixed_price) {
+            const commission = await calculateCommission(Number(fixed_price), card.rarity);
+            commissionInfo = {
+                commission_rate: commission.commission_rate,
+                commission_amount: commission.commission_amount,
+                total_commission_collected: commission.commission_amount * 2, // Double commission for user-to-user
+            };
+            sellerWillReceive = commission.seller_receives;
+            buyerWillPay = commission.buyer_pays;
+
+            console.log('💰 Commission calculation for fixed price:', {
+                cardPrice: fixed_price,
+                rarity: card.rarity,
+                commissionRate: commission.commission_rate,
+                sellerReceives: sellerWillReceive,
+                buyerPays: buyerWillPay,
+                totalCommissionForPlatform: commissionInfo.total_commission_collected
+            });
+        }
+
+        if (sale_type === 'AUCTION' && reserve_price !== undefined && reserve_price > 0) {
+            const commission = await calculateCommission(Number(reserve_price), card.rarity);
+            commissionInfo = {
+                commission_rate: commission.commission_rate,
+                commission_amount: commission.commission_amount,
+                total_commission_collected: commission.commission_amount * 2, // Double commission for user-to-user
+            };
+            sellerWillReceive = commission.seller_receives;
+            buyerWillPay = commission.buyer_pays;
+
+            console.log('💰 Commission calculation for reserve price:', {
+                reservePrice: reserve_price,
+                rarity: card.rarity,
+                commissionRate: commission.commission_rate,
+                sellerReceives: sellerWillReceive,
+                buyerPays: buyerWillPay,
+                totalCommissionForPlatform: commissionInfo.total_commission_collected
+            });
+        }
 
         // Prepare update data
         const updateData: any = {
@@ -139,26 +186,45 @@ export async function POST(
             data: updateData
         });
 
-        console.log('✅ Card listed successfully:', {
+        console.log('✅ Card listed successfully with commission info:', {
             id: updatedCard.id,
             cardName: card.name,
             saleType: sale_type,
             price: sale_type === 'FIXED' ? Number(fixed_price) : Number(reserve_price),
-            owner: userName
+            owner: userName,
+            commissionRate: commissionInfo?.commission_rate,
+            sellerWillReceive,
+            buyerWillPay
         });
 
-        return NextResponse.json({
+        // Prepare response with commission information
+        const responseData: any = {
             success: true,
             message: `${card.name} listed for ${sale_type.toLowerCase()} sale`,
             listing: {
                 id: parseInt(userCardId),
                 card_name: card.name,
+                card_rarity: card.rarity,
                 sale_type: sale_type,
                 price: sale_type === 'FIXED' ? Number(fixed_price) : Number(reserve_price),
                 auction_end: updateData.auction_end,
                 owner: userName
             }
-        });
+        };
+
+        // Add commission info if calculated
+        if (commissionInfo) {
+            responseData.commission_info = {
+                commission_rate: commissionInfo.commission_rate.toFixed(2) + '%',
+                commission_per_side: commissionInfo.commission_amount.toFixed(2),
+                total_platform_commission: commissionInfo.total_commission_collected.toFixed(2),
+                seller_will_receive: sellerWillReceive?.toFixed(2),
+                buyer_will_pay: buyerWillPay?.toFixed(2),
+                explanation: `Commission is ${commissionInfo.commission_rate.toFixed(2)}% collected from both buyer and seller. You will receive $${sellerWillReceive?.toFixed(2)} after commission.`
+            };
+        }
+
+        return NextResponse.json(responseData);
 
     } catch (error) {
         console.error('❌ Error listing card for sale:', error);
