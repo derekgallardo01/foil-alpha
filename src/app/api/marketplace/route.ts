@@ -1,4 +1,4 @@
-// src/app/api/marketplace/route.ts - Updated with proper inventory management
+// src/app/api/marketplace/route.ts - Fixed to properly hide sold cards
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -40,11 +40,15 @@ export async function GET(request: NextRequest) {
         if (cardType) cardFilter.card_type = cardType;
         if (rarity) cardFilter.rarity = rarity;
 
-        // Updated user card filter - only show available cards
+        // 🔥 CRITICAL FIX: Strict filtering for AVAILABLE user cards only
         const userCardFilter: Prisma.UserCardWhereInput = {
             is_for_sale: true,
-            is_sold: false, // IMPORTANT: Only show unsold cards
-            // Add additional checks to ensure card is still available
+            is_sold: false, // ✅ Must be unsold
+            // 🚨 Additional safety checks
+            AND: [
+                { is_for_sale: { equals: true } },
+                { is_sold: { equals: false } }
+            ]
         };
 
         if (saleType) {
@@ -59,8 +63,9 @@ export async function GET(request: NextRequest) {
             ];
         }
 
-        console.log('Marketplace query filters:', {
+        console.log('🔍 Marketplace query filters:', {
             search, setName, cardType, saleType, rarity, priceMin, priceMax, priceStatus, sortBy, page, limit,
+            userCardFilter
         });
 
         // Get catalog cards - these have unlimited stock
@@ -68,40 +73,82 @@ export async function GET(request: NextRequest) {
             where: {
                 ...cardFilter,
                 market_price: { not: null, gt: 0 },
-                // Add a flag to identify catalog cards (you might need to add this field)
-                // OR check if this card has any active user listings to avoid duplicates
             },
             take: limit * 2,
             orderBy: getOrderBy(sortBy),
         });
 
-        // Get AVAILABLE user cards for sale (not sold, not expired)
+        // 🔥 CRITICAL: Get ONLY truly available user cards
+        console.log('📋 Fetching user cards with filter:', userCardFilter);
         const userCardsForSale = await prisma.userCard.findMany({
             where: userCardFilter,
             take: limit * 2,
-            orderBy: { created_at: 'desc' },
+            orderBy: { created_at: 'desc' }
         });
 
-        // Double-check that user cards are still available
-        const availableUserCards = [];
+        console.log(`📊 Found ${userCardsForSale.length} user cards for sale`);
+
+        // Get card names for debugging
+        if (userCardsForSale.length > 0) {
+            const cardIds = userCardsForSale.map(uc => uc.card_id);
+            const debugCards = await prisma.card.findMany({
+                where: { id: { in: cardIds } },
+                select: { id: true, name: true }
+            });
+            const cardNameMap = new Map(debugCards.map(c => [c.id, c.name]));
+
+            userCardsForSale.forEach(uc => {
+                const cardName = cardNameMap.get(uc.card_id) || 'Unknown';
+                console.log(`  - Card ${uc.id}: ${cardName} | For Sale: ${uc.is_for_sale} | Sold: ${uc.is_sold} | Sale Type: ${uc.sale_type}`);
+            });
+        }
+
+        // 🔥 CRITICAL: Double-check each card individually to ensure it's really available
+        const trulyAvailableUserCards = [];
         for (const userCard of userCardsForSale) {
-            // Extra validation to ensure card is really available
-            if (!userCard.is_sold && userCard.is_for_sale) {
-                // For auctions, check if not expired
-                if (userCard.sale_type === 'AUCTION' && userCard.auction_end) {
-                    if (new Date(userCard.auction_end) > new Date()) {
-                        availableUserCards.push(userCard);
-                    }
-                } else if (userCard.sale_type === 'FIXED') {
-                    availableUserCards.push(userCard);
+            // 🚨 Real-time verification that card is still available
+            const currentStatus = await prisma.userCard.findUnique({
+                where: { id: userCard.id },
+                select: {
+                    id: true,
+                    is_for_sale: true,
+                    is_sold: true,
+                    sale_type: true,
+                    auction_end: true,
+                    owner_id: true
                 }
+            });
+
+            if (!currentStatus) {
+                console.log(`⚠️  Card ${userCard.id} no longer exists, skipping`);
+                continue;
+            }
+
+            // ✅ Strict availability check
+            if (currentStatus.is_for_sale && !currentStatus.is_sold) {
+                // For auctions, check if not expired
+                if (currentStatus.sale_type === 'AUCTION' && currentStatus.auction_end) {
+                    if (new Date(currentStatus.auction_end) > new Date()) {
+                        trulyAvailableUserCards.push(userCard);
+                        console.log(`✅ Card ${userCard.id} is available for auction`);
+                    } else {
+                        console.log(`⏰ Card ${userCard.id} auction expired, skipping`);
+                    }
+                } else if (currentStatus.sale_type === 'FIXED') {
+                    trulyAvailableUserCards.push(userCard);
+                    console.log(`✅ Card ${userCard.id} is available for fixed price`);
+                }
+            } else {
+                console.log(`❌ Card ${userCard.id} is NOT available: for_sale=${currentStatus.is_for_sale}, sold=${currentStatus.is_sold}`);
             }
         }
 
+        console.log(`🎯 Final available user cards: ${trulyAvailableUserCards.length} out of ${userCardsForSale.length} initially found`);
+
         // Filter user cards that match our card filter
         const userCardsWithMatchingCards = [];
-        if (availableUserCards.length > 0) {
-            const userCardIds = availableUserCards.map(uc => uc.card_id);
+        if (trulyAvailableUserCards.length > 0) {
+            const userCardIds = trulyAvailableUserCards.map(uc => uc.card_id);
             const matchingCards = await prisma.card.findMany({
                 where: {
                     id: { in: userCardIds },
@@ -110,12 +157,14 @@ export async function GET(request: NextRequest) {
             });
             const matchingCardIds = new Set(matchingCards.map(c => c.id));
 
-            for (const userCard of availableUserCards) {
+            for (const userCard of trulyAvailableUserCards) {
                 if (matchingCardIds.has(userCard.card_id)) {
                     userCardsWithMatchingCards.push(userCard);
                 }
             }
         }
+
+        console.log(`🎯 User cards matching filters: ${userCardsWithMatchingCards.length}`);
 
         // Get related data separately
         const allCardIds = [
@@ -159,11 +208,18 @@ export async function GET(request: NextRequest) {
                     market_price: { not: null, gt: 0 },
                 },
             }),
-            // Updated count to only include available cards
+            // 🔥 CRITICAL: Count only truly available cards
             prisma.userCard.count({
                 where: {
-                    ...userCardFilter,
-                    is_sold: false, // Ensure we only count unsold cards
+                    is_for_sale: true,
+                    is_sold: false, // ✅ Only unsold cards
+                    OR: [
+                        { sale_type: 'FIXED' },
+                        {
+                            sale_type: 'AUCTION',
+                            auction_end: { gt: new Date() }
+                        }
+                    ]
                 },
             })
         ]);
@@ -241,7 +297,7 @@ export async function GET(request: NextRequest) {
                 is_auction_expired: false,
                 notes: 'New card from Pokemon TCG catalog',
                 availability: 'IN_STOCK' as const,
-                has_user_listings: hasUserListings, // Flag to indicate user competition
+                has_user_listings: hasUserListings,
             };
 
             // Apply price status filter for catalog cards
@@ -250,26 +306,40 @@ export async function GET(request: NextRequest) {
             listings.push(listing);
         }
 
-        // Process available user cards
+        // 🔥 CRITICAL: Process ONLY verified available user cards
         for (const userCard of userCardsWithMatchingCards) {
             try {
+                // 🚨 FINAL verification - check one more time that card is available
+                const finalCheck = await prisma.userCard.findUnique({
+                    where: { id: userCard.id },
+                    select: {
+                        id: true,
+                        is_for_sale: true,
+                        is_sold: true,
+                        sale_type: true,
+                        auction_end: true
+                    }
+                });
+
+                if (!finalCheck || !finalCheck.is_for_sale || finalCheck.is_sold) {
+                    console.log(`🚫 FINAL CHECK FAILED: Card ${userCard.id} is no longer available`);
+                    continue;
+                }
+
+                // Check auction expiry one more time
+                if (finalCheck.sale_type === 'AUCTION' && finalCheck.auction_end) {
+                    if (new Date(finalCheck.auction_end) <= new Date()) {
+                        console.log(`🚫 FINAL CHECK: Card ${userCard.id} auction has expired`);
+                        continue;
+                    }
+                }
+
                 // Get the card data
                 const card = catalogCards.find(c => c.id === userCard.card_id) ||
                     await prisma.card.findUnique({ where: { id: userCard.card_id } });
 
-                if (!card) continue;
-
-                // Extra check: verify this card is really still available
-                const cardStillAvailable = await prisma.userCard.findUnique({
-                    where: {
-                        id: userCard.id,
-                        is_for_sale: true,
-                        is_sold: false
-                    }
-                });
-
-                if (!cardStillAvailable) {
-                    console.log(`Skipping card ${userCard.id} - no longer available`);
+                if (!card) {
+                    console.log(`🚫 Card data not found for userCard ${userCard.id}`);
                     continue;
                 }
 
@@ -291,9 +361,9 @@ export async function GET(request: NextRequest) {
                     time_remaining = Math.max(0, endTime - now);
                     is_auction_expired = time_remaining <= 0;
 
-                    // Skip expired auctions
+                    // Skip expired auctions (should already be filtered, but double-check)
                     if (is_auction_expired) {
-                        console.log(`Skipping expired auction ${userCard.id}`);
+                        console.log(`🚫 Skipping expired auction ${userCard.id} (final check)`);
                         continue;
                     }
                 }
@@ -339,8 +409,9 @@ export async function GET(request: NextRequest) {
                 if (priceStatus && !matchesPriceStatus(listing, priceStatus)) continue;
 
                 listings.push(listing);
+                console.log(`✅ Added listing for card ${userCard.id}: ${card.name}`);
             } catch (error) {
-                console.error(`Error processing userCard ${userCard.id}:`, error);
+                console.error(`❌ Error processing userCard ${userCard.id}:`, error);
                 continue;
             }
         }
@@ -351,7 +422,8 @@ export async function GET(request: NextRequest) {
         // Apply pagination
         const paginatedListings = listings.slice(skip, skip + limit);
 
-        console.log(`Returning ${paginatedListings.length} available listings (Total found: ${listings.length})`);
+        console.log(`📦 Returning ${paginatedListings.length} available listings (Total found: ${listings.length})`);
+        console.log(`📊 Stats: ${listings.filter(l => l.type === 'CATALOG').length} catalog cards, ${listings.filter(l => l.type === 'USER_CARD').length} user cards`);
 
         return NextResponse.json({
             listings: paginatedListings,

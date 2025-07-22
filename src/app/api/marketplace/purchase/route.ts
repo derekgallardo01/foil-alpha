@@ -212,19 +212,45 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       commission_rate: commission.commission_rate
     }, tx);
 
-    // 🔄 CRITICAL: Transfer card ownership instead of creating a copy
-    await tx.userCard.update({
+    console.log(`🔍 BEFORE UPDATE - Card ${userCardId} status:`, {
+      is_for_sale: userCard.is_for_sale,
+      is_sold: userCard.is_sold,
+      owner_id: userCard.owner_id
+    });
+
+    // Replace the update with this:
+    const updatedCard = await tx.userCard.update({
       where: { id: userCardId },
       data: {
-        owner_id: buyerId, // Transfer to new owner
-        is_for_sale: false, // Remove from marketplace
-        is_sold: true, // Mark as sold
+        owner_id: buyerId,
+        is_for_sale: false,
+        is_sold: true,
         sale_type: null,
         fixed_price: null,
         auction_end: null,
         notes: `Purchased from ${owner.name} for $${cardPrice.toFixed(2)} (${commission.commission_rate}% commission) - Transferred ${new Date().toLocaleDateString()}`
       }
     });
+
+    // Right AFTER the update
+    console.log(`🔍 AFTER UPDATE - Card ${userCardId} status:`, {
+      is_for_sale: updatedCard.is_for_sale,
+      is_sold: updatedCard.is_sold,
+      owner_id: updatedCard.owner_id
+    });
+
+    // Verify the update with a fresh query
+    const verifyUpdate = await tx.userCard.findUnique({
+      where: { id: userCardId },
+      select: {
+        id: true,
+        is_for_sale: true,
+        is_sold: true,
+        owner_id: true
+      }
+    });
+
+    console.log(`🔍 VERIFY UPDATE - Fresh query for card ${userCardId}:`, verifyUpdate);
 
     // Record wallet transactions
     await Promise.all([

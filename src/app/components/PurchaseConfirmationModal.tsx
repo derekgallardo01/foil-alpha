@@ -1,7 +1,6 @@
 // src/app/components/PurchaseConfirmationModal.tsx
 'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -10,96 +9,86 @@ import {
     Button,
     Typography,
     Box,
-    CircularProgress,
+    Card,
+    CardMedia,
+    Chip,
     Alert,
+    CircularProgress,
+    Paper,
+    Grid,
     Divider,
-    Chip
+    Skeleton
 } from '@mui/material';
 import {
-    ShoppingCart as ShoppingCartIcon,
-    CheckCircle as CheckCircleIcon,
+    ShoppingCart as CartIcon,
+    AttachMoney as MoneyIcon,
+    CheckCircle as CheckIcon,
+    Warning as WarningIcon,
+    Percent as PercentIcon,
+    AccountBalance as WalletIcon,
     Store as StoreIcon,
     Person as PersonIcon
 } from '@mui/icons-material';
-import Image from 'next/image';
 import { toast } from 'react-toastify';
+
+interface Card {
+    id: number;
+    name: string;
+    set_name: string;
+    set_number: string;
+    rarity: string;
+    card_type: string;
+    image_url: string;
+    small_image_url: string;
+    market_price?: number;
+}
+
+interface Listing {
+    id: string;
+    type: 'CATALOG' | 'USER_CARD';
+    user_card_id?: number;
+    card: Card;
+    owner: { id: number | null; name: string; role?: string };
+    condition: string;
+    sale_type: 'FIXED' | 'AUCTION';
+    fixed_price: number | null;
+    reserve_price: number | null;
+    current_price: number;
+    notes: string | null;
+    availability?: string; // Add this for compatibility
+}
+
+interface CommissionInfo {
+    commission_rate: number;
+    commission_amount: number;
+    buyer_pays: number;
+    seller_receives: number;
+    admin_receives: number;
+}
 
 interface PurchaseConfirmationModalProps {
     open: boolean;
     onClose: () => void;
-    listingData?: {
-        id: string;
-        type: 'CATALOG' | 'USER_CARD';
-        user_card_id?: number;
-        card: {
-            id: number;
-            name: string;
-            set_name: string;
-            set_number: string;
-            rarity: string;
-            image_url: string;
-            small_image_url: string;
-        };
-        owner: {
-            id: number;
-            name: string;
-            role: string;
-        };
-        condition: string;
-        current_price: number;
-        availability: string;
-    } | null;
+    listingData: Listing | null; // Changed from listing to listingData for compatibility
     onPurchaseComplete?: () => void;
 }
 
 export default function PurchaseConfirmationModal({
     open,
     onClose,
-    listingData,
+    listingData, // Changed from listing to listingData
     onPurchaseComplete
 }: PurchaseConfirmationModalProps) {
-    const [purchasing, setPurchasing] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState(false);
+    const [commissionInfo, setCommissionInfo] = useState<CommissionInfo | null>(null);
+    const [loadingCommission, setLoadingCommission] = useState(false);
 
-    const handleConfirmPurchase = async () => {
-        if (!listingData) return;
-
-        setPurchasing(true);
-        setError(null);
-
-        try {
-            const requestBody = listingData.type === 'CATALOG'
-                ? { catalog_card_id: listingData.card.id, quantity: 1 }
-                : { user_card_id: listingData.user_card_id };
-
-            const response = await fetch('/api/marketplace/purchase', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                const message = listingData.type === 'CATALOG'
-                    ? `Successfully purchased ${data.purchase_details.card_name}!`
-                    : `Successfully purchased ${data.purchase_details.card_name}!`;
-
-                toast.success(message);
-                onPurchaseComplete?.();
-                onClose();
-            } else {
-                setError(data.error || 'Failed to purchase card');
-            }
-        } catch (error) {
-            console.error('Purchase error:', error);
-            setError('Failed to purchase card. Please try again.');
-        } finally {
-            setPurchasing(false);
-        }
+    const formatPrice = (price: number | null) => {
+        if (!price) return 'N/A';
+        return `$${Number(price).toFixed(2)}`;
     };
-
-    const formatPrice = (price: number) => `$${price.toFixed(2)}`;
 
     const getRarityColor = (rarity: string) => {
         switch (rarity.toLowerCase()) {
@@ -112,13 +101,182 @@ export default function PurchaseConfirmationModal({
         }
     };
 
+    // Calculate commission when modal opens
+    useEffect(() => {
+        if (open && listingData) {
+            calculateCommission();
+        }
+    }, [open, listingData]);
+
+    const calculateCommission = async () => {
+        if (!listingData) return;
+
+        setLoadingCommission(true);
+        try {
+            const cardPrice = listingData.fixed_price || listingData.current_price || 0;
+
+            // Call commission calculation API
+            const response = await fetch('/api/commission/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    card_price: cardPrice,
+                    card_rarity: listingData.card.rarity,
+                    transaction_type: listingData.type === 'CATALOG' ? 'MARKETPLACE_SALE' : 'USER_SALE'
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setCommissionInfo(data);
+            } else {
+                // Fallback calculation
+                const commissionRate = 5; // Default 5%
+                const commissionAmount = (cardPrice * commissionRate) / 100;
+
+                if (listingData.type === 'CATALOG') {
+                    // Marketplace sale: buyer pays price + commission, platform gets full amount
+                    setCommissionInfo({
+                        commission_rate: commissionRate,
+                        commission_amount: commissionAmount,
+                        buyer_pays: cardPrice + commissionAmount,
+                        seller_receives: 0, // Platform sale
+                        admin_receives: cardPrice + commissionAmount
+                    });
+                } else {
+                    // User sale: buyer pays price + commission, seller gets price - commission
+                    setCommissionInfo({
+                        commission_rate: commissionRate,
+                        commission_amount: commissionAmount,
+                        buyer_pays: cardPrice + commissionAmount,
+                        seller_receives: cardPrice - commissionAmount,
+                        admin_receives: commissionAmount * 2 // Double commission
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to calculate commission:', error);
+            // Use fallback calculation on error
+            const cardPrice = listingData.fixed_price || listingData.current_price || 0;
+            const commissionRate = 5;
+            const commissionAmount = (cardPrice * commissionRate) / 100;
+
+            setCommissionInfo({
+                commission_rate: commissionRate,
+                commission_amount: commissionAmount,
+                buyer_pays: cardPrice + commissionAmount,
+                seller_receives: listingData.type === 'CATALOG' ? 0 : cardPrice - commissionAmount,
+                admin_receives: listingData.type === 'CATALOG' ? cardPrice + commissionAmount : commissionAmount * 2
+            });
+        } finally {
+            setLoadingCommission(false);
+        }
+    };
+
+    const handlePurchase = async () => {
+        if (!listingData) return;
+        console.log('🔍 DEBUG: listingData:', {
+            id: listingData.id,
+            type: listingData.type,
+            user_card_id: listingData.user_card_id,
+            card_id: listingData.card.id,
+            owner: listingData.owner
+        });
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            let requestBody: any;
+
+            if (listingData.type === 'CATALOG') {
+                requestBody = {
+                    catalog_card_id: listingData.card.id,
+                    quantity: 1
+                };
+            } else if (listingData.type === 'USER_CARD') {
+                if (!listingData.user_card_id) {
+                    throw new Error('User card ID is missing');
+                }
+                requestBody = {
+                    user_card_id: listingData.user_card_id
+                };
+            } else {
+                throw new Error(`Invalid listing type: ${listingData.type}`);
+            }
+
+            console.log('🛒 Processing purchase:', requestBody);
+
+            const response = await fetch('/api/marketplace/purchase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                let errorMessage = `Failed to purchase: ${response.status} ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.details || errorMessage;
+                } catch (parseError) {
+                    console.error('Could not parse error response:', parseError);
+                }
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                setSuccess(true);
+
+                const cardName = data.purchase_details?.card_name || listingData.card.name;
+                const totalPaid = data.purchase_details?.total_paid || data.purchase_details?.total_cost;
+
+                toast.success(`Successfully purchased ${cardName}!`);
+
+                // Call the callback to refresh the parent component
+                if (onPurchaseComplete) {
+                    onPurchaseComplete();
+                }
+
+                // Auto-close after 3 seconds
+                setTimeout(() => {
+                    handleClose();
+                }, 3000);
+            } else {
+                throw new Error(data.error || data.message || 'Purchase failed');
+            }
+
+        } catch (err) {
+            console.error('Purchase error:', err);
+            setError(err instanceof Error ? err.message : 'Unknown error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleClose = () => {
+        if (!loading) {
+            onClose();
+            setError(null);
+            setSuccess(false);
+            setCommissionInfo(null);
+        }
+    };
+
     if (!listingData) return null;
+
+    const cardPrice = listingData.fixed_price || listingData.current_price || 0;
+    const isMarketplaceSale = listingData.type === 'CATALOG';
 
     return (
         <Dialog
             open={open}
-            onClose={onClose}
-            maxWidth="sm"
+            onClose={handleClose}
+            maxWidth="md"
             fullWidth
             PaperProps={{
                 sx: {
@@ -135,8 +293,10 @@ export default function PurchaseConfirmationModal({
                 borderBottom: '1px solid rgba(150, 255, 155, 0.2)',
                 pb: 2
             }}>
-                <ShoppingCartIcon />
-                Confirm Purchase
+                <CartIcon />
+                <Typography variant="h6">
+                    {success ? 'Purchase Complete!' : 'Confirm Purchase'}
+                </Typography>
             </DialogTitle>
 
             <DialogContent sx={{ pt: 3 }}>
@@ -146,118 +306,184 @@ export default function PurchaseConfirmationModal({
                     </Alert>
                 )}
 
-                {/* Card Details */}
-                <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                    <Box sx={{ flexShrink: 0 }}>
-                        <Image
-                            src={listingData.card.small_image_url || listingData.card.image_url || '/placeholder-card.png'}
-                            alt={listingData.card.name}
-                            width={100}
-                            height={140}
-                            style={{
-                                objectFit: 'contain',
-                                borderRadius: 8,
-                                border: '1px solid rgba(150, 255, 155, 0.3)'
-                            }}
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/placeholder-card.png';
-                            }}
-                        />
-                    </Box>
-
-                    <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
-                            {listingData.card.name}
+                {success ? (
+                    // Success State
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
+                        <Typography variant="h5" gutterBottom color="success.main">
+                            Purchase Successful!
                         </Typography>
-
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                            {listingData.card.set_name} • {listingData.card.set_number}
+                        <Typography variant="body1" color="text.secondary">
+                            {listingData.card.name} has been added to your collection.
                         </Typography>
-
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                        <Box sx={{ mt: 2 }}>
                             <Chip
-                                label={listingData.card.rarity}
-                                color={getRarityColor(listingData.card.rarity)}
-                                size="small"
-                            />
-                            <Chip
-                                label={listingData.condition}
+                                icon={<WalletIcon />}
+                                label="Wallet Updated"
+                                color="success"
                                 variant="outlined"
-                                size="small"
                             />
-                            {listingData.type === 'CATALOG' ? (
+                        </Box>
+                    </Box>
+                ) : (
+                    // Purchase Confirmation
+                    <Grid container spacing={3}>
+                        {/* Card Display */}
+                        <Grid item xs={12} md={5}>
+                            <Card sx={{
+                                border: '1px solid rgba(150, 255, 155, 0.3)',
+                                bgcolor: 'grey.800'
+                            }}>
+                                <CardMedia
+                                    component="img"
+                                    height="300"
+                                    image={listingData.card.image_url || listingData.card.small_image_url || '/placeholder-card.png'}
+                                    alt={listingData.card.name}
+                                    sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = '/placeholder-card.png';
+                                    }}
+                                />
+                            </Card>
+                        </Grid>
+
+                        {/* Card Details */}
+                        <Grid item xs={12} md={7}>
+                            <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                                {listingData.card.name}
+                            </Typography>
+
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                {listingData.card.set_name} • {listingData.card.set_number}
+                            </Typography>
+
+                            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                                 <Chip
-                                    icon={<StoreIcon />}
-                                    label="Catalog"
-                                    color="info"
+                                    label={listingData.card.rarity}
+                                    color={getRarityColor(listingData.card.rarity)}
                                     size="small"
                                 />
-                            ) : (
                                 <Chip
-                                    icon={<PersonIcon />}
-                                    label="User"
+                                    label={listingData.condition}
+                                    variant="outlined"
+                                    size="small"
+                                />
+                                {listingData.type === 'CATALOG' ? (
+                                    <Chip
+                                        icon={<StoreIcon />}
+                                        label="Catalog"
+                                        color="info"
+                                        size="small"
+                                    />
+                                ) : (
+                                    <Chip
+                                        icon={<PersonIcon />}
+                                        label="User"
+                                        color="primary"
+                                        size="small"
+                                    />
+                                )}
+                                <Chip
+                                    label={listingData.sale_type === 'FIXED' ? 'Fixed Price' : 'Auction'}
                                     color="primary"
+                                    variant="outlined"
                                     size="small"
                                 />
-                            )}
-                        </Box>
+                            </Box>
 
-                        <Typography variant="body2" color="text.secondary">
-                            Seller: {listingData.owner.name}
-                        </Typography>
-                    </Box>
-                </Box>
+                            <Box sx={{ mb: 3 }}>
+                                <Typography variant="body2" color="text.secondary" gutterBottom>
+                                    <strong>Seller:</strong> {listingData.owner.name}
+                                </Typography>
+                                {listingData.card.market_price && (
+                                    <Typography variant="body2" color="text.secondary">
+                                        <strong>Market Price:</strong> {formatPrice(listingData.card.market_price)}
+                                    </Typography>
+                                )}
+                                {listingData.notes && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                        <strong>Notes:</strong> {listingData.notes}
+                                    </Typography>
+                                )}
+                            </Box>
 
-                <Divider sx={{ my: 2, borderColor: 'rgba(150, 255, 155, 0.2)' }} />
+                            {/* Commission Information */}
+                            {loadingCommission ? (
+                                <Paper sx={{ p: 2, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                        <PercentIcon sx={{ color: '#96ff9b' }} />
+                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                            Calculating Fees...
+                                        </Typography>
+                                    </Box>
+                                    <Skeleton variant="text" width="60%" />
+                                    <Skeleton variant="text" width="80%" />
+                                    <Skeleton variant="text" width="40%" />
+                                </Paper>
+                            ) : commissionInfo ? (
+                                <Paper sx={{ p: 2, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                        <MoneyIcon sx={{ color: '#96ff9b' }} />
+                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                            Purchase Summary
+                                        </Typography>
+                                    </Box>
 
-                {/* Purchase Summary */}
-                <Box sx={{ bgcolor: 'grey.800', p: 2, borderRadius: 1, border: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
-                        Purchase Summary
-                    </Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Card Price:
+                                        </Typography>
+                                        <Typography variant="body2" color="text.primary">
+                                            {formatPrice(cardPrice)}
+                                        </Typography>
+                                    </Box>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            Card Price:
-                        </Typography>
-                        <Typography variant="body2" color="text.primary">
-                            {formatPrice(listingData.current_price)}
-                        </Typography>
-                    </Box>
+                                    {listingData.type === 'USER_CARD' && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Marketplace Fee ({commissionInfo.commission_rate}%):
+                                            </Typography>
+                                            <Typography variant="body2" color="text.primary">
+                                                {formatPrice(commissionInfo.commission_amount)}
+                                            </Typography>
+                                        </Box>
+                                    )}
 
-                    {listingData.type === 'USER_CARD' && (
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                                Marketplace Fee (5%):
-                            </Typography>
-                            <Typography variant="body2" color="text.primary">
-                                {formatPrice(listingData.current_price * 0.05)}
-                            </Typography>
-                        </Box>
-                    )}
+                                    <Divider sx={{ my: 1, borderColor: 'rgba(150, 255, 155, 0.2)' }} />
 
-                    <Divider sx={{ my: 1, borderColor: 'rgba(150, 255, 155, 0.2)' }} />
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                            Total You Pay:
+                                        </Typography>
+                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                            {formatPrice(commissionInfo.buyer_pays)}
+                                        </Typography>
+                                    </Box>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
-                            Total:
-                        </Typography>
-                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
-                            {formatPrice(listingData.current_price)}
-                        </Typography>
-                    </Box>
-                </Box>
+                                    {/* Breakdown for user sales */}
+                                    {listingData.type === 'USER_CARD' && commissionInfo.seller_receives > 0 && (
+                                        <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(150, 255, 155, 0.1)', borderRadius: 1 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Seller receives: {formatPrice(commissionInfo.seller_receives)}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Paper>
+                            ) : null}
 
-                {/* Purchase Type Info */}
-                <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(150, 255, 155, 0.1)', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                        {listingData.type === 'CATALOG'
-                            ? 'This card will be added to your collection as a new mint condition card.'
-                            : 'This card will be transferred to your collection from the current owner.'
-                        }
-                    </Typography>
-                </Box>
+                            {/* Purchase Type Info */}
+                            <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(150, 255, 155, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CheckIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                                    {listingData.type === 'CATALOG'
+                                        ? 'This card will be added to your collection as a new mint condition card.'
+                                        : 'This card will be transferred to your collection from the current owner.'
+                                    }
+                                </Typography>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                )}
             </DialogContent>
 
             <DialogActions sx={{
@@ -265,37 +491,61 @@ export default function PurchaseConfirmationModal({
                 borderTop: '1px solid rgba(150, 255, 155, 0.2)',
                 gap: 2
             }}>
-                <Button
-                    onClick={onClose}
-                    disabled={purchasing}
-                    variant="outlined"
-                    sx={{
-                        borderColor: 'text.secondary',
-                        color: 'text.secondary'
-                    }}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    variant="contained"
-                    onClick={handleConfirmPurchase}
-                    disabled={purchasing}
-                    startIcon={purchasing ? <CircularProgress size={20} /> : <ShoppingCartIcon />}
-                    sx={{
-                        bgcolor: '#96ff9b',
-                        color: 'grey.900',
-                        minWidth: 140,
-                        '&:hover': {
-                            bgcolor: 'rgba(150, 255, 155, 0.8)'
-                        },
-                        '&:disabled': {
-                            bgcolor: 'rgba(150, 255, 155, 0.3)',
-                            color: 'grey.700'
-                        }
-                    }}
-                >
-                    {purchasing ? 'Processing...' : `Purchase ${formatPrice(listingData.current_price)}`}
-                </Button>
+                {!success && (
+                    <>
+                        <Button
+                            onClick={handleClose}
+                            disabled={loading}
+                            variant="outlined"
+                            sx={{
+                                borderColor: 'text.secondary',
+                                color: 'text.secondary'
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handlePurchase}
+                            disabled={loading || loadingCommission}
+                            startIcon={loading ? <CircularProgress size={20} /> : <CartIcon />}
+                            sx={{
+                                bgcolor: '#96ff9b',
+                                color: 'grey.900',
+                                minWidth: 160,
+                                '&:hover': {
+                                    bgcolor: 'rgba(150, 255, 155, 0.8)'
+                                },
+                                '&:disabled': {
+                                    bgcolor: 'rgba(150, 255, 155, 0.3)',
+                                    color: 'grey.700'
+                                }
+                            }}
+                        >
+                            {loading
+                                ? 'Processing...'
+                                : loadingCommission
+                                    ? 'Calculating...'
+                                    : `Purchase ${commissionInfo ? formatPrice(commissionInfo.buyer_pays) : formatPrice(cardPrice)}`
+                            }
+                        </Button>
+                    </>
+                )}
+                {success && (
+                    <Button
+                        variant="contained"
+                        onClick={handleClose}
+                        sx={{
+                            bgcolor: '#96ff9b',
+                            color: 'grey.900',
+                            '&:hover': {
+                                bgcolor: 'rgba(150, 255, 155, 0.8)'
+                            }
+                        }}
+                    >
+                        Close
+                    </Button>
+                )}
             </DialogActions>
         </Dialog>
     );

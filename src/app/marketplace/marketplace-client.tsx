@@ -160,6 +160,9 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
         if (priceDiff > 0) return { color: 'error.main', label: `${priceDiff.toFixed(1)}% Above Market` };
         return { color: 'warning.main', label: `${Math.abs(priceDiff).toFixed(1)}% Below Market` };
     };
+
+   
+
     
 
     const priceStatus = getPriceStatus();
@@ -535,6 +538,8 @@ export default function MarketplacePage() {
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [availableSets, setAvailableSets] = useState<string[]>([]);
     const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+    const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+    const [selectedListingForPurchase, setSelectedListingForPurchase] = useState<Listing | null>(null);
 
     // Price history modal state
     const [priceHistoryModalOpen, setPriceHistoryModalOpen] = useState(false);
@@ -569,12 +574,17 @@ export default function MarketplacePage() {
         }
     };
 
-    const fetchCards = async () => {
+    const fetchCards = async (forceFresh: boolean = false) => {
         try {
             setLoading(true);
             setError(null);
 
             const params = new URLSearchParams();
+
+            // Add cache buster for fresh data
+            if (forceFresh) {
+                params.append('_t', Date.now().toString());
+            }
 
             if (searchTerm.trim()) {
                 params.append('search', encodeURIComponent(searchTerm.trim()));
@@ -601,8 +611,10 @@ export default function MarketplacePage() {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache',
+                },
+                cache: 'no-store'
             });
 
             if (!response.ok) {
@@ -783,119 +795,61 @@ export default function MarketplacePage() {
             return;
         }
 
-        const listingPrice = listing.fixed_price || listing.reserve_price || 0;
-        console.log('🛒 Starting purchase:', {
-            cardName: listing.card.name,
-            priceUSD: listingPrice,
-            listingType: listing.type,
-            timestamp: new Date().toISOString()
-        });
+        // Convert listing to the format expected by the purchase modal
+        const listingData = {
+            id: listing.id,
+            type: listing.type,
+            user_card_id: listing.user_card_id,
+            card: {
+                id: listing.card.id,
+                name: listing.card.name,
+                set_name: listing.card.set_name,
+                set_number: listing.card.set_number || '',
+                rarity: listing.card.rarity,
+                image_url: listing.card.image_url || '',
+                small_image_url: listing.card.small_image_url || ''
+            },
+            owner: {
+                id: typeof listing.owner.id === 'number' ? listing.owner.id : 0,
+                name: listing.owner.name,
+                role: listing.owner.role || 'user'
+            },
+            condition: listing.condition,
+            current_price: listing.fixed_price || listing.current_price || 0,
+            availability: listing.availability
+        };
+        
 
-        setPurchasingCards((prev) => new Set(prev).add(listing.id));
+        // Open the purchase confirmation modal
+        setSelectedListingForPurchase(listingData as any);
+        setPurchaseModalOpen(true);
 
-        try {
-            let requestBody: any;
+        // Add a small delay to ensure DB transaction is committed
+        setTimeout(() => {
+            fetchCards();
+            fetchNotificationCount();
 
-            if (listing.type === 'CATALOG') {
-                requestBody = {
-                    catalog_card_id: listing.card.id,
-                    quantity: 1
-                };
-            } else if (listing.type === 'USER_CARD') {
-                if (!listing.user_card_id) {
-                    throw new Error('User card ID is missing');
-                }
-                requestBody = {
-                    user_card_id: listing.user_card_id
-                };
-            } else {
-                throw new Error(`Invalid listing type: ${listing.type}`);
-            }
+            // Dispatch custom event for wallet refresh
+            window.dispatchEvent(new CustomEvent('purchaseComplete', {
+                detail: { timestamp: new Date().toISOString() }
+            }));
+        }, 500); // 500ms delay
+    };
+    const handlePurchaseComplete = () => {
+        // Close the modal
+        setPurchaseModalOpen(false);
+        setSelectedListingForPurchase(null);
 
-            console.log('📤 Sending purchase request:', requestBody);
+        // Refresh data with a delay to ensure DB transaction is committed
+        setTimeout(() => {
+            fetchCards(true); // Force fresh fetch
+            fetchNotificationCount();
 
-            const response = await fetch('/api/marketplace/purchase', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(requestBody),
-            });
-
-            console.log('📨 Purchase response status:', response.status);
-
-            if (!response.ok) {
-                let errorMessage = `Failed to purchase: ${response.status} ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorData.details || errorMessage;
-                } catch (parseError) {
-                    console.error('Could not parse error response:', parseError);
-                }
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
-            console.log('✅ Purchase response data:', data);
-
-            if (data.success) {
-                const cardName = data.purchase_details?.card_name || listing.card.name;
-                const purchasePrice = data.purchase_details?.total_price || data.purchase_details?.purchase_price || 'N/A';
-                const newBalance = data.purchase_details?.buyer_new_balance;
-
-                console.log('🎉 Purchase successful:', {
-                    cardName,
-                    purchasePrice,
-                    newBalance,
-                    timestamp: new Date().toISOString()
-                });
-
-                toast.success(`Successfully purchased ${cardName} for $${purchasePrice}!`);
-
-                // 🔄 IMPORTANT: Refresh all data after purchase
-                console.log('🔄 Refreshing all data after purchase...');
-
-                // Force refresh with a small delay to ensure database commit
-                setTimeout(async () => {
-                    try {
-                        await Promise.all([
-                            fetchCards(),
-                            fetchNotificationCount(),
-                            // If you have access to wallet refresh function, call it
-                            // fetchWalletData?.(true)
-                        ]);
-
-                        // Dispatch custom event for wallet refresh
-                        window.dispatchEvent(new CustomEvent('purchaseComplete', {
-                            detail: {
-                                cardName,
-                                purchasePrice,
-                                newBalance,
-                                timestamp: new Date().toISOString()
-                            }
-                        }));
-
-                        console.log('✅ All data refreshed after purchase');
-                    } catch (refreshError) {
-                        console.error('❌ Error refreshing data:', refreshError);
-                    }
-                }, 500); // 500ms delay to ensure DB commit
-
-            } else {
-                throw new Error(data.error || data.message || 'Purchase failed');
-            }
-
-        } catch (error) {
-            console.error('❌ Purchase error:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to purchase card');
-        } finally {
-            setPurchasingCards((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(listing.id);
-                return newSet;
-            });
-        }
+            // Dispatch custom event for wallet refresh
+            window.dispatchEvent(new CustomEvent('purchaseComplete', {
+                detail: { timestamp: new Date().toISOString() }
+            }));
+        }, 500); // 500ms delay
     };
 
     const handleBidClick = async (listing: Listing) => {
@@ -981,7 +935,7 @@ export default function MarketplacePage() {
                             <NotificationIcon />
                         </Badge>
                     </IconButton>
-                    <IconButton onClick={fetchCards} title="Refresh">
+                    <IconButton onClick={() => fetchCards(true)} title="Refresh">
                         <RefreshIcon />
                     </IconButton>
                     <Button variant="outlined" onClick={() => router.push('/wallet')} size="small">
@@ -1407,6 +1361,17 @@ export default function MarketplacePage() {
                 }}
                 userCard={selectedCardForBidding}
                 onBidPlaced={handleBidPlaced}
+            />
+
+            {/* Purchase Confirmation Modal */}
+            <PurchaseConfirmationModal
+                open={purchaseModalOpen}
+                onClose={() => {
+                    setPurchaseModalOpen(false);
+                    setSelectedListingForPurchase(null);
+                }}
+                listingData={selectedListingForPurchase}
+                onPurchaseComplete={handlePurchaseComplete} // No parameters
             />
         </Container>
     );
