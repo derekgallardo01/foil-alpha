@@ -457,6 +457,19 @@ model commission_settings {
   @@index([setting_type], map: "idx_setting_type")
 }
 
+model CatalogInventory {
+  id                 Int       @id @default(autoincrement())
+  card_id            Int       @unique(map: "unique_card_inventory") @map("card_id")
+  quantity_available Int       @default(0) @map("quantity_available")
+  quantity_sold      Int       @default(0) @map("quantity_sold")
+  last_restock_date  DateTime? @map("last_restock_date") @db.DateTime(0)
+  created_at         DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updated_at         DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@index([quantity_available], map: "idx_quantity_available")
+  @@map("catalog_inventory")
+}
+
 enum CardSource {
   API
   MANUAL
