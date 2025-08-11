@@ -175,6 +175,7 @@ model Card {
   api_updated_at           DateTime?
   sync_enabled             Boolean    @default(true)
   last_sync                DateTime?
+  price_change_24h Decimal? @db.Decimal(5, 2)
   tags                     Json?
   notes                    String?    @db.Text
   featured                 Boolean    @default(false)

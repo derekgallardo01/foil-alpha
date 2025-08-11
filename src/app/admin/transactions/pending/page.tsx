@@ -115,7 +115,8 @@ export default function AdminPendingTransactionsPage() {
     }, [status, session]);
 
     const formatPrice = (price: number) => {
-        return `$${price.toFixed(2)}`;
+        const num = typeof price === 'number' ? price : Number(price) || 0;
+        return `$${num.toFixed(2)}`;
     };
 
     const formatDateTime = (dateString: string) => {

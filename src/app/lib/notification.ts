@@ -376,3 +376,135 @@ export async function createPurchaseExpiredNotifications(
 
     return Promise.all(notifications);
 }
+
+export async function createPriceChangeNotification(
+    userId: number,
+    cardId: number,
+    cardName: string,
+    oldPrice: number,
+    newPrice: number,
+    changePercent: number,
+    imageUrl?: string | null
+) {
+    const isIncrease = newPrice > oldPrice;
+    const emoji = isIncrease ? '📈' : '📉';
+    const changeText = isIncrease ? 'increased' : 'decreased';
+
+    return createNotification({
+        user_id: userId,
+        type: 'PRICE_CHANGE',
+        title: `${emoji} Price ${changeText.charAt(0).toUpperCase() + changeText.slice(1)} for ${cardName}`,
+        message: `The price of ${cardName} has ${changeText} from $${oldPrice.toFixed(2)} to $${newPrice.toFixed(2)} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%)`,
+        data: {
+            card_id: cardId,
+            card_name: cardName,
+            card_image: imageUrl,
+            old_price: oldPrice,
+            new_price: newPrice,
+            change_percent: changePercent,
+            change_type: isIncrease ? 'increase' : 'decrease',
+            timestamp: new Date().toISOString()
+        }
+    });
+}
+
+export async function createBulkPriceChangeNotifications(
+    priceChanges: Array<{
+        cardId: number;
+        cardName: string;
+        oldPrice: number;
+        newPrice: number;
+        changePercent: number;
+        imageUrl: string | null;
+    }>
+) {
+    const notifications = [];
+    let totalNotifications = 0;
+
+    // Get all owners for the changed cards
+    const cardIds = priceChanges.map(pc => pc.cardId);
+
+    const userCards = await prisma.userCard.findMany({
+        where: {
+            card_id: { in: cardIds },
+            is_sold: false // Only notify current owners
+        },
+        select: {
+            owner_id: true,
+            card_id: true
+        }
+    });
+
+    // Group by owner to send consolidated notifications
+    const ownerCardMap = new Map<number, typeof priceChanges>();
+
+    userCards.forEach(uc => {
+        const priceChange = priceChanges.find(pc => pc.cardId === uc.card_id);
+        if (priceChange) {
+            if (!ownerCardMap.has(uc.owner_id)) {
+                ownerCardMap.set(uc.owner_id, []);
+            }
+            ownerCardMap.get(uc.owner_id)!.push(priceChange);
+        }
+    });
+
+    // Create notifications for each owner
+    for (const [ownerId, ownerPriceChanges] of ownerCardMap) {
+        if (ownerPriceChanges.length === 1) {
+            // Single card price change
+            const change = ownerPriceChanges[0];
+            notifications.push(
+                createPriceChangeNotification(
+                    ownerId,
+                    change.cardId,
+                    change.cardName,
+                    change.oldPrice,
+                    change.newPrice,
+                    change.changePercent,
+                    change.imageUrl
+                )
+            );
+            totalNotifications++;
+        } else {
+            // Multiple cards price change - create summary notification
+            const totalOldValue = ownerPriceChanges.reduce((sum, c) => sum + c.oldPrice, 0);
+            const totalNewValue = ownerPriceChanges.reduce((sum, c) => sum + c.newPrice, 0);
+            const totalChange = totalNewValue - totalOldValue;
+            const totalChangePercent = (totalChange / totalOldValue) * 100;
+
+            notifications.push(
+                createNotification({
+                    user_id: ownerId,
+                    type: 'BULK_PRICE_CHANGE',
+                    title: `📊 Price Updates for ${ownerPriceChanges.length} Cards`,
+                    message: `${ownerPriceChanges.length} of your cards have price changes. Total portfolio value changed from $${totalOldValue.toFixed(2)} to $${totalNewValue.toFixed(2)} (${totalChangePercent > 0 ? '+' : ''}${totalChangePercent.toFixed(1)}%)`,
+                    data: {
+                        cards: ownerPriceChanges.map(c => ({
+                            card_id: c.cardId,
+                            card_name: c.cardName,
+                            card_image: c.imageUrl,
+                            old_price: c.oldPrice,
+                            new_price: c.newPrice,
+                            change_percent: c.changePercent
+                        })),
+                        total_old_value: totalOldValue,
+                        total_new_value: totalNewValue,
+                        total_change: totalChange,
+                        total_change_percent: totalChangePercent,
+                        timestamp: new Date().toISOString()
+                    }
+                })
+            );
+            totalNotifications++;
+        }
+    }
+
+    await Promise.all(notifications);
+
+    return {
+        success: true,
+        totalNotifications,
+        uniqueOwners: ownerCardMap.size,
+        totalCards: priceChanges.length
+    };
+}

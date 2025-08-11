@@ -662,17 +662,25 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             clearInterval(progressInterval);
 
             const data = await response.json();
+            console.log('📥 Import API response:', data);
 
             if (data.success) {
-                completed = data.results?.imported?.length || 0;
+                // Handle the response structure correctly
+                completed = data.results?.imported || 0; // Now it's a count, not an array
                 failed = data.results?.errors?.length || 0;
-                skipped = data.results?.updated?.length || 0; // Updated cards are "skipped" from new imports
+                skipped = data.results?.updated || 0; // Updated cards count
 
                 updateStats(completed, failed, skipped);
                 updateProgress(cardsToImport.length, 'Import completed successfully', 'completed');
                 completeProgress({ completed, failed, skipped });
 
-                onImportComplete?.(data.results);
+                // Pass the results with the correct structure
+                onImportComplete?.({
+                    imported: completed,    // Pass count, not array
+                    updated: skipped,      // Pass count, not array  
+                    errors: failed,        // Pass count
+                    results: data.results  // Pass full results object
+                });
 
                 // Close modal after brief delay to show completion
                 setTimeout(() => {
@@ -684,9 +692,10 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             } else {
                 setError(data.error || 'Import failed');
                 updateProgress(cardsToImport.length, 'Import failed', 'error');
+                console.error('❌ Import failed:', data.error);
             }
         } catch (error) {
-            console.error('Error importing cards:', error);
+            console.error('💥 Error importing cards:', error);
             setError('Failed to import cards');
             updateProgress(selectedCards.size, 'Import failed', 'error');
         } finally {
@@ -719,7 +728,7 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             // Simulate progress updates during set import
             const progressInterval = setInterval(() => {
                 if (processed < estimatedCards) {
-                    processed += Math.floor(Math.random() * 3) + 1; // Random progress simulation
+                    processed += Math.floor(Math.random() * 3) + 1;
                     processed = Math.min(processed, estimatedCards);
                     updateProgress(processed, `Processing cards from ${selectedSet}...`, 'importing');
                 }
@@ -736,17 +745,24 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             clearInterval(progressInterval);
 
             const data = await response.json();
+            console.log('📥 Set import API response:', data);
 
             if (data.success) {
-                const completed = data.results?.imported?.length || 0;
+                const completed = data.results?.imported || 0;  // Count, not array
                 const failed = data.results?.errors?.length || 0;
-                const skipped = data.results?.updated?.length || 0;
+                const skipped = data.results?.updated || 0;     // Count, not array
 
                 updateStats(completed, failed, skipped);
                 updateProgress(estimatedCards, 'Set import completed', 'completed');
                 completeProgress({ completed, failed, skipped });
 
-                onImportComplete?.(data.results);
+                // Pass the results with correct structure  
+                onImportComplete?.({
+                    imported: completed,
+                    updated: skipped,
+                    errors: failed,
+                    results: data.results
+                });
 
                 // Close modal after brief delay
                 setTimeout(() => {
@@ -756,9 +772,10 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             } else {
                 setError(data.error || 'Import failed');
                 updateProgress(estimatedCards, 'Set import failed', 'error');
+                console.error('❌ Set import failed:', data.error);
             }
         } catch (error) {
-            console.error('Error importing set:', error);
+            console.error('💥 Error importing set:', error);
             setError('Failed to import set');
             updateProgress(selectedSetObj.total || 100, 'Set import failed', 'error');
         } finally {
@@ -1427,6 +1444,10 @@ export default function AdminCardsClient() {
             if (setFilter) params.append('set', setFilter);
             if (typeFilter) params.append('type', typeFilter);
 
+            // *** FIX: Add parameter to get ALL cards ***
+            params.append('all', 'true'); // This will get all cards without pagination
+            params.append('limit', '1000'); // Fallback limit if 'all' is not supported
+
             updateMainProgress(2, 'Fetching cards from server');
 
             const response = await fetch(`/api/admin/cards?${params.toString()}`, {
@@ -1445,7 +1466,11 @@ export default function AdminCardsClient() {
             completeMainProgress({ completed: data.cards?.length || 0, failed: 0, skipped: 0 });
 
             setCards(data.cards || []);
-            toast.success("Cards loaded successfully!", { autoClose: 2000 });
+
+            // *** FIX: Show total count in success message ***
+            const totalMessage = `Loaded ${data.cards?.length || 0} cards (${data.pagination?.total || 0} total in database)`;
+            console.log(`✅ ${totalMessage}`);
+            toast.success(totalMessage, { autoClose: 3000 });
 
             // Reset progress after brief delay
             setTimeout(resetMainProgress, 2000);
@@ -1953,10 +1978,49 @@ export default function AdminCardsClient() {
     };
 
     const handlePokemonImportComplete = (results: any) => {
-        if (results && results.imported) {
-            setCards((prev) => [...results.imported, ...prev]);
-            toast.success(`Successfully imported ${formatNumber(results.imported.length)} Pokémon cards!`);
+        console.log('🎉 Import completed with results:', results);
+
+        if (results) {
+            let importedCount = 0;
+            let updatedCount = 0;
+            let errorCount = 0;
+
+            // Handle the API response structure properly
+            if (results.results) {
+                // New API response structure
+                importedCount = Array.isArray(results.results.imported) ? results.results.imported.length : (results.imported || 0);
+                updatedCount = Array.isArray(results.results.updated) ? results.results.updated.length : (results.updated || 0);
+                errorCount = Array.isArray(results.results.errors) ? results.results.errors.length : 0;
+            } else {
+                // Direct count response
+                importedCount = typeof results.imported === 'number' ? results.imported : 0;
+                updatedCount = typeof results.updated === 'number' ? results.updated : 0;
+                errorCount = Array.isArray(results.errors) ? results.errors.length : 0;
+            }
+
+            // Show success message with proper counts
+            const totalProcessed = importedCount + updatedCount;
+            if (totalProcessed > 0) {
+                let message = `Successfully processed ${formatNumber(totalProcessed)} cards!`;
+                if (importedCount > 0) message += ` ${formatNumber(importedCount)} imported.`;
+                if (updatedCount > 0) message += ` ${formatNumber(updatedCount)} updated.`;
+                if (errorCount > 0) message += ` ${formatNumber(errorCount)} had errors.`;
+
+                toast.success(message, { autoClose: 5000 });
+                console.log(`✅ ${message}`);
+            } else {
+                const noCardsMessage = 'Import completed - No new cards were added. All cards may already exist.';
+                toast.info(noCardsMessage);
+                console.log(`ℹ️ ${noCardsMessage}`);
+            }
+
+            // Always refresh the cards list after import to get the most up-to-date data
+            console.log('🔄 Refreshing cards list...');
             fetchCards();
+        } else {
+            const errorMessage = 'Import completed but no results were returned';
+            toast.error(errorMessage);
+            console.error(`❌ ${errorMessage}`);
         }
     };
 
