@@ -7,8 +7,25 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
-        // 🔥 FIX: Increase default limit from 20 to show more cards
-        const limit = parseInt(searchParams.get('limit') || '100'); // Changed from 20 to 100
+
+        // 🔥 FIX: Remove default limit or make it much higher
+        // Check if user wants to see all cards or use pagination
+        const requestedLimit = searchParams.get('limit');
+        const showAll = searchParams.get('show_all') === 'true';
+
+        let limit: number;
+        let skip: number;
+
+        if (showAll) {
+            // No pagination - show all cards
+            limit = 10000; // Very high limit to effectively show all
+            skip = 0;
+        } else {
+            // Use pagination with much higher default
+            limit = requestedLimit ? parseInt(requestedLimit) : 500; // Increased from 100 to 500
+            skip = (page - 1) * limit;
+        }
+
         const search = searchParams.get('search') || '';
         const setName = searchParams.get('set') || '';
         const cardType = searchParams.get('type') || '';
@@ -25,8 +42,6 @@ export async function GET(request: NextRequest) {
                 { status: 400 }
             );
         }
-
-        const skip = (page - 1) * limit;
 
         // 🔥 FIX: Build more robust card filter with proper string matching
         const cardFilter: Prisma.CardWhereInput = {};
@@ -74,27 +89,27 @@ export async function GET(request: NextRequest) {
         }
 
         console.log('🔍 Marketplace query filters:', {
-            search, setName, cardType, saleType, rarity, priceMin, priceMax, priceStatus, sortBy, page, limit,
+            search, setName, cardType, saleType, rarity, priceMin, priceMax, priceStatus, sortBy, page, limit, showAll,
             userCardFilter, cardFilter
         });
 
-        // 🔥 FIX: Get more catalog cards initially
+        // 🔥 FIX: Get ALL catalog cards initially (remove artificial limit)
         const catalogCards = await prisma.card.findMany({
             where: {
                 ...cardFilter,
                 market_price: { not: null, gt: 0 },
             },
-            // Remove strict limit here - we'll apply filters and then paginate
+            // *** REMOVED LIMIT - Get ALL matching cards ***
             orderBy: getOrderBy(sortBy),
         });
 
         console.log(`📋 Found ${catalogCards.length} catalog cards matching filters`);
 
-        // 🔥 CRITICAL: Get ONLY truly available user cards
+        // 🔥 CRITICAL: Get ONLY truly available user cards (also remove limit)
         console.log('📋 Fetching user cards with filter:', userCardFilter);
         const userCardsForSale = await prisma.userCard.findMany({
             where: userCardFilter,
-            // Remove strict limit here too
+            // *** REMOVED LIMIT - Get ALL matching user cards ***
             orderBy: { created_at: 'desc' }
         });
 
@@ -379,9 +394,17 @@ export async function GET(request: NextRequest) {
         // Sort listings
         listings.sort((a, b) => sortListings(a, b, sortBy));
 
-        // 🔥 FIX: Apply pagination AFTER all filtering and sorting
+        // 🔥 FIX: Apply pagination AFTER all filtering and sorting (if not showing all)
         const totalListings = listings.length;
-        const paginatedListings = listings.slice(skip, skip + limit);
+        let paginatedListings;
+
+        if (showAll) {
+            // Show all listings - no pagination
+            paginatedListings = listings;
+        } else {
+            // Apply pagination
+            paginatedListings = listings.slice(skip, skip + limit);
+        }
 
         console.log(`📦 Returning ${paginatedListings.length} available listings (Total found: ${totalListings})`);
         console.log(`📊 Stats: ${listings.filter(l => l.type === 'CATALOG').length} catalog cards, ${listings.filter(l => l.type === 'USER_CARD').length} user cards`);
@@ -389,12 +412,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             listings: paginatedListings,
             pagination: {
-                page,
-                limit,
+                page: showAll ? 1 : page,
+                limit: showAll ? totalListings : limit,
                 total: totalListings,
-                totalPages: Math.ceil(totalListings / limit),
+                totalPages: showAll ? 1 : Math.ceil(totalListings / limit),
                 catalog_cards: listings.filter(l => l.type === 'CATALOG').length,
                 user_cards: listings.filter(l => l.type === 'USER_CARD').length,
+                showAll: showAll,
             },
             filters: {
                 sets: await getAvailableSets().catch((err) => {

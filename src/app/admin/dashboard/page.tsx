@@ -108,19 +108,81 @@ export default function AdminDashboard() {
             if (!usersResponse.ok) throw new Error("Failed to fetch users");
             const users = await usersResponse.json();
 
-            // Calculate stats from users data (removed balance-related calculations)
+            // *** FIX: Fetch actual total cards count from the cards API ***
+            const cardsResponse = await fetch("/api/admin/cards?all=true", {
+                headers: {
+                    "Authorization": `Bearer ${session?.accessToken}`,
+                },
+            });
+
+            let totalCardsCount = 0;
+            let activeListingsCount = 0;
+
+            if (cardsResponse.ok) {
+                const cardsData = await cardsResponse.json();
+                totalCardsCount = cardsData.pagination?.total || cardsData.cards?.length || 0;
+
+                // Calculate active listings from cards data
+                activeListingsCount = cardsData.cards?.reduce((sum: number, card: any) => {
+                    return sum + (card.forSaleCount || 0);
+                }, 0) || 0;
+            }
+
+            // *** FIX: Fetch auctions data ***
+            let activeAuctionsCount = 0;
+            try {
+                const auctionsResponse = await fetch("/api/admin/auctions", {
+                    headers: {
+                        "Authorization": `Bearer ${session?.accessToken}`,
+                    },
+                });
+
+                if (auctionsResponse.ok) {
+                    const auctionsData = await auctionsResponse.json();
+                    // Assuming the API returns auctions data
+                    activeAuctionsCount = auctionsData.activeAuctions || 0;
+                }
+            } catch (auctionError) {
+                console.warn("Could not fetch auctions data:", auctionError);
+            }
+
+            // *** FIX: Fetch transactions data ***
+            let totalSalesCount = 0;
+            let pendingTransactionsCount = 0;
+            let monthlyRevenueAmount = 0;
+
+            try {
+                const transactionsResponse = await fetch("/api/admin/transactions", {
+                    headers: {
+                        "Authorization": `Bearer ${session?.accessToken}`,
+                    },
+                });
+
+                if (transactionsResponse.ok) {
+                    const transactionsData = await transactionsResponse.json();
+                    totalSalesCount = transactionsData.totalSales || 0;
+                    pendingTransactionsCount = transactionsData.pendingTransactions || 0;
+                    monthlyRevenueAmount = transactionsData.monthlyRevenue || 0;
+                }
+            } catch (transactionError) {
+                console.warn("Could not fetch transactions data:", transactionError);
+            }
+
+            // Calculate stats with actual data
             const newStats: DashboardStats = {
                 totalUsers: users.length,
                 activeUsers: users.filter((u: any) => u.subscriptionStatus === 'active').length,
-                totalCards: users.reduce((sum: number, u: any) => sum + (u.cardCount || 0), 0),
-                activeListings: 0, // TODO: Fetch from listings API
-                activeAuctions: 0, // TODO: Fetch from auctions API
-                totalSales: users.reduce((sum: number, u: any) => sum + (u.saleCount || 0), 0),
-                monthlyRevenue: 0, // TODO: Calculate from transactions
-                pendingTransactions: 0, // TODO: Fetch from transactions API
+                totalCards: totalCardsCount, // *** FIXED: Using actual card count ***
+                activeListings: activeListingsCount, // *** FIXED: Using actual listings count ***
+                activeAuctions: activeAuctionsCount, // *** FIXED: Using actual auctions count ***
+                totalSales: totalSalesCount, // *** FIXED: Using actual sales count ***
+                monthlyRevenue: monthlyRevenueAmount, // *** FIXED: Using actual revenue ***
+                pendingTransactions: pendingTransactionsCount, // *** FIXED: Using actual pending count ***
             };
 
             setStats(newStats);
+
+            console.log("📊 Dashboard Stats Updated:", newStats);
 
             // Generate sample recent activity (replace with real data)
             const sampleActivity: RecentActivity[] = [
@@ -166,11 +228,11 @@ export default function AdminDashboard() {
         }
     }, [status, session]);
 
-    // Updated stat cards without balance information
+    // Updated stat cards with proper formatting
     const statCards = [
         {
             title: "Total Users",
-            value: stats.totalUsers,
+            value: stats.totalUsers.toLocaleString(),
             icon: <People sx={{ fontSize: 40, color: '#96ff9b' }} />,
             change: "+12%",
             changeType: "up" as const,
@@ -178,7 +240,7 @@ export default function AdminDashboard() {
         },
         {
             title: "Active Users",
-            value: stats.activeUsers,
+            value: stats.activeUsers.toLocaleString(),
             icon: <People sx={{ fontSize: 40, color: '#96ff9b' }} />,
             change: "+8%",
             changeType: "up" as const,
@@ -186,7 +248,7 @@ export default function AdminDashboard() {
         },
         {
             title: "Total Cards",
-            value: stats.totalCards,
+            value: stats.totalCards.toLocaleString(), // *** FIXED: Now shows actual count ***
             icon: <Store sx={{ fontSize: 40, color: '#96ff9b' }} />,
             change: "+25%",
             changeType: "up" as const,
@@ -194,7 +256,7 @@ export default function AdminDashboard() {
         },
         {
             title: "Active Auctions",
-            value: stats.activeAuctions,
+            value: stats.activeAuctions.toLocaleString(),
             icon: <Gavel sx={{ fontSize: 40, color: '#96ff9b' }} />,
             change: "-5%",
             changeType: "down" as const,
@@ -202,7 +264,7 @@ export default function AdminDashboard() {
         },
         {
             title: "Total Sales",
-            value: stats.totalSales,
+            value: stats.totalSales.toLocaleString(),
             icon: <TrendingUp sx={{ fontSize: 40, color: '#96ff9b' }} />,
             change: "+18%",
             changeType: "up" as const,
@@ -210,7 +272,7 @@ export default function AdminDashboard() {
         },
         {
             title: "Active Listings",
-            value: stats.activeListings,
+            value: stats.activeListings.toLocaleString(),
             icon: <Store sx={{ fontSize: 40, color: '#96ff9b' }} />,
             change: "+10%",
             changeType: "up" as const,

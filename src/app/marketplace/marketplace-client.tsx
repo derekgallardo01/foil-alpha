@@ -110,6 +110,7 @@ interface EnhancedListing extends Listing {
 interface MarketplaceResponse {
     listings: Listing[];
     pagination: {
+        showAll: any;
         page: number;
         limit: number;
         total: number;
@@ -581,6 +582,9 @@ export default function MarketplacePage() {
 
             const params = new URLSearchParams();
 
+            // *** FIX: Add option to show all cards ***
+            params.append('show_all', 'true'); // This will show all cards instead of limiting to 100
+
             // Add cache buster for fresh data
             if (forceFresh) {
                 params.append('_t', Date.now().toString());
@@ -647,7 +651,8 @@ export default function MarketplacePage() {
             console.log('Marketplace data received:', {
                 listingsCount: data.listings?.length || 0,
                 pagination: data.pagination,
-                hasFilters: !!data.filters
+                hasFilters: !!data.filters,
+                showingAll: data.pagination?.showAll
             });
 
             setCards(data.listings || []);
@@ -657,6 +662,7 @@ export default function MarketplacePage() {
             // Debug the data
             if (data.listings?.length > 0) {
                 console.log('Sample listing:', data.listings[0]);
+                console.log(`📊 Total cards shown: ${data.listings.length} (Total available: ${data.pagination?.total})`);
             }
 
         } catch (err) {
