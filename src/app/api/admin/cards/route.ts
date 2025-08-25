@@ -58,14 +58,31 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+
+    // *** FIX: Increase default limit and add option to get ALL cards ***
+    const requestedLimit = searchParams.get('limit');
+    const getAllCards = searchParams.get('all') === 'true'; // New parameter to get all cards
+
+    let limit: number;
+    let skip: number;
+
+    if (getAllCards) {
+      // Get all cards - no pagination
+      limit = undefined as any; // Will not use take
+      skip = 0;
+    } else {
+      // Use pagination with higher default limit
+      limit = Math.min(1000, Math.max(1, parseInt(requestedLimit || '100'))); // Default 100, max 1000
+      skip = (page - 1) * limit;
+    }
+
     const search = searchParams.get('search') || '';
     const setName = searchParams.get('set') || '';
     const cardType = searchParams.get('type') || '';
 
-    const skip = (page - 1) * limit;
+    console.log(`🔍 Admin Cards Query: page=${page}, limit=${limit || 'ALL'}, search="${search}"`);
 
-    // Build Prisma where filter with correct typing
+    // Build Prisma where filter
     const where: CardFilter = {};
 
     if (search) {
@@ -80,18 +97,21 @@ export async function GET(request: NextRequest) {
       where.card_type = cardType;
     }
 
-    // Fetch cards without problematic includes
+    // *** FIX: Fetch cards with conditional pagination ***
+    const cardsQuery = {
+      where,
+      orderBy: { created_at: 'desc' },
+      ...(getAllCards ? {} : { skip, take: limit }) // Only add pagination if not getting all
+    };
+
     const [cards, totalCount] = await Promise.all([
-      prisma.card.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' }
-      }),
+      prisma.card.findMany(cardsQuery as any),
       prisma.card.count({ where })
     ]);
 
-    // Get related user cards data separately
+    console.log(`📊 Found ${cards.length} cards out of ${totalCount} total`);
+
+    // Get related user cards data separately (optimized)
     const cardIds = cards.map(card => card.id);
     const userCards = cardIds.length > 0 ? await prisma.userCard.findMany({
       where: {
@@ -107,7 +127,7 @@ export async function GET(request: NextRequest) {
       }
     }) : [];
 
-    // Group user cards by card_id
+    // Group user cards by card_id for efficient lookup
     const userCardsByCardId = new Map<number, typeof userCards>();
     userCards.forEach(uc => {
       if (!userCardsByCardId.has(uc.card_id)) {
@@ -126,22 +146,30 @@ export async function GET(request: NextRequest) {
         forSaleCount: cardUserCards.filter(uc => uc.is_for_sale && !uc.is_sold).length,
         soldCount: cardUserCards.filter(uc => uc.is_sold).length,
         uniqueOwners: new Set(cardUserCards.map(uc => uc.owner_id)).size,
-        userCards: cardUserCards, // Include the user cards data
+        userCards: cardUserCards,
         _count: { userCards: cardUserCards.length }
       };
     });
 
-    return NextResponse.json({
+    const response = {
       cards: cardsWithStats,
       pagination: {
-        page,
-        limit,
+        page: getAllCards ? 1 : page,
+        limit: getAllCards ? totalCount : limit,
         total: totalCount,
-        totalPages: Math.ceil(totalCount / limit)
+        totalPages: getAllCards ? 1 : Math.ceil(totalCount / limit),
+        hasNextPage: getAllCards ? false : (page * limit) < totalCount,
+        hasPrevPage: getAllCards ? false : page > 1,
+        showing: cards.length,
+        getAllCards
       }
-    });
+    };
+
+    console.log(`✅ Returning ${cards.length} cards with pagination:`, response.pagination);
+
+    return NextResponse.json(response);
   } catch (error: unknown) {
-    console.error('Error fetching admin cards:', error);
+    console.error('❌ Error fetching admin cards:', error);
     return NextResponse.json(
       {
         error: 'Failed to fetch cards',

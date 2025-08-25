@@ -13,7 +13,11 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx seed.ts",
     "start-cron": "node scripts/setup-cron.js",
-    "test-price-update": "node scripts/test-price-update.js"
+    "test-price-update": "node scripts/test-price-update.js",
+    "cron": "node cron-runner.js",
+    "cron:dev": "RUN_ON_STARTUP=true node cron-runner.js",
+    "sync:test": "node -e \"fetch('http://localhost:3000/api/test/price-sync').then(r=>r.json()).then(console.log)\"",
+    "sync:manual": "node -e \"fetch('http://localhost:3000/api/cards/sync-prices', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force:true})}).then(r=>r.json()).then(console.log)\""
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",

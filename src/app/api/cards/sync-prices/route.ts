@@ -1,13 +1,16 @@
-// src/app/api/cards/sync-prices/route.ts - Updated with proper price_history table
+// src/app/api/cards/sync-prices/route.ts - FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
-import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from '../../../lib/pokemon-price-tracker-api';
+import { pokemonTCGAPI, PokemonTCGAPI } from '../../../lib/pokemon-tcg-api';
+import { createPriceChangeNotification, createBulkPriceChangeNotifications } from '../../../lib/notification';
 
 interface PriceSyncResult {
     total_cards: number;
     successful_updates: number;
     failed_updates: number;
     skipped_cards: number;
+    price_changes: number;
+    notifications_sent: number;
     errors: Array<{
         card_id: number;
         card_name: string;
@@ -38,8 +41,6 @@ class RateLimiter {
 
     async waitIfNeeded(): Promise<void> {
         const now = Date.now();
-
-        // Remove old requests outside time window
         this.requests = this.requests.filter(time => now - time < this.timeWindow);
 
         if (this.requests.length >= this.maxRequests) {
@@ -63,22 +64,26 @@ export async function POST(request: NextRequest) {
             cardIds,
             force = false,
             batchSize = 20,
-            maxAgeHours = 24
+            maxAgeHours = 24,
+            priceChangeThreshold = 5 // Notify if price changes by more than 5%
         } = body;
 
         console.log('Starting price sync operation...', {
             cardIds: cardIds?.length || 'all',
             force,
             batchSize,
-            maxAgeHours
+            maxAgeHours,
+            priceChangeThreshold
         });
 
-        const rateLimiter = new RateLimiter(60, 60000); // 60 requests per minute
+        const rateLimiter = new RateLimiter(60, 60000);
         const result: PriceSyncResult = {
             total_cards: 0,
             successful_updates: 0,
             failed_updates: 0,
             skipped_cards: 0,
+            price_changes: 0,
+            notifications_sent: 0,
             errors: [],
             pricing_summary: {
                 total_market_value: 0,
@@ -91,8 +96,8 @@ export async function POST(request: NextRequest) {
 
         // Build query to get cards that need pricing updates
         let whereClause: any = {
-            api_id: { not: null }, // Only cards with API IDs
-            sync_enabled: true, // Only sync enabled cards
+            api_id: { not: null },
+            sync_enabled: true,
         };
 
         if (cardIds && Array.isArray(cardIds)) {
@@ -100,7 +105,6 @@ export async function POST(request: NextRequest) {
         }
 
         if (!force) {
-            // Only update cards that haven't been updated recently
             const cutoffTime = new Date(Date.now() - (maxAgeHours * 60 * 60 * 1000));
             whereClause.OR = [
                 { last_price_update: null },
@@ -119,9 +123,11 @@ export async function POST(request: NextRequest) {
                 set_number: true,
                 market_price: true,
                 last_price_update: true,
+                image_url: true,
+                small_image_url: true,
             },
             orderBy: [
-                { last_price_update: 'asc' }, // Prioritize cards never updated
+                { last_price_update: 'asc' },
                 { id: 'asc' }
             ]
         });
@@ -138,6 +144,15 @@ export async function POST(request: NextRequest) {
         }
 
         const priceChanges: number[] = [];
+        const cardsWithSignificantChanges: Array<{
+            cardId: number;
+            cardName: string;
+            oldPrice: number;
+            newPrice: number;
+            changePercent: number;
+            imageUrl: string | null;
+        }> = [];
+
         let highestValueCard: { name: string; price: number } | null = null;
 
         // Process cards in batches
@@ -145,119 +160,103 @@ export async function POST(request: NextRequest) {
             const batch = cardsToUpdate.slice(i, i + batchSize);
             console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(cardsToUpdate.length / batchSize)}`);
 
-            // Prepare price tracker IDs for batch
-            const priceTrackerIds = batch
-                .map(card => {
-                    if (!card.set_id || !card.set_number) return null;
-                    return PokemonPriceTrackerAPI.convertTCGCardIdToPriceTrackerId(card.set_id, card.set_number);
-                })
-                .filter(Boolean) as string[];
-
-            if (priceTrackerIds.length === 0) {
-                result.skipped_cards += batch.length;
-                continue;
-            }
-
             // Rate limiting
             await rateLimiter.waitIfNeeded();
-
-            // Fetch pricing data
-            const pricingResponse = await pokemonPriceTrackerAPI.getBatchPricing(priceTrackerIds, false);
-
-            if (!pricingResponse.success || !pricingResponse.data) {
-                console.error('Failed to fetch pricing data:', pricingResponse.error);
-
-                // Mark these cards as failed
-                for (const card of batch) {
-                    result.errors.push({
-                        card_id: card.id,
-                        card_name: card.name,
-                        error: pricingResponse.error || 'Failed to fetch pricing'
-                    });
-                }
-                result.failed_updates += batch.length;
-                continue;
-            }
 
             // Process each card in the batch
             for (const card of batch) {
                 try {
-                    const priceTrackerId = card.set_id && card.set_number ?
-                        PokemonPriceTrackerAPI.convertTCGCardIdToPriceTrackerId(card.set_id, card.set_number) : null;
-
-                    if (!priceTrackerId) {
+                    if (!card.api_id) {
                         result.skipped_cards++;
                         continue;
                     }
 
-                    // Find pricing data for this card
-                    const pricingData = pricingResponse.data.find(p => p.id === priceTrackerId);
+                    // Fetch updated card data from Pokemon TCG API
+                    const updatedCardData = await pokemonTCGAPI.getCard(card.api_id);
 
-                    if (!pricingData) {
+                    if (!updatedCardData) {
                         result.skipped_cards++;
                         continue;
                     }
 
-                    // Extract pricing information
-                    const marketPrice = PokemonPriceTrackerAPI.getBestMarketPrice(pricingData);
-                    const priceSummary = PokemonPriceTrackerAPI.getPricingSummary(pricingData);
+                    // Extract new market price
+                    const newMarketPrice = PokemonTCGAPI.getMarketPrice(updatedCardData);
 
-                    if (!marketPrice || marketPrice <= 0) {
+                    if (!newMarketPrice || newMarketPrice <= 0) {
                         result.skipped_cards++;
                         continue;
                     }
 
                     // Calculate price change
                     const oldPrice = card.market_price ? Number(card.market_price) : 0;
-                    const priceChange = oldPrice > 0 ? ((marketPrice - oldPrice) / oldPrice) * 100 : 0;
+                    const priceChange = oldPrice > 0 ? ((newMarketPrice - oldPrice) / oldPrice) * 100 : 0;
 
+                    // Track price changes
                     if (priceChange !== 0) {
                         priceChanges.push(priceChange);
                         if (priceChange > 0) result.pricing_summary.cards_with_increases++;
                         if (priceChange < 0) result.pricing_summary.cards_with_decreases++;
+
+                        // Check if price change is significant enough for notification
+                        if (Math.abs(priceChange) >= priceChangeThreshold) {
+                            cardsWithSignificantChanges.push({
+                                cardId: card.id,
+                                cardName: card.name,
+                                oldPrice,
+                                newPrice: newMarketPrice,
+                                changePercent: priceChange,
+                                imageUrl: card.small_image_url || card.image_url
+                            });
+                            result.price_changes++;
+                        }
                     }
 
                     // Track highest value card
-                    if (!highestValueCard || marketPrice > highestValueCard.price) {
-                        highestValueCard = { name: card.name, price: marketPrice };
+                    if (!highestValueCard || newMarketPrice > highestValueCard.price) {
+                        highestValueCard = { name: card.name, price: newMarketPrice };
                     }
 
-                    // Update card in database
+                    // Determine price trend
+                    let priceTrend = 'stable';
+                    if (priceChange > 5) priceTrend = 'up';
+                    else if (priceChange < -5) priceTrend = 'down';
+
+                    // Update card in database - FIXED: Only use fields that exist in your schema
                     await prisma.card.update({
                         where: { id: card.id },
                         data: {
-                            market_price: marketPrice,
-                            price_trend: priceSummary.trend,
+                            market_price: newMarketPrice,
+                            price_trend: priceTrend,
                             last_price_update: new Date(),
-                            tcgplayer_prices: pricingData.prices.tcgplayer ?
-                                JSON.parse(JSON.stringify(pricingData.prices.tcgplayer)) : null,
-                            cardmarket_prices: pricingData.prices.cardmarket ?
-                                JSON.parse(JSON.stringify(pricingData.prices.cardmarket)) : null,
+                            tcgplayer_prices: updatedCardData.tcgplayer ?
+                                JSON.parse(JSON.stringify(updatedCardData.tcgplayer)) : undefined,
+                            cardmarket_prices: updatedCardData.cardmarket ?
+                                JSON.parse(JSON.stringify(updatedCardData.cardmarket)) : undefined,
                         }
                     });
 
-                    // Create price history entry using the correct price_history table
+                    // Create price history entry with price change in metadata
                     await prisma.price_history.create({
                         data: {
                             card_id: card.id,
-                            price: marketPrice,
-                            source: 'pokemon_price_tracker',
+                            price: newMarketPrice,
+                            source: 'pokemon_tcg_api',
                             recorded_at: new Date(),
                             metadata: {
-                                price_change_24h: pricingData.price_change_24h,
-                                price_change_7d: pricingData.price_change_7d,
-                                volume_24h: pricingData.volume_24h,
-                                sources: priceSummary.sources,
                                 price_change_percent: priceChange,
+                                price_change_24h: priceChange, // Store in metadata instead
                                 old_price: oldPrice,
-                                new_price: marketPrice,
-                                sync_batch: true
+                                new_price: newMarketPrice,
+                                trend: priceTrend,
+                                sync_batch: true,
+                                tcgplayer_data: updatedCardData.tcgplayer?.prices || null,
+                                cardmarket_data: updatedCardData.cardmarket?.prices || null
                             }
                         }
                     });
 
                     result.successful_updates++;
-                    result.pricing_summary.total_market_value += marketPrice;
+                    result.pricing_summary.total_market_value += newMarketPrice;
 
                 } catch (error) {
                     console.error(`Error updating card ${card.id}:`, error);
@@ -270,10 +269,20 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // Small delay between batches to be respectful
+            // Small delay between batches
             if (i + batchSize < cardsToUpdate.length) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
+        }
+
+        // Send notifications for significant price changes
+        if (cardsWithSignificantChanges.length > 0) {
+            console.log(`Sending notifications for ${cardsWithSignificantChanges.length} cards with significant price changes`);
+
+            const notificationResult = await createBulkPriceChangeNotifications(cardsWithSignificantChanges);
+            result.notifications_sent = notificationResult.totalNotifications;
+
+            console.log(`Sent ${result.notifications_sent} notifications to card owners`);
         }
 
         // Calculate summary statistics
@@ -286,7 +295,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: `Price sync completed: ${result.successful_updates} updated, ${result.failed_updates} failed, ${result.skipped_cards} skipped`,
+            message: `Price sync completed: ${result.successful_updates} updated, ${result.failed_updates} failed, ${result.skipped_cards} skipped, ${result.notifications_sent} notifications sent`,
             result
         });
 
@@ -310,8 +319,16 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
 
         if (status === 'summary') {
-            // Get pricing summary statistics using correct table names
-            const result = await prisma.$queryRaw`
+            // Get current stats including recent price changes from price_history
+            const cardStatsResult = await prisma.$queryRaw<Array<{
+                total_cards: bigint;
+                cards_with_prices: bigint;
+                never_updated: bigint;
+                stale_prices: bigint;
+                avg_market_price: number | null;
+                max_price: number | null;
+                min_price: number | null;
+            }>>`
                 SELECT 
                   COUNT(*) as total_cards,
                   COUNT(CASE WHEN market_price IS NOT NULL THEN 1 END) as cards_with_prices,
@@ -322,9 +339,34 @@ export async function GET(request: NextRequest) {
                   MIN(market_price) as min_price
                 FROM cards 
                 WHERE api_id IS NOT NULL AND sync_enabled = 1
-            ` as any[];
+            `;
 
-            const stats = result[0];
+            const recentChangesResult = await prisma.$queryRaw<Array<{
+                cards_updated_24h: bigint;
+                avg_change_24h: number | null;
+            }>>`
+                SELECT 
+                  COUNT(DISTINCT card_id) as cards_updated_24h,
+                  AVG(CAST(JSON_EXTRACT(metadata, '$.price_change_percent') AS DECIMAL(10,2))) as avg_change_24h
+                FROM price_history
+                WHERE recorded_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                  AND source = 'pokemon_tcg_api'
+            `;
+
+            const stats = cardStatsResult[0] || {
+                total_cards: 0n,
+                cards_with_prices: 0n,
+                never_updated: 0n,
+                stale_prices: 0n,
+                avg_market_price: null,
+                max_price: null,
+                min_price: null
+            };
+
+            const changes = recentChangesResult[0] || {
+                cards_updated_24h: 0n,
+                avg_change_24h: null
+            };
 
             return NextResponse.json({
                 success: true,
@@ -333,6 +375,8 @@ export async function GET(request: NextRequest) {
                     cards_with_prices: Number(stats.cards_with_prices),
                     never_updated: Number(stats.never_updated),
                     stale_prices: Number(stats.stale_prices),
+                    cards_updated_24h: Number(changes.cards_updated_24h),
+                    avg_price_change_24h: changes.avg_change_24h ? Number(changes.avg_change_24h) : 0,
                     avg_market_price: stats.avg_market_price ? Number(stats.avg_market_price) : 0,
                     price_range: {
                         min: stats.min_price ? Number(stats.min_price) : 0,
