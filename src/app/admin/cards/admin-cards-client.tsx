@@ -1439,14 +1439,10 @@ export default function AdminCardsClient() {
 
             updateMainProgress(1, 'Preparing request parameters');
 
+            // Only fetch all cards - no filter parameters needed since we filter client-side
             const params = new URLSearchParams();
-            if (searchQuery) params.append('search', searchQuery);
-            if (setFilter) params.append('set', setFilter);
-            if (typeFilter) params.append('type', typeFilter);
-
-            // *** FIX: Add parameter to get ALL cards ***
-            params.append('all', 'true'); // This will get all cards without pagination
-            params.append('limit', '1000'); // Fallback limit if 'all' is not supported
+            params.append('all', 'true'); // Get all cards
+            params.append('limit', '1000'); // Fallback limit
 
             updateMainProgress(2, 'Fetching cards from server');
 
@@ -1467,12 +1463,10 @@ export default function AdminCardsClient() {
 
             setCards(data.cards || []);
 
-            // *** FIX: Show total count in success message ***
-            const totalMessage = `Loaded ${data.cards?.length || 0} cards (${data.pagination?.total || 0} total in database)`;
+            const totalMessage = `Loaded ${data.cards?.length || 0} cards from database`;
             console.log(`✅ ${totalMessage}`);
             toast.success(totalMessage, { autoClose: 3000 });
 
-            // Reset progress after brief delay
             setTimeout(resetMainProgress, 2000);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Failed to load cards.";
@@ -1483,7 +1477,7 @@ export default function AdminCardsClient() {
         } finally {
             setLoading(false);
         }
-    }, [session, searchQuery, setFilter, typeFilter, startMainProgress, updateMainProgress, completeMainProgress, resetMainProgress]);
+    }, [session, startMainProgress, updateMainProgress, completeMainProgress, resetMainProgress]); // Remove filter dependencies
 
     // Initial fetch
     useEffect(() => {
@@ -1526,9 +1520,36 @@ export default function AdminCardsClient() {
 
     const filteredCards = useMemo(() => {
         let result = [...cards];
-        if (rarityFilter) result = result.filter(card => card.rarity === rarityFilter);
-        return result.filter(Boolean);
-    }, [cards, rarityFilter]);
+
+        // Search filter - search in name, set_name, and set_number
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase().trim();
+            result = result.filter(card =>
+                card.name.toLowerCase().includes(query) ||
+                card.set_name.toLowerCase().includes(query) ||
+                (card.set_number && card.set_number.toLowerCase().includes(query)) ||
+                (card.rarity && card.rarity.toLowerCase().includes(query)) ||
+                (card.card_type && card.card_type.toLowerCase().includes(query))
+            );
+        }
+
+        // Set filter
+        if (setFilter) {
+            result = result.filter(card => card.set_name === setFilter);
+        }
+
+        // Type filter  
+        if (typeFilter) {
+            result = result.filter(card => card.card_type === typeFilter);
+        }
+
+        // Rarity filter
+        if (rarityFilter) {
+            result = result.filter(card => card.rarity === rarityFilter);
+        }
+
+        return result;
+    }, [cards, searchQuery, setFilter, typeFilter, rarityFilter]);
 
     // Price sync functions with progress tracking
     const handlePriceSyncComplete = (results: any) => {
@@ -2136,7 +2157,7 @@ export default function AdminCardsClient() {
                                     flexWrap="wrap"
                                 >
                                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                        <Tooltip title="Add a new card to the collection">
+                                        {/* <Tooltip title="Add a new card to the collection">
                                             <Button
                                                 variant="contained"
                                                 sx={{ bgcolor: "#96ff9b", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
@@ -2157,7 +2178,7 @@ export default function AdminCardsClient() {
                                             >
                                                 Bulk Create
                                             </Button>
-                                        </Tooltip>
+                                        </Tooltip> */}
                                         <Tooltip title="Import cards directly from Pokémon TCG API with progress tracking">
                                             <Button
                                                 variant="contained"
@@ -2254,11 +2275,11 @@ export default function AdminCardsClient() {
                                             label="Search Cards"
                                             variant="outlined"
                                             value={searchQuery}
-                                            onChange={(e) => debouncedSetSearchQuery(e.target.value)}
+                                            onChange={(e) => setSearchQuery(e.target.value)} // Direct update instead of debounced
                                             sx={{ flex: 1, minWidth: { xs: "100%", md: 200 } }}
                                             InputLabelProps={{ style: { color: "text.secondary" } }}
                                             inputProps={{ style: { color: "text.primary" } }}
-                                            placeholder="Search by name..."
+                                            placeholder="Search by name, set, number, rarity, or type..."
                                         />
                                         <FormControl sx={{ minWidth: { xs: "100%", md: 150 } }}>
                                             <InputLabel sx={{ color: "text.secondary" }}>Set</InputLabel>
@@ -2311,6 +2332,7 @@ export default function AdminCardsClient() {
                                                 setSetFilter("");
                                                 setTypeFilter("");
                                                 setRarityFilter("");
+                                                // No need to refetch since filtering is client-side
                                             }}
                                             sx={{ minWidth: 100 }}
                                         >
