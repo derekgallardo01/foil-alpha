@@ -27,6 +27,102 @@ model User {
   @@map("users")
 }
 
+model Card {
+  id                       Int        @id @default(autoincrement())
+  name                     String     @db.VarChar(255)
+  set_name                 String     @db.VarChar(255)
+  set_number               String?    @db.VarChar(50)
+  rarity                   String     @db.VarChar(50)
+  card_type                String?    @db.VarChar(50)
+  subtype                  String?    @db.VarChar(255)
+  hp                       Int?
+  image_url                String?    @db.VarChar(500)
+  small_image_url          String?    @db.VarChar(500)
+  tcg_id                   String?    @db.VarChar(255)
+  api_id                   String?    @unique @db.VarChar(100)
+  supertype                String?    @db.VarChar(50)
+  subtypes                 Json?
+  set_id                   String?
+  rarity_id                Int?
+  subtype_id               Int?
+  supertype_id             Int?
+  primary_type_id          Int?
+  secondary_type_id        Int?
+  types                    Json?
+  weakness_type            String?    @db.VarChar(50)
+  weakness_value           String?    @db.VarChar(20)
+  resistance_type          String?    @db.VarChar(50)
+  resistance_value         String?    @db.VarChar(20)
+  retreat_cost             Json?
+  retreat_cost_count       Int?
+  evolves_from             String?    @db.VarChar(255)
+  evolves_to               Json?
+  evolution_stage          String?    @db.VarChar(50)
+  pokemon_type             String?    @db.VarChar(100)
+  abilities                Json?
+  attacks                  Json?
+  artist                   String?    @db.VarChar(255)
+  flavor_text              String?    @db.Text
+  national_pokedex_numbers Json?
+  regulation_mark          String?    @db.VarChar(10)
+  tcgplayer_prices         Json?
+  cardmarket_prices        Json?
+  market_price             Decimal?   @db.Decimal(10, 2)
+  price_trend              String?    @db.VarChar(20)
+  last_price_update        DateTime?
+  legalities               Json?
+  tournament_legal         Boolean    @default(true)
+  banned_formats           Json?
+  condition_notes          String?    @db.Text
+  grading_company          String?    @db.VarChar(50)
+  grade_score              String?    @db.VarChar(10)
+  grade_date               DateTime?
+  rarity_symbol            String?    @db.VarChar(20)
+  holographic              Boolean    @default(false)
+  reverse_holo             Boolean    @default(false)
+  first_edition            Boolean    @default(false)
+  shadowless               Boolean    @default(false)
+  promo                    Boolean    @default(false)
+  secret_rare              Boolean    @default(false)
+  source                   CardSource @default(MANUAL)
+  api_updated_at           DateTime?
+  sync_enabled             Boolean    @default(true)
+  last_sync                DateTime?
+  tags                     Json?
+  notes                    String?    @db.Text
+  featured                 Boolean    @default(false)
+  view_count               Int        @default(0)
+  created_at               DateTime   @default(now()) @db.DateTime(0)
+  updated_at               DateTime   @updatedAt @db.DateTime(0)
+  price_tracker_id         String?    @unique(map: "unique_price_tracker_id") @db.VarChar(100)
+  price_change_7d          Decimal?   @db.Decimal(5, 2)
+  volume_24h               Decimal?   @db.Decimal(12, 2)
+  market_cap               Decimal?   @db.Decimal(15, 2)
+  pricing_sources          Json?
+  price_range              Json?
+  graded_prices            Json?
+  sync_errors              Int?       @default(0)
+
+  @@index([api_id])
+  @@index([name])
+  @@index([set_name])
+  @@index([source])
+  @@index([card_type])
+  @@index([rarity])
+  @@index([market_price])
+  @@index([tournament_legal])
+  @@index([featured])
+  @@index([secondary_type_id])
+  @@index([set_id])
+  @@index([rarity_id])
+  @@index([subtype_id])
+  @@index([supertype_id])
+  @@index([sync_enabled])
+  @@index([last_price_update])
+  @@index([price_tracker_id], map: "idx_price_tracker_id")
+  @@map("cards")
+}
+
 model PokemonSet {
   id             String    @id
   name           String    @unique
@@ -112,95 +208,6 @@ model CardType {
   @@index([is_active])
   @@index([type_order])
   @@map("card_types")
-}
-
-model Card {
-  id                       Int        @id @default(autoincrement())
-  name                     String     @db.VarChar(255)
-  set_name                 String     @db.VarChar(255)
-  set_number               String?    @db.VarChar(50)
-  rarity                   String     @db.VarChar(50)
-  card_type                String?    @db.VarChar(50)
-  subtype                  String?    @db.VarChar(255)
-  hp                       Int?
-  image_url                String?    @db.VarChar(500)
-  small_image_url          String?    @db.VarChar(500)
-  tcg_id                   String?    @db.VarChar(255)
-  api_id                   String?    @unique @db.VarChar(100)
-  supertype                String?    @db.VarChar(50)
-  subtypes                 Json?
-  set_id                   String?
-  rarity_id                Int?
-  subtype_id               Int?
-  supertype_id             Int?
-  primary_type_id          Int?
-  secondary_type_id        Int?
-  types                    Json?
-  weakness_type            String?    @db.VarChar(50)
-  weakness_value           String?    @db.VarChar(20)
-  resistance_type          String?    @db.VarChar(50)
-  resistance_value         String?    @db.VarChar(20)
-  retreat_cost             Json?
-  retreat_cost_count       Int?
-  evolves_from             String?    @db.VarChar(255)
-  evolves_to               Json?
-  evolution_stage          String?    @db.VarChar(50)
-  pokemon_type             String?    @db.VarChar(100)
-  abilities                Json?
-  attacks                  Json?
-  artist                   String?    @db.VarChar(255)
-  flavor_text              String?    @db.Text
-  national_pokedex_numbers Json?
-  regulation_mark          String?    @db.VarChar(10)
-  tcgplayer_prices         Json?
-  cardmarket_prices        Json?
-  market_price             Decimal?   @db.Decimal(10, 2)
-  price_trend              String?    @db.VarChar(20)
-  last_price_update        DateTime?
-  legalities               Json?
-  tournament_legal         Boolean    @default(true)
-  banned_formats           Json?
-  condition_notes          String?    @db.Text
-  grading_company          String?    @db.VarChar(50)
-  grade_score              String?    @db.VarChar(10)
-  grade_date               DateTime?
-  rarity_symbol            String?    @db.VarChar(20)
-  holographic              Boolean    @default(false)
-  reverse_holo             Boolean    @default(false)
-  first_edition            Boolean    @default(false)
-  shadowless               Boolean    @default(false)
-  promo                    Boolean    @default(false)
-  secret_rare              Boolean    @default(false)
-  source                   CardSource @default(MANUAL)
-  api_updated_at           DateTime?
-  sync_enabled             Boolean    @default(true)
-  last_sync                DateTime?
-  price_change_24h Decimal? @db.Decimal(5, 2)
-  tags                     Json?
-  notes                    String?    @db.Text
-  featured                 Boolean    @default(false)
-  view_count               Int        @default(0)
-  created_at               DateTime   @default(now()) @db.DateTime(0)
-  updated_at               DateTime   @updatedAt @db.DateTime(0)
-
-  @@index([api_id])
-  @@index([name])
-  @@index([set_name])
-  @@index([source])
-  @@index([card_type])
-  @@index([rarity])
-  @@index([market_price])
-  @@index([tournament_legal])
-  @@index([featured])
-  @@index([primary_type_id])
-  @@index([secondary_type_id])
-  @@index([set_id])
-  @@index([rarity_id])
-  @@index([subtype_id])
-  @@index([supertype_id])
-  @@index([sync_enabled])
-  @@index([last_price_update])
-  @@map("cards")
 }
 
 model PriceHistory {
@@ -294,10 +301,10 @@ model UserCard {
   acquired_date DateTime? @map("acquired_date") @db.DateTime(0)
   created_at    DateTime  @default(now()) @db.DateTime(0)
 
-  @@index([owner_id], map: "owner_id")
-  @@index([card_id], map: "card_id")
   @@index([is_for_sale])
   @@index([is_sold])
+  @@index([card_id], map: "card_id")
+  @@index([owner_id], map: "owner_id")
   @@map("user_cards")
 }
 
@@ -376,13 +383,15 @@ model Notification {
 }
 
 model price_history {
-  id          Int      @id @default(autoincrement())
-  card_id     Int
-  price       Decimal  @db.Decimal(10, 2)
-  source      String   @default("manual") @db.VarChar(50)
-  recorded_at DateTime @default(now()) @db.DateTime(0)
-  metadata    Json?
-  created_at  DateTime @default(now()) @db.DateTime(0)
+  id              Int      @id @default(autoincrement())
+  card_id         Int
+  price           Decimal  @db.Decimal(10, 2)
+  source          String   @default("manual") @db.VarChar(50)
+  recorded_at     DateTime @default(now()) @db.DateTime(0)
+  metadata        Json?
+  created_at      DateTime @default(now()) @db.DateTime(0)
+  price_type      String?  @db.VarChar(50)
+  condition_field String?  @db.VarChar(50)
 
   @@index([card_id, recorded_at], map: "idx_card_date")
   @@index([card_id], map: "idx_card_id")
@@ -469,6 +478,44 @@ model CatalogInventory {
 
   @@index([quantity_available], map: "idx_quantity_available")
   @@map("catalog_inventory")
+}
+
+model price_sync_logs {
+  id                 Int       @id @default(autoincrement())
+  sync_type          String?   @db.VarChar(50)
+  cards_processed    Int?      @default(0)
+  cards_updated      Int?      @default(0)
+  cards_failed       Int?      @default(0)
+  cards_skipped      Int?      @default(0)
+  total_api_requests Int?      @default(0)
+  api_errors         Int?      @default(0)
+  rate_limit_hits    Int?      @default(0)
+  start_time         DateTime? @db.DateTime(0)
+  end_time           DateTime? @db.DateTime(0)
+  duration_seconds   Int?      @default(0)
+  error_details      Json?
+  performance_stats  Json?
+  triggered_by       String?   @db.VarChar(100)
+  created_at         DateTime? @default(now()) @db.DateTime(0)
+
+  @@index([start_time], map: "idx_start_time")
+  @@index([sync_type], map: "idx_sync_type")
+}
+
+model price_tracker_sets {
+  id               String    @id @db.VarChar(100)
+  name             String    @unique(map: "name") @db.VarChar(255)
+  release_date     String?   @db.VarChar(50)
+  card_count       Int?      @default(0)
+  avg_price        Decimal?  @db.Decimal(10, 2)
+  total_market_cap Decimal?  @db.Decimal(15, 2)
+  last_updated     DateTime? @default(now()) @db.DateTime(0)
+  sync_enabled     Boolean?  @default(true)
+  created_at       DateTime? @default(now()) @db.DateTime(0)
+  updated_at       DateTime? @default(now()) @db.DateTime(0)
+
+  @@index([name], map: "idx_name")
+  @@index([release_date], map: "idx_release_date")
 }
 
 enum CardSource {

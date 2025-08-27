@@ -1,4 +1,4 @@
-// src/app/api/admin/transactions/route.ts - Get transactions for admin
+// src/app/api/admin/transactions/route.ts - Updated version
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
@@ -21,22 +21,57 @@ export async function GET(request: NextRequest) {
             where.status = status;
         }
 
-        // Get transactions without problematic includes
-        const transactions = await prisma.transaction.findMany({
-            where,
-            orderBy: { created_at: 'desc' },
-            take: limit
-        });
+        // Get current date info for monthly calculations
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        // Get related data separately for each transaction
+        // Get aggregated statistics
+        const [
+            totalSalesCount,
+            pendingTransactionsCount,
+            monthlyTransactions,
+            transactions
+        ] = await Promise.all([
+            // Total completed sales
+            prisma.transaction.count({
+                where: { status: 'COMPLETED' }
+            }),
+            // Pending transactions
+            prisma.transaction.count({
+                where: {
+                    status: {
+                        in: ['PENDING_BUYER_CONFIRMATION', 'PENDING_SELLER_CONFIRMATION']
+                    }
+                }
+            }),
+            // Monthly revenue calculation
+            prisma.transaction.findMany({
+                where: {
+                    status: 'COMPLETED',
+                    created_at: { gte: startOfMonth }
+                },
+                select: { amount: true }
+            }),
+            // Recent transactions
+            prisma.transaction.findMany({
+                where,
+                orderBy: { created_at: 'desc' },
+                take: limit
+            })
+        ]);
+
+        // Calculate monthly revenue
+        const monthlyRevenue = monthlyTransactions.reduce((sum, t) => {
+            return sum + Number(t.amount);
+        }, 0);
+
+        // Get related data for transactions (same as before)
         const transactionsWithDetails = await Promise.all(
             transactions.map(async (transaction) => {
-                // Get user card details
                 const userCard = await prisma.userCard.findUnique({
                     where: { id: transaction.user_card_id }
                 });
 
-                // Get card details
                 const card = userCard ? await prisma.card.findUnique({
                     where: { id: userCard.card_id },
                     select: {
@@ -47,7 +82,6 @@ export async function GET(request: NextRequest) {
                     }
                 }) : null;
 
-                // Get buyer details
                 const buyer = await prisma.user.findUnique({
                     where: { id: transaction.buyer_id },
                     select: {
@@ -57,7 +91,6 @@ export async function GET(request: NextRequest) {
                     }
                 });
 
-                // Get seller details
                 const seller = await prisma.user.findUnique({
                     where: { id: transaction.seller_id },
                     select: {
@@ -67,7 +100,6 @@ export async function GET(request: NextRequest) {
                     }
                 });
 
-                // Calculate expiration info for pending confirmations
                 const expiresAt = transaction.status === 'PENDING_BUYER_CONFIRMATION'
                     ? new Date(new Date(transaction.created_at).getTime() + 24 * 60 * 60 * 1000)
                     : null;
@@ -88,7 +120,10 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             transactions: transactionsWithDetails,
-            total: transactions.length
+            total: transactions.length,
+            totalSales: totalSalesCount,
+            pendingTransactions: pendingTransactionsCount,
+            monthlyRevenue: monthlyRevenue
         });
 
     } catch (error) {

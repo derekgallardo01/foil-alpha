@@ -1,102 +1,151 @@
-
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { prisma } from "../../lib/prisma";
 
-const prisma = new PrismaClient();
-
-interface WaitlistResponseData {
+interface WaitlistEntry {
   id: number;
   email: string;
   name: string;
-  phone_number?: string | null;
-  status: string | null; // Made nullable to match Prisma schema
-  source: string | null; // Made nullable to match Prisma schema
-  createdAt: Date;
+  phone_number: string | null;
+  status: string | null;
+  source: string | null;
+  created_at: Date | null;
   metadata: Record<string, unknown> | null;
 }
 
-interface SuccessResponse {
-  found: true;
-  data: WaitlistResponseData;
-}
-
-interface NotFoundResponse {
-  found: false;
-  message: string;
-}
-
-interface ErrorResponse {
-  error: string;
-}
-
-interface ErrorWithMessage extends Error {
-  message: string;
-  stack?: string;
-}
-
-function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
-  return typeof error === "object" && error !== null && "message" in error;
-}
-
+// GET /api/admin/waitlist - Get all waitlist entries
 export async function GET(request: Request) {
-  const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
-
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
 
-    if (!email) {
-      console.log(`[${timestamp}] Validation failed: Email parameter is required`);
-      return NextResponse.json<ErrorResponse>(
-        { error: "Email parameter is required" },
+    // If email is provided, get single entry (keeping backward compatibility)
+    if (email) {
+      const waitlistEntry = await prisma.waitlist.findUnique({
+        where: { email },
+      });
+
+      if (!waitlistEntry) {
+        return NextResponse.json({
+          found: false,
+          message: "Email not found in waitlist",
+        });
+      }
+
+      return NextResponse.json({
+        found: true,
+        data: {
+          id: waitlistEntry.id,
+          email: waitlistEntry.email,
+          name: waitlistEntry.name,
+          phone_number: waitlistEntry.phone_number,
+          status: waitlistEntry.status,
+          source: waitlistEntry.source,
+          created_at: waitlistEntry.created_at,
+          metadata: waitlistEntry.metadata,
+        },
+      });
+    }
+
+    // Otherwise, get all entries for admin page
+    const entries = await prisma.waitlist.findMany({
+      orderBy: { created_at: 'desc' },
+    });
+
+    console.log(`Found ${entries.length} waitlist entries`);
+
+    return NextResponse.json({ entries });
+
+  } catch (error) {
+    console.error("Error fetching waitlist entries:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/admin/waitlist - Delete a waitlist entry
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID parameter is required" },
         { status: 400 }
       );
     }
 
-    console.log(`[${timestamp}] Verifying waitlist entry for email=${email}`);
+    console.log(`Deleting waitlist entry with id=${id}`);
 
-    const waitlistEntry = await prisma.waitlist.findUnique({
-      where: { email },
+    const deletedEntry = await prisma.waitlist.delete({
+      where: { id: parseInt(id) },
     });
 
-    if (!waitlistEntry) {
-      console.log(`[${timestamp}] Email not found in waitlist: email=${email}`);
-      return NextResponse.json<NotFoundResponse>({
-        found: false,
-        message: "Email not found in waitlist",
-      });
-    }
+    console.log(`Successfully deleted waitlist entry: ${deletedEntry.email}`);
 
-    console.log(`[${timestamp}] Waitlist entry found: id=${waitlistEntry.id}`);
-
-    return NextResponse.json<SuccessResponse>({
-      found: true,
-      data: {
-        id: waitlistEntry.id,
-        email: waitlistEntry.email,
-        name: waitlistEntry.name,
-        phone_number: waitlistEntry.phone_number ?? null,
-        status: waitlistEntry.status ?? null,
-        source: waitlistEntry.source ?? null,
-        createdAt: waitlistEntry.created_at ?? new Date(), // Fallback to current date if null
-        metadata: (typeof waitlistEntry.metadata === "object" && waitlistEntry.metadata !== null
-          ? waitlistEntry.metadata
-          : null) as Record<string, unknown> | null,
-      },
+    return NextResponse.json({
+      success: true,
+      message: `Deleted waitlist entry for ${deletedEntry.email}`,
     });
+
   } catch (error) {
-    const errorMessage = isErrorWithMessage(error) ? error.message : String(error);
-    console.error(`[${timestamp}] Error verifying waitlist entry:`, {
-      message: errorMessage,
-      stack: isErrorWithMessage(error) ? error.stack : undefined,
-    });
-    return NextResponse.json<ErrorResponse>(
-      { error: "Internal server error" },
+    console.error("Error deleting waitlist entry:", error);
+    return NextResponse.json(
+      { error: "Failed to delete waitlist entry" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect().catch((err) => {
-      console.error(`[${timestamp}] Failed to disconnect Prisma client:`, err);
+  }
+}
+
+// POST /api/admin/waitlist - Update waitlist entry status
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id, status } = body;
+
+    if (!id || !status) {
+      return NextResponse.json(
+        { error: "ID and status are required" },
+        { status: 400 }
+      );
+    }
+
+    const updatedEntry = await prisma.waitlist.update({
+      where: { id: parseInt(id) },
+      data: { status },
     });
+
+    console.log(`Updated waitlist entry ${id} status to ${status}`);
+
+    return NextResponse.json({
+      success: true,
+      data: updatedEntry,
+    });
+
+  } catch (error) {
+    console.error("Error updating waitlist entry:", error);
+    return NextResponse.json(
+      { error: "Failed to update waitlist entry" },
+      { status: 500 }
+    );
   }
 }

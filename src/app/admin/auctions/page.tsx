@@ -1,4 +1,4 @@
-// src/app/admin/auctions/page.tsx - Complete Admin auction management
+// src/app/admin/auctions/page.tsx - Updated to show actual data correctly
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -27,7 +27,9 @@ import {
     List,
     ListItem,
     ListItemText,
-    Divider
+    Divider,
+    LinearProgress,
+    Avatar
 } from '@mui/material';
 import {
     Gavel as GavelIcon,
@@ -40,7 +42,8 @@ import {
     Refresh as RefreshIcon,
     Settings as SettingsIcon,
     Warning as WarningIcon,
-    CheckCircle as CheckIcon
+    CheckCircle as CheckIcon,
+    TrendingUp,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AdminSidebar from '../../components/AdminSidebar';
@@ -50,6 +53,7 @@ interface Card {
     name: string;
     set_name: string;
     image_url: string;
+    small_image_url?: string;
 }
 
 interface Bid {
@@ -83,10 +87,17 @@ interface PendingTransaction {
     userCard: {
         card: Card;
     };
-    amount: number;
+    amount: string | number;
     status: string;
     created_at: string;
     expires_at?: string;
+    transaction_type?: string;
+}
+
+interface AuctionStats {
+    activeAuctions: number;
+    totalAuctions: number;
+    activeAuctionsCount?: number;
 }
 
 export default function AdminAuctionManagement() {
@@ -96,6 +107,10 @@ export default function AdminAuctionManagement() {
     const [activeTab, setActiveTab] = useState(0);
     const [auctions, setAuctions] = useState<AuctionData[]>([]);
     const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
+    const [stats, setStats] = useState<AuctionStats>({
+        activeAuctions: 0,
+        totalAuctions: 0
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedAuction, setSelectedAuction] = useState<AuctionData | null>(null);
@@ -116,17 +131,37 @@ export default function AdminAuctionManagement() {
             setLoading(true);
             setError(null);
 
-            // Fetch active auctions
-            const auctionsResponse = await fetch('/api/admin/auctions');
+            // Fetch all auctions
+            const auctionsResponse = await fetch('/api/admin/auctions?limit=100');
             if (!auctionsResponse.ok) throw new Error('Failed to fetch auctions');
             const auctionsData = await auctionsResponse.json();
 
-            // Fetch pending transactions
-            const transactionsResponse = await fetch('/api/admin/transactions?status=PENDING_BUYER_CONFIRMATION');
-            const transactionsData = transactionsResponse.ok ? await transactionsResponse.json() : [];
+            // Fetch pending transactions (specifically for auctions)
+            const transactionsResponse = await fetch('/api/admin/transactions?status=PENDING_BUYER_CONFIRMATION&limit=100');
+            let transactionsData = { transactions: [] };
+            if (transactionsResponse.ok) {
+                transactionsData = await transactionsResponse.json();
+            }
 
-            setAuctions(auctionsData.auctions || auctionsData);
-            setPendingTransactions(transactionsData.transactions || transactionsData);
+            // Filter only auction-related pending transactions
+            const auctionPendingTransactions = (transactionsData.transactions || []).filter((t: PendingTransaction) =>
+                t.transaction_type === 'AUCTION' || t.transaction_type === 'BID_ACCEPTED'
+            );
+
+            // Set data
+            setAuctions(auctionsData.auctions || []);
+            setPendingTransactions(auctionPendingTransactions);
+            setStats({
+                activeAuctions: auctionsData.activeAuctions || 0,
+                totalAuctions: auctionsData.total || 0,
+                activeAuctionsCount: auctionsData.activeAuctions || 0
+            });
+
+            console.log('Fetched auction data:', {
+                auctions: auctionsData.auctions?.length || 0,
+                active: auctionsData.activeAuctions || 0,
+                pendingTransactions: auctionPendingTransactions.length
+            });
 
         } catch (err) {
             console.error('Error fetching auction data:', err);
@@ -152,7 +187,7 @@ export default function AdminAuctionManagement() {
     }, [status, session]);
 
     const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
+        if (price === null || price === undefined) return 'No bids';
         return `$${Number(price).toFixed(2)}`;
     };
 
@@ -180,6 +215,10 @@ export default function AdminAuctionManagement() {
     };
 
     const handleEndAuction = async (auctionId: number) => {
+        if (!confirm('Are you sure you want to end this auction? This will process the highest bid if one exists.')) {
+            return;
+        }
+
         setActionLoading(auctionId);
         try {
             const response = await fetch('/api/admin/auctions/end', {
@@ -195,6 +234,7 @@ export default function AdminAuctionManagement() {
             if (response.ok) {
                 toast.success('Auction ended successfully');
                 fetchAuctions();
+                setDetailsModalOpen(false);
             } else {
                 toast.error(data.error || 'Failed to end auction');
             }
@@ -219,7 +259,7 @@ export default function AdminAuctionManagement() {
             const data = await response.json();
 
             if (response.ok) {
-                toast.success(`Processed ${data.total_processed} auctions/transactions`);
+                toast.success(`Processed ${data.total_processed || 0} auctions/transactions`);
                 fetchAuctions();
             } else {
                 toast.error(data.error || 'Failed to process auctions');
@@ -233,6 +273,10 @@ export default function AdminAuctionManagement() {
     };
 
     const handleForceCompleteTransaction = async (transactionId: number) => {
+        if (!confirm('Are you sure you want to force complete this transaction?')) {
+            return;
+        }
+
         setActionLoading(transactionId);
         try {
             const response = await fetch('/api/admin/transactions/force-complete', {
@@ -263,6 +307,15 @@ export default function AdminAuctionManagement() {
         setSelectedAuction(auction);
         setDetailsModalOpen(true);
     };
+
+    // Get filtered auctions based on status
+    const activeAuctions = auctions.filter(a => getAuctionStatus(a).label === 'Active');
+    const endedAuctions = auctions.filter(a => ['Ended', 'Sold'].includes(getAuctionStatus(a).label));
+
+    // Calculate total value of active auctions
+    const totalActiveValue = activeAuctions.reduce((sum, auction) =>
+        sum + (auction.highest_bid || auction.reserve_price || 0), 0
+    );
 
     if (status === 'loading' || loading) {
         return (
@@ -336,6 +389,58 @@ export default function AdminAuctionManagement() {
                     </Alert>
                 )}
 
+                {/* Statistics Cards */}
+                <Grid container spacing={3} sx={{ mb: 3 }}>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <CardContent>
+                                <Typography variant="h4" sx={{ color: '#96ff9b' }}>
+                                    {stats.activeAuctionsCount || activeAuctions.length}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Active Auctions
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <CardContent>
+                                <Typography variant="h4" sx={{ color: 'warning.main' }}>
+                                    {pendingTransactions.length}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Pending Confirmations
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <CardContent>
+                                <Typography variant="h4" sx={{ color: 'success.main' }}>
+                                    {endedAuctions.filter(a => a.is_sold).length}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Sold Auctions
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <CardContent>
+                                <Typography variant="h4" sx={{ color: '#96ff9b' }}>
+                                    ${totalActiveValue.toFixed(2)}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Active Auction Value
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                </Grid>
+
                 {/* Tabs */}
                 <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
                     <Tabs
@@ -348,11 +453,11 @@ export default function AdminAuctionManagement() {
                         }}
                     >
                         <Tab
-                            label={`Active Auctions (${auctions.filter(a => getAuctionStatus(a).label === 'Active').length})`}
+                            label={`Active Auctions (${activeAuctions.length})`}
                             icon={<GavelIcon />}
                         />
                         <Tab
-                            label={`Ended Auctions (${auctions.filter(a => getAuctionStatus(a).label === 'Ended').length})`}
+                            label={`Ended Auctions (${endedAuctions.length})`}
                             icon={<ClockIcon />}
                         />
                         <Tab
@@ -366,101 +471,169 @@ export default function AdminAuctionManagement() {
                 {activeTab === 0 && (
                     /* Active Auctions */
                     <Grid container spacing={3}>
-                        {auctions.filter(auction => getAuctionStatus(auction).label === 'Active').map((auction) => (
-                            <Grid item xs={12} sm={6} md={4} key={auction.id}>
-                                <Card sx={{
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    bgcolor: 'grey.800',
-                                    border: '1px solid rgba(150, 255, 155, 0.2)'
-                                }}>
-                                    <CardMedia
-                                        component="img"
-                                        height="200"
-                                        image={auction.card.image_url || '/placeholder-card.png'}
-                                        alt={auction.card.name}
-                                        sx={{ objectFit: 'contain', bgcolor: 'grey.700' }}
-                                    />
-                                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b', mb: 1 }}>
-                                            {auction.card.name}
-                                        </Typography>
-
-                                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            Owner: {auction.owner.name}
-                                        </Typography>
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Reserve:
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                {formatPrice(auction.reserve_price)}
-                                            </Typography>
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Highest Bid:
-                                            </Typography>
-                                            <Typography variant="h6" color="primary.main">
-                                                {formatPrice(auction.highest_bid)}
-                                            </Typography>
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Time Left:
-                                            </Typography>
-                                            <Typography variant="body2" color="error.main">
-                                                {formatTimeLeft(auction.time_remaining)}
-                                            </Typography>
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
-                                            <Button
-                                                variant="outlined"
-                                                size="small"
-                                                fullWidth
-                                                onClick={() => showAuctionDetails(auction)}
-                                                sx={{
-                                                    borderColor: '#96ff9b',
-                                                    color: '#96ff9b',
-                                                    '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-                                                }}
-                                            >
-                                                View Details ({auction.bid_count})
-                                            </Button>
-
-                                            <Tooltip title="End auction now">
-                                                <IconButton
-                                                    color="error"
-                                                    onClick={() => handleEndAuction(auction.id)}
-                                                    disabled={actionLoading === auction.id}
-                                                >
-                                                    {actionLoading === auction.id ? (
-                                                        <CircularProgress size={20} />
-                                                    ) : (
-                                                        <EndIcon />
-                                                    )}
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        ))}
-
-                        {auctions.filter(auction => getAuctionStatus(auction).label === 'Active').length === 0 && (
+                        {activeAuctions.length === 0 ? (
                             <Grid item xs={12}>
                                 <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                                     <GavelIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No active auctions
                                     </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                        There are currently no auctions running
+                                    </Typography>
                                 </Paper>
                             </Grid>
+                        ) : (
+                            activeAuctions.map((auction) => (
+                                <Grid item xs={12} sm={6} md={4} key={auction.id}>
+                                    <Card sx={{
+                                        height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        bgcolor: 'grey.800',
+                                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                                        position: 'relative',
+                                        overflow: 'visible'
+                                    }}>
+                                        {/* Time warning indicator */}
+                                        {auction.time_remaining && auction.time_remaining < 3600000 && (
+                                            <Box sx={{
+                                                position: 'absolute',
+                                                top: -1,
+                                                left: -1,
+                                                right: -1,
+                                                height: 4,
+                                                bgcolor: 'error.main',
+                                                animation: 'pulse 2s infinite',
+                                                zIndex: 1
+                                            }} />
+                                        )}
+
+                                        <CardMedia
+                                            component="img"
+                                            height="200"
+                                            image={auction.card?.image_url || '/placeholder-card.png'}
+                                            alt={auction.card?.name || 'Card'}
+                                            sx={{ objectFit: 'contain', bgcolor: 'grey.700', p: 1 }}
+                                            onError={(e: any) => {
+                                                e.target.src = '/placeholder-card.png';
+                                            }}
+                                        />
+                                        <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                            <Typography variant="h6" sx={{ color: '#96ff9b', mb: 1 }}>
+                                                {auction.card?.name || 'Unknown Card'}
+                                            </Typography>
+
+                                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                                {auction.card?.set_name || 'Unknown Set'}
+                                            </Typography>
+
+                                            <Box sx={{ mt: 'auto' }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Owner
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {auction.owner?.name || 'Unknown'}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Reserve
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {formatPrice(auction.reserve_price)}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Current Bid
+                                                    </Typography>
+                                                    <Typography variant="h6" color={auction.highest_bid ? 'primary.main' : 'text.secondary'}>
+                                                        {formatPrice(auction.highest_bid)}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Bids
+                                                    </Typography>
+                                                    <Chip
+                                                        label={auction.bid_count}
+                                                        size="small"
+                                                        color={auction.bid_count > 0 ? 'primary' : 'default'}
+                                                    />
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Time Left
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: auction.time_remaining && auction.time_remaining < 3600000 ? 'error.main' : 'warning.main',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        {formatTimeLeft(auction.time_remaining)}
+                                                    </Typography>
+                                                </Box>
+
+                                                {/* Progress bar for time remaining */}
+                                                {auction.time_remaining && auction.auction_end && (
+                                                    <LinearProgress
+                                                        variant="determinate"
+                                                        value={Math.max(0, Math.min(100, (auction.time_remaining / (7 * 24 * 60 * 60 * 1000)) * 100))}
+                                                        sx={{
+                                                            mb: 2,
+                                                            height: 6,
+                                                            borderRadius: 3,
+                                                            bgcolor: 'grey.700',
+                                                            '& .MuiLinearProgress-bar': {
+                                                                bgcolor: auction.time_remaining < 3600000 ? 'error.main' : '#96ff9b',
+                                                                borderRadius: 3,
+                                                            },
+                                                        }}
+                                                    />
+                                                )}
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    fullWidth
+                                                    onClick={() => showAuctionDetails(auction)}
+                                                    sx={{
+                                                        borderColor: '#96ff9b',
+                                                        color: '#96ff9b',
+                                                        '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                    }}
+                                                >
+                                                    View Details
+                                                </Button>
+
+                                                <Tooltip title="End auction now">
+                                                    <IconButton
+                                                        color="error"
+                                                        onClick={() => handleEndAuction(auction.id)}
+                                                        disabled={actionLoading === auction.id}
+                                                    >
+                                                        {actionLoading === auction.id ? (
+                                                            <CircularProgress size={20} />
+                                                        ) : (
+                                                            <EndIcon />
+                                                        )}
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ))
                         )}
                     </Grid>
                 )}
@@ -468,74 +641,113 @@ export default function AdminAuctionManagement() {
                 {activeTab === 1 && (
                     /* Ended Auctions */
                     <Grid container spacing={3}>
-                        {auctions.filter(auction => getAuctionStatus(auction).label === 'Ended' || getAuctionStatus(auction).label === 'Sold').map((auction) => (
-                            <Grid item xs={12} sm={6} md={4} key={auction.id}>
-                                <Card sx={{
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    bgcolor: 'grey.800',
-                                    border: '1px solid rgba(150, 255, 155, 0.2)'
-                                }}>
-                                    <CardMedia
-                                        component="img"
-                                        height="200"
-                                        image={auction.card.image_url || '/placeholder-card.png'}
-                                        alt={auction.card.name}
-                                        sx={{ objectFit: 'contain', bgcolor: 'grey.700' }}
-                                    />
-                                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b', mb: 1 }}>
-                                            {auction.card.name}
-                                        </Typography>
-
-                                        <Chip
-                                            label={getAuctionStatus(auction).label}
-                                            color={getAuctionStatus(auction).color}
-                                            size="small"
-                                            sx={{ mb: 2, alignSelf: 'flex-start' }}
-                                        />
-
-                                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            Owner: {auction.owner.name}
-                                        </Typography>
-
-                                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            Final Bid: {formatPrice(auction.highest_bid)}
-                                        </Typography>
-
-                                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            Ended: {formatDateTime(auction.auction_end)}
-                                        </Typography>
-
-                                        <Button
-                                            variant="outlined"
-                                            size="small"
-                                            fullWidth
-                                            onClick={() => showAuctionDetails(auction)}
-                                            sx={{
-                                                mt: 'auto',
-                                                borderColor: '#96ff9b',
-                                                color: '#96ff9b',
-                                                '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-                                            }}
-                                        >
-                                            View Details
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        ))}
-
-                        {auctions.filter(auction => getAuctionStatus(auction).label === 'Ended' || getAuctionStatus(auction).label === 'Sold').length === 0 && (
+                        {endedAuctions.length === 0 ? (
                             <Grid item xs={12}>
                                 <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                                     <ClockIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No ended auctions
                                     </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                        No auctions have ended yet
+                                    </Typography>
                                 </Paper>
                             </Grid>
+                        ) : (
+                            endedAuctions.map((auction) => (
+                                <Grid item xs={12} sm={6} md={4} key={auction.id}>
+                                    <Card sx={{
+                                        height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        bgcolor: 'grey.800',
+                                        border: `1px solid ${auction.is_sold ? 'rgba(76, 175, 80, 0.5)' : 'rgba(244, 67, 54, 0.5)'}`
+                                    }}>
+                                        <CardMedia
+                                            component="img"
+                                            height="200"
+                                            image={auction.card?.image_url || '/placeholder-card.png'}
+                                            alt={auction.card?.name || 'Card'}
+                                            sx={{ objectFit: 'contain', bgcolor: 'grey.700', p: 1 }}
+                                            onError={(e: any) => {
+                                                e.target.src = '/placeholder-card.png';
+                                            }}
+                                        />
+                                        <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                    {auction.card?.name || 'Unknown Card'}
+                                                </Typography>
+                                                <Chip
+                                                    label={auction.is_sold ? 'SOLD' : 'ENDED'}
+                                                    color={auction.is_sold ? 'success' : 'error'}
+                                                    size="small"
+                                                />
+                                            </Box>
+
+                                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                                {auction.card?.set_name || 'Unknown Set'}
+                                            </Typography>
+
+                                            <Box sx={{ mt: 'auto' }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Owner:
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {auction.owner?.name || 'Unknown'}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Reserve:
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {formatPrice(auction.reserve_price)}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Final Bid:
+                                                    </Typography>
+                                                    <Typography variant="h6" sx={{ color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
+                                                        {formatPrice(auction.highest_bid)}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Total Bids:
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {auction.bid_count}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                                                    Ended: {formatDateTime(auction.auction_end)}
+                                                </Typography>
+
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    fullWidth
+                                                    onClick={() => showAuctionDetails(auction)}
+                                                    sx={{
+                                                        borderColor: '#96ff9b',
+                                                        color: '#96ff9b',
+                                                        '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                    }}
+                                                >
+                                                    View Details
+                                                </Button>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ))
                         )}
                     </Grid>
                 )}
@@ -543,93 +755,7 @@ export default function AdminAuctionManagement() {
                 {activeTab === 2 && (
                     /* Pending Confirmations */
                     <Grid container spacing={3}>
-                        {pendingTransactions.map((transaction) => (
-                            <Grid item xs={12} md={6} key={transaction.id}>
-                                <Card sx={{
-                                    bgcolor: 'grey.800',
-                                    border: '1px solid rgba(255, 152, 0, 0.5)' // Warning color
-                                }}>
-                                    <CardContent>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <WarningIcon sx={{ color: 'warning.main', mr: 1 }} />
-                                            <Typography variant="h6" sx={{ color: '#96ff9b' }}>
-                                                Pending Purchase Confirmation
-                                            </Typography>
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                                            <img
-                                                src={transaction.userCard.card.image_url || '/placeholder-card.png'}
-                                                alt={transaction.userCard.card.name}
-                                                style={{ width: 60, height: 60, objectFit: 'contain' }}
-                                            />
-                                            <Box sx={{ flexGrow: 1 }}>
-                                                <Typography variant="subtitle1" sx={{ color: 'text.primary' }}>
-                                                    {transaction.userCard.card.name}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Amount: {formatPrice(transaction.amount)}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Created: {formatDateTime(transaction.created_at)}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-
-                                        <Divider sx={{ my: 2 }} />
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Buyer:
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                {transaction.buyer.name}
-                                            </Typography>
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Seller:
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                {transaction.seller.name}
-                                            </Typography>
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Status:
-                                            </Typography>
-                                            <Chip
-                                                label={transaction.status}
-                                                color="warning"
-                                                size="small"
-                                            />
-                                        </Box>
-
-                                        <Button
-                                            variant="contained"
-                                            fullWidth
-                                            onClick={() => handleForceCompleteTransaction(transaction.id)}
-                                            disabled={actionLoading === transaction.id}
-                                            startIcon={actionLoading === transaction.id ?
-                                                <CircularProgress size={16} /> :
-                                                <CheckIcon />
-                                            }
-                                            sx={{
-                                                bgcolor: '#96ff9b',
-                                                color: 'grey.900',
-                                                '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
-                                            }}
-                                        >
-                                            Force Complete Transaction
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        ))}
-
-                        {pendingTransactions.length === 0 && (
+                        {pendingTransactions.length === 0 ? (
                             <Grid item xs={12}>
                                 <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                                     <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
@@ -637,131 +763,377 @@ export default function AdminAuctionManagement() {
                                         No pending confirmations
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        All transactions are up to date
+                                        All auction transactions are up to date
                                     </Typography>
                                 </Paper>
                             </Grid>
+                        ) : (
+                            pendingTransactions.map((transaction) => {
+                                const timeLeft = transaction.expires_at ?
+                                    new Date(transaction.expires_at).getTime() - new Date().getTime() : null;
+                                const isExpired = timeLeft !== null && timeLeft <= 0;
+
+                                return (
+                                    <Grid item xs={12} md={6} key={transaction.id}>
+                                        <Card sx={{
+                                            bgcolor: 'grey.800',
+                                            border: `1px solid ${isExpired ? 'rgba(244, 67, 54, 0.5)' : 'rgba(255, 152, 0, 0.5)'}`,
+                                            position: 'relative'
+                                        }}>
+                                            {isExpired && (
+                                                <Box sx={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    height: 4,
+                                                    bgcolor: 'error.main'
+                                                }} />
+                                            )}
+
+                                            <CardContent>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <WarningIcon sx={{ color: isExpired ? 'error.main' : 'warning.main' }} />
+                                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                            Transaction #{transaction.id}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Chip
+                                                        label={isExpired ? 'EXPIRED' : 'PENDING'}
+                                                        color={isExpired ? 'error' : 'warning'}
+                                                        size="small"
+                                                    />
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                                                    <img
+                                                        src={transaction.userCard?.card?.image_url || '/placeholder-card.png'}
+                                                        alt={transaction.userCard?.card?.name || 'Card'}
+                                                        style={{ width: 80, height: 80, objectFit: 'contain' }}
+                                                        onError={(e: any) => {
+                                                            e.target.src = '/placeholder-card.png';
+                                                        }}
+                                                    />
+                                                    <Box sx={{ flexGrow: 1 }}>
+                                                        <Typography variant="subtitle1" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                                                            {transaction.userCard?.card?.name || 'Unknown Card'}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            {transaction.userCard?.card?.set_name || 'Unknown Set'}
+                                                        </Typography>
+                                                        <Typography variant="h6" sx={{ color: 'primary.main', mt: 1 }}>
+                                                            {formatPrice(typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : transaction.amount)}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+
+                                                <Divider sx={{ my: 2 }} />
+
+                                                <Grid container spacing={1}>
+                                                    <Grid item xs={6}>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Buyer
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            {transaction.buyer?.name || 'Unknown'}
+                                                        </Typography>
+                                                    </Grid>
+                                                    <Grid item xs={6}>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Seller
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            {transaction.seller?.name || 'Unknown'}
+                                                        </Typography>
+                                                    </Grid>
+                                                    <Grid item xs={12}>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Created
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            {formatDateTime(transaction.created_at)}
+                                                        </Typography>
+                                                    </Grid>
+                                                    {timeLeft !== null && (
+                                                        <Grid item xs={12}>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Time Remaining
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ color: isExpired ? 'error.main' : 'warning.main', fontWeight: 'bold' }}>
+                                                                {isExpired ? 'Expired' : formatTimeLeft(timeLeft)}
+                                                            </Typography>
+                                                            <LinearProgress
+                                                                variant="determinate"
+                                                                value={isExpired ? 0 : Math.max(0, Math.min(100, (timeLeft / (24 * 60 * 60 * 1000)) * 100))}
+                                                                sx={{
+                                                                    mt: 1,
+                                                                    height: 6,
+                                                                    borderRadius: 3,
+                                                                    bgcolor: 'grey.700',
+                                                                    '& .MuiLinearProgress-bar': {
+                                                                        bgcolor: isExpired ? 'error.main' : 'warning.main',
+                                                                        borderRadius: 3,
+                                                                    },
+                                                                }}
+                                                            />
+                                                        </Grid>
+                                                    )}
+                                                </Grid>
+
+                                                <Button
+                                                    variant="contained"
+                                                    fullWidth
+                                                    onClick={() => handleForceCompleteTransaction(transaction.id)}
+                                                    disabled={actionLoading === transaction.id}
+                                                    startIcon={actionLoading === transaction.id ?
+                                                        <CircularProgress size={16} /> :
+                                                        <CheckIcon />
+                                                    }
+                                                    sx={{
+                                                        mt: 2,
+                                                        bgcolor: isExpired ? 'error.main' : '#96ff9b',
+                                                        color: isExpired ? 'white' : 'grey.900',
+                                                        '&:hover': {
+                                                            bgcolor: isExpired ? 'error.dark' : 'rgba(150, 255, 155, 0.8)'
+                                                        }
+                                                    }}
+                                                >
+                                                    {actionLoading === transaction.id ?
+                                                        'Processing...' :
+                                                        'Force Complete Transaction'
+                                                    }
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                );
+                            })
                         )}
                     </Grid>
                 )}
             </Container>
 
             {/* Auction Details Modal */}
-            <Dialog open={detailsModalOpen} onClose={() => setDetailsModalOpen(false)} maxWidth="md" fullWidth>
+            <Dialog
+                open={detailsModalOpen}
+                onClose={() => setDetailsModalOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'grey.900',
+                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                    }
+                }}
+            >
                 <DialogTitle sx={{ bgcolor: 'grey.800', color: '#96ff9b' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <GavelIcon />
                         <Typography variant="h6">
-                            Auction Details: {selectedAuction?.card.name}
+                            Auction Details: {selectedAuction?.card?.name || 'Unknown Card'}
                         </Typography>
                     </Box>
                 </DialogTitle>
 
                 <DialogContent sx={{ bgcolor: 'grey.800' }}>
                     {selectedAuction && (
-                        <Box>
+                        <Box sx={{ pt: 2 }}>
                             {/* Auction Summary */}
                             <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.700' }}>
                                 <Grid container spacing={2}>
                                     <Grid item xs={4}>
                                         <img
-                                            src={selectedAuction.card.image_url || '/placeholder-card.png'}
-                                            alt={selectedAuction.card.name}
-                                            style={{ width: '100%', height: 'auto', maxHeight: '150px', objectFit: 'contain' }}
+                                            src={selectedAuction.card?.image_url || '/placeholder-card.png'}
+                                            alt={selectedAuction.card?.name || 'Card'}
+                                            style={{ width: '100%', height: 'auto', maxHeight: '200px', objectFit: 'contain' }}
+                                            onError={(e: any) => {
+                                                e.target.src = '/placeholder-card.png';
+                                            }}
                                         />
                                     </Grid>
                                     <Grid item xs={8}>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
-                                            {selectedAuction.card.name}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {selectedAuction.card.set_name}
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ mt: 1 }}>
-                                            Condition: {selectedAuction.condition}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            Reserve Price: {formatPrice(selectedAuction.reserve_price)}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            Owner: {selectedAuction.owner.name} ({selectedAuction.owner.email})
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            Ends: {formatDateTime(selectedAuction.auction_end)}
-                                        </Typography>
-                                        <Chip
-                                            label={getAuctionStatus(selectedAuction).label}
-                                            color={getAuctionStatus(selectedAuction).color}
-                                            size="small"
-                                            sx={{ mt: 1 }}
-                                        />
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                                            <Box>
+                                                <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                    {selectedAuction.card?.name || 'Unknown Card'}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {selectedAuction.card?.set_name || 'Unknown Set'}
+                                                </Typography>
+                                            </Box>
+                                            <Chip
+                                                label={getAuctionStatus(selectedAuction).label}
+                                                color={getAuctionStatus(selectedAuction).color}
+                                                size="small"
+                                            />
+                                        </Box>
+
+                                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                                            <Grid item xs={6}>
+                                                <Typography variant="caption" color="text.secondary" display="block">
+                                                    Condition
+                                                </Typography>
+                                                <Typography variant="body2">
+                                                    {selectedAuction.condition || 'N/A'}
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={6}>
+                                                <Typography variant="caption" color="text.secondary" display="block">
+                                                    Reserve Price
+                                                </Typography>
+                                                <Typography variant="body2">
+                                                    {formatPrice(selectedAuction.reserve_price)}
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={6}>
+                                                <Typography variant="caption" color="text.secondary" display="block">
+                                                    Owner
+                                                </Typography>
+                                                <Typography variant="body2">
+                                                    {selectedAuction.owner?.name || 'Unknown'}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {selectedAuction.owner?.email || ''}
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={6}>
+                                                <Typography variant="caption" color="text.secondary" display="block">
+                                                    Auction Ends
+                                                </Typography>
+                                                <Typography variant="body2">
+                                                    {formatDateTime(selectedAuction.auction_end)}
+                                                </Typography>
+                                                {selectedAuction.time_remaining && selectedAuction.time_remaining > 0 && (
+                                                    <Typography variant="caption" sx={{ color: 'warning.main' }}>
+                                                        {formatTimeLeft(selectedAuction.time_remaining)} remaining
+                                                    </Typography>
+                                                )}
+                                            </Grid>
+                                        </Grid>
+
+                                        <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.800', borderRadius: 1 }}>
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={6}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Current Bid
+                                                    </Typography>
+                                                    <Typography variant="h5" sx={{ color: 'primary.main' }}>
+                                                        {formatPrice(selectedAuction.highest_bid)}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={6}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Total Bids
+                                                    </Typography>
+                                                    <Typography variant="h5">
+                                                        {selectedAuction.bid_count}
+                                                    </Typography>
+                                                </Grid>
+                                            </Grid>
+                                        </Box>
                                     </Grid>
                                 </Grid>
                             </Paper>
 
                             {/* Bids List */}
-                            <Typography variant="h6" gutterBottom sx={{ color: '#96ff9b' }}>
-                                Bid History ({selectedAuction.bid_count} bids)
-                            </Typography>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom sx={{ color: '#96ff9b', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <TrendingUp />
+                                    Bid History ({selectedAuction.bid_count} bids)
+                                </Typography>
 
-                            {selectedAuction.bids.length === 0 ? (
-                                <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.700' }}>
-                                    <Typography variant="body1" color="text.secondary">
-                                        No bids received
-                                    </Typography>
-                                </Paper>
-                            ) : (
-                                <List sx={{ bgcolor: 'grey.700', borderRadius: 1 }}>
-                                    {selectedAuction.bids
-                                        .sort((a, b) => Number(b.amount) - Number(a.amount))
-                                        .map((bid, index) => (
-                                            <React.Fragment key={bid.id}>
-                                                <ListItem>
-                                                    <ListItemText
-                                                        primary={
-                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <Box>
-                                                                    <Typography variant="body1" sx={{ color: 'text.primary' }}>
-                                                                        {bid.bidder.name} ({bid.bidder.email})
+                                {selectedAuction.bids.length === 0 ? (
+                                    <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.700' }}>
+                                        <Typography variant="body1" color="text.secondary">
+                                            No bids received yet
+                                        </Typography>
+                                    </Paper>
+                                ) : (
+                                    <List sx={{ bgcolor: 'grey.700', borderRadius: 1, maxHeight: 300, overflow: 'auto' }}>
+                                        {selectedAuction.bids
+                                            .sort((a, b) => b.amount - a.amount)
+                                            .map((bid, index) => (
+                                                <React.Fragment key={bid.id}>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary={
+                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                        <Avatar sx={{ width: 32, height: 32, bgcolor: index === 0 ? 'primary.main' : 'grey.600' }}>
+                                                                            {bid.bidder?.name?.charAt(0).toUpperCase() || '?'}
+                                                                        </Avatar>
+                                                                        <Box>
+                                                                            <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                                                                                {bid.bidder?.name || 'Unknown'}
+                                                                            </Typography>
+                                                                            {index === 0 && (
+                                                                                <Chip
+                                                                                    label="Highest Bidder"
+                                                                                    color="primary"
+                                                                                    size="small"
+                                                                                />
+                                                                            )}
+                                                                        </Box>
+                                                                    </Box>
+                                                                    <Typography variant="h6" color={index === 0 ? 'primary.main' : 'text.primary'}>
+                                                                        {formatPrice(bid.amount)}
                                                                     </Typography>
-                                                                    {index === 0 && (
-                                                                        <Chip
-                                                                            label="Highest Bidder"
-                                                                            color="primary"
-                                                                            size="small"
-                                                                        />
-                                                                    )}
                                                                 </Box>
-                                                                <Typography variant="h6" color="primary.main">
-                                                                    {formatPrice(bid.amount)}
-                                                                </Typography>
-                                                            </Box>
-                                                        }
-                                                        secondary={
-                                                            <Box>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    {formatDateTime(bid.created_at)}
-                                                                </Typography>
-                                                                <Chip
-                                                                    label={bid.is_active ? 'Active' : 'Inactive'}
-                                                                    color={bid.is_active ? 'success' : 'default'}
-                                                                    size="small"
-                                                                    sx={{ ml: 1 }}
-                                                                />
-                                                            </Box>
-                                                        }
-                                                    />
-                                                </ListItem>
-                                                {index < selectedAuction.bids.length - 1 && <Divider />}
-                                            </React.Fragment>
-                                        ))}
-                                </List>
-                            )}
+                                                            }
+                                                            secondary={
+                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {bid.bidder?.email || 'No email'}
+                                                                    </Typography>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                        <Typography variant="caption" color="text.secondary">
+                                                                            {formatDateTime(bid.created_at)}
+                                                                        </Typography>
+                                                                        {!bid.is_active && (
+                                                                            <Chip
+                                                                                label="Inactive"
+                                                                                size="small"
+                                                                                sx={{ height: 16, fontSize: '0.7rem' }}
+                                                                            />
+                                                                        )}
+                                                                    </Box>
+                                                                </Box>
+                                                            }
+                                                        />
+                                                    </ListItem>
+                                                    {index < selectedAuction.bids.length - 1 && <Divider />}
+                                                </React.Fragment>
+                                            ))}
+                                    </List>
+                                )}
+                            </Box>
+
+                            {/* Additional Info */}
+                            <Paper sx={{ p: 2, bgcolor: 'rgba(150, 255, 155, 0.05)', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    <strong>Auction ID:</strong> #{selectedAuction.id}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    <strong>Created:</strong> {formatDateTime(selectedAuction.created_at)}
+                                </Typography>
+                                {selectedAuction.highest_bid && selectedAuction.reserve_price && (
+                                    <Typography variant="body2" sx={{
+                                        mt: 1, color:
+                                            selectedAuction.highest_bid >= selectedAuction.reserve_price ? 'success.main' : 'warning.main'
+                                    }}>
+                                        {selectedAuction.highest_bid >= selectedAuction.reserve_price ?
+                                            '✓ Reserve price met' :
+                                            '⚠ Reserve price not met'
+                                        }
+                                    </Typography>
+                                )}
+                            </Paper>
                         </Box>
                     )}
                 </DialogContent>
 
-                <DialogActions sx={{ bgcolor: 'grey.800' }}>
+                <DialogActions sx={{ bgcolor: 'grey.800', borderTop: '1px solid rgba(150, 255, 155, 0.2)' }}>
                     <Button onClick={() => setDetailsModalOpen(false)} sx={{ color: '#96ff9b' }}>
                         Close
                     </Button>

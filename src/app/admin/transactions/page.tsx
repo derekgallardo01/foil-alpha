@@ -52,8 +52,10 @@ import AdminSidebar from '../../components/AdminSidebar';
 
 interface Transaction {
     id: number;
-    userCard: {
-        card: {
+    user_card_id: number;
+    userCard?: {
+        id: number;
+        card?: {
             id: number;
             name: string;
             set_name: string;
@@ -70,13 +72,19 @@ interface Transaction {
         name: string;
         email: string;
     };
-    amount: number;
+    amount: string | number;
     transaction_type: string;
     status: string;
     notes?: string;
     created_at: string;
-    completed_at?: string;
+    updated_at: string;
     expires_at?: string;
+}
+
+interface TransactionStats {
+    totalSales: number;
+    pendingTransactions: number;
+    monthlyRevenue: number;
 }
 
 const AdminTransactionsPage = () => {
@@ -85,6 +93,11 @@ const AdminTransactionsPage = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [stats, setStats] = useState<TransactionStats>({
+        totalSales: 0,
+        pendingTransactions: 0,
+        monthlyRevenue: 0
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -122,7 +135,16 @@ const AdminTransactionsPage = () => {
             if (!response.ok) throw new Error('Failed to fetch transactions');
 
             const data = await response.json();
-            setTransactions(data.transactions || data);
+
+            // Set transactions and stats from API response
+            setTransactions(data.transactions || []);
+            setStats({
+                totalSales: data.totalSales || 0,
+                pendingTransactions: data.pendingTransactions || 0,
+                monthlyRevenue: data.monthlyRevenue || 0
+            });
+
+            console.log('Fetched data:', data);
 
         } catch (err) {
             console.error('Error fetching transactions:', err);
@@ -139,9 +161,9 @@ const AdminTransactionsPage = () => {
         }
     }, [status, session, statusFilter, typeFilter, searchTerm]);
 
-    const formatPrice = (price: number) => {
-        const num = typeof price === 'number' ? price : Number(price) || 0;
-        return `$${num.toFixed(2)}`;
+    const formatPrice = (price: number | string) => {
+        const num = typeof price === 'string' ? parseFloat(price) : price;
+        return `$${(num || 0).toFixed(2)}`;
     };
 
     const formatDateTime = (dateString: string) => {
@@ -165,7 +187,7 @@ const AdminTransactionsPage = () => {
             case 'purchase': return 'primary' as const;
             case 'sale': return 'success' as const;
             case 'bid_accepted': return 'secondary' as const;
-            case 'auction_win': return 'info' as const;
+            case 'auction': return 'info' as const;
             case 'admin_force_completed': return 'warning' as const;
             default: return 'default' as const;
         }
@@ -206,17 +228,17 @@ const AdminTransactionsPage = () => {
 
     const exportTransactions = () => {
         const csvContent = [
-            ['ID', 'Card', 'Buyer', 'Seller', 'Amount', 'Type', 'Status', 'Created', 'Completed'].join(','),
+            ['ID', 'Card', 'Buyer', 'Seller', 'Amount', 'Type', 'Status', 'Created', 'Updated'].join(','),
             ...transactions.map(t => [
                 t.id,
-                `"${t.userCard.card.name}"`,
-                `"${t.buyer.name}"`,
-                `"${t.seller.name}"`,
+                `"${t.userCard?.card?.name || 'N/A'}"`,
+                `"${t.buyer?.name || 'Unknown'}"`,
+                `"${t.seller?.name || 'Unknown'}"`,
                 t.amount,
                 t.transaction_type,
                 t.status,
                 formatDateTime(t.created_at),
-                t.completed_at ? formatDateTime(t.completed_at) : ''
+                formatDateTime(t.updated_at)
             ].join(','))
         ].join('\n');
 
@@ -262,6 +284,11 @@ const AdminTransactionsPage = () => {
         page * rowsPerPage,
         page * rowsPerPage + rowsPerPage
     );
+
+    // Calculate total volume from completed transactions
+    const totalVolume = transactions
+        .filter(t => t.status.toLowerCase() === 'completed')
+        .reduce((sum, t) => sum + parseFloat(String(t.amount)), 0);
 
     if (status === 'loading' || loading) {
         return (
@@ -334,16 +361,16 @@ const AdminTransactionsPage = () => {
                     </Alert>
                 )}
 
-                {/* Statistics Cards */}
+                {/* Statistics Cards - Using actual data from API */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={6} md={3}>
                         <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: '#96ff9b' }}>
-                                    {transactions.length}
+                                    {stats.totalSales.toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Total Transactions
+                                    Total Sales
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -352,7 +379,7 @@ const AdminTransactionsPage = () => {
                         <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: 'warning.main' }}>
-                                    {transactions.filter(t => t.status.toLowerCase().includes('pending')).length}
+                                    {stats.pendingTransactions.toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
                                     Pending Transactions
@@ -364,10 +391,10 @@ const AdminTransactionsPage = () => {
                         <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
-                                    {transactions.filter(t => t.status.toLowerCase() === 'completed').length}
+                                    {transactions.length.toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Completed Transactions
+                                    Recent Transactions
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -376,66 +403,305 @@ const AdminTransactionsPage = () => {
                         <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: '#96ff9b' }}>
-                                    {formatPrice(transactions.filter(t => t.status.toLowerCase() === 'completed').reduce((sum, t) => sum + t.amount, 0))}
+                                    {formatPrice(stats.monthlyRevenue)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Total Volume
+                                    Monthly Revenue
                                 </Typography>
                             </CardContent>
                         </Card>
                     </Grid>
                 </Grid>
 
-                {/* Simple table for now */}
-                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', p: 3 }}>
-                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
-                        Recent Transactions
-                    </Typography>
+                {/* Filters */}
+                <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} md={3}>
+                            <TextField
+                                fullWidth
+                                label="Search"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon sx={{ color: 'text.secondary' }} />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Status</InputLabel>
+                                <Select
+                                    value={statusFilter}
+                                    label="Status"
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
+                                    <MenuItem value="">All Status</MenuItem>
+                                    <MenuItem value="COMPLETED">Completed</MenuItem>
+                                    <MenuItem value="PENDING_BUYER_CONFIRMATION">Pending Buyer</MenuItem>
+                                    <MenuItem value="PENDING_SELLER_CONFIRMATION">Pending Seller</MenuItem>
+                                    <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                                    <MenuItem value="FAILED">Failed</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Type</InputLabel>
+                                <Select
+                                    value={typeFilter}
+                                    label="Type"
+                                    onChange={(e) => setTypeFilter(e.target.value)}
+                                >
+                                    <MenuItem value="">All Types</MenuItem>
+                                    <MenuItem value="PURCHASE">Purchase</MenuItem>
+                                    <MenuItem value="SALE">Sale</MenuItem>
+                                    <MenuItem value="AUCTION">Auction</MenuItem>
+                                    <MenuItem value="BID_ACCEPTED">Bid Accepted</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                    </Grid>
+                </Paper>
 
-                    {transactions.length === 0 ? (
-                        <Typography variant="body1" color="text.secondary" textAlign="center" py={4}>
-                            No transactions found
-                        </Typography>
-                    ) : (
-                        <TableContainer>
-                            <Table>
-                                <TableHead>
+                {/* Tabs */}
+                <Tabs
+                    value={activeTab}
+                    onChange={(_, newValue) => setActiveTab(newValue)}
+                    sx={{
+                        mb: 3,
+                        '& .MuiTab-root': {
+                            color: 'text.secondary',
+                            '&.Mui-selected': { color: '#96ff9b' }
+                        },
+                        '& .MuiTabs-indicator': { backgroundColor: '#96ff9b' }
+                    }}
+                >
+                    <Tab label={`All (${transactions.length})`} />
+                    <Tab label={`Pending (${transactions.filter(t => t.status.includes('PENDING')).length})`} />
+                    <Tab label={`Completed (${transactions.filter(t => t.status === 'COMPLETED').length})`} />
+                    <Tab label={`Failed/Cancelled (${transactions.filter(t => ['CANCELLED', 'FAILED', 'EXPIRED'].includes(t.status)).length})`} />
+                </Tabs>
+
+                {/* Transactions Table */}
+                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>ID</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Card</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Buyer</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Seller</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Amount</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Type</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Status</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Date</TableCell>
+                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {paginatedTransactions.length === 0 ? (
                                     <TableRow>
-                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>ID</TableCell>
-                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Card</TableCell>
-                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Amount</TableCell>
-                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Status</TableCell>
-                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Created</TableCell>
+                                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                No transactions found
+                                            </Typography>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {transactions.slice(0, 10).map((transaction) => (
+                                ) : (
+                                    paginatedTransactions.map((transaction) => (
                                         <TableRow key={transaction.id} hover>
-                                            <TableCell sx={{ color: 'text.primary' }}>#{transaction.id}</TableCell>
                                             <TableCell sx={{ color: 'text.primary' }}>
-                                                {transaction.userCard.card.name}
+                                                #{transaction.id}
                                             </TableCell>
-                                            <TableCell sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                                            <TableCell sx={{ color: 'text.primary' }}>
+                                                {transaction.userCard?.card ? (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        {transaction.userCard.card.image_url && (
+                                                            <img
+                                                                src={transaction.userCard.card.image_url}
+                                                                alt={transaction.userCard.card.name}
+                                                                style={{ width: 30, height: 30, objectFit: 'contain' }}
+                                                            />
+                                                        )}
+                                                        <Box>
+                                                            <Typography variant="body2">{transaction.userCard.card.name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {transaction.userCard.card.set_name}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                ) : (
+                                                    <Typography variant="body2" color="text.secondary">N/A</Typography>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">{transaction.buyer?.name || 'Unknown'}</Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {transaction.buyer?.email || ''}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">{transaction.seller?.name || 'Unknown'}</Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {transaction.seller?.email || ''}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ color: 'primary.main', fontWeight: 'bold' }}>
                                                 {formatPrice(transaction.amount)}
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={transaction.status}
+                                                    label={transaction.transaction_type.replace('_', ' ')}
+                                                    color={getTypeColor(transaction.transaction_type)}
+                                                    size="small"
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={transaction.status.replace('_', ' ')}
                                                     color={getStatusColor(transaction.status)}
                                                     size="small"
                                                 />
                                             </TableCell>
                                             <TableCell sx={{ color: 'text.secondary' }}>
-                                                {formatDateTime(transaction.created_at)}
+                                                <Typography variant="caption">
+                                                    {formatDateTime(transaction.created_at)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => showTransactionDetails(transaction)}
+                                                    sx={{ color: '#96ff9b' }}
+                                                >
+                                                    <ViewIcon />
+                                                </IconButton>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    )}
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                    <TablePagination
+                        component="div"
+                        count={filteredTransactions.length}
+                        page={page}
+                        onPageChange={(_, newPage) => setPage(newPage)}
+                        rowsPerPage={rowsPerPage}
+                        onRowsPerPageChange={(event) => {
+                            setRowsPerPage(parseInt(event.target.value, 10));
+                            setPage(0);
+                        }}
+                        rowsPerPageOptions={[10, 25, 50, 100]}
+                        sx={{
+                            borderTop: '1px solid rgba(150, 255, 155, 0.2)',
+                            '.MuiTablePagination-toolbar': { color: 'text.secondary' },
+                            '.MuiTablePagination-selectLabel': { color: 'text.secondary' },
+                            '.MuiTablePagination-displayedRows': { color: 'text.secondary' },
+                        }}
+                    />
                 </Paper>
             </Container>
+
+            {/* Transaction Details Modal */}
+            <Dialog
+                open={detailsModalOpen}
+                onClose={() => setDetailsModalOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'grey.900',
+                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                    }
+                }}
+            >
+                {selectedTransaction && (
+                    <>
+                        <DialogTitle sx={{ color: '#96ff9b' }}>
+                            Transaction #{selectedTransaction.id}
+                        </DialogTitle>
+                        <DialogContent>
+                            <Box sx={{ pt: 2 }}>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={6}>
+                                        <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+                                        <Chip
+                                            label={selectedTransaction.status}
+                                            color={getStatusColor(selectedTransaction.status)}
+                                            size="small"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="subtitle2" color="text.secondary">Type</Typography>
+                                        <Chip
+                                            label={selectedTransaction.transaction_type}
+                                            color={getTypeColor(selectedTransaction.transaction_type)}
+                                            size="small"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                                        <Typography variant="h5" sx={{ color: 'primary.main' }}>
+                                            {formatPrice(selectedTransaction.amount)}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="subtitle2" color="text.secondary">Buyer</Typography>
+                                        <Typography>{selectedTransaction.buyer?.name || 'Unknown'}</Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {selectedTransaction.buyer?.email || ''}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="subtitle2" color="text.secondary">Seller</Typography>
+                                        <Typography>{selectedTransaction.seller?.name || 'Unknown'}</Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {selectedTransaction.seller?.email || ''}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <Typography variant="subtitle2" color="text.secondary">Created</Typography>
+                                        <Typography>{formatDateTime(selectedTransaction.created_at)}</Typography>
+                                    </Grid>
+                                    {selectedTransaction.notes && (
+                                        <Grid item xs={12}>
+                                            <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
+                                            <Typography>{selectedTransaction.notes}</Typography>
+                                        </Grid>
+                                    )}
+                                </Grid>
+                            </Box>
+                        </DialogContent>
+                        <DialogActions>
+                            {selectedTransaction.status.includes('PENDING') && (
+                                <Button
+                                    onClick={() => handleForceComplete(selectedTransaction.id)}
+                                    color="primary"
+                                    variant="contained"
+                                    disabled={actionLoading === selectedTransaction.id}
+                                    startIcon={actionLoading === selectedTransaction.id ?
+                                        <CircularProgress size={16} /> :
+                                        <CompleteIcon />
+                                    }
+                                >
+                                    Force Complete
+                                </Button>
+                            )}
+                            <Button onClick={() => setDetailsModalOpen(false)}>
+                                Close
+                            </Button>
+                        </DialogActions>
+                    </>
+                )}
+            </Dialog>
         </Box>
     );
 };
