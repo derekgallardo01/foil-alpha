@@ -1,507 +1,382 @@
-'use client';
-import React, { useState, useEffect } from "react";
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Typography,
-  CircularProgress,
-  Button,
   Box,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Container,
+  Grid,
+  Typography,
   IconButton,
-} from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import MenuIcon from '@mui/icons-material/Menu';
-import { useTheme } from "@mui/material/styles";
-import he from "he";
-import axios from "axios";
-import Image from "next/image";
-import { Line } from 'react-chartjs-2';
+  Paper,
+  Card,
+  CardContent,
+  Tabs,
+  Tab,
+  Chip,
+  Button
+} from '@mui/material';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  TooltipItem,
-} from 'chart.js';
-import Sidebar from "../components/Sidebar"; // Import Sidebar component
+  Menu as MenuIcon,
+  TrendingUp,
+  Gavel,
+  NewReleases,
+  Whatshot,
+  Assessment,
+  Refresh,
+  Dashboard as DashboardIcon
+} from '@mui/icons-material';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Sidebar from '../components/Sidebar';
+import TrendingCardsTable from '../components/dashboard/TrendingCardsTable';
+import LiveAuctionTable from '../components/dashboard/LiveAuctionTable';
+import NewReleasesCarousel from '../components/dashboard/NewReleasesCarousel';
+import PopularityMetrics from '../components/dashboard/PopularityMetrics';
+import PriceChart from '../components/PriceChart';
+import { motion } from 'framer-motion';
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
 
-interface Product {
-  product_id: string;
-  retailer: string;
-  title: string;
-  url: string;
-  image: string;
-  screenshot: string;
-  stockStatus: string;
-  price: string;
-  recorded_at: string | null;
-  release_date?: string | null;
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+};
+
+interface DashboardStats {
+  totalValue: number;
+  totalCards: number;
+  activeAuctions: number;
+  recentSales: number;
 }
 
-interface PriceHistory {
-  id: string;
-  product_id: string;
-  retailer: string;
-  price: string;
-  recorded_at: string;
-}
+export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalValue: 0,
+    totalCards: 0,
+    activeAuctions: 0,
+    recentSales: 0
+  });
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
-const Watchlist = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // State for sidebar
-  const theme = useTheme();
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen); // Toggle sidebar function
+  // Fetch user stats
+  const fetchUserStats = async () => {
+    if (!session?.user?.id) return;
 
-  const fetchData = async () => {
     try {
-      setLoading(true);
-      const [productsResponse, priceHistoryResponse] = await Promise.all([
-        axios.get<Product[]>("/api/products", { timeout: 10000 }),
-        axios.get<PriceHistory[]>("/api/price-history", { timeout: 10000 })
-      ]);
-      
-      const uniqueProducts = productsResponse.data.filter((product, index, self) =>
-        index === self.findIndex((p) => p.product_id === product.product_id)
-      );
-      setProducts(uniqueProducts);
-      setPriceHistory(priceHistoryResponse.data);
-      setError(null);
+      // Fetch user collection stats
+      const collectionRes = await fetch('/api/user/collection');
+      const collectionData = await collectionRes.json();
+
+      // Fetch active auctions
+      const auctionsRes = await fetch('/api/bids?user_id=' + session.user.id);
+      const auctionsData = await auctionsRes.json();
+
+      setStats({
+        totalValue: collectionData.totalValue || 0,
+        totalCards: collectionData.totalCards || 0,
+        activeAuctions: auctionsData.filter((bid: any) => bid.is_active).length,
+        recentSales: collectionData.recentSales || 0
+      });
     } catch (error) {
-      setError(
-        axios.isAxiosError(error)
-          ? error.code === "ECONNABORTED"
-            ? "Request timed out after 10 seconds"
-            : error.response
-            ? `Server error: ${error.response.status} - ${error.response.data?.error || "Unknown error"}`
-            : "Network error: Unable to reach server"
-          : "Unexpected error occurred"
-      );
-      setProducts([]);
-      setPriceHistory([]);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching user stats:', error);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const triggerScrape = async () => {
-    try {
-      setLoading(true);
-      await axios.post("/api/scrapeTarget");
-      await fetchData();
-    } catch (error) {
-      setError("Failed to start scraping: " + (error instanceof Error ? error.message : String(error)));
-    } finally {
-      setLoading(false);
+    if (status === 'authenticated') {
+      fetchUserStats();
     }
+  }, [status, session]);
+
+  const handleRefresh = () => {
+    setLastRefresh(new Date());
+    fetchUserStats();
   };
 
-  const getProductPriceHistory = (productId: string): PriceHistory[] => {
-    return priceHistory
-      .filter(price => price.product_id === productId)
-      .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
-  };
-
-  const getPriceTrend = (history: PriceHistory[], retailer: string): string | null => {
-    const filteredHistory = history.filter(item => item.retailer === retailer);
-    if (filteredHistory.length < 2) return null;
-    const latest = parseFloat(filteredHistory[filteredHistory.length - 1].price.replace('$', ''));
-    const previous = parseFloat(filteredHistory[filteredHistory.length - 2].price.replace('$', ''));
-    return latest > previous ? '↑' : latest < previous ? '↓' : '→';
-  };
-
-  const getPriceChartData = (history: PriceHistory[]) => {
-    const dates = Array.from(new Set(history.map(item => new Date(item.recorded_at).toLocaleDateString()))).sort();
-
-    const retailers = ['Target', 'Walmart', 'BestBuy', 'GameStop', 'Barnes & Noble'];
-    const datasets = retailers.map(retailer => {
-      const prices = dates.map(date => {
-        const entry = history.find(
-          item => item.retailer === retailer && new Date(item.recorded_at).toLocaleDateString() === date
-        );
-        return entry ? parseFloat(entry.price.replace('$', '')) : null;
-      });
-
-      return {
-        label: `Price History (${retailer})`,
-        data: prices,
-        borderColor: retailer === 'Target' ? '#96ff9b' : 
-                    retailer === 'Walmart' ? '#ffcc00' : 
-                    retailer === 'BestBuy' ? '#ff4444' : 
-                    retailer === 'GameStop' ? '#00bcd4' : '#9c27b0',
-        backgroundColor: retailer === 'Target' ? 'rgba(150, 255, 155, 0.2)' : 
-                        retailer === 'Walmart' ? 'rgba(255, 204, 0, 0.2)' : 
-                        retailer === 'BestBuy' ? 'rgba(255, 68, 68, 0.2)' : 
-                        retailer === 'GameStop' ? 'rgba(0, 188, 212, 0.2)' : 'rgba(156, 39, 176, 0.2)',
-        fill: false,
-        tension: 0.1,
-        hidden: prices.every(price => price === null),
-      };
-    });
-
-    return {
-      labels: dates,
-      datasets: datasets.filter(dataset => !dataset.hidden),
-    };
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: false,
-        title: {
-          display: true,
-          text: 'Price ($)',
-          color: '#FFFFFF',
-        },
-        ticks: { color: '#90a4ae' },
-      },
-      x: {
-        title: {
-          display: true,
-          text: 'Date',
-          color: '#FFFFFF',
-        },
-        ticks: { color: '#90a4ae' },
-      }
-    },
-    plugins: {
-      legend: { 
-        labels: { color: '#FFFFFF' }
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: TooltipItem<'line'>) => `${context.dataset.label}: $${context.parsed.y.toFixed(2)}`
-        }
-      }
-    }
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
   };
 
   return (
-    <Container sx={{ marginTop: 4, marginBottom: 4, paddingLeft: 0, paddingRight: 0 }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        bgcolor: "grey.900",
+        background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
+        backgroundSize: "200% 200%",
+        animation: "gradientShift 20s ease infinite",
+        "@keyframes gradientShift": {
+          "0%": { backgroundPosition: "0% 0%" },
+          "50%": { backgroundPosition: "100% 100%" },
+          "100%": { backgroundPosition: "0% 0%" },
+        },
+      }}
+    >
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-      {/* Top Bar with Menu Button and Logo */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
-        <IconButton onClick={toggleSidebar}>
-          <MenuIcon sx={{ color: '#FFFFFF' }} />
+
+      {/* Header */}
+      <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+        <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+          <MenuIcon />
         </IconButton>
-        <Image
-          src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-          alt="Logo"
-          width={120}
-          height={60}
-          style={{ height: "60px", width: "auto" }}
-        />
-      </Box>
-      <Box
-        component="section"
-        sx={{
-          width: "100%",
-          padding: "20px",
-          marginTop: "20px",
-          backgroundColor: "#1E1E1E",
-          color: "#FFFFFF",
-          borderRadius: "10px",
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
-        }}
-      >
-        <Typography variant="h2" color="#ffffff" sx={{ marginBottom: "20px", fontSize: "2rem" }}>
-          My Dashboard
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={triggerScrape}
-          disabled={loading}
-          sx={{ marginBottom: "20px", backgroundColor: "#96ff9b", color: "#1E1E1E" }}
-        >
-          {loading ? "Refreshing..." : "Refresh Products"}
-        </Button>
-
-        {loading ? (
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "200px" }}>
-            <CircularProgress size={60} thickness={4} sx={{ color: "#96ff9b", marginBottom: "20px" }} />
-            <Typography variant="body1" sx={{ color: "#90a4ae", fontSize: "1.2rem" }}>
-              Fetching product data...
-            </Typography>
-          </Box>
-        ) : error ? (
-          <Typography variant="body1" sx={{ textAlign: "center", fontSize: "18px", color: "#E57373", padding: "20px" }}>
-            Error: {error}
+        <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={40} height={20} />
+          <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DashboardIcon />
+            Market Dashboard
           </Typography>
-        ) : products.length > 0 ? (
-          products.map((product, index) => {
-            const productPriceHistory = getProductPriceHistory(product.product_id);
+        </Box>
+        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Last updated: {lastRefresh.toLocaleTimeString()}
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
+            onClick={handleRefresh}
+            sx={{
+              borderColor: '#96ff9b',
+              color: '#96ff9b',
+              '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+            }}
+          >
+            Refresh
+          </Button>
+        </Box>
+      </Box>
 
-            // Calculate trends for each retailer
-            const targetTrend = getPriceTrend(productPriceHistory, 'Target');
-            const walmartTrend = getPriceTrend(productPriceHistory, 'Walmart');
-            const bestbuyTrend = getPriceTrend(productPriceHistory, 'BestBuy');
-            const gamestopTrend = getPriceTrend(productPriceHistory, 'GameStop');
-            const barnesNobleTrend = getPriceTrend(productPriceHistory, 'Barnes & Noble');
+      <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={containerVariants}>
+          {/* User Stats Cards */}
+          {session && (
+            <motion.div variants={itemVariants}>
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <CardContent>
+                      <Typography variant="body2" color="text.secondary">
+                        Collection Value
+                      </Typography>
+                      <Typography variant="h4" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
+                        ${stats.totalValue.toFixed(2)}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <CardContent>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Cards
+                      </Typography>
+                      <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                        {stats.totalCards}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <CardContent>
+                      <Typography variant="body2" color="text.secondary">
+                        Active Bids
+                      </Typography>
+                      <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                        {stats.activeAuctions}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <CardContent>
+                      <Typography variant="body2" color="text.secondary">
+                        Recent Sales
+                      </Typography>
+                      <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                        {stats.recentSales}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </motion.div>
+          )}
 
-            // Get the latest price for each retailer
-            const latestTargetPriceEntry = productPriceHistory
-              .filter(item => item.retailer === 'Target')
-              .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
-            const latestWalmartPriceEntry = productPriceHistory
-              .filter(item => item.retailer === 'Walmart')
-              .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
-            const latestBestbuyPriceEntry = productPriceHistory
-              .filter(item => item.retailer === 'BestBuy')
-              .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
-            const latestGamestopPriceEntry = productPriceHistory
-              .filter(item => item.retailer === 'GameStop')
-              .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
-            const latestBarnesNoblePriceEntry = productPriceHistory
-              .filter(item => item.retailer === 'Barnes & Noble')
-              .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
-
-            const latestTargetPrice = latestTargetPriceEntry ? latestTargetPriceEntry.price : 'N/A';
-            const latestWalmartPrice = latestWalmartPriceEntry ? latestWalmartPriceEntry.price : 'N/A';
-            const latestBestbuyPrice = latestBestbuyPriceEntry ? latestBestbuyPriceEntry.price : 'N/A';
-            const latestGamestopPrice = latestGamestopPriceEntry ? latestGamestopPriceEntry.price : 'N/A';
-            const latestBarnesNoblePrice = latestBarnesNoblePriceEntry ? latestBarnesNoblePriceEntry.price : 'N/A';
-
-            return (
-              <div
-                key={`${product.product_id}-${index}`}
-                style={{
-                  backgroundColor: "#2A2A2A",
-                  padding: "15px",
-                  borderRadius: "8px",
-                  marginBottom: "20px",
-                  boxShadow: "0px 2px 6px rgba(0, 0, 0, 0.2)",
+          {/* Main Dashboard Tabs */}
+          <motion.div variants={itemVariants}>
+            <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
+              <Tabs
+                value={activeTab}
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  borderBottom: '1px solid rgba(150, 255, 155, 0.2)',
+                  '& .MuiTab-root': {
+                    color: 'text.secondary',
+                    '&.Mui-selected': {
+                      color: '#96ff9b'
+                    }
+                  },
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: '#96ff9b'
+                  }
                 }}
               >
-                <Typography variant="h3" sx={{ fontSize: "1.5rem", color: "#90a4ae", fontWeight: "bold", marginBottom: "8px" }}>
-                  Product {index + 1}
-                </Typography>
-                <Typography variant="h4" sx={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "8px", color: "#FFFFFF" }}>
-                  {he.decode(product.title)}
-                </Typography>
-                <a href={product.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "200px" }}>
-                  <Image
-                    width={200}
-                    height={200}
-                    src={product.image}
-                    alt={product.title}
-                    style={{
-                      borderRadius: "8px",
-                      border: `2px solid ${theme.palette.primary.main}`,
-                      display: "block",
-                      marginBottom: "10px",
-                    }}
-                  />
-                </a>
+                <Tab icon={<Assessment />} label="Overview" />
+                <Tab icon={<TrendingUp />} label="Trending" />
+                <Tab icon={<Gavel />} label="Live Auctions" />
+                <Tab icon={<NewReleases />} label="New Releases" />
+                <Tab icon={<Whatshot />} label="Popular" />
+              </Tabs>
+            </Paper>
+          </motion.div>
 
-                {/* Display Latest Prices and Trends for Each Retailer */}
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Target: </span>
-                  <span style={{ color: "#96ff9b", fontWeight: "bold" }}>{latestTargetPrice}</span>
-                  {targetTrend && (
-                    <span style={{ 
-                      color: targetTrend === '↑' ? '#E57373' : targetTrend === '↓' ? '#66BB6A' : '#90a4ae',
-                      marginLeft: '8px',
-                      fontSize: '1.2rem'
-                    }}>
-                      {targetTrend}
-                    </span>
-                  )}
-                </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Walmart: </span>
-                  <span style={{ color: "#ffcc00", fontWeight: "bold" }}>{latestWalmartPrice}</span>
-                  {walmartTrend && (
-                    <span style={{ 
-                      color: walmartTrend === '↑' ? '#E57373' : walmartTrend === '↓' ? '#66BB6A' : '#90a4ae',
-                      marginLeft: '8px',
-                      fontSize: '1.2rem'
-                    }}>
-                      {walmartTrend}
-                    </span>
-                  )}
-                </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>BestBuy: </span>
-                  <span style={{ color: "#ff4444", fontWeight: "bold" }}>{latestBestbuyPrice}</span>
-                  {bestbuyTrend && (
-                    <span style={{ 
-                      color: bestbuyTrend === '↑' ? '#E57373' : bestbuyTrend === '↓' ? '#66BB6A' : '#90a4ae',
-                      marginLeft: '8px',
-                      fontSize: '1.2rem'
-                    }}>
-                      {bestbuyTrend}
-                    </span>
-                  )}
-                </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>GameStop: </span>
-                  <span style={{ color: "#00bcd4", fontWeight: "bold" }}>{latestGamestopPrice}</span>
-                  {gamestopTrend && (
-                    <span style={{ 
-                      color: gamestopTrend === '↑' ? '#E57373' : gamestopTrend === '↓' ? '#66BB6A' : '#90a4ae',
-                      marginLeft: '8px',
-                      fontSize: '1.2rem'
-                    }}>
-                      {gamestopTrend}
-                    </span>
-                  )}
-                </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Barnes & Noble: </span>
-                  <span style={{ color: "#9c27b0", fontWeight: "bold" }}>{latestBarnesNoblePrice}</span>
-                  {barnesNobleTrend && (
-                    <span style={{ 
-                      color: barnesNobleTrend === '↑' ? '#E57373' : barnesNobleTrend === '↓' ? '#66BB6A' : '#90a4ae',
-                      marginLeft: '8px',
-                      fontSize: '1.2rem'
-                    }}>
-                      {barnesNobleTrend}
-                    </span>
-                  )}
-                </Typography>
-                <Typography variant="body1" sx={{ fontSize: "1rem", fontWeight: "500", marginBottom: "5px" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Stock Status: </span>
-                  <span
-                    style={{
-                      color: product.stockStatus.toLowerCase() === "in stock" ? "#66BB6A" : "#E57373",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {product.stockStatus}
-                  </span>
-                </Typography>
-                {product.release_date && (
-                  <Typography variant="body1" sx={{ fontSize: "1rem", fontWeight: "500", marginBottom: "10px" }}>
-                    <span style={{ color: "rgb(144 164 174)" }}>Release Date: </span>
-                    <span style={{ color: "#FFFFFF", fontWeight: "bold" }}>
-                      {new Date(product.release_date).toLocaleDateString()}
-                    </span>
-                  </Typography>
-                )}
+          {/* Tab Content */}
+          {activeTab === 0 && (
+            <motion.div variants={itemVariants}>
+              <Grid container spacing={3}>
+                {/* Trending Cards - Half Width */}
+                <Grid item xs={12} lg={6}>
+                  <TrendingCardsTable limit={5} height={400} />
+                </Grid>
 
-                {/* Price History Accordion with Combined Chart */}
-                {productPriceHistory.length > 0 && (
-                  <Accordion sx={{ backgroundColor: "#333333", color: "#FFFFFF", marginBottom: "10px" }}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#FFFFFF" }} />}>
-                      <Typography>Price History (All Retailers)</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Box sx={{ height: '200px', marginBottom: '15px' }}>
-                        <Line 
-                          data={getPriceChartData(productPriceHistory)} 
-                          options={chartOptions}
-                        />
-                      </Box>
-                      <Box sx={{ 
-                        maxHeight: '150px', 
-                        overflowY: 'auto', 
-                        backgroundColor: '#2A2A2A',
-                        padding: '10px',
-                        borderRadius: '4px',
-                      }}>
-                        {productPriceHistory.map((price, idx) => (
-                          <Box
-                            key={price.id}
-                            sx={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              padding: '5px 0',
-                              borderBottom: idx === productPriceHistory.length - 1 ? 'none' : '1px solid #455A64',
-                              color: '#90a4ae',
-                              '&:hover': {
-                                backgroundColor: '#3A3A3A',
-                                color: '#FFFFFF',
-                              },
-                            }}
-                          >
-                            <Typography sx={{ fontSize: '0.9rem' }}>
-                              {price.retailer} - {new Date(price.recorded_at).toLocaleString()}
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#96ff9b' }}>
-                              {price.price}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    </AccordionDetails>
-                  </Accordion>
-                )}
+                {/* Popular Cards - Half Width */}
+                <Grid item xs={12} lg={6}>
+                  <PopularityMetrics limit={5} />
+                </Grid>
 
-                <Button
-                  variant="outlined"
-                  href={product.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    borderColor: "primary",
-                    color: "#ffffff",
-                    padding: "8px 15px",
-                    marginRight: "10px",
-                    borderRadius: "6px",
-                    fontWeight: "bold",
-                    "&:hover": { backgroundColor: "primary", color: "#ffffff" },
-                  }}
-                >
-                  View Product
-                </Button>
-                {product.screenshot && (
-                  <Button
-                    variant="outlined"
-                    href={product.screenshot}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      borderColor: "secondary",
-                      color: "#ffffff",
-                      padding: "8px 15px",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      "&:hover": { backgroundColor: "secondary", color: "#ffffff" },
-                    }}
-                  >
-                    View Screenshot
-                  </Button>
-                )}
-                <Divider sx={{ borderBottom: "0.5px solid #455A64", marginY: "10px" }} />
-              </div>
-            );
-          })
-        ) : (
-          <Typography sx={{ textAlign: "center", fontSize: "18px", padding: "20px" }}>
-            No product details found
-          </Typography>
-        )}
-      </Box>
-    </Container>
+                {/* Live Auctions - Full Width */}
+                <Grid item xs={12}>
+                  <LiveAuctionTable limit={5} height={400} />
+                </Grid>
+
+                {/* New Releases - Full Width */}
+                <Grid item xs={12}>
+                  <NewReleasesCarousel limit={6} />
+                </Grid>
+              </Grid>
+            </motion.div>
+          )}
+
+          {activeTab === 1 && (
+            <motion.div variants={itemVariants}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TrendingCardsTable limit={20} height={600} />
+                </Grid>
+                {/* Price Chart for Top Trending Card */}
+                <Grid item xs={12}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <Typography variant="h6" gutterBottom>
+                      Price Trend Analysis
+                    </Typography>
+                    <PriceChart height={300} />
+                  </Paper>
+                </Grid>
+              </Grid>
+            </motion.div>
+          )}
+
+          {activeTab === 2 && (
+            <motion.div variants={itemVariants}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <LiveAuctionTable limit={20} height={700} autoRefresh={true} />
+                </Grid>
+                <Grid item xs={12}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6">
+                        Auction Activity
+                      </Typography>
+                      <Chip
+                        label="Real-time updates enabled"
+                        color="success"
+                        size="small"
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Auctions refresh automatically every 30 seconds. Click on any auction to place a bid.
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </motion.div>
+          )}
+
+          {activeTab === 3 && (
+            <motion.div variants={itemVariants}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <NewReleasesCarousel limit={12} />
+                </Grid>
+                <Grid item xs={12}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <Typography variant="h6" gutterBottom>
+                      Release Calendar
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Stay updated with the latest Pokemon TCG releases and pre-order opportunities.
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </motion.div>
+          )}
+
+          {activeTab === 4 && (
+            <motion.div variants={itemVariants}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <PopularityMetrics limit={10} />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <Typography variant="h6" gutterBottom>
+                      Popularity Trends
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Cards are ranked by views, active listings, and recent sales activity.
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <Typography variant="h6" gutterBottom>
+                      Market Insights
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Popular cards often indicate market trends and potential investment opportunities.
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </motion.div>
+          )}
+        </motion.div>
+      </Container>
+
+      <style jsx global>{`
+                @keyframes gradientShift {
+                    0% { background-position: 0% 0%; }
+                    50% { background-position: 100% 100%; }
+                    100% { background-position: 0% 0%; }
+                }
+            `}</style>
+    </Box>
   );
-};
-
-export default Watchlist;
+}

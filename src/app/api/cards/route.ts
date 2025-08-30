@@ -1,236 +1,156 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { prisma } from "../../lib/prisma";
-import { CardSource } from '@prisma/client';
+// src/app/api/cards/route.ts - FIXED VERSION
+import { NextRequest, NextResponse } from 'next/server';
+import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from '../../lib/pokemon-price-tracker-api';
+import { prisma } from '../../lib/prisma';
 
-// Response interface
-interface CardResponse {
-  id: string;
-  name: string;
-  set_name: string;
-  set_number: string | null;
-  rarity: string;
-  card_type: string | null;
-  imageUrl: string | null;
-  createdAt: Date;
-}
-
-// POST/PUT body interfaces
-interface CreateCardBody {
-  name: string;
-  set_name: string;
-  set_number?: string | null;
-  rarity: string;
-  card_type?: string | null;
-  imageUrl?: string | null;
-}
-
-interface UpdateCardBody {
-  name?: string;
-  set_name?: string;
-  set_number?: string | null;
-  rarity?: string;
-  card_type?: string | null;
-  imageUrl?: string | null;
-}
-
-// GET /api/cards - fetch all cards
-export async function GET() {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const cardsFromDb = await prisma.card.findMany({
-      select: {
-        id: true,
-        name: true,
-        set_name: true,
-        set_number: true,
-        rarity: true,
-        card_type: true,
-        image_url: true,
-        created_at: true,
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+    const body = await request.json();
+    const { searchQuery, limit = 20, setId } = body;
 
-    // Map DB records to CardResponse format
-    const cards: CardResponse[] = cardsFromDb.map((c) => ({
-      id: c.id.toString(),
-      name: c.name,
-      set_name: c.set_name,
-      set_number: c.set_number,
-      rarity: c.rarity,
-      card_type: c.card_type,
-      imageUrl: c.image_url ?? null,
-      createdAt: c.created_at,
-    }));
+    console.log('Card import request:', { searchQuery, limit, setId });
 
-    return NextResponse.json({ cards }, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching cards:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+    let searchResponse;
 
-// POST /api/cards - create a new card
-export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const body: CreateCardBody = await request.json();
-
-    // Validate required fields
-    if (!body.name || !body.set_name || !body.rarity) {
-      return NextResponse.json({ error: "Name, set_name, and rarity are required" }, { status: 400 });
+    if (setId) {
+      // Import entire set
+      console.log(`Importing entire set: ${setId}`);
+      searchResponse = await pokemonPriceTrackerAPI.getSetPricing(setId);
+    } else if (searchQuery) {
+      // Search for specific cards
+      console.log(`Searching for: "${searchQuery}"`);
+      searchResponse = await pokemonPriceTrackerAPI.searchCardPricing({
+        name: searchQuery,
+        limit: Math.min(limit, 50)
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Either searchQuery or setId is required'
+      }, { status: 400 });
     }
 
-    const newCard = await prisma.card.create({
-      data: {
-        name: body.name,
-        set_name: body.set_name,
-        set_number: body.set_number ?? null,
-        rarity: body.rarity,
-        card_type: body.card_type ?? null,
-        image_url: body.imageUrl ?? null,
-        source: CardSource.MANUAL, // Use the enum
-      },
-      select: {
-        id: true,
-        name: true,
-        set_name: true,
-        set_number: true,
-        rarity: true,
-        card_type: true,
-        image_url: true,
-        created_at: true,
-      },
-    });
+    console.log('API Response:', searchResponse);
 
-    const card: CardResponse = {
-      id: newCard.id.toString(),
-      name: newCard.name,
-      set_name: newCard.set_name,
-      set_number: newCard.set_number,
-      rarity: newCard.rarity,
-      card_type: newCard.card_type,
-      imageUrl: newCard.image_url ?? null,
-      createdAt: newCard.created_at,
-    };
-
-    return NextResponse.json({ card }, { status: 201 });
-  } catch (error) {
-    console.error("Error creating card:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-// PUT /api/cards?id=... - update existing card
-export async function PUT(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json({ error: "Card ID is required" }, { status: 400 });
+    if (!searchResponse.success) {
+      return NextResponse.json({
+        success: false,
+        error: searchResponse.error || 'API request failed'
+      });
     }
 
-    const body: UpdateCardBody = await request.json();
-
-    // Explicitly build update object
-    type CardUpdateData = {
-      name?: string;
-      set_name?: string;
-      set_number?: string | null;
-      rarity?: string;
-      card_type?: string | null;
-      image_url?: string | null;
-      source?: CardSource;
-    };
-
-    const dataToUpdate: CardUpdateData = {};
-    if (body.name !== undefined) dataToUpdate.name = body.name;
-    if (body.set_name !== undefined) dataToUpdate.set_name = body.set_name;
-    if (body.set_number !== undefined) dataToUpdate.set_number = body.set_number;
-    if (body.rarity !== undefined) dataToUpdate.rarity = body.rarity;
-    if (body.card_type !== undefined) dataToUpdate.card_type = body.card_type;
-    if (body.imageUrl !== undefined) dataToUpdate.image_url = body.imageUrl;
-
-    // Set source to MIXED when manually updating API-imported cards
-    dataToUpdate.source = CardSource.MIXED;
-
-    const updatedCard = await prisma.card.update({
-      where: { id: Number(id) },
-      data: dataToUpdate,
-      select: {
-        id: true,
-        name: true,
-        set_name: true,
-        set_number: true,
-        rarity: true,
-        card_type: true,
-        image_url: true,
-        created_at: true,
-      },
-    });
-
-    const card: CardResponse = {
-      id: updatedCard.id.toString(),
-      name: updatedCard.name,
-      set_name: updatedCard.set_name,
-      set_number: updatedCard.set_number,
-      rarity: updatedCard.rarity,
-      card_type: updatedCard.card_type,
-      imageUrl: updatedCard.image_url ?? null,
-      createdAt: updatedCard.created_at,
-    };
-
-    return NextResponse.json({ card }, { status: 200 });
-  } catch (error) {
-    console.error("Error updating card:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-// DELETE /api/cards?id=... - delete a card
-export async function DELETE(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json({ error: "Card ID is required" }, { status: 400 });
+    const cardsData = searchResponse.data;
+    if (!Array.isArray(cardsData) || cardsData.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No cards found',
+        results: { imported: 0, updated: 0, skipped: 0, errors: [] }
+      });
     }
 
-    await prisma.card.delete({
-      where: { id: Number(id) },
+    const results = {
+      imported: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as any[]
+    };
+
+    // Process each card
+    for (const apiCard of cardsData) {
+      try {
+        const priceTrackerId = apiCard.id; // setId-cardNumber format
+        const marketPrice = PokemonPriceTrackerAPI.getBestMarketPrice(apiCard);
+        const priceTrend = marketPrice ? 'stable' : null;
+
+        console.log(`Processing: ${apiCard.name} (${priceTrackerId}) - $${marketPrice}`);
+
+        // Check if card exists
+        const existingCard = await prisma.card.findFirst({
+          where: { price_tracker_id: priceTrackerId }
+        });
+
+        if (existingCard) {
+          // Update existing card
+          await prisma.card.update({
+            where: { id: existingCard.id },
+            data: {
+              market_price: marketPrice,
+              price_trend: priceTrend,
+              last_price_update: new Date(),
+              sync_errors: 0,
+              updated_at: new Date()
+            }
+          });
+          results.updated++;
+          console.log(`Updated: ${apiCard.name}`);
+        } else {
+          // Create new card
+          await prisma.card.create({
+            data: {
+              name: apiCard.name,
+              set_name: apiCard.setName,
+              set_number: apiCard.number || 'Unknown',
+              rarity: apiCard.rarity || 'Common',
+              card_type: 'Pokemon', // Default type
+              image_url: apiCard.imageUrl || null,
+              small_image_url: apiCard.imageUrl || null,
+              price_tracker_id: priceTrackerId,
+              market_price: marketPrice,
+              price_trend: priceTrend,
+              last_price_update: new Date(),
+              sync_enabled: true,
+              sync_errors: 0,
+              source: 'API',
+              created_at: new Date(),
+              updated_at: new Date()
+            }
+          });
+          results.imported++;
+          console.log(`Imported: ${apiCard.name}`);
+        }
+
+        // Create price history entry
+        if (marketPrice) {
+          await prisma.price_history.create({
+            data: {
+              card_id: existingCard?.id || (await prisma.card.findFirst({
+                where: { price_tracker_id: priceTrackerId }
+              }))!.id,
+              price: marketPrice,
+              source: 'pokemon_price_tracker',
+              recorded_at: new Date(),
+              metadata: {
+                import_batch: true,
+                api_source: 'pokemon_price_tracker',
+                pricing_sources: apiCard.prices
+              }
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error(`Error processing card ${apiCard.id}:`, error);
+        results.errors.push({
+          cardId: apiCard.id,
+          cardName: apiCard.name,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    console.log('Import results:', results);
+
+    return NextResponse.json({
+      success: true,
+      message: `Import completed: ${results.imported} imported, ${results.updated} updated, ${results.errors.length} errors`,
+      results
     });
 
-    return NextResponse.json({ message: "Card deleted" }, { status: 200 });
   } catch (error) {
-    console.error("Error deleting card:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('Import error:', error);
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
