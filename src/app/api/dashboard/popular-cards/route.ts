@@ -32,15 +32,50 @@ export async function GET(request: NextRequest) {
                 name: true,
                 set_name: true,
                 rarity: true,
-                image_url: true,
+                image_small: true, // Changed from image_url to image_small
                 market_price: true,
                 view_count: true,
-                price_change_7d: true,
+            }
+        });
+
+        // Get price history for price change calculation
+        const cardIds = popularCards.map(card => card.id);
+        const priceHistory = await prisma.price_history.findMany({
+            where: {
+                card_id: { in: cardIds },
+                recorded_at: { gte: startDate }
+            },
+            orderBy: {
+                recorded_at: 'asc'
+            }
+        });
+
+        // Calculate price changes from history
+        const priceChangeMap = new Map<number, number>();
+        const cardPriceHistory = new Map<number, Array<{ price: number, recorded_at: Date }>>();
+
+        // Group price history by card
+        priceHistory.forEach(ph => {
+            const cardHistory = cardPriceHistory.get(ph.card_id) || [];
+            cardHistory.push({
+                price: parseFloat(ph.price.toString()),
+                recorded_at: ph.recorded_at
+            });
+            cardPriceHistory.set(ph.card_id, cardHistory);
+        });
+
+        // Calculate price change for each card
+        cardPriceHistory.forEach((history, cardId) => {
+            if (history.length >= 2) {
+                const oldestPrice = history[0].price;
+                const newestPrice = history[history.length - 1].price;
+                const percentChange = oldestPrice > 0 ?
+                    ((newestPrice - oldestPrice) / oldestPrice) * 100 : 0;
+                priceChangeMap.set(cardId, percentChange);
             }
         });
 
         // Get active listing counts
-        const cardIds = popularCards.map(card => card.id);
         const listingCounts = await prisma.userCard.groupBy({
             by: ['card_id'],
             where: {
@@ -76,9 +111,9 @@ export async function GET(request: NextRequest) {
             name: card.name,
             set_name: card.set_name,
             rarity: card.rarity,
-            image_url: card.image_url,
+            image_url: card.image_small, // Map image_small to image_url for API response
             market_price: card.market_price ? parseFloat(card.market_price.toString()) : null,
-            price_change_7d: card.price_change_7d ? parseFloat(card.price_change_7d.toString()) : null,
+            price_change_7d: priceChangeMap.get(card.id) || null, // Use calculated price change
             view_count: card.view_count,
             active_listings: listingMap.get(card.id) || 0,
             recent_sales: salesMap.get(card.id) || 0,

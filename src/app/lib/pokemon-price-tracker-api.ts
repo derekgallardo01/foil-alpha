@@ -340,7 +340,7 @@ class PokemonPriceTrackerAPI {
 
 // Export singleton instance
 const pokemonPriceTrackerAPI = new PokemonPriceTrackerAPI(
-    process.env.POKEMON_PRICE_TRACKER_API_KEY || ''
+    process.env.POKEMON_PRICE_TRACKER_API_KEY || 'pokeprice_pro_a08dea5947407f6c0d1bcd52fd88a6cbcdeaa9aa6b75e979'
 );
 
 export { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI };

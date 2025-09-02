@@ -195,7 +195,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                     borderBottom: index < popularCards.length - 2 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
                                     px: 0,
                                     width: '100%',
-                                    textAlign: 'left'
+                                    textAlign: 'left'   
                                 }}
                             >
                                 <ListItemAvatar>

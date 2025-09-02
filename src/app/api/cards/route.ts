@@ -60,49 +60,67 @@ export async function POST(request: NextRequest) {
       try {
         const priceTrackerId = apiCard.id; // setId-cardNumber format
         const marketPrice = PokemonPriceTrackerAPI.getBestMarketPrice(apiCard);
-        const priceTrend = marketPrice ? 'stable' : null;
 
-        console.log(`Processing: ${apiCard.name} (${priceTrackerId}) - $${marketPrice}`);
+        console.log(`Processing: ${apiCard.name} (${priceTrackerId}) - ${marketPrice}`);
 
         // Check if card exists
         const existingCard = await prisma.card.findFirst({
           where: { price_tracker_id: priceTrackerId }
         });
 
+        let newCard = null;
+
         if (existingCard) {
-          // Update existing card
+          // Update existing card - using only fields that exist in your schema
           await prisma.card.update({
             where: { id: existingCard.id },
             data: {
               market_price: marketPrice,
-              price_trend: priceTrend,
-              last_price_update: new Date(),
+              last_updated: new Date(),
               sync_errors: 0,
-              updated_at: new Date()
+              updated_at: new Date(),
+              // Store pricing data in existing JSON fields
+              tcgplayer_data: apiCard.prices?.tcgplayer || undefined,
+              cardmarket_data: apiCard.prices?.cardmarket || undefined,
+              ebay_data: apiCard.prices?.ebay || undefined,
             }
           });
           results.updated++;
           console.log(`Updated: ${apiCard.name}`);
         } else {
-          // Create new card
-          await prisma.card.create({
+          // Create new card - using only fields that exist in your schema
+          newCard = await prisma.card.create({
             data: {
               name: apiCard.name,
-              set_name: apiCard.setName,
-              set_number: apiCard.number || 'Unknown',
+              number: apiCard.number || 'Unknown', // Using 'number' field from your schema
               rarity: apiCard.rarity || 'Common',
-              card_type: 'Pokemon', // Default type
-              image_url: apiCard.imageUrl || null,
-              small_image_url: apiCard.imageUrl || null,
+              image_small: apiCard.imageUrl || undefined, // Using 'image_small' from your schema
+              set_id: apiCard.setId || 'unknown', // Using 'set_id' from your schema
+              set_name: apiCard.setName,
+              set_series: undefined, // Optional field
+              set_printed_total: undefined, // Optional field
+              set_total: undefined, // Optional field
+              set_legalities: undefined, // Optional JSON field
+              set_ptcgo_code: undefined, // Optional field
+              set_release_date: undefined, // Optional field
+              set_updated_at: undefined, // Optional field
               price_tracker_id: priceTrackerId,
               market_price: marketPrice,
-              price_trend: priceTrend,
-              last_price_update: new Date(),
+              price_source: 'pokemon_price_tracker',
+              last_updated: new Date(),
+              api_mongo_id: undefined, // Optional field
+              source: 'API', // Using CardSource enum
               sync_enabled: true,
               sync_errors: 0,
-              source: 'API',
-              created_at: new Date(),
-              updated_at: new Date()
+              featured: false,
+              view_count: 0,
+              notes: undefined, // Optional field
+              // Store pricing data in existing JSON fields
+              tcgplayer_data: apiCard.prices?.tcgplayer || undefined,
+              cardmarket_data: apiCard.prices?.cardmarket || undefined,
+              ebay_data: apiCard.prices?.ebay || undefined,
+              tcgplayer_url: undefined, // Optional field
+              cardmarket_url: undefined, // Optional field
             }
           });
           results.imported++;
@@ -111,21 +129,23 @@ export async function POST(request: NextRequest) {
 
         // Create price history entry
         if (marketPrice) {
-          await prisma.price_history.create({
-            data: {
-              card_id: existingCard?.id || (await prisma.card.findFirst({
-                where: { price_tracker_id: priceTrackerId }
-              }))!.id,
-              price: marketPrice,
-              source: 'pokemon_price_tracker',
-              recorded_at: new Date(),
-              metadata: {
-                import_batch: true,
-                api_source: 'pokemon_price_tracker',
-                pricing_sources: apiCard.prices
+          const cardForHistory = existingCard || newCard;
+          if (cardForHistory) {
+            await prisma.price_history.create({
+              data: {
+                card_id: cardForHistory.id,
+                price: marketPrice,
+                source: 'pokemon_price_tracker',
+                price_type: 'market',
+                condition: undefined, // Optional field
+                metadata: {
+                  import_batch: true,
+                  api_source: 'pokemon_price_tracker',
+                  pricing_sources: apiCard.prices
+                }
               }
-            }
-          });
+            });
+          }
         }
 
       } catch (error) {

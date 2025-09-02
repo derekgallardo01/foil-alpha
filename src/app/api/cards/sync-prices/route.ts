@@ -1,4 +1,4 @@
-// src/app/api/cards/sync-prices/route.ts - FIXED VERSION FOR POKEMON PRICE TRACKER API
+// src/app/api/cards/sync-prices/route.ts - FIXED VERSION FOR YOUR SCHEMA
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from '../../../lib/pokemon-price-tracker-api';
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
         // Build query to get cards that need pricing updates
         let whereClause: any = {
-            price_tracker_id: { not: null }, // Only cards with Pokemon Price Tracker IDs
+            price_tracker_id: { not: { equals: "" } }, // Only cards with Pokemon Price Tracker IDs
             sync_enabled: true,
         };
 
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
         if (!force) {
             const cutoffTime = new Date(Date.now() - (maxAgeHours * 60 * 60 * 1000));
             whereClause.OR = [
-                { last_price_update: null },
-                { last_price_update: { lt: cutoffTime } }
+                { last_updated: { equals: null } },
+                { last_updated: { lt: cutoffTime } }
             ];
         }
 
@@ -124,12 +124,11 @@ export async function POST(request: NextRequest) {
                 name: true,
                 price_tracker_id: true,
                 market_price: true,
-                last_price_update: true,
-                image_url: true,
-                small_image_url: true,
+                last_updated: true,
+                image_small: true,
             },
             orderBy: [
-                { last_price_update: 'asc' },
+                { last_updated: 'asc' },
                 { id: 'asc' }
             ]
         });
@@ -214,21 +213,17 @@ export async function POST(request: NextRequest) {
                         highestValueCard = { name: card.name, price: newMarketPrice };
                     }
 
-                    // Determine price trend
-                    let priceTrend = 'stable';
-                    if (priceChange > 5) priceTrend = 'up';
-                    else if (priceChange < -5) priceTrend = 'down';
-
-                    // Update card in database
+                    // Update card in database - using your schema fields
                     await prisma.card.update({
                         where: { id: card.id },
                         data: {
                             market_price: newMarketPrice,
-                            price_trend: priceTrend,
-                            price_change_7d: priceChange, // Store the calculated change
-                            last_price_update: new Date(),
+                            last_updated: new Date(),
                             sync_errors: 0,
-                            updated_at: new Date()
+                            // Store pricing data in existing JSON fields
+                            tcgplayer_data: pricingResponse.data.prices?.tcgplayer || undefined,
+                            cardmarket_data: pricingResponse.data.prices?.cardmarket || undefined,
+                            ebay_data: pricingResponse.data.prices?.ebay || undefined,
                         }
                     });
 
@@ -238,12 +233,11 @@ export async function POST(request: NextRequest) {
                             card_id: card.id,
                             price: newMarketPrice,
                             source: 'pokemon_price_tracker',
-                            recorded_at: new Date(),
+                            price_type: 'market',
                             metadata: {
                                 price_change_percent: priceChange,
                                 old_price: oldPrice,
                                 new_price: newMarketPrice,
-                                trend: priceTrend,
                                 sync_batch: true,
                                 pricing_sources: pricingResponse.data.prices || null
                             }
@@ -263,6 +257,12 @@ export async function POST(request: NextRequest) {
                         error: error instanceof Error ? error.message : 'Unknown error'
                     });
                     result.failed_updates++;
+
+                    // Increment sync_errors for this card
+                    await prisma.card.update({
+                        where: { id: card.id },
+                        data: { sync_errors: { increment: 1 } }
+                    });
                 }
             }
 
@@ -314,7 +314,7 @@ export async function GET(request: NextRequest) {
             // Get current stats
             const stats = await prisma.card.aggregate({
                 where: {
-                    price_tracker_id: { not: null },
+                    price_tracker_id: { not: { equals: "" } },
                     sync_enabled: true
                 },
                 _count: { id: true },
@@ -325,12 +325,12 @@ export async function GET(request: NextRequest) {
 
             const staleCards = await prisma.card.count({
                 where: {
-                    price_tracker_id: { not: null },
+                    price_tracker_id: { not: { equals: "" } },
                     sync_enabled: true,
                     OR: [
-                        { last_price_update: null },
+                        { last_updated: { equals: null } },
                         {
-                            last_price_update: {
+                            last_updated: {
                                 lt: new Date(Date.now() - 24 * 60 * 60 * 1000)
                             }
                         }
@@ -340,34 +340,39 @@ export async function GET(request: NextRequest) {
 
             const recentUpdates = await prisma.card.count({
                 where: {
-                    last_price_update: {
+                    last_updated: {
                         gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
                     }
                 }
             });
 
+            const totalCards = stats._count ? stats._count.id : 0;
+            const avgPrice = stats._avg ? stats._avg.market_price : null;
+            const minPrice = stats._min ? stats._min.market_price : null;
+            const maxPrice = stats._max ? stats._max.market_price : null;
+
             return NextResponse.json({
                 success: true,
                 stats: {
-                    total_cards: stats._count.id,
+                    total_cards: totalCards,
                     cards_with_prices: await prisma.card.count({
                         where: {
-                            price_tracker_id: { not: null },
-                            market_price: { not: null }
+                            price_tracker_id: { not: { equals: "" } },
+                            market_price: { not: { equals: null } }
                         }
                     }),
                     never_updated: await prisma.card.count({
                         where: {
-                            price_tracker_id: { not: null },
-                            last_price_update: null
+                            price_tracker_id: { not: { equals: "" } },
+                            last_updated: { equals: null }
                         }
                     }),
                     stale_prices: staleCards,
                     cards_updated_24h: recentUpdates,
-                    avg_market_price: stats._avg.market_price || 0,
+                    avg_market_price: avgPrice || 0,
                     price_range: {
-                        min: stats._min.market_price || 0,
-                        max: stats._max.market_price || 0,
+                        min: minPrice || 0,
+                        max: maxPrice || 0,
                     }
                 }
             });

@@ -543,6 +543,7 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
         }
     }, [open]);
 
+
     const loadFilterOptions = async () => {
         try {
             setLoading(true);
@@ -556,6 +557,10 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                     total: set.cardCount || 0,
                     releaseDate: set.releaseDate || new Date().toISOString()
                 })));
+            } else {
+                console.warn('Failed to load sets:', setsResponse.error);
+                // Fallback to empty array
+                setAvailableSets([]);
             }
 
             // Since Pokemon Price Tracker API doesn't provide types/rarities filtering,
@@ -565,6 +570,10 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
         } catch (error) {
             console.error('Error loading filter options:', error);
             setError('Failed to load filter options');
+            // Set fallback empty arrays
+            setAvailableSets([]);
+            setAvailableTypes([]);
+            setAvailableRarities([]);
         } finally {
             setLoading(false);
         }
@@ -661,6 +670,12 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const cardsToImport = Array.from(selectedCards);
             startProgress(cardsToImport.length, 'Importing selected cards...');
 
+            // Create a search query with the selected card names for the import
+            const selectedCardNames = searchResults
+                .filter(card => selectedCards.has(card.id))
+                .map(card => card.name)
+                .join(' OR ');
+
             let processed = 0;
             const progressInterval = setInterval(() => {
                 if (processed < cardsToImport.length) {
@@ -674,8 +689,8 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    searchQuery: '', // Not needed since we're importing specific cards
-                    cardIds: cardsToImport, // Send the selected card IDs
+                    searchQuery: selectedCardNames, // Send search query with selected card names
+                    limit: cardsToImport.length,
                 }),
             });
 
@@ -718,6 +733,7 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             setImporting(false);
         }
     };
+
 
     const importEntireSet = async () => {
         if (!selectedSet) {
@@ -793,7 +809,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             setImporting(false);
         }
     };
-
     const handleClose = () => {
         if (!importing) {
             setSelectedCards(new Set());
