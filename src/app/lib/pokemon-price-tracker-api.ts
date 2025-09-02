@@ -1,74 +1,45 @@
-// src/app/lib/pokemon-price-tracker-api.ts
-interface PriceData {
-    tcgplayer?: {
-        market?: number;
-        low?: number;
-        mid?: number;
-        high?: number;
-        updated_at?: string;
-    };
-    ebay?: {
-        average?: number;
-        recent?: number;
-        updated_at?: string;
-    };
-    cardmarket?: {
-        average?: number;
-        trend?: number;
-        updated_at?: string;
-    };
-}
-
-interface GradedPriceData {
-    psa_7?: number;
-    psa_8?: number;
-    psa_9?: number;
-    psa_10?: number;
-    population?: {
-        psa_7?: number;
-        psa_8?: number;
-        psa_9?: number;
-        psa_10?: number;
-    };
-}
-
+// src/app/lib/pokemon-price-tracker-api.ts - CORRECTED IMPLEMENTATION
 interface PokemonPriceTrackerCard {
-    id: string; // "setId-cardNumber" format
+    id: string; // Format: "setId-cardNumber" 
     name: string;
-    set_name: string;
-    set_id: string;
-    card_number: string;
+    setName: string;
+    setId: string;
+    number: string;
     rarity?: string;
-    prices: PriceData;
-    graded_prices?: GradedPriceData;
-    last_updated: string;
-    market_cap?: number;
-    volume_24h?: number;
-    price_change_24h?: number;
-    price_change_7d?: number;
+    imageUrl?: string;
+    prices?: {
+        tcgplayer?: {
+            market?: number;
+            low?: number;
+            high?: number;
+            lastUpdated?: string;
+        };
+        ebay?: {
+            average?: number;
+            prices?: {
+                PSA10?: number;
+                PSA9?: number;
+                PSA8?: number;
+                PSA7?: number;
+            };
+            lastUpdated?: string;
+        };
+        cardmarket?: {
+            average?: number;
+            trend?: number;
+            lastUpdated?: string;
+        };
+    };
+    lastUpdated?: string;
 }
 
 interface PokemonPriceTrackerSet {
     id: string;
     name: string;
-    release_date: string;
-    card_count: number;
-    avg_price: number;
-    total_market_cap: number;
-}
-
-interface PriceHistoryEntry {
-    date: string;
-    price: number;
-    source: 'tcgplayer' | 'ebay' | 'cardmarket';
-}
-
-interface SearchResponse<T> {
-    data: T[];
-    total: number;
-    page: number;
-    per_page: number;
-    last_page: number;
+    releaseDate?: string;
+    cardCount?: number;
+    avgPrice?: number;
+    totalMarketCap?: number;
 }
 
 interface APIResponse<T> {
@@ -83,7 +54,7 @@ interface APIResponse<T> {
 }
 
 class PokemonPriceTrackerAPI {
-    private baseUrl = 'https://api.pokemonpricetracker.com/v1';
+    private baseUrl = 'https://www.pokemonpricetracker.com/api'; // CORRECTED BASE URL
     private apiKey: string;
     private defaultHeaders: Record<string, string>;
     private rateLimitCache = new Map<string, number>();
@@ -91,7 +62,7 @@ class PokemonPriceTrackerAPI {
     constructor(apiKey: string) {
         this.apiKey = apiKey;
         this.defaultHeaders = {
-            'X-API-Key': this.apiKey,
+            'Authorization': `Bearer ${this.apiKey}`, // CORRECTED: Use Bearer token
             'Content-Type': 'application/json',
             'User-Agent': 'TCG-Market-App/1.0'
         };
@@ -115,11 +86,11 @@ class PokemonPriceTrackerAPI {
 
         const cacheKey = url.toString();
 
-        // Check rate limiting cache (avoid hitting API too frequently)
+        // Check rate limiting cache
         if (useCache && this.rateLimitCache.has(cacheKey)) {
             const cacheTime = this.rateLimitCache.get(cacheKey)!;
             const timeDiff = Date.now() - cacheTime;
-            if (timeDiff < 60000) { // 1 minute cache for rate limiting
+            if (timeDiff < 60000) { // 1 minute cache
                 console.log('Rate limit cache hit, skipping request:', endpoint);
                 return { success: false, error: 'Rate limited - using cache' };
             }
@@ -133,13 +104,12 @@ class PokemonPriceTrackerAPI {
                 headers: this.defaultHeaders,
             });
 
-            // Handle rate limiting
+            // Handle rate limiting (429)
             if (response.status === 429) {
                 const retryAfter = response.headers.get('Retry-After');
                 const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000;
                 console.warn(`Pokemon Price Tracker API rate limited. Waiting ${waitTime}ms...`);
 
-                // Cache this endpoint to prevent immediate retry
                 this.rateLimitCache.set(cacheKey, Date.now());
 
                 return {
@@ -170,18 +140,18 @@ class PokemonPriceTrackerAPI {
 
             const data = await response.json();
 
-            // Update rate limit cache with successful request
+            // Update rate limit cache
             this.rateLimitCache.set(cacheKey, Date.now());
 
             console.log('Pokemon Price Tracker API Response:', {
                 endpoint,
-                dataType: Array.isArray(data.data) ? 'array' : typeof data.data,
-                count: Array.isArray(data.data) ? data.data.length : 'N/A'
+                dataType: Array.isArray(data) ? 'array' : typeof data,
+                count: Array.isArray(data) ? data.length : 'N/A'
             });
 
             return {
                 success: true,
-                data: data.data || data,
+                data: data,
                 rate_limit: {
                     remaining: parseInt(response.headers.get('X-RateLimit-Remaining') || '0'),
                     reset_at: response.headers.get('X-RateLimit-Reset') || new Date().toISOString()
@@ -197,39 +167,34 @@ class PokemonPriceTrackerAPI {
         }
     }
 
-    // Get pricing for a specific card by ID (setId-cardNumber format)
-    async getCardPricing(cardId: string, includeGraded = false): Promise<APIResponse<PokemonPriceTrackerCard>> {
-        const params: Record<string, any> = { id: cardId };
-        if (includeGraded) {
-            params.includeGraded = 'true';
-        }
-
-        return this.makeRequest<PokemonPriceTrackerCard>('/prices', params);
+    // Get pricing for specific card by ID
+    async getCardPricing(cardId: string): Promise<APIResponse<PokemonPriceTrackerCard>> {
+        return this.makeRequest<PokemonPriceTrackerCard>(`/prices`, { id: cardId });
     }
 
-    // Search for cards by name and set
+    // Search for cards by name
     async searchCardPricing(options: {
         name?: string;
         setId?: string;
+        limit?: number;
         page?: number;
-        per_page?: number;
-        includeGraded?: boolean;
-    } = {}): Promise<APIResponse<SearchResponse<PokemonPriceTrackerCard>>> {
+        includeHistory?: boolean;
+    } = {}): Promise<APIResponse<PokemonPriceTrackerCard[]>> {
         const params: Record<string, any> = {
+            limit: Math.min(options.limit || 50, 100), // API limit
             page: options.page || 1,
-            per_page: Math.min(options.per_page || 20, 100), // API limit
         };
 
         if (options.name) params.name = options.name;
         if (options.setId) params.setId = options.setId;
-        if (options.includeGraded) params.includeGraded = 'true';
+        if (options.includeHistory) params.includeHistory = 'true';
 
-        return this.makeRequest<SearchResponse<PokemonPriceTrackerCard>>('/prices', params);
+        return this.makeRequest<PokemonPriceTrackerCard[]>('/prices', params);
     }
 
-    // Get all cards from a specific set with pricing
-    async getSetPricing(setId: string, includeGraded = false): Promise<APIResponse<PokemonPriceTrackerCard[]>> {
-        let allCards: PokemonPriceTrackerCard[] = [];
+    // Get all cards from a specific set
+    async getSetPricing(setId: string): Promise<APIResponse<PokemonPriceTrackerCard[]>> {
+        const allCards: PokemonPriceTrackerCard[] = [];
         let page = 1;
         let hasMore = true;
 
@@ -237,17 +202,19 @@ class PokemonPriceTrackerAPI {
             const response = await this.searchCardPricing({
                 setId,
                 page,
-                per_page: 100,
-                includeGraded
+                limit: 100
             });
 
             if (!response.success || !response.data) {
                 return { success: false, error: response.error || 'Failed to fetch set pricing' };
             }
 
-            allCards.push(...response.data.data);
-            hasMore = page < response.data.last_page;
+            allCards.push(...response.data);
+            hasMore = response.data.length === 100; // If we got a full page, there might be more
             page++;
+
+            // Rate limiting delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         return { success: true, data: allCards };
@@ -259,22 +226,16 @@ class PokemonPriceTrackerAPI {
     }
 
     // Get price history for a card
-    async getCardPriceHistory(
-        cardId: string,
-        days = 30
-    ): Promise<APIResponse<PriceHistoryEntry[]>> {
-        return this.makeRequest<PriceHistoryEntry[]>(`/prices/${cardId}/history`, {
+    async getCardPriceHistory(cardId: string, days = 30): Promise<APIResponse<any[]>> {
+        return this.makeRequest<any[]>(`/cards/${cardId}/history`, {
             days: Math.min(days, 365) // API limit
         });
     }
 
-    // Batch pricing lookup for multiple cards
-    async getBatchPricing(
-        cardIds: string[],
-        includeGraded = false
-    ): Promise<APIResponse<PokemonPriceTrackerCard[]>> {
-        // Split into chunks to respect API limits
-        const chunkSize = 50; // Conservative chunk size
+    // Batch pricing lookup
+    async getBatchPricing(cardIds: string[]): Promise<APIResponse<PokemonPriceTrackerCard[]>> {
+        // Process in chunks of 50 (API limit)
+        const chunkSize = 50;
         const chunks = [];
 
         for (let i = 0; i < cardIds.length; i += chunkSize) {
@@ -285,23 +246,22 @@ class PokemonPriceTrackerAPI {
         const errors: string[] = [];
 
         for (const chunk of chunks) {
-            const params: Record<string, any> = {
-                ids: chunk.join(','),
-                per_page: chunkSize
-            };
+            try {
+                // Note: Check if API supports bulk requests, otherwise do individual requests
+                for (const cardId of chunk) {
+                    const response = await this.getCardPricing(cardId);
+                    if (response.success && response.data) {
+                        allResults.push(response.data);
+                    } else {
+                        errors.push(response.error || 'Unknown error');
+                    }
 
-            if (includeGraded) params.includeGraded = 'true';
-
-            const response = await this.makeRequest<SearchResponse<PokemonPriceTrackerCard>>('/prices', params);
-
-            if (response.success && response.data) {
-                allResults.push(...response.data.data);
-            } else {
-                errors.push(response.error || 'Unknown error');
+                    // Rate limiting delay
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            } catch (error) {
+                errors.push(error instanceof Error ? error.message : 'Unknown error');
             }
-
-            // Add delay between requests to respect rate limits
-            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         if (allResults.length === 0 && errors.length > 0) {
@@ -311,43 +271,34 @@ class PokemonPriceTrackerAPI {
         return { success: true, data: allResults };
     }
 
-    // Utility method to convert Pokemon TCG API card ID to Price Tracker format
-    static convertTCGCardIdToPriceTrackerId(setId: string, cardNumber: string): string {
-        // Clean and format the card number
-        const cleanNumber = cardNumber.replace(/[^\d\/]/g, '');
-        return `${setId}-${cleanNumber}`;
-    }
-
     // Extract best market price from pricing data
     static getBestMarketPrice(card: PokemonPriceTrackerCard): number | null {
-        const prices = card.prices;
+        if (!card.prices) return null;
 
-        // Priority: TCGPlayer market > TCGPlayer mid > eBay average > CardMarket average
-        if (prices.tcgplayer?.market && prices.tcgplayer.market > 0) {
-            return prices.tcgplayer.market;
+        // Priority: TCGPlayer market > TCGPlayer low > eBay average
+        if (card.prices.tcgplayer?.market && card.prices.tcgplayer.market > 0) {
+            return card.prices.tcgplayer.market;
         }
 
-        if (prices.tcgplayer?.mid && prices.tcgplayer.mid > 0) {
-            return prices.tcgplayer.mid;
+        if (card.prices.tcgplayer?.low && card.prices.tcgplayer.low > 0) {
+            return card.prices.tcgplayer.low;
         }
 
-        if (prices.ebay?.average && prices.ebay.average > 0) {
-            return prices.ebay.average;
+        if (card.prices.ebay?.average && card.prices.ebay.average > 0) {
+            return card.prices.ebay.average;
         }
 
-        if (prices.cardmarket?.average && prices.cardmarket.average > 0) {
-            return prices.cardmarket.average;
+        if (card.prices.cardmarket?.average && card.prices.cardmarket.average > 0) {
+            return card.prices.cardmarket.average;
         }
 
         return null;
     }
 
-    // Calculate price trend from change data
+    // Calculate price trend
     static getPriceTrend(card: PokemonPriceTrackerCard): 'up' | 'down' | 'stable' {
-        if (card.price_change_24h === undefined) return 'stable';
-
-        if (card.price_change_24h > 2) return 'up';
-        if (card.price_change_24h < -2) return 'down';
+        // Note: Price Tracker API doesn't provide trend data directly
+        // You might need to implement this by comparing with historical data
         return 'stable';
     }
 
@@ -359,18 +310,18 @@ class PokemonPriceTrackerAPI {
         return {
             market_price: marketPrice,
             price_range: {
-                low: card.prices.tcgplayer?.low || null,
-                high: card.prices.tcgplayer?.high || null,
+                low: card.prices?.tcgplayer?.low || null,
+                high: card.prices?.tcgplayer?.high || null,
             },
             trend,
-            change_24h: card.price_change_24h || null,
-            change_7d: card.price_change_7d || null,
-            volume_24h: card.volume_24h || null,
-            last_updated: card.last_updated,
+            change_24h: null, // Not available in API
+            change_7d: null,  // Not available in API
+            volume_24h: null, // Not available in API
+            last_updated: card.lastUpdated,
             sources: {
-                tcgplayer: !!card.prices.tcgplayer,
-                ebay: !!card.prices.ebay,
-                cardmarket: !!card.prices.cardmarket,
+                tcgplayer: !!card.prices?.tcgplayer,
+                ebay: !!card.prices?.ebay,
+                cardmarket: !!card.prices?.cardmarket,
             }
         };
     }
@@ -378,7 +329,7 @@ class PokemonPriceTrackerAPI {
     // Health check
     async healthCheck(): Promise<boolean> {
         try {
-            const response = await this.makeRequest('/sets', { per_page: 1 });
+            const response = await this.makeRequest('/sets', { limit: 1 });
             return response.success;
         } catch (error) {
             console.error('Pokemon Price Tracker API health check failed:', error);
@@ -389,15 +340,12 @@ class PokemonPriceTrackerAPI {
 
 // Export singleton instance
 const pokemonPriceTrackerAPI = new PokemonPriceTrackerAPI(
-    process.env.POKEMON_PRICE_TRACKER_API_KEY || 'pokeprice_pro_a08dea5947407f6c0d1bcd52fd88a6cbcdeaa9aa6b75e979'
+    process.env.POKEMON_PRICE_TRACKER_API_KEY || ''
 );
 
 export { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI };
 export type {
     PokemonPriceTrackerCard,
     PokemonPriceTrackerSet,
-    PriceData,
-    GradedPriceData,
-    PriceHistoryEntry,
     APIResponse
-  };
+};

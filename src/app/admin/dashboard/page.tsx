@@ -108,7 +108,7 @@ export default function AdminDashboard() {
             if (!usersResponse.ok) throw new Error("Failed to fetch users");
             const users = await usersResponse.json();
 
-            // *** FIX: Fetch actual total cards count from the cards API ***
+            // Fetch cards data with all=true to get total count
             const cardsResponse = await fetch("/api/admin/cards?all=true", {
                 headers: {
                     "Authorization": `Bearer ${session?.accessToken}`,
@@ -120,18 +120,18 @@ export default function AdminDashboard() {
 
             if (cardsResponse.ok) {
                 const cardsData = await cardsResponse.json();
-                totalCardsCount = cardsData.pagination?.total || cardsData.cards?.length || 0;
+                totalCardsCount = cardsData.pagination?.total || 0;
 
-                // Calculate active listings from cards data
-                activeListingsCount = cardsData.cards?.reduce((sum: number, card: any) => {
-                    return sum + (card.forSaleCount || 0);
-                }, 0) || 0;
+                // Calculate active listings from the actual cards data
+                activeListingsCount = cardsData.cards?.filter((card: any) =>
+                    card.userCards?.some((uc: any) => uc.is_for_sale && !uc.is_sold)
+                ).length || 0;
             }
 
-            // *** FIX: Fetch auctions data ***
+            // Fetch auctions data
             let activeAuctionsCount = 0;
             try {
-                const auctionsResponse = await fetch("/api/admin/auctions", {
+                const auctionsResponse = await fetch("/api/admin/auctions?status=active", {
                     headers: {
                         "Authorization": `Bearer ${session?.accessToken}`,
                     },
@@ -139,20 +139,20 @@ export default function AdminDashboard() {
 
                 if (auctionsResponse.ok) {
                     const auctionsData = await auctionsResponse.json();
-                    // Assuming the API returns auctions data
-                    activeAuctionsCount = auctionsData.activeAuctions || 0;
+                    activeAuctionsCount = auctionsData.total || 0;
                 }
             } catch (auctionError) {
                 console.warn("Could not fetch auctions data:", auctionError);
             }
 
-            // *** FIX: Fetch transactions data ***
+            // Fetch transactions data
             let totalSalesCount = 0;
             let pendingTransactionsCount = 0;
             let monthlyRevenueAmount = 0;
 
             try {
-                const transactionsResponse = await fetch("/api/admin/transactions", {
+                // Get all transactions to calculate stats
+                const transactionsResponse = await fetch("/api/admin/transactions?limit=1000", {
                     headers: {
                         "Authorization": `Bearer ${session?.accessToken}`,
                     },
@@ -160,58 +160,105 @@ export default function AdminDashboard() {
 
                 if (transactionsResponse.ok) {
                     const transactionsData = await transactionsResponse.json();
-                    totalSalesCount = transactionsData.totalSales || 0;
-                    pendingTransactionsCount = transactionsData.pendingTransactions || 0;
-                    monthlyRevenueAmount = transactionsData.monthlyRevenue || 0;
+                    const transactions = transactionsData.transactions || [];
+
+                    // Calculate stats from actual transaction data
+                    totalSalesCount = transactions.filter((t: any) => t.status === 'COMPLETED').length;
+                    pendingTransactionsCount = transactions.filter((t: any) =>
+                        ['PENDING_BUYER_CONFIRMATION', 'PENDING_SELLER_CONFIRMATION'].includes(t.status)
+                    ).length;
+
+                    // Calculate monthly revenue from completed transactions this month
+                    const now = new Date();
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    monthlyRevenueAmount = transactions
+                        .filter((t: any) =>
+                            t.status === 'COMPLETED' &&
+                            new Date(t.created_at) >= startOfMonth
+                        )
+                        .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
                 }
             } catch (transactionError) {
                 console.warn("Could not fetch transactions data:", transactionError);
             }
 
-            // Calculate stats with actual data
+            // Generate recent activity from actual data
+            const recentActivities: RecentActivity[] = [];
+
+            // Add recent user registrations
+            const recentUsers = users
+                .sort((a: any, b: any) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime())
+                .slice(0, 3);
+
+            recentUsers.forEach((user: any, index: number) => {
+                recentActivities.push({
+                    id: `user-${user.id}`,
+                    type: 'user_registered',
+                    description: 'New user registration',
+                    user: user.name,
+                    timestamp: user.registeredAt,
+                });
+            });
+
+            // Add recent transactions if available
+            try {
+                const recentTransResponse = await fetch("/api/admin/transactions?limit=5", {
+                    headers: {
+                        "Authorization": `Bearer ${session?.accessToken}`,
+                    },
+                });
+
+                if (recentTransResponse.ok) {
+                    const recentTransData = await recentTransResponse.json();
+                    const recentTrans = recentTransData.transactions || [];
+
+                    recentTrans.forEach((trans: any) => {
+                        if (trans.status === 'COMPLETED' && trans.transaction_type === 'AUCTION') {
+                            recentActivities.push({
+                                id: `trans-${trans.id}`,
+                                type: 'auction_ended',
+                                description: 'Auction completed successfully',
+                                user: trans.buyer?.name || 'Unknown',
+                                amount: parseFloat(trans.amount),
+                                timestamp: trans.created_at,
+                            });
+                        } else if (trans.status === 'COMPLETED') {
+                            recentActivities.push({
+                                id: `trans-${trans.id}`,
+                                type: 'card_sold',
+                                description: 'Card sold via fixed price',
+                                user: trans.buyer?.name || 'Unknown',
+                                amount: parseFloat(trans.amount),
+                                timestamp: trans.created_at,
+                            });
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn("Could not fetch recent transactions for activity:", error);
+            }
+
+            // Sort activities by timestamp
+            recentActivities.sort((a, b) =>
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+
+            // Update stats with actual data
             const newStats: DashboardStats = {
                 totalUsers: users.length,
                 activeUsers: users.filter((u: any) => u.subscriptionStatus === 'active').length,
-                totalCards: totalCardsCount, // *** FIXED: Using actual card count ***
-                activeListings: activeListingsCount, // *** FIXED: Using actual listings count ***
-                activeAuctions: activeAuctionsCount, // *** FIXED: Using actual auctions count ***
-                totalSales: totalSalesCount, // *** FIXED: Using actual sales count ***
-                monthlyRevenue: monthlyRevenueAmount, // *** FIXED: Using actual revenue ***
-                pendingTransactions: pendingTransactionsCount, // *** FIXED: Using actual pending count ***
+                totalCards: totalCardsCount,
+                activeListings: activeListingsCount,
+                activeAuctions: activeAuctionsCount,
+                totalSales: totalSalesCount,
+                monthlyRevenue: monthlyRevenueAmount,
+                pendingTransactions: pendingTransactionsCount,
             };
 
             setStats(newStats);
+            setRecentActivity(recentActivities.slice(0, 10)); // Show only 10 most recent
 
-            console.log("📊 Dashboard Stats Updated:", newStats);
-
-            // Generate sample recent activity (replace with real data)
-            const sampleActivity: RecentActivity[] = [
-                {
-                    id: '1',
-                    type: 'user_registered',
-                    description: 'New user registration',
-                    user: 'John Doe',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-                },
-                {
-                    id: '2',
-                    type: 'card_sold',
-                    description: 'Card sold via fixed price',
-                    user: 'Bob Wilson',
-                    amount: 25.99,
-                    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-                },
-                {
-                    id: '3',
-                    type: 'auction_ended',
-                    description: 'Auction completed successfully',
-                    user: 'Alice Johnson',
-                    amount: 45.50,
-                    timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-                },
-            ];
-
-            setRecentActivity(sampleActivity);
+            console.log("📊 Dashboard Stats Updated with Actual Data:", newStats);
             toast.success("Dashboard data loaded!");
 
         } catch (error) {

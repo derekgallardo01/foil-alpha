@@ -101,11 +101,11 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                     path: "/admin/users",
                     badge: stats.totalUsers,
                 },
-                {
-                    title: "Add User",
-                    icon: <UserAddIcon />,
-                    path: "/admin/users/add",
-                },
+                // {
+                //     title: "Add User",
+                //     icon: <UserAddIcon />,
+                //     path: "/admin/users/add",
+                // },
                 {
                     title: "Waitlist Signups",
                     icon: <ScheduleIcon />,
@@ -128,23 +128,23 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                 {
                     title: "Wallet Overview",
                     icon: <WalletIcon />,
-                    path: "/admin/wallets",
+                    path: "/admin/wallet",
                 },
                 {
                     title: "Add Funds",
                     icon: <MoneyIcon />,
-                    path: "/admin/wallets/add-funds",
+                    path: "/admin/users",
                 },
                 {
                     title: "Freeze/Unfreeze",
                     icon: <FreezeIcon />,
-                    path: "/admin/wallets/freeze",
+                    path: "/admin/users",
                 },
-                {
-                    title: "Wallet Transactions",
-                    icon: <PaymentIcon />,
-                    path: "/admin/wallets/transactions",
-                },
+                // {
+                //     title: "Wallet Transactions",
+                //     icon: <PaymentIcon />,
+                //     path: "/admin/wallets/transactions",
+                // },
             ],
         },
 
@@ -163,11 +163,11 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                     icon: <MoneyIcon />,
                     path: "/admin/commission/wallet",
                 },
-                {
-                    title: "Commission Reports",
-                    icon: <AnalyticsIcon />,
-                    path: "/admin/commission/reports",
-                },
+                // {
+                //     title: "Commission Reports",
+                //     icon: <AnalyticsIcon />,
+                //     path: "/admin/commission/reports",
+                // },
             ],
         },
 
@@ -183,21 +183,21 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                     path: "/admin/cards",
                     badge: stats.totalCards,
                 },
-                {
-                    title: "Add Cards",
-                    icon: <CardAddIcon />,
-                    path: "/admin/cards/add",
-                },
-                {
-                    title: "Card Listings",
-                    icon: <Store />,
-                    path: "/admin/listings",
-                },
-                {
-                    title: "Bulk Operations",
-                    icon: <ToolsIcon />,
-                    path: "/admin/cards/bulk",
-                },
+                // {
+                //     title: "Add Cards",
+                //     icon: <CardAddIcon />,
+                //     path: "/admin/cards/add",
+                // },
+                // {
+                //     title: "Card Listings",
+                //     icon: <Store />,
+                //     path: "/admin/listings",
+                // },
+                // {
+                //     title: "Bulk Operations",
+                //     icon: <ToolsIcon />,
+                //     path: "/admin/cards/bulk",
+                // },
             ],
         },
 
@@ -209,7 +209,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                 {
                     title: "Active Listings",
                     icon: <Store />,
-                    path: "/admin/marketplace",
+                    path: "/marketplace",
                 },
                 {
                     title: "Auctions",
@@ -217,17 +217,17 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                     path: "/admin/auctions",
                     badge: stats.activeAuctions,
                 },
-                {
-                    title: "Process Auctions",
-                    icon: <ScheduleIcon />,
-                    path: "/admin/process-auctions",
-                },
-                {
-                    title: "Sales Analytics",
-                    icon: <SalesIcon />,
-                    path: "/admin/sales",
-                    badge: stats.totalSales,
-                },
+                // {
+                //     title: "Process Auctions",
+                //     icon: <ScheduleIcon />,
+                //     path: "/admin/process-auctions",
+                // },
+                // {
+                //     title: "Sales Analytics",
+                //     icon: <SalesIcon />,
+                //     path: "/admin/sales",
+                //     badge: stats.totalSales,
+                // },
             ],
         },
 
@@ -249,75 +249,75 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                     path: "/admin/transactions/pending",
                     badge: stats.pendingTransactions,
                 },
-                {
-                    title: "Financial Reports",
-                    icon: <InvoiceIcon />,
-                    path: "/admin/reports/financial",
-                },
+                // {
+                //     title: "Financial Reports",
+                //     icon: <InvoiceIcon />,
+                //     path: "/admin/reports/financial",
+                // },
                 {
                     title: "Refunds",
                     icon: <History />,
-                    path: "/admin/transactions/refunds",
+                    path: "/admin/users",
                 },
             ],
         },
 
-        // ANALYTICS & REPORTS
-        {
-            title: "Analytics",
-            icon: <AnalyticsIcon />,
-            children: [
-                {
-                    title: "Dashboard Analytics",
-                    icon: <DashboardIcon />,
-                    path: "/admin/analytics/dashboard",
-                },
-                {
-                    title: "User Analytics",
-                    icon: <PeopleIcon />,
-                    path: "/admin/analytics/users",
-                },
-                {
-                    title: "Sales Reports",
-                    icon: <SalesIcon />,
-                    path: "/admin/analytics/sales",
-                },
-                {
-                    title: "Market Trends",
-                    icon: <TrendingUp />,
-                    path: "/admin/analytics/trends",
-                },
-            ],
-        },
+        // // ANALYTICS & REPORTS
+        // {
+        //     title: "Analytics",
+        //     icon: <AnalyticsIcon />,
+        //     children: [
+        //         {
+        //             title: "Dashboard Analytics",
+        //             icon: <DashboardIcon />,
+        //             path: "/admin/analytics/dashboard",
+        //         },
+        //         {
+        //             title: "User Analytics",
+        //             icon: <PeopleIcon />,
+        //             path: "/admin/analytics/users",
+        //         },
+        //         {
+        //             title: "Sales Reports",
+        //             icon: <SalesIcon />,
+        //             path: "/admin/analytics/sales",
+        //         },
+        //         {
+        //             title: "Market Trends",
+        //             icon: <TrendingUp />,
+        //             path: "/admin/analytics/trends",
+        //         },
+        //     ],
+        // },
 
         // SYSTEM & SETTINGS
-        {
-            title: "System",
-            icon: <SettingsIcon />,
-            divider: true,
-            children: [
-                {
-                    title: "Admin Settings",
-                    icon: <AdminIcon />,
-                    path: "/admin/settings",
-                },
-                {
-                    title: "Security",
-                    icon: <SecurityIcon />,
-                    path: "/admin/security",
-                },
-                {
-                    title: "Notifications",
-                    icon: <NotificationIcon />,
-                    path: "/admin/notifications",
-                },
-                {
-                    title: "System Tools",
-                    icon: <ToolsIcon />,
-                    path: "/admin/tools",
-                },
-            ],
-        },
+        // {
+        //     title: "System",
+        //     icon: <SettingsIcon />,
+        //     divider: true,
+        //     children: [
+        //         {
+        //             title: "Admin Settings",
+        //             icon: <AdminIcon />,
+        //             path: "/admin/settings",
+        //         },
+        //         {
+        //             title: "Security",
+        //             icon: <SecurityIcon />,
+        //             path: "/admin/security",
+        //         },
+        //         {
+        //             title: "Notifications",
+        //             icon: <NotificationIcon />,
+        //             path: "/admin/notifications",
+        //         },
+        //         {
+        //             title: "System Tools",
+        //             icon: <ToolsIcon />,
+        //             path: "/admin/tools",
+        //         },
+        //     ],
+        // },
     ];
 
     const handleItemClick = (item: NavigationItem) => {

@@ -1,4 +1,4 @@
-// src/app/api/admin/auctions/route.ts - Main admin auction API
+// src/app/api/admin/auctions/route.ts - Updated version
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
@@ -30,6 +30,16 @@ export async function GET(request: NextRequest) {
                 { auction_end: { lte: new Date() } }
             ];
         }
+
+        // Get active auction count for dashboard
+        const activeAuctionsCount = await prisma.userCard.count({
+            where: {
+                sale_type: 'AUCTION',
+                is_for_sale: true,
+                is_sold: false,
+                auction_end: { gte: new Date() }
+            }
+        });
 
         // Fetch auctions without includes to avoid type issues
         const auctions = await prisma.userCard.findMany({
@@ -133,7 +143,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             auctions: auctionsWithDetails,
-            total: auctions.length
+            total: auctions.length,
+            activeAuctions: activeAuctionsCount // Added for dashboard
         });
 
     } catch (error) {
