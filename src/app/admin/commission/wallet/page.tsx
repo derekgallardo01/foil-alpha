@@ -177,7 +177,10 @@ export default function AdminWalletManagement() {
         }
     };
 
-    const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+    const formatCurrency = (amount: number | null | undefined) => {
+        const numAmount = Number(amount) || 0;
+        return `$${numAmount.toFixed(2)}`;
+    };
 
     if (loading) {
         return (

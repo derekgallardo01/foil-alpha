@@ -30,7 +30,7 @@ import { GoogleAnalytics } from "nextjs-google-analytics";
 
 // DEV MODE: Available test users
 const DEV_USERS = [
-  { email: 'admin@test.com', password: 'admin123', name: 'Admin User', role: 'admin' },
+  { email: 'admin@test.com', password: '123', name: 'Admin User', role: 'admin' },
   { email: 'user@test.com', password: 'user123', name: 'Test User', role: 'user' },
   { email: 'user1@test.com', password: 'user123', name: 'Test User 1', role: 'user' },
   { email: 'buyer@test.com', password: 'buyer123', name: 'Buyer User', role: 'user' },

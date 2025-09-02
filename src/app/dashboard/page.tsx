@@ -284,7 +284,7 @@ export default function Dashboard() {
                     <Typography variant="h6" gutterBottom>
                       Price Trend Analysis
                     </Typography>
-                    <PriceChart height={300} />
+                    <PriceChart cardId={1} height={300} />
                   </Paper>
                 </Grid>
               </Grid>

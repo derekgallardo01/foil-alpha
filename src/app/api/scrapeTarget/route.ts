@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import path from 'path';
 
 const execPromise = promisify(exec);
 
@@ -7,7 +8,18 @@ export async function POST() {
   console.time('api-scrape-target');
   try {
     console.log('🚀 Starting scrape process...');
-    const command = '/var/www/my-next-app/myenv/bin/python3 /var/www/my-next-app/scrape_target.py';
+    
+    // Dynamic path based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const scriptPath = isProduction 
+      ? '/var/www/my-next-app/scrape_target.py'
+      : path.join(process.cwd(), 'scrape_target.py');
+    
+    const pythonCommand = isProduction 
+      ? '/var/www/my-next-app/myenv/bin/python3'
+      : 'python';
+    
+    const command = `${pythonCommand} ${scriptPath}`;
     const { stdout, stderr } = await execPromise(command);
 
     console.log('✅ Scrape completed:', stdout);
