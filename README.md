@@ -73,47 +73,126 @@ A comprehensive Pokemon TCG marketplace and auction platform built with Next.js 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- MySQL 8.0+
-- npm 9+ or yarn 1.22+
-- Redis (for real-time features and rate limiting)
-- Stripe account (for payment processing)
-- Google OAuth credentials (for authentication)
-- Discord OAuth credentials (for authentication)
+
+#### Required
+- **Node.js 18+** - JavaScript runtime
+- **MySQL 8.0+** - Database server
+- **npm 9+** or yarn 1.22+ - Package manager
+- **Python 3.8+** - For web scraping functionality
+
+#### Optional (for full functionality)
+- **Redis** - For real-time features and rate limiting
+- **Stripe account** - For payment processing
+- **Google OAuth credentials** - For authentication
+- **Discord OAuth credentials** - For authentication
+- **Chrome/Chromium browser** - For web scraping
 
 ### Installation
 
-1. Clone the repository and install dependencies:
-   ```bash
-   git clone https://github.com/yourusername/tcg-market.git
-   cd tcg-market
-   npm install
-   ```
+#### 1. Clone and Install Node Dependencies
+```bash
+git clone https://github.com/derekgallardo01/tcg-market.git
+cd tcg-market
+npm install
+```
 
-2. Set up environment variables:
-   ```bash
-   cp .env.example .env.local
-   # Update the environment variables in .env.local
-   ```
-   Required environment variables:
-   - `DATABASE_URL`: MySQL connection string
-   - `NEXTAUTH_SECRET`: Random string for session encryption
-   - `NEXTAUTH_URL`: Your application URL
-   - `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: For Google OAuth
-   - `DISCORD_CLIENT_ID` & `DISCORD_CLIENT_SECRET`: For Discord OAuth
-   - `STRIPE_SECRET_KEY`: For payment processing
+#### 2. Install Python Dependencies (for scraping)
+```bash
+pip install -r requirements.txt
+```
 
-3. Set up the database:
-   ```bash
-   npx prisma migrate dev
-   npx prisma db seed  # Optional: Seed with initial data
-   ```
+#### 3. Database Setup
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-   The application will be available at `http://localhost:3000`
+**Create MySQL Database:**
+```sql
+-- In MySQL Workbench or command line
+CREATE DATABASE tcg_market;  -- or use existing visitordb
+CREATE USER 'dev'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON tcg_market.* TO 'dev'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+**Set Environment Variables:**
+```bash
+# Create .env file in project root
+DATABASE_URL="mysql://dev:your_password@localhost:3306/tcg_market"
+NEXTAUTH_SECRET="your-random-secret-key"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Optional OAuth (for production)
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret" 
+DISCORD_CLIENT_ID="your-discord-client-id"
+DISCORD_CLIENT_SECRET="your-discord-client-secret"
+STRIPE_SECRET_KEY="your-stripe-secret-key"
+```
+
+**Initialize Database:**
+```bash
+# Create tables and seed with sample data
+npx prisma migrate dev
+npm run seed
+```
+
+#### 4. Start Development Server
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:3000`
+
+### Test Login Credentials
+After seeding, you can login with:
+- **Admin**: `admin@test.com` / `123`
+- **Users**: `collector1@test.com`, `collector2@test.com`, `trader@test.com` / `user123`
+
+## Features Overview
+
+### ✅ Core Functionality Working
+- **User Authentication** - Login/register with test accounts
+- **Dashboard** - Overview with trending cards, live auctions, price charts
+- **Marketplace** - Browse Pokemon cards with filtering
+- **Price Tracking** - Historical price data and charts
+- **User Collections** - Manage card collections
+- **Auction System** - Bid on cards and track auctions
+- **Admin Panel** - User management and system administration
+- **Web Scraping** - Live price updates from retailers (Target)
+
+### 🎯 Sample Data Included
+- 5 Pokemon cards (Charizard, Blastoise, Venusaur, Pikachu, Professor Oak)
+- 31 days of price history for each card (155 total entries)
+- User collections with cards for sale/auction
+- Active bids and auction data
+- User wallets with balances
+
+## Troubleshooting
+
+### Common Issues
+
+**Chart.js "category is not registered" Error:**
+- Fixed automatically with proper Chart.js component registration
+
+**Python Scraping ModuleNotFoundError:**
+```bash
+# Install missing Python packages
+pip install -r requirements.txt
+```
+
+**Database Connection Issues:**
+- Verify MySQL is running
+- Check DATABASE_URL in .env file
+- Ensure user has proper privileges
+
+**Prisma Migration Errors:**
+```bash
+# Reset and recreate database
+npx prisma migrate reset
+npm run seed
+```
+
+**Login 401 Errors:**
+- Verify you're using correct test credentials
+- Check if user exists: `SELECT * FROM users WHERE email='admin@test.com';`
 
 ## Deployment
 

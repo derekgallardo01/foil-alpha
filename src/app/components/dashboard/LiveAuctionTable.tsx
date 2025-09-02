@@ -114,7 +114,24 @@ export default function LiveAuctionTable({
     };
 
     function formatTimeRemaining(time_remaining: number): React.ReactNode {
-        throw new Error('Function not implemented.');
+        const now = Date.now();
+        const remaining = time_remaining - now;
+        
+        if (remaining <= 0) {
+            return <Chip label="ENDED" color="error" size="small" />;
+        }
+        
+        const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        
+        if (days > 0) {
+            return <Chip label={`${days}d ${hours}h`} color="success" size="small" />;
+        } else if (hours > 0) {
+            return <Chip label={`${hours}h ${minutes}m`} color="warning" size="small" />;
+        } else {
+            return <Chip label={`${minutes}m`} color="error" size="small" />;
+        }
     }
 
     return (
