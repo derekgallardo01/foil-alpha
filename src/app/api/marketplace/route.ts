@@ -1,4 +1,4 @@
-// src/app/api/marketplace/route.ts - Fixed pagination and filtering issues
+// src/app/api/marketplace/route.ts - Fixed for current schema
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
 
-        // 🔥 FIX: Remove default limit or make it much higher
         // Check if user wants to see all cards or use pagination
         const requestedLimit = searchParams.get('limit');
         const showAll = searchParams.get('show_all') === 'true';
@@ -28,7 +27,6 @@ export async function GET(request: NextRequest) {
 
         const search = searchParams.get('search') || '';
         const setName = searchParams.get('set') || '';
-        const cardType = searchParams.get('type') || '';
         const saleType = searchParams.get('sale_type') || '';
         const rarity = searchParams.get('rarity') || '';
         const priceMin = searchParams.get('price_min') ? parseFloat(searchParams.get('price_min')!) : null;
@@ -43,33 +41,28 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // 🔥 FIX: Build more robust card filter with proper string matching
+        // Build card filter with existing schema fields only
         const cardFilter: Prisma.CardWhereInput = {};
         if (search.trim()) {
             // Case-insensitive search using contains
             cardFilter.OR = [
                 { name: { contains: search.trim() } },
                 { set_name: { contains: search.trim() } },
-                { card_type: { contains: search.trim() } },
                 { rarity: { contains: search.trim() } }
             ];
         }
-        // 🔥 FIX: Use exact matching for set filter to prevent issues
+        // Use exact matching for set filter
         if (setName.trim()) {
             cardFilter.set_name = { equals: setName.trim() };
-        }
-        if (cardType.trim()) {
-            cardFilter.card_type = { equals: cardType.trim() };
         }
         if (rarity.trim()) {
             cardFilter.rarity = { equals: rarity.trim() };
         }
 
-        // 🔥 CRITICAL FIX: Strict filtering for AVAILABLE user cards only
+        // Strict filtering for AVAILABLE user cards only
         const userCardFilter: Prisma.UserCardWhereInput = {
             is_for_sale: true,
-            is_sold: false, // ✅ Must be unsold
-            // 🚨 Additional safety checks
+            is_sold: false,
             AND: [
                 { is_for_sale: { equals: true } },
                 { is_sold: { equals: false } }
@@ -89,33 +82,31 @@ export async function GET(request: NextRequest) {
         }
 
         console.log('🔍 Marketplace query filters:', {
-            search, setName, cardType, saleType, rarity, priceMin, priceMax, priceStatus, sortBy, page, limit, showAll,
+            search, setName, saleType, rarity, priceMin, priceMax, priceStatus, sortBy, page, limit, showAll,
             userCardFilter, cardFilter
         });
 
-        // 🔥 FIX: Get ALL catalog cards initially (remove artificial limit)
+        // Get ALL catalog cards initially
         const catalogCards = await prisma.card.findMany({
             where: {
                 ...cardFilter,
                 market_price: { not: null, gt: 0 },
             },
-            // *** REMOVED LIMIT - Get ALL matching cards ***
             orderBy: getOrderBy(sortBy),
         });
 
         console.log(`📋 Found ${catalogCards.length} catalog cards matching filters`);
 
-        // 🔥 CRITICAL: Get ONLY truly available user cards (also remove limit)
+        // Get ONLY truly available user cards
         console.log('📋 Fetching user cards with filter:', userCardFilter);
         const userCardsForSale = await prisma.userCard.findMany({
             where: userCardFilter,
-            // *** REMOVED LIMIT - Get ALL matching user cards ***
             orderBy: { created_at: 'desc' }
         });
 
         console.log(`📊 Found ${userCardsForSale.length} user cards for sale`);
 
-        // 🔥 FIX: Filter user cards that match our card filter more efficiently
+        // Filter user cards that match our card filter more efficiently
         let userCardsWithMatchingCards: any[] = [];
         if (userCardsForSale.length > 0) {
             // Get all cards that match both user card ownership AND our search filters
@@ -151,19 +142,11 @@ export async function GET(request: NextRequest) {
 
         // Fetch related data in parallel
         const [
-            pokemonSets,
-            rarities,
-            subtypes,
-            supertypes,
             owners,
             allBids,
             totalCatalogCount,
             totalUserCardsCount
         ] = await Promise.all([
-            prisma.pokemonSet.findMany(),
-            uniqueCardIds.length > 0 ? prisma.rarity.findMany() : [],
-            uniqueCardIds.length > 0 ? prisma.subtype.findMany() : [],
-            uniqueCardIds.length > 0 ? prisma.supertype.findMany() : [],
             ownerIds.length > 0 ? prisma.user.findMany({
                 where: { id: { in: ownerIds } },
                 select: { id: true, name: true, role: true }
@@ -181,11 +164,11 @@ export async function GET(request: NextRequest) {
                     market_price: { not: null, gt: 0 },
                 },
             }),
-            // 🔥 CRITICAL: Count only truly available cards
+            // Count only truly available cards
             prisma.userCard.count({
                 where: {
                     is_for_sale: true,
-                    is_sold: false, // ✅ Only unsold cards
+                    is_sold: false,
                     OR: [
                         { sale_type: 'FIXED' },
                         {
@@ -198,23 +181,19 @@ export async function GET(request: NextRequest) {
         ]);
 
         // Get bidders for the bids
-        const bidderIds = [...new Set(allBids.map(bid => bid.bidderId))];
+        const bidderIds = [...new Set(allBids.map((bid: any) => bid.bidderId))];
         const bidders = bidderIds.length > 0 ? await prisma.user.findMany({
             where: { id: { in: bidderIds } },
             select: { id: true, name: true }
         }) : [];
 
         // Create lookup maps
-        const pokemonSetMap = new Map(pokemonSets.map(ps => [ps.id, ps]));
-        const rarityMap = new Map(rarities.map(r => [r.id, r]));
-        const subtypeMap = new Map(subtypes.map(st => [st.id, st]));
-        const supertypeMap = new Map(supertypes.map(st => [st.id, st]));
-        const ownerMap = new Map(owners.map(o => [o.id, o]));
-        const bidderMap = new Map(bidders.map(b => [b.id, b]));
+        const ownerMap = new Map(owners.map((o: any) => [o.id, o]));
+        const bidderMap = new Map(bidders.map((b: any) => [b.id, b]));
 
         // Group bids by user card ID
         const bidsByUserCard = new Map();
-        allBids.forEach(bid => {
+        allBids.forEach((bid: any) => {
             if (!bidsByUserCard.has(bid.userCardId)) {
                 bidsByUserCard.set(bid.userCardId, []);
             }
@@ -245,18 +224,18 @@ export async function GET(request: NextRequest) {
                     id: card.id,
                     name: card.name,
                     set_name: card.set_name,
-                    set_number: card.set_number,
+                    set_number: card.number, // Using 'number' field from schema
                     rarity: card.rarity,
-                    card_type: card.card_type,
-                    image_url: card.image_url,
-                    small_image_url: card.small_image_url,
+                    card_type: 'Pokemon', // Default since field doesn't exist
+                    image_url: card.image_small, // Using image_small from schema
+                    small_image_url: card.image_small,
                     market_price: marketPrice,
-                    price_trend: card.price_trend,
-                    last_price_update: card.last_price_update,
-                    set: card.set_id ? pokemonSetMap.get(card.set_id) : null,
-                    rarity_info: card.rarity_id ? rarityMap.get(card.rarity_id) : null,
-                    subtype_info: card.subtype_id ? subtypeMap.get(card.subtype_id) : null,
-                    supertype_info: card.supertype_id ? supertypeMap.get(card.supertype_id) : null,
+                    price_trend: 'stable', // Default since field doesn't exist
+                    last_price_update: card.last_updated, // Using last_updated from schema
+                    set: null, // No separate set table
+                    rarity_info: null, // No separate rarity table
+                    subtype_info: null, // No separate subtype table
+                    supertype_info: null, // No separate supertype table
                 },
                 owner: { id: null, name: 'TCG Market', role: 'system' },
                 condition: 'Mint',
@@ -280,10 +259,10 @@ export async function GET(request: NextRequest) {
             listings.push(listing);
         }
 
-        // 🔥 CRITICAL: Process ONLY verified available user cards
+        // Process ONLY verified available user cards
         for (const userCard of userCardsWithMatchingCards) {
             try {
-                // 🚨 FINAL verification - check one more time that card is available
+                // Final verification - check one more time that card is available
                 const finalCheck = await prisma.userCard.findUnique({
                     where: { id: userCard.id },
                     select: {
@@ -336,7 +315,7 @@ export async function GET(request: NextRequest) {
                     time_remaining = Math.max(0, endTime - now);
                     is_auction_expired = time_remaining <= 0;
 
-                    // Skip expired auctions (should already be filtered, but double-check)
+                    // Skip expired auctions
                     if (is_auction_expired) {
                         console.log(`🚫 Skipping expired auction ${userCard.id} (final check)`);
                         continue;
@@ -351,18 +330,18 @@ export async function GET(request: NextRequest) {
                         id: card.id,
                         name: card.name,
                         set_name: card.set_name,
-                        set_number: card.set_number,
+                        set_number: card.number, // Using 'number' field
                         rarity: card.rarity,
-                        card_type: card.card_type,
-                        image_url: card.image_url,
-                        small_image_url: card.small_image_url,
+                        card_type: 'Pokemon', // Default since field doesn't exist
+                        image_url: card.image_small, // Using image_small
+                        small_image_url: card.image_small,
                         market_price: card.market_price ? Number(card.market_price) : null,
-                        price_trend: card.price_trend,
-                        last_price_update: card.last_price_update,
-                        set: card.set_id ? pokemonSetMap.get(card.set_id) : null,
-                        rarity_info: card.rarity_id ? rarityMap.get(card.rarity_id) : null,
-                        subtype_info: card.subtype_id ? subtypeMap.get(card.subtype_id) : null,
-                        supertype_info: card.supertype_id ? supertypeMap.get(card.supertype_id) : null,
+                        price_trend: 'stable', // Default since field doesn't exist
+                        last_price_update: card.last_updated, // Using last_updated
+                        set: null, // No separate set table
+                        rarity_info: null, // No separate rarity table  
+                        subtype_info: null, // No separate subtype table
+                        supertype_info: null, // No separate supertype table
                     },
                     owner: ownerMap.get(userCard.owner_id),
                     condition: userCard.condition,
@@ -394,7 +373,7 @@ export async function GET(request: NextRequest) {
         // Sort listings
         listings.sort((a, b) => sortListings(a, b, sortBy));
 
-        // 🔥 FIX: Apply pagination AFTER all filtering and sorting (if not showing all)
+        // Apply pagination AFTER all filtering and sorting (if not showing all)
         const totalListings = listings.length;
         let paginatedListings;
 
@@ -423,10 +402,6 @@ export async function GET(request: NextRequest) {
             filters: {
                 sets: await getAvailableSets().catch((err) => {
                     console.error('Error fetching sets:', err);
-                    return [];
-                }),
-                types: await getAvailableTypes().catch((err) => {
-                    console.error('Error fetching types:', err);
                     return [];
                 }),
                 rarities: await getAvailableRarities().catch((err) => {
@@ -516,7 +491,7 @@ function getOrderBy(sortBy: string): Prisma.CardOrderByWithRelationInput {
     }
 }
 
-// 🔥 FIX: Helper functions to get filter options with proper filtering
+// Helper functions to get filter options with proper filtering
 async function getAvailableSets() {
     try {
         const sets = await prisma.card.groupBy({
@@ -531,32 +506,10 @@ async function getAvailableSets() {
             .filter(s => s.set_name && s.set_name.trim() !== '')
             .map(s => ({
                 name: s.set_name!,
-                count: s._count.set_name || 0
+                count: s._count?.set_name || 0
             }));
     } catch (error) {
         console.error('Error fetching available sets:', error);
-        return [];
-    }
-}
-
-async function getAvailableTypes() {
-    try {
-        const types = await prisma.card.groupBy({
-            by: ['card_type'],
-            _count: { card_type: true },
-            where: {
-                market_price: { not: null, gt: 0 }
-            },
-            orderBy: { card_type: 'asc' }
-        });
-        return types
-            .filter(t => t.card_type && t.card_type.trim() !== '')
-            .map(t => ({
-                name: t.card_type!,
-                count: t._count.card_type || 0
-            }));
-    } catch (error) {
-        console.error('Error fetching available types:', error);
         return [];
     }
 }
@@ -575,7 +528,7 @@ async function getAvailableRarities() {
             .filter(r => r.rarity && r.rarity.trim() !== '')
             .map(r => ({
                 name: r.rarity!,
-                count: r._count.rarity || 0
+                count: r._count?.rarity || 0
             }));
     } catch (error) {
         console.error('Error fetching available rarities:', error);

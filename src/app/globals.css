@@ -20,14 +20,57 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Smart overlay positioning - no header spacing needed */
+.header-status-overlay {
+  position: fixed !important;
+  z-index: 9999 !important;
+  pointer-events: none;
+}
+
+.header-status-overlay>* {
+  pointer-events: auto;
+}
+
+/* Enhanced notification menu for mobile */
+@media (max-width: 768px) {
+  .MuiMenu-paper {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px !important;
+  }
+
+  .MuiMenu-list {
+    max-height: calc(100vh - 100px) !important;
+  }
+}
+
+/* Prevent content selection on overlay elements */
+.header-status-overlay * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Ensure overlay elements don't interfere with page scrolling */
+.header-status-overlay {
+  pointer-events: none;
+}
+
+.header-status-overlay button,
+.header-status-overlay .MuiIconButton-root {
+  pointer-events: auto;
+}
+
 /* In a global CSS file (e.g., styles/globals.css) */
 @keyframes typing {
   0% {
     width: 0;
   }
+
   50% {
     width: 100%;
   }
+
   100% {
     width: 0;
   }
@@ -39,17 +82,17 @@ body {
   white-space: nowrap;
   border-right: 3px solid;
   animation: typing 3s steps(30) 0s 1 normal both;
- /* Loop indefinitely */
 }
-
 
 @keyframes gradientBackground {
   0% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }
@@ -62,12 +105,11 @@ body {
   animation: gradientBackground 15s ease infinite;
 }
 
-
-
 @keyframes pulseGlow {
   0% {
     box-shadow: 0 0 10px 0px rgba(0, 255, 0, 0.6), 0 0 20px 5px rgba(0, 255, 0, 0.3);
   }
+
   100% {
     box-shadow: 0 0 30px 10px rgba(0, 255, 0, 0.1), 0 0 50px 20px rgba(0, 255, 0, 0.2);
   }
@@ -82,9 +124,8 @@ body {
   padding: 24px;
   border-radius: 24px;
   position: relative;
-  animation: pulseGlow 10s infinite alternate; /* Apply the pulsating animation */
+  animation: pulseGlow 10s infinite alternate;
 }
-
 
 .watchlist-table {
   width: 100%;
@@ -114,6 +155,3 @@ body {
   font-style: italic;
   color: #888;
 }
-
-
-

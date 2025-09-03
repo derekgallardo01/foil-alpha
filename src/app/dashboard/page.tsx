@@ -138,7 +138,13 @@ export default function Dashboard() {
             Market Dashboard
           </Typography>
         </Box>
-        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{
+          ml: 'auto',
+          mr: 20, 
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2
+        }}>
           <Typography variant="body2" color="text.secondary">
             Last updated: {lastRefresh.toLocaleTimeString()}
           </Typography>
