@@ -28,48 +28,80 @@ model User {
 }
 
 model Card {
-  id                Int        @id @default(autoincrement())
-  price_tracker_id  String     @unique @db.VarChar(100)
-  name              String     @db.VarChar(255)
-  number            String     @db.VarChar(50)
-  rarity            String     @db.VarChar(100)
-  image_small       String?    @db.VarChar(500)
-  set_id            String     @db.VarChar(100)
-  set_name          String     @db.VarChar(255)
-  set_series        String?    @db.VarChar(255)
-  set_printed_total Int?
-  set_total         Int?
-  set_legalities    Json?
-  set_ptcgo_code    String?    @db.VarChar(10)
-  set_release_date  String?    @db.VarChar(50)
-  set_updated_at    String?    @db.VarChar(50)
-  market_price      Decimal?   @db.Decimal(10, 2)
-  price_source      String?    @db.VarChar(50)
-  tcgplayer_data    Json?
-  cardmarket_data   Json?
-  ebay_data         Json?
-  tcgplayer_url     String?    @db.VarChar(500)
-  cardmarket_url    String?    @db.VarChar(500)
-  last_updated      DateTime?
-  api_mongo_id      String?    @db.VarChar(100)
-  source            CardSource @default(API)
-  sync_enabled      Boolean    @default(true)
-  sync_errors       Int        @default(0)
-  featured          Boolean    @default(false)
-  view_count        Int        @default(0)
-  notes             String?    @db.Text
-  created_at        DateTime   @default(now()) @db.DateTime(0)
-  updated_at        DateTime   @updatedAt @db.DateTime(0)
+  id                    Int       @id @default(autoincrement())
+  
+  // V2 API identifiers
+  price_tracker_id      String    @unique @db.VarChar(100) // V2 id field
+  tcg_player_id         String?   @db.VarChar(100) // V2 tcgPlayerId field
+  
+  // Basic card info (V2 structure)
+  name                  String    @db.VarChar(255)
+  card_number           String    @db.VarChar(50) // V2 cardNumber
+  total_set_number      String?   @db.VarChar(50) // V2 totalSetNumber
+  rarity                String    @db.VarChar(100)
+  card_type             String?   @db.VarChar(100) // V2 cardType (Lightning, Fire, etc.)
+  hp                    Int?      // V2 hp field
+  stage                 String?   @db.VarChar(50) // V2 stage (Basic, Stage 1, etc.)
+  
+  // Set information
+  set_id                String    @db.VarChar(100) // V2 setId
+  set_name              String    @db.VarChar(255) // V2 setName
+  
+  // Images
+  image_url             String?   @db.VarChar(500) // V2 imageUrl
+  
+  // V2 Pricing data
+  market_price          Decimal?  @db.Decimal(10, 2) // From prices.market
+  price_listings        Int?      // From prices.listings
+  primary_condition     String?   @db.VarChar(50) // From prices.primaryCondition
+  price_last_updated    DateTime? @db.DateTime(0) // From prices.lastUpdated
+  
+  // V2 Additional fields
+  tcg_player_url        String?   @db.VarChar(500) // V2 tcgPlayerUrl
+  artist                String?   @db.VarChar(255) // V2 artist
+  retreat_cost          Int?      // V2 retreatCost
+  data_completeness     Int?      @default(0) // V2 dataCompleteness
+  needs_detailed_scrape Boolean?  @default(false) // V2 needsDetailedScrape
+  last_scraped_at       DateTime? @db.DateTime(0) // V2 lastScrapedAt
+  
+  // V2 API JSON data (for rich data storage)
+  attacks_data          Json?     // V2 attacks array
+  weakness_data         Json?     // V2 weakness object
+  resistance_data       Json?     // V2 resistance object
+  prices_data           Json?     // V2 full prices object with conditions
+  ebay_data             Json?     // V2 ebay object (if available)
+  price_history_data    Json?     // V2 priceHistory object
+  
+  // Sync metadata
+  price_source          String?   @db.VarChar(50)
+  last_updated          DateTime? @db.DateTime(0)
+  sync_enabled          Boolean   @default(true)
+  sync_errors           Int       @default(0)
+  
+  // App-specific fields
+  source                CardSource @default(API)
+  featured              Boolean   @default(false)
+  view_count            Int       @default(0)
+  notes                 String?   @db.Text
+  
+  // Timestamps
+  created_at            DateTime  @default(now()) @db.DateTime(0)
+  updated_at            DateTime  @updatedAt @db.DateTime(0)
 
+   price_history price_history[]
+
+  // Indexes for performance
   @@index([price_tracker_id])
+  @@index([tcg_player_id])
   @@index([name])
   @@index([set_id])
   @@index([set_name])
   @@index([rarity])
+  @@index([card_type])
   @@index([market_price])
-  @@index([set_release_date])
   @@index([sync_enabled])
   @@index([last_updated])
+  @@index([last_scraped_at])
   @@map("cards")
 }
 
@@ -218,20 +250,35 @@ model Notification {
 }
 
 model price_history {
-  id          Int      @id @default(autoincrement())
-  card_id     Int
-  price       Decimal  @db.Decimal(10, 2)
-  source      String   @default("pokemon_price_tracker") @db.VarChar(50)
-  recorded_at DateTime @default(now()) @db.DateTime(0)
-  metadata    Json?
-  price_type  String?  @db.VarChar(50)
-  condition   String?  @db.VarChar(50)
-  created_at  DateTime @default(now()) @db.DateTime(0)
+  id              Int      @id @default(autoincrement())
+  card_id         Int      // References Card.id
+  price           Decimal  @db.Decimal(10, 2)
+  source          String   @default("pokemon_price_tracker_v2") @db.VarChar(50) // Updated default
+  recorded_at     DateTime @default(now()) @db.DateTime(0)
+  price_type      String?  @db.VarChar(50) // market, low, high, etc.
+  condition       String?  @db.VarChar(50) // Near Mint, Lightly Played, etc.
+  
+  // V2 specific fields
+  tcg_player_id   String?  @db.VarChar(100) // From V2 API
+  listing_count   Int?     // Number of listings at this price
+  volume          Int?     // Sales volume if available
+  data_source     String?  @db.VarChar(50) // tcgplayer, ebay, cardmarket
+  
+  // Enhanced metadata for V2
+  metadata        Json?    // Store additional V2 pricing metadata
+  
+  // Timestamps
+  created_at      DateTime @default(now()) @db.DateTime(0)
+
+  card Card @relation(fields: [card_id], references: [id], onDelete: Cascade)
+
 
   @@index([card_id, recorded_at], map: "idx_card_date")
   @@index([card_id], map: "idx_card_id")
   @@index([recorded_at], map: "idx_recorded_at")
   @@index([source], map: "idx_source")
+  @@index([tcg_player_id], map: "idx_tcg_player_id")
+  
 }
 
 model Transaction {

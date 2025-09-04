@@ -614,10 +614,10 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                         id: card.setId,
                         name: card.setName
                     },
-                    number: card.number,
+                    number: card.cardNumber,
                     rarity: card.rarity || 'Common',
                     images: {
-                        small: card.imageUrl || '/placeholder-card.png'
+                        small: card.imageUrl
                     },
                     // Add price info if available
                     marketPrice: PokemonPriceTrackerAPI.getBestMarketPrice(card)
@@ -670,11 +670,13 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const cardsToImport = Array.from(selectedCards);
             startProgress(cardsToImport.length, 'Importing selected cards...');
 
-            // Create a search query with the selected card names for the import
-            const selectedCardNames = searchResults
-                .filter(card => selectedCards.has(card.id))
-                .map(card => card.name)
-                .join(' OR ');
+            // Get the actual card data instead of just names
+            const selectedCardData = searchResults.filter(card => selectedCards.has(card.id));
+            console.log('🔍 Cards being sent for import:', selectedCardData);
+            console.log('🔍 Number of cards:', selectedCardData.length);
+            console.log('🔍 Sample card structure:', selectedCardData[0]);
+
+            console.log('Cards to import:', selectedCardData); // DEBUG LINE
 
             let processed = 0;
             const progressInterval = setInterval(() => {
@@ -684,13 +686,13 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 }
             }, 200);
 
-            // Call our fixed import API
+            // Call our import API with the actual card data
             const response = await fetch('/api/cards', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    searchQuery: selectedCardNames, // Send search query with selected card names
-                    limit: cardsToImport.length,
+                    cardsData: selectedCardData, // Send actual card objects
+                    source: 'pokemon_price_tracker'
                 }),
             });
 
@@ -734,7 +736,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
         }
     };
 
-
     const importEntireSet = async () => {
         if (!selectedSet) {
             setError('Please select a set to import');
@@ -751,24 +752,51 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             setImporting(true);
             setError('');
 
-            const estimatedCards = selectedSetObj.total || 100;
+            const estimatedCards = selectedSetObj.cardCount || 100; // Use cardCount instead of total
             startProgress(estimatedCards, `Importing ${selectedSet} set...`);
+
+            console.log('Importing set:', selectedSetObj); // DEBUG LINE
+
+            // First, get all cards from the set via our Pokemon Price Tracker API
+            let allSetCards = [];
+            try {
+                const setCardsResponse = await pokemonPriceTrackerAPI.getSetPricing(selectedSetObj.id);
+                if (setCardsResponse.success && setCardsResponse.data) {
+                    allSetCards = setCardsResponse.data;
+                    console.log(`Retrieved ${allSetCards.length} cards from set ${selectedSet}`);
+                } else {
+                    throw new Error(setCardsResponse.error || 'Failed to fetch set cards');
+                }
+            } catch (apiError) {
+                console.error('Error fetching set cards:', apiError);
+                setError('Failed to fetch cards from the selected set');
+                updateProgress(estimatedCards, 'Set import failed', 'error');
+                return;
+            }
+
+            if (allSetCards.length === 0) {
+                setError('No cards found in the selected set');
+                updateProgress(estimatedCards, 'Set import failed', 'error');
+                return;
+            }
 
             let processed = 0;
             const progressInterval = setInterval(() => {
-                if (processed < estimatedCards) {
+                if (processed < allSetCards.length - 1) {
                     processed += Math.floor(Math.random() * 3) + 1;
-                    processed = Math.min(processed, estimatedCards);
+                    processed = Math.min(processed, allSetCards.length - 1);
                     updateProgress(processed, `Processing cards from ${selectedSet}...`, 'importing');
                 }
-            }, 500);
+            }, 100);
 
-            // Call our fixed import API with setId
+            // Call our import API with the fetched card data
             const response = await fetch('/api/cards', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    setId: selectedSetObj.id, // Import entire set
+                    cardsData: allSetCards, // Send the actual card data
+                    source: 'pokemon_price_tracker',
+                    setImport: true
                 }),
             });
 
@@ -783,7 +811,7 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 const skipped = data.results?.updated || 0;
 
                 updateStats(completed, failed, skipped);
-                updateProgress(estimatedCards, 'Set import completed', 'completed');
+                updateProgress(allSetCards.length, 'Set import completed', 'completed');
                 completeProgress({ completed, failed, skipped });
 
                 onImportComplete?.({
@@ -804,7 +832,7 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
         } catch (error) {
             console.error('Error importing set:', error);
             setError('Failed to import set');
-            updateProgress(selectedSetObj.total || 100, 'Set import failed', 'error');
+            updateProgress(selectedSetObj.cardCount || 100, 'Set import failed', 'error');
         } finally {
             setImporting(false);
         }
