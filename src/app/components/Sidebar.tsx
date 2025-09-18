@@ -1,6 +1,6 @@
-// src/app/components/Sidebar.tsx - Updated with Currency Selector
+// src/app/components/Sidebar.tsx - Updated with Active Page Highlighting
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import {
@@ -39,6 +39,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
 
   const handleNavigation = (path: string) => {
@@ -47,6 +48,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   };
 
   const isAdmin = session?.user?.role === 'admin';
+
+  // Function to check if current path matches the menu item
+  const isActivePath = (path: string) => {
+    // Handle exact matches
+    if (pathname === path) return true;
+
+    // Handle nested routes (e.g., /admin/dashboard matches /admin)
+    if (path === '/admin/dashboard' && pathname.startsWith('/admin')) return true;
+
+    // Handle other nested routes
+    if (path !== '/' && path !== '/dashboard' && pathname.startsWith(path)) return true;
+
+    return false;
+  };
+
+  // Define active and hover styles
+  const getMenuItemStyles = (path: string) => ({
+    cursor: 'pointer',
+    backgroundColor: isActivePath(path) ? 'rgba(150, 255, 155, 0.15)' : 'transparent',
+    borderLeft: isActivePath(path) ? '4px solid #96ff9b' : '4px solid transparent',
+    '&:hover': {
+      backgroundColor: isActivePath(path)
+        ? 'rgba(150, 255, 155, 0.2)'
+        : 'rgba(150, 255, 155, 0.1)'
+    }
+  });
+
+  const getIconColor = (path: string) =>
+    isActivePath(path) ? '#96ff9b' : 'inherit';
+
+  const getTextStyles = (path: string) => ({
+    color: isActivePath(path) ? '#96ff9b' : 'inherit',
+    fontWeight: isActivePath(path) ? 'bold' : 'normal'
+  });
 
   return (
     <Drawer anchor="left" open={isOpen} onClose={toggleSidebar}>
@@ -110,129 +145,116 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           <ListItem
             component="div"
             onClick={() => handleNavigation("/dashboard")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/dashboard")}
           >
             <ListItemIcon>
-              <DashboardIcon />
+              <DashboardIcon sx={{ color: getIconColor("/dashboard") }} />
             </ListItemIcon>
-            <ListItemText primary="Dashboard" />
+            <ListItemText
+              primary="Dashboard"
+              primaryTypographyProps={getTextStyles("/dashboard")}
+            />
           </ListItem>
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/marketplace")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/marketplace")}
           >
             <ListItemIcon>
-              <StorefrontIcon />
+              <StorefrontIcon sx={{ color: getIconColor("/marketplace") }} />
             </ListItemIcon>
-            <ListItemText primary="Marketplace" />
+            <ListItemText
+              primary="Marketplace"
+              primaryTypographyProps={getTextStyles("/marketplace")}
+            />
           </ListItem>
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/watchlist")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
-            }}
+            sx={getMenuItemStyles("/watchlist")}
           >
             <ListItemIcon>
-              <TaskIcon />
+              <TaskIcon sx={{ color: getIconColor("/watchlist") }} />
             </ListItemIcon>
-            <ListItemText primary="My Watchlist" />
+            <ListItemText
+              primary="My Watchlist"
+              primaryTypographyProps={getTextStyles("/watchlist")}
+            />
           </ListItem>
-
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/collection")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/collection")}
           >
             <ListItemIcon>
-              <CollectionsIcon />
+              <CollectionsIcon sx={{ color: getIconColor("/collection") }} />
             </ListItemIcon>
-            <ListItemText primary="My Collection" />
+            <ListItemText
+              primary="My Collection"
+              primaryTypographyProps={getTextStyles("/collection")}
+            />
           </ListItem>
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/wallet")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/wallet")}
           >
             <ListItemIcon>
-              <WalletIcon />
+              <WalletIcon sx={{ color: getIconColor("/wallet") }} />
             </ListItemIcon>
-            <ListItemText primary="My Wallet" />
+            <ListItemText
+              primary="My Wallet"
+              primaryTypographyProps={getTextStyles("/wallet")}
+            />
           </ListItem>
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/selling/dashboard")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/selling/dashboard")}
           >
             <ListItemIcon>
-              <SellIcon />
+              <SellIcon sx={{ color: getIconColor("/selling/dashboard") }} />
             </ListItemIcon>
-            <ListItemText primary="My Sales" />
+            <ListItemText
+              primary="My Sales"
+              primaryTypographyProps={getTextStyles("/selling/dashboard")}
+            />
           </ListItem>
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/bids/my-auctions")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/bids/my-auctions")}
           >
             <ListItemIcon>
-              <AuctionIcon />
+              <AuctionIcon sx={{ color: getIconColor("/bids/my-auctions") }} />
             </ListItemIcon>
-            <ListItemText primary="My Auctions" />
+            <ListItemText
+              primary="My Auctions"
+              primaryTypographyProps={getTextStyles("/bids/my-auctions")}
+            />
           </ListItem>
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/notifications")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/notifications")}
           >
             <ListItemIcon>
-              <NotificationsIcon />
+              <NotificationsIcon sx={{ color: getIconColor("/notifications") }} />
             </ListItemIcon>
-            <ListItemText primary="Notifications" />
+            <ListItemText
+              primary="Notifications"
+              primaryTypographyProps={getTextStyles("/notifications")}
+            />
           </ListItem>
 
-          <ListItem
-            component="div"
-            onClick={() => handleNavigation("/tasks")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
-          >
-            <ListItemIcon>
-              <TaskIcon />
-            </ListItemIcon>
-            <ListItemText primary="Tasks" />
-          </ListItem>
+         
 
           {/* Admin Panel - Only for admin users */}
           {isAdmin && (
@@ -240,10 +262,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               component="div"
               onClick={() => handleNavigation("/admin/dashboard")}
               sx={{
-                cursor: 'pointer',
-                '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' },
-                bgcolor: 'rgba(150, 255, 155, 0.05)',
-                border: '1px solid rgba(150, 255, 155, 0.2)',
+                ...getMenuItemStyles("/admin/dashboard"),
+                bgcolor: isActivePath("/admin/dashboard")
+                  ? 'rgba(150, 255, 155, 0.2)'
+                  : 'rgba(150, 255, 155, 0.05)',
+                border: isActivePath("/admin/dashboard")
+                  ? '1px solid #96ff9b'
+                  : '1px solid rgba(150, 255, 155, 0.2)',
                 borderRadius: 1,
                 mx: 1,
                 my: 0.5
@@ -262,29 +287,29 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           <ListItem
             component="div"
             onClick={() => handleNavigation("/settings")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/settings")}
           >
             <ListItemIcon>
-              <SettingsIcon />
+              <SettingsIcon sx={{ color: getIconColor("/settings") }} />
             </ListItemIcon>
-            <ListItemText primary="Settings" />
+            <ListItemText
+              primary="Settings"
+              primaryTypographyProps={getTextStyles("/settings")}
+            />
           </ListItem>
 
           <ListItem
             component="div"
             onClick={() => handleNavigation("/chat")}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'rgba(150, 255, 155, 0.1)' }
-            }}
+            sx={getMenuItemStyles("/chat")}
           >
             <ListItemIcon>
-              <ChatIcon />
+              <ChatIcon sx={{ color: getIconColor("/chat") }} />
             </ListItemIcon>
-            <ListItemText primary="Chat" />
+            <ListItemText
+              primary="Chat"
+              primaryTypographyProps={getTextStyles("/chat")}
+            />
           </ListItem>
         </List>
 

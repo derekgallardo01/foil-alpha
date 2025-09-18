@@ -506,7 +506,7 @@ function StatsCard({ icon, title, value, subtitle, color = "primary" }: {
     );
 }
 
-// Enhanced Pokemon Card Import Modal Component with Progress Tracking
+// Enhanced Pokemon Card Import Modal Component with Progress Tracking - FIXED FOR V2 API
 function PokemonImportModal({ open, onClose, onImportComplete }: {
     open: boolean;
     onClose: () => void;
@@ -543,7 +543,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
         }
     }, [open]);
 
-
     const loadFilterOptions = async () => {
         try {
             setLoading(true);
@@ -551,7 +550,8 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             // Load available sets from Pokemon Price Tracker API
             const setsResponse = await pokemonPriceTrackerAPI.getSets();
             if (setsResponse.success && setsResponse.data) {
-                setAvailableSets(setsResponse.data.map(set => ({
+                const setsArray = Array.isArray(setsResponse.data) ? setsResponse.data : [];
+                setAvailableSets(setsArray.map((set: any) => ({
                     id: set.id,
                     name: set.name,
                     total: set.cardCount || 0,
@@ -559,18 +559,15 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 })));
             } else {
                 console.warn('Failed to load sets:', setsResponse.error);
-                // Fallback to empty array
                 setAvailableSets([]);
             }
 
-            // Since Pokemon Price Tracker API doesn't provide types/rarities filtering,
-            // we'll use common Pokemon values
+            // Common Pokemon values for filtering
             setAvailableTypes(['Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Fighting', 'Darkness', 'Metal', 'Fairy', 'Dragon', 'Colorless']);
             setAvailableRarities(['Common', 'Uncommon', 'Rare', 'Rare Holo', 'Rare Ultra', 'Rare Secret', 'Promo']);
         } catch (error) {
             console.error('Error loading filter options:', error);
             setError('Failed to load filter options');
-            // Set fallback empty arrays
             setAvailableSets([]);
             setAvailableTypes([]);
             setAvailableRarities([]);
@@ -578,6 +575,7 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             setLoading(false);
         }
     };
+
     const searchCards = async (page = 1) => {
         try {
             setLoading(true);
@@ -586,15 +584,13 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             startProgress(1, `Searching Pokemon cards...`);
             updateProgress(0, 'Initiating search request', 'searching');
 
-            // Use Pokemon Price Tracker API directly
             const searchParams: any = {
-                limit: 20,
+                limit: 50,
                 page: page
             };
 
             if (searchTerm) searchParams.name = searchTerm;
             if (selectedSet) {
-                // Find the set ID from the selected set name
                 const selectedSetObj = availableSets.find(set => set.name === selectedSet);
                 if (selectedSetObj) {
                     searchParams.setId = selectedSetObj.id;
@@ -606,28 +602,29 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const searchResponse = await pokemonPriceTrackerAPI.searchCardPricing(searchParams);
 
             if (searchResponse.success && searchResponse.data) {
-                // Transform the Pokemon Price Tracker data to match expected format
-                const transformedCards = searchResponse.data.map(card => ({
-                    id: card.id,
-                    name: card.name,
-                    set: {
-                        id: card.setId,
-                        name: card.setName
-                    },
-                    number: card.cardNumber,
-                    rarity: card.rarity || 'Common',
-                    images: {
-                        small: card.imageUrl
-                    },
-                    // Add price info if available
-                    marketPrice: PokemonPriceTrackerAPI.getBestMarketPrice(card)
+                const cardsArray = Array.isArray(searchResponse.data) ? searchResponse.data : [];
+
+                console.log('Admin client received V2 data:', {
+                    count: cardsArray.length,
+                    firstCard: cardsArray[0],
+                    hasCorrectFields: cardsArray[0] ? {
+                        cardNumber: cardsArray[0].cardNumber,
+                        setName: cardsArray[0].setName,
+                        imageUrl: cardsArray[0].imageUrl,
+                        prices: cardsArray[0].prices
+                    } : null
+                });
+
+                // FIXED: Don't transform data - use raw V2 API response
+                const transformedCards = cardsArray.map((card: any) => ({
+                    ...card // Use raw V2 API data
                 }));
 
                 updateProgress(1, `Found ${transformedCards.length} cards`, 'completed');
                 setSearchResults(transformedCards);
                 setPagination({
                     page: page,
-                    totalPages: Math.ceil(transformedCards.length / 20) || 1 // Estimate
+                    totalPages: Math.ceil(transformedCards.length / 20) || 1
                 });
 
                 setTimeout(() => {
@@ -670,13 +667,11 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const cardsToImport = Array.from(selectedCards);
             startProgress(cardsToImport.length, 'Importing selected cards...');
 
-            // Get the actual card data instead of just names
+            // FIXED: Get only selected cards, not all search results
             const selectedCardData = searchResults.filter(card => selectedCards.has(card.id));
-            console.log('🔍 Cards being sent for import:', selectedCardData);
-            console.log('🔍 Number of cards:', selectedCardData.length);
-            console.log('🔍 Sample card structure:', selectedCardData[0]);
-
-            console.log('Cards to import:', selectedCardData); // DEBUG LINE
+            console.log('Cards being sent for import:', selectedCardData);
+            console.log('Number of cards:', selectedCardData.length);
+            console.log('Sample card structure:', selectedCardData[0]);
 
             let processed = 0;
             const progressInterval = setInterval(() => {
@@ -686,12 +681,12 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 }
             }, 200);
 
-            // Call our import API with the actual card data
+            // FIXED: Send only selected cards, not all search results
             const response = await fetch('/api/cards', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    cardsData: selectedCardData, // Send actual card objects
+                    cardsData: selectedCardData, // Send only selected cards
                     source: 'pokemon_price_tracker'
                 }),
             });
@@ -752,17 +747,17 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             setImporting(true);
             setError('');
 
-            const estimatedCards = selectedSetObj.cardCount || 100; // Use cardCount instead of total
+            const estimatedCards = selectedSetObj.total || 100;
             startProgress(estimatedCards, `Importing ${selectedSet} set...`);
 
-            console.log('Importing set:', selectedSetObj); // DEBUG LINE
+            console.log('Importing set:', selectedSetObj);
 
-            // First, get all cards from the set via our Pokemon Price Tracker API
-            let allSetCards = [];
+            // Get all cards from the set via Pokemon Price Tracker API
+            let allSetCards: any[] = [];
             try {
                 const setCardsResponse = await pokemonPriceTrackerAPI.getSetPricing(selectedSetObj.id);
                 if (setCardsResponse.success && setCardsResponse.data) {
-                    allSetCards = setCardsResponse.data;
+                    allSetCards = Array.isArray(setCardsResponse.data) ? setCardsResponse.data : [];
                     console.log(`Retrieved ${allSetCards.length} cards from set ${selectedSet}`);
                 } else {
                     throw new Error(setCardsResponse.error || 'Failed to fetch set cards');
@@ -789,12 +784,12 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 }
             }, 100);
 
-            // Call our import API with the fetched card data
+            // Call import API with the fetched card data
             const response = await fetch('/api/cards', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    cardsData: allSetCards, // Send the actual card data
+                    cardsData: allSetCards,
                     source: 'pokemon_price_tracker',
                     setImport: true
                 }),
@@ -832,11 +827,12 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
         } catch (error) {
             console.error('Error importing set:', error);
             setError('Failed to import set');
-            updateProgress(selectedSetObj.cardCount || 100, 'Set import failed', 'error');
+            updateProgress(selectedSetObj.total || 100, 'Set import failed', 'error');
         } finally {
             setImporting(false);
         }
     };
+
     const handleClose = () => {
         if (!importing) {
             setSelectedCards(new Set());
@@ -856,7 +852,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 </Typography>
             </DialogTitle>
             <DialogContent>
-                {/* Progress Display */}
                 <ProgressDisplay progress={progress} />
 
                 <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
@@ -983,10 +978,11 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                                                     disabled={importing}
                                                     sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1, bgcolor: 'rgba(0,0,0,0.5)' }}
                                                 />
+                                                {/* FIXED: Use V2 API imageUrl field directly */}
                                                 <CardMedia
                                                     component="img"
                                                     height="200"
-                                                    image={card.images.small}
+                                                    image={card.imageUrl || '/placeholder-card.png'}
                                                     alt={card.name}
                                                     sx={{ objectFit: 'contain', p: 1 }}
                                                 />
@@ -994,8 +990,9 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                                                     <Typography variant="h6" noWrap sx={{ fontWeight: 'bold' }}>
                                                         {card.name}
                                                     </Typography>
+                                                    {/* FIXED: Use V2 API field names */}
                                                     <Typography variant="body2" color="text.secondary" noWrap>
-                                                        {card.set.name} • #{card.number}
+                                                        {card.setName} • #{card.cardNumber}
                                                     </Typography>
                                                     <Chip
                                                         label={card.rarity}
@@ -1003,6 +1000,12 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                                                         sx={{ mt: 1 }}
                                                         color={getRarityColor(card.rarity)}
                                                     />
+                                                    {/* FIXED: Show market price from V2 API */}
+                                                    {card.prices?.market && (
+                                                        <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                                                            ${card.prices.market.toFixed(2)}
+                                                        </Typography>
+                                                    )}
                                                 </CardContent>
                                             </Card>
                                         </Grid>

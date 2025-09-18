@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
                 name: true,
                 set_name: true,
                 rarity: true,
-                image_small: true, // Changed from image_url to image_small
+                image_url: true, // FIXED: Changed from image_small to image_url (matching schema)
                 market_price: true,
                 view_count: true,
             }
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
             name: card.name,
             set_name: card.set_name,
             rarity: card.rarity,
-            image_url: card.image_small, // Map image_small to image_url for API response
+            image_url: card.image_url, // FIXED: Use image_url directly from schema
             market_price: card.market_price ? parseFloat(card.market_price.toString()) : null,
             price_change_7d: priceChangeMap.get(card.id) || null, // Use calculated price change
             view_count: card.view_count,

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
                     name: true,
                     set_name: true,
                     image_url: true,
-                    small_image_url: true
+                    
                 }
             }),
             prisma.user.findMany({

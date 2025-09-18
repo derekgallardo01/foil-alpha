@@ -5,51 +5,56 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const limit = parseInt(searchParams.get('limit') || '10');
-        const type = searchParams.get('type') || 'recent'; // 'recent', 'upcoming', 'preorder'
+        const type = searchParams.get('type') || 'recent'; // 'recent', 'upcoming', 'popular'
 
         const now = new Date();
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         let where: any = {};
+        let orderBy: any = { created_at: 'desc' }; // Default ordering
 
         switch (type) {
             case 'recent':
-                // Recently released sets (last 30 days)
+                // Recently added cards (last 30 days)
                 where = {
-                    set_release_date: {
-                        gte: thirtyDaysAgo.toISOString().split('T')[0],
-                        lte: now.toISOString().split('T')[0]
-                    }
+                    created_at: {
+                        gte: thirtyDaysAgo
+                    },
+                    market_price: { not: null, gt: 0 }
                 };
+                orderBy = { created_at: 'desc' };
                 break;
 
             case 'upcoming':
-                // Upcoming releases
+                // Cards with high market value (representing "premium" new releases)
                 where = {
-                    set_release_date: {
-                        gt: now.toISOString().split('T')[0]
+                    market_price: { gte: 50 }, // Cards $50+
+                    created_at: {
+                        gte: thirtyDaysAgo
                     }
                 };
+                orderBy = { market_price: 'desc' };
                 break;
 
-            case 'preorder':
-                // Pre-order available (upcoming with cards listed)
+            case 'popular':
+                // Cards with most views or high market value
                 where = {
-                    set_release_date: {
-                        gt: now.toISOString().split('T')[0]
-                    }
+                    market_price: { not: null, gt: 0 },
+                    view_count: { gt: 0 }
                 };
+                orderBy = { view_count: 'desc' };
                 break;
         }
 
-        // Get distinct sets from cards since there's no separate PokemonSet model
+        // Get distinct sets from cards since there's no separate set model
         // Group by set information to get unique sets
         const setGroups = await prisma.card.groupBy({
-            by: ['set_name', 'set_id', 'set_series'],
+            by: ['set_name', 'set_id'], // FIXED: Only use fields that exist in schema
             where: {
                 ...where,
-                set_name: { not: { equals: "" } } // Only cards with set names
+                set_name: { not: { equals: "" } }, // Only cards with set names
+                sync_enabled: true // Only active cards
             },
             _count: {
                 id: true
@@ -59,47 +64,83 @@ export async function GET(request: NextRequest) {
             },
             _min: {
                 market_price: true,
-                set_release_date: true
+                created_at: true // FIXED: Use created_at instead of set_release_date
             },
             _max: {
-                market_price: true,
-                set_printed_total: true,
-                set_total: true
+                market_price: true
+                // FIXED: Removed non-existent fields set_printed_total, set_total
             },
             orderBy: {
-                set_name: type === 'upcoming' ? 'asc' : 'desc'
+                _count: {
+                    id: 'desc' // Order by number of cards in set
+                }
             },
             take: limit
         });
 
+        // Get sample cards for each set to show representative images
+        const setIds = setGroups.map(group => group.set_id);
+        const sampleCards = await prisma.card.findMany({
+            where: {
+                set_id: { in: setIds },
+                image_url: { not: null },
+                market_price: { not: null, gt: 0 }
+            },
+            select: {
+                set_id: true,
+                image_url: true,
+                name: true,
+                rarity: true
+            },
+            take: setIds.length * 3, // Get up to 3 sample cards per set
+        });
+
+        // Group sample cards by set
+        const cardsBySet = new Map<string, typeof sampleCards>();
+        sampleCards.forEach(card => {
+            const setCards = cardsBySet.get(card.set_id) || [];
+            setCards.push(card);
+            cardsBySet.set(card.set_id, setCards);
+        });
+
         // Format response
         const formattedSets = setGroups.map((setGroup: any) => {
-            const releaseDate = setGroup._min.set_release_date;
-            const daysUntilRelease = releaseDate ?
-                Math.ceil((new Date(releaseDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+            const setCards = cardsBySet.get(setGroup.set_id) || [];
+            const createdDate = setGroup._min.created_at;
+            const daysOld = createdDate ?
+                Math.floor((now.getTime() - new Date(createdDate).getTime()) / (1000 * 60 * 60 * 24)) : null;
 
             return {
                 id: setGroup.set_id,
                 name: setGroup.set_name,
-                series: setGroup.set_series,
-                release_date: releaseDate,
-                days_until_release: daysUntilRelease != null && daysUntilRelease > 0 ? daysUntilRelease : null,
-                total_cards: setGroup._max.set_total || 0,
-                printed_total: setGroup._max.set_printed_total || 0,
-                images: null, // Not available in current schema
+                series: null, // Not available in current schema
+                release_date: createdDate, // Using created_at as proxy for release date
+                days_since_added: daysOld,
+                total_cards: setGroup._count.id || 0,
+                printed_total: null, // Not available in current schema
+                images: setCards.slice(0, 3).map(card => ({ // Show up to 3 sample images
+                    small: card.image_url,
+                    large: card.image_url
+                })),
+                sample_cards: setCards.slice(0, 3).map(card => ({
+                    name: card.name,
+                    rarity: card.rarity,
+                    image_url: card.image_url
+                })),
                 card_count: setGroup._count.id || 0,
                 avg_price: setGroup._avg.market_price ? parseFloat(setGroup._avg.market_price.toString()) : null,
                 min_price: setGroup._min.market_price ? parseFloat(setGroup._min.market_price.toString()) : null,
                 max_price: setGroup._max.market_price ? parseFloat(setGroup._max.market_price.toString()) : null,
-                is_released: daysUntilRelease !== null && daysUntilRelease <= 0,
-                preorder_available: type === 'preorder' && (setGroup._count.id || 0) > 0
+                is_new: daysOld !== null && daysOld <= 30,
+                is_featured: type === 'popular' && (setGroup._count.id || 0) > 10 // Sets with 10+ cards
             };
         });
 
         return NextResponse.json({
             success: true,
             data: formattedSets,
-            type
+            type,
+            total: formattedSets.length
         });
 
     } catch (error) {

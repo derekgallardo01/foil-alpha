@@ -580,7 +580,7 @@ export default function AdminDashboard() {
                                                 View Transactions
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={12}>
+                                        {/* <Grid item xs={12}>
                                             <Button
                                                 fullWidth
                                                 variant="contained"
@@ -594,13 +594,13 @@ export default function AdminDashboard() {
                                             >
                                                 View Analytics
                                             </Button>
-                                        </Grid>
+                                        </Grid> */}
                                     </Grid>
                                 </Paper>
                             </motion.div>
                         </Grid>
 
-                        {/* System Status */}
+                        {/* System Status
                         <Grid item xs={12}>
                             <motion.div variants={itemVariants}>
                                 <Paper
@@ -669,7 +669,7 @@ export default function AdminDashboard() {
                                     </Grid>
                                 </Paper>
                             </motion.div>
-                        </Grid>
+                        </Grid> */}
                     </Grid>
                 </motion.div>
             </Container>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -29,6 +29,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Slider,
+    FormLabel,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -48,6 +50,7 @@ import {
     LocalOffer as LocalOfferIcon,
     Add as AddIcon,
     CurrencyExchange,
+    Clear as ClearIcon,
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
@@ -57,7 +60,7 @@ import PriceChart from '../components/PriceChart';
 import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../components/PriceDisplay';
 import CurrencySelector from '../components/CurrencySelector';
 import { useCurrencyContext } from '../lib/currency-context';
-import PurchaseConfirmationModal from '../components/PurchaseConfirmationModal';    
+import PurchaseConfirmationModal from '../components/PurchaseConfirmationModal';
 
 interface Card {
     id: number;
@@ -147,6 +150,23 @@ interface BiddingUserCard {
     }>;
 }
 
+// FIXED: Debounced search hook
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
 // Price Comparison Component with Currency Support
 function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
     const { data: session } = useSession();
@@ -161,10 +181,6 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
         if (priceDiff > 0) return { color: 'error.main', label: `${priceDiff.toFixed(1)}% Above Market` };
         return { color: 'warning.main', label: `${Math.abs(priceDiff).toFixed(1)}% Below Market` };
     };
-
-   
-
-    
 
     const priceStatus = getPriceStatus();
 
@@ -530,15 +546,23 @@ export default function MarketplacePage() {
     const [cards, setCards] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // FIXED: Enhanced search and filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSet, setSelectedSet] = useState('');
     const [selectedType, setSelectedType] = useState('');
+    const [selectedRarity, setSelectedRarity] = useState(''); // FIXED: Added rarity state
     const [selectedSaleType, setSelectedSaleType] = useState('');
     const [priceStatusFilter, setPriceStatusFilter] = useState('');
+    const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]); // FIXED: Added price range
     const [sortBy, setSortBy] = useState('newest');
+
     const [unreadNotifications, setUnreadNotifications] = useState(0);
-    const [availableSets, setAvailableSets] = useState<string[]>([]);
-    const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+    const [availableSets, setAvailableSets] = useState<{ name: string; count: number }[]>([]);
+    const [availableTypes, setAvailableTypes] = useState<{ name: string; count: number }[]>([]);
+    const [availableRarities, setAvailableRarities] = useState<{ name: string; count: number }[]>([]); // FIXED: Added rarities
+    const [priceRangeInfo, setPriceRangeInfo] = useState({ min: 0, max: 1000, avg: 50 }); // FIXED: Added price range info
+
     const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
     const [selectedListingForPurchase, setSelectedListingForPurchase] = useState<Listing | null>(null);
 
@@ -560,6 +584,9 @@ export default function MarketplacePage() {
 
     const isAdmin = session?.user?.role === 'admin';
 
+    // FIXED: Debounced search to prevent excessive API calls
+    const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Fetch unread notifications count
@@ -575,32 +602,45 @@ export default function MarketplacePage() {
         }
     };
 
-    const fetchCards = async (forceFresh: boolean = false) => {
+    // FIXED: Improved fetchCards function with stable dependencies
+    const fetchCards = useCallback(async (forceFresh: boolean = false) => {
         try {
             setLoading(true);
             setError(null);
 
             const params = new URLSearchParams();
 
-            // *** FIX: Add option to show all cards ***
-            params.append('show_all', 'true'); // This will show all cards instead of limiting to 100
+            // Show all cards instead of limiting
+            params.append('show_all', 'true');
 
             // Add cache buster for fresh data
             if (forceFresh) {
                 params.append('_t', Date.now().toString());
             }
 
-            if (searchTerm.trim()) {
-                params.append('search', encodeURIComponent(searchTerm.trim()));
+            // FIXED: Add all filter parameters to API call
+            if (debouncedSearchTerm.trim()) {
+                params.append('search', encodeURIComponent(debouncedSearchTerm.trim()));
             }
-            if (selectedSet && availableSets.includes(selectedSet)) {
+            if (selectedSet) {
                 params.append('set', encodeURIComponent(selectedSet));
             }
-            if (selectedType && availableTypes.includes(selectedType)) {
+            if (selectedType) {
                 params.append('type', encodeURIComponent(selectedType));
+            }
+            // FIXED: Add rarity filter - this was missing!
+            if (selectedRarity) {
+                params.append('rarity', encodeURIComponent(selectedRarity));
             }
             if (selectedSaleType && ['FIXED', 'AUCTION'].includes(selectedSaleType)) {
                 params.append('sale_type', selectedSaleType);
+            }
+            // FIXED: Add price range filters
+            if (priceRange[0] > 0) {
+                params.append('price_min', priceRange[0].toString());
+            }
+            if (priceRange[1] < 10000) { // Use a high number instead of priceRangeInfo.max
+                params.append('price_max', priceRange[1].toString());
             }
             if (priceStatusFilter && ['below_market', 'at_market', 'above_market', 'good_deals'].includes(priceStatusFilter)) {
                 params.append('price_status', priceStatusFilter);
@@ -608,6 +648,19 @@ export default function MarketplacePage() {
             if (sortBy) {
                 params.append('sort_by', sortBy);
             }
+
+            // FIXED: Add debug logging to see what parameters are being sent
+            console.log('Client sending parameters:', {
+                search: debouncedSearchTerm,
+                set: selectedSet,
+                rarity: selectedRarity,
+                type: selectedType,
+                sale_type: selectedSaleType,
+                price_status: priceStatusFilter,
+                sort_by: sortBy,
+                price_min: priceRange[0] > 0 ? priceRange[0] : null,
+                price_max: priceRange[1] < 10000 ? priceRange[1] : null
+            });
 
             console.log('Fetching marketplace with params:', params.toString());
 
@@ -656,8 +709,21 @@ export default function MarketplacePage() {
             });
 
             setCards(data.listings || []);
-            setAvailableSets(data.filters?.sets?.map((s) => s.name).sort() || []);
-            setAvailableTypes(data.filters?.types?.map((t) => t.name).sort() || []);
+
+            // FIXED: Update filter options with proper structure
+            if (data.filters) {
+                setAvailableSets(data.filters.sets || []);
+                setAvailableTypes(data.filters.types || []);
+                setAvailableRarities(data.filters.rarities || []);
+                setPriceRangeInfo(data.filters.price_range || { min: 0, max: 1000, avg: 50 });
+
+                // FIXED: Only update price range on first load or when explicitly cleared
+                if ((priceRange[0] === 0 && priceRange[1] === 1000) || forceFresh) {
+                    if (data.filters.price_range) {
+                        setPriceRange([data.filters.price_range.min, data.filters.price_range.max]);
+                    }
+                }
+            }
 
             // Debug the data
             if (data.listings?.length > 0) {
@@ -671,7 +737,32 @@ export default function MarketplacePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [
+        // FIXED: Only include primitive values and simple state variables as dependencies
+        debouncedSearchTerm,
+        selectedSet,
+        selectedType,
+        selectedRarity,
+        selectedSaleType,
+        priceStatusFilter,
+        sortBy,
+        priceRange[0],
+        priceRange[1]
+        // REMOVED: availableSets, availableTypes, availableRarities, priceRangeInfo
+        // These caused infinite loops because they're objects that change reference
+    ]);
+
+    // FIXED: Clear all filters function with stable price range reset
+    const clearAllFilters = useCallback(() => {
+        setSearchTerm('');
+        setSelectedSet('');
+        setSelectedType('');
+        setSelectedRarity('');
+        setSelectedSaleType('');
+        setPriceStatusFilter('');
+        setPriceRange([0, 1000]); // Use fixed values instead of priceRangeInfo
+        setSortBy('newest');
+    }, []); // No dependencies needed since we're using fixed values
 
     const fetchCardForBidding = async (listingId: string): Promise<BiddingUserCard | null> => {
         if (!listingId.startsWith('user-')) {
@@ -763,17 +854,17 @@ export default function MarketplacePage() {
         }
     }, [status, router]);
 
+    // FIXED: Use debounced search term and callback in effect
     useEffect(() => {
         if (status === 'authenticated') {
             fetchCards();
-            fetchNotificationCount();
         }
-    }, [searchTerm, selectedSet, selectedType, selectedSaleType, priceStatusFilter, sortBy, status]);
+    }, [status, fetchCards]);
 
     useEffect(() => {
         if (status === 'authenticated') {
+            fetchNotificationCount();
             const interval = setInterval(() => {
-                // fetchCards();
                 fetchNotificationCount();
             }, 30000);
             return () => clearInterval(interval);
@@ -824,7 +915,6 @@ export default function MarketplacePage() {
             current_price: listing.fixed_price || listing.current_price || 0,
             availability: listing.availability
         };
-        
 
         // Open the purchase confirmation modal
         setSelectedListingForPurchase(listingData as any);
@@ -841,6 +931,7 @@ export default function MarketplacePage() {
             }));
         }, 500); // 500ms delay
     };
+
     const handlePurchaseComplete = () => {
         // Close the modal
         setPurchaseModalOpen(false);
@@ -997,13 +1088,32 @@ export default function MarketplacePage() {
             {/* Daily Deals */}
             <DailyDealsSection cards={cards as EnhancedListing[]} />
 
+            {/* FIXED: Enhanced Search & Filters Section */}
             <Paper sx={{ p: 3, mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <FilterIcon sx={{ mr: 1 }} />
-                    <Typography variant="h6">Search & Filters</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <FilterIcon sx={{ mr: 1 }} />
+                        <Typography variant="h6">Search & Filters</Typography>
+                        <Chip
+                            label={`${cards.length} results`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            sx={{ ml: 2 }}
+                        />
+                    </Box>
+                    <Button
+                        onClick={clearAllFilters}
+                        startIcon={<ClearIcon />}
+                        size="small"
+                        variant="outlined"
+                    >
+                        Clear All
+                    </Button>
                 </Box>
+
                 <Grid container spacing={2}>
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={3}>
                         <TextField
                             fullWidth
                             label="Search cards"
@@ -1016,8 +1126,10 @@ export default function MarketplacePage() {
                                     </InputAdornment>
                                 ),
                             }}
+                            helperText="Search by name, set, rarity, or card number"
                         />
                     </Grid>
+
                     <Grid item xs={12} md={2}>
                         <FormControl fullWidth>
                             <InputLabel>Set</InputLabel>
@@ -1028,31 +1140,33 @@ export default function MarketplacePage() {
                             >
                                 <MenuItem value="">All Sets</MenuItem>
                                 {availableSets.map((set) => (
-                                    <MenuItem key={set} value={set}>
-                                        {set}
+                                    <MenuItem key={set.name} value={set.name}>
+                                        {set.name} ({set.count})
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
+
                     <Grid item xs={12} md={2}>
                         <FormControl fullWidth>
-                            <InputLabel>Type</InputLabel>
+                            <InputLabel>Rarity</InputLabel>
                             <Select
-                                value={selectedType}
-                                label="Type"
-                                onChange={(e) => setSelectedType(e.target.value as string)}
+                                value={selectedRarity}
+                                label="Rarity"
+                                onChange={(e) => setSelectedRarity(e.target.value as string)}
                             >
-                                <MenuItem value="">All Types</MenuItem>
-                                {availableTypes.map((type) => (
-                                    <MenuItem key={type} value={type}>
-                                        {type}
+                                <MenuItem value="">All Rarities</MenuItem>
+                                {availableRarities.map((rarity) => (
+                                    <MenuItem key={rarity.name} value={rarity.name}>
+                                        {rarity.name} ({rarity.count})
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid item xs={12} md={2}>
+
+                    <Grid item xs={12} md={1.5}>
                         <FormControl fullWidth>
                             <InputLabel>Sale Type</InputLabel>
                             <Select
@@ -1060,13 +1174,14 @@ export default function MarketplacePage() {
                                 label="Sale Type"
                                 onChange={(e) => setSelectedSaleType(e.target.value as string)}
                             >
-                                <MenuItem value="">All Sale Types</MenuItem>
+                                <MenuItem value="">All Types</MenuItem>
                                 <MenuItem value="FIXED">Fixed Price</MenuItem>
                                 <MenuItem value="AUCTION">Auction</MenuItem>
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid item xs={12} md={2}>
+
+                    <Grid item xs={12} md={1.5}>
                         <FormControl fullWidth>
                             <InputLabel>Price Status</InputLabel>
                             <Select
@@ -1076,12 +1191,13 @@ export default function MarketplacePage() {
                             >
                                 <MenuItem value="">All Prices</MenuItem>
                                 <MenuItem value="below_market">Below Market</MenuItem>
-                                <MenuItem value="at_market">At Market Price</MenuItem>
+                                <MenuItem value="at_market">At Market</MenuItem>
                                 <MenuItem value="above_market">Above Market</MenuItem>
-                                <MenuItem value="good_deals">Good Deals (10%+ Below)</MenuItem>
+                                <MenuItem value="good_deals">Good Deals</MenuItem>
                             </Select>
                         </FormControl>
                     </Grid>
+
                     <Grid item xs={12} md={2}>
                         <FormControl fullWidth>
                             <InputLabel>Sort By</InputLabel>
@@ -1100,6 +1216,30 @@ export default function MarketplacePage() {
                         </FormControl>
                     </Grid>
                 </Grid>
+
+                {/* FIXED: Price Range Slider */}
+                <Box sx={{ mt: 3 }}>
+                    <FormLabel component="legend">Price Range</FormLabel>
+                    <Box sx={{ px: 2 }}>
+                        <Slider
+                            value={priceRange}
+                            onChange={(event, newValue) => setPriceRange(newValue as [number, number])}
+                            valueLabelDisplay="auto"
+                            min={priceRangeInfo.min}
+                            max={priceRangeInfo.max}
+                            step={1}
+                            marks={[
+                                { value: priceRangeInfo.min, label: `${priceRangeInfo.min}` },
+                                { value: priceRangeInfo.avg, label: `${priceRangeInfo.avg}` },
+                                { value: priceRangeInfo.max, label: `${priceRangeInfo.max}` }
+                            ]}
+                            sx={{ mt: 1 }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                            ${priceRange[0]} - ${priceRange[1]}
+                        </Typography>
+                    </Box>
+                </Box>
             </Paper>
 
             {error && (
@@ -1122,6 +1262,14 @@ export default function MarketplacePage() {
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         Try adjusting your search or filters
                     </Typography>
+                    <Button
+                        onClick={clearAllFilters}
+                        sx={{ mt: 2 }}
+                        variant="outlined"
+                        startIcon={<ClearIcon />}
+                    >
+                        Clear All Filters
+                    </Button>
                 </Paper>
             ) : (
                 <Grid container spacing={3}>
@@ -1377,7 +1525,7 @@ export default function MarketplacePage() {
                     setSelectedListingForPurchase(null);
                 }}
                 listingData={selectedListingForPurchase}
-                onPurchaseComplete={handlePurchaseComplete} // No parameters
+                onPurchaseComplete={handlePurchaseComplete}
             />
         </Container>
     );

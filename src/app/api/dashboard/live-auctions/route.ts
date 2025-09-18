@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
                     name: true,
                     set_name: true,
                     rarity: true,
-                    image_small: true, // Changed from image_url to image_small
+                    image_url: true, // FIXED: Changed from image_small to image_url (matching schema)
                     market_price: true,
                 }
             }),
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
                     name: card.name,
                     set_name: card.set_name,
                     rarity: card.rarity,
-                    image_url: card.image_small, // Changed from image_url to image_small
+                    image_url: card.image_url, // FIXED: Changed from image_small to image_url
                     market_price: card.market_price ? parseFloat(card.market_price.toString()) : null
                 } : null,
                 seller: owner?.name || 'Unknown',

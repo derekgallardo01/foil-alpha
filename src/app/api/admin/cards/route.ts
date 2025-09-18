@@ -11,30 +11,29 @@ interface CardFilter {
 interface CardData {
   name: string;
   set_name: string;
-  set_number: string;
+  card_number: string; // Fixed: Changed from set_number to card_number
   rarity: string;
   card_type: string;
-  subtype?: string | null;
+  
   hp?: string | null;
   image_url?: string | null;
-  small_image_url?: string | null;
-  tcg_id?: string | null;
+
 }
 
 interface PrismaCard {
   id: number;
   name: string;
   set_name: string;
-  set_number: string | null;
+  card_number: string | null;
   rarity: string;
   card_type: string | null;
-  subtype: string | null;
   hp: number | null;
   image_url: string | null;
-  small_image_url: string | null;
-  tcg_id: string | null;
+  price_tracker_id: string;
+  set_id: string;
+  source: string;
   created_at: Date;
-  updated_at: Date;
+  updated_at: Date; 
 }
 
 interface BulkCreateResult {
@@ -193,25 +192,25 @@ export async function POST(request: NextRequest) {
     const {
       name,
       set_name,
-      set_number,
+      card_number, // Fixed: Changed from set_number to card_number
       rarity,
       card_type,
-      subtype,
+     
       hp,
       image_url,
-      small_image_url,
-      tcg_id
+      
+      
     } = body;
 
-    if (!name || !set_name || !set_number || !rarity || !card_type) {
+    if (!name || !set_name || !card_number || !rarity || !card_type) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, set_name, set_number, rarity, card_type' },
+        { error: 'Missing required fields: name, set_name, card_number, rarity, card_type' },
         { status: 400 }
       );
     }
 
     const existingCard = await prisma.card.findFirst({
-      where: { name, set_name, set_number }
+      where: { name, set_name, card_number } // Fixed: Changed from set_number to card_number
     });
 
     if (existingCard) {
@@ -225,14 +224,23 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         set_name,
-        set_number,
+        card_number,
         rarity,
         card_type,
-        subtype: subtype ?? null,
         hp: hpNumber,
         image_url: image_url ?? null,
-        small_image_url: small_image_url ?? null,
-        tcg_id: tcg_id ?? null
+
+        // Add required fields for manual card creation
+        price_tracker_id: `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        set_id: 'manual',
+
+        // Add other required schema fields
+        source: 'MANUAL',
+        sync_enabled: false,
+        sync_errors: 0,
+        last_updated: new Date(),
+        created_at: new Date(),
+        updated_at: new Date()
       }
     });
 
@@ -284,23 +292,23 @@ export async function PUT(request: NextRequest) {
         const {
           name,
           set_name,
-          set_number,
+          card_number, // Fixed: Changed from set_number to card_number
           rarity,
           card_type,
-          subtype,
+          
           hp,
           image_url,
-          small_image_url,
-          tcg_id
+          
+          
         } = cardData;
 
-        if (!name || !set_name || !set_number || !rarity || !card_type) {
+        if (!name || !set_name || !card_number || !rarity || !card_type) {
           results.errors.push({ card: cardData, error: 'Missing required fields' });
           continue;
         }
 
         const existingCard = await prisma.card.findFirst({
-          where: { name, set_name, set_number }
+          where: { name, set_name, card_number } // Fixed: Changed from set_number to card_number
         });
 
         if (existingCard) {
@@ -315,14 +323,21 @@ export async function PUT(request: NextRequest) {
           data: {
             name,
             set_name,
-            set_number,
+            card_number,
             rarity,
             card_type,
-            subtype: subtype ?? null,
             hp: hpNumber,
             image_url: image_url ?? null,
-            small_image_url: small_image_url ?? null,
-            tcg_id: tcg_id ?? null
+
+            
+            price_tracker_id: `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            set_id: 'manual',
+            source: 'MANUAL',
+            sync_enabled: false,
+            sync_errors: 0,
+            last_updated: new Date(),
+            created_at: new Date(),
+            updated_at: new Date()
           }
         });
 

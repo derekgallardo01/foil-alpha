@@ -22,24 +22,30 @@ import {
     ChevronRight,
     CalendarToday,
     LocalOffer,
-    ShoppingCart
+    ShoppingCart,
+    Refresh
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
 interface SetRelease {
     id: string;
     name: string;
-    series: string;
+    series: string | null;
     release_date: string;
-    days_until_release: number | null;
+    days_since_added: number | null;
     total_cards: number;
     card_count: number;
     avg_price: number | null;
     min_price: number | null;
     max_price: number | null;
     images: any;
-    is_released: boolean;
-    preorder_available: boolean;
+    sample_cards: Array<{
+        name: string;
+        rarity: string;
+        image_url: string | null;
+    }>;
+    is_new: boolean;
+    is_featured: boolean;
 }
 
 interface NewReleasesCarouselProps {
@@ -50,21 +56,35 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
     const router = useRouter();
     const [releases, setReleases] = useState<SetRelease[]>([]);
     const [loading, setLoading] = useState(true);
-    const [releaseType, setReleaseType] = useState<'recent' | 'upcoming' | 'preorder'>('recent');
+    const [error, setError] = useState<string | null>(null);
+    const [releaseType, setReleaseType] = useState<'recent' | 'upcoming' | 'popular'>('recent');
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const fetchReleases = async () => {
         try {
             setLoading(true);
+            setError(null);
+
+            console.log(`Fetching releases: type=${releaseType}, limit=${limit}`);
+
             const response = await fetch(`/api/dashboard/new-releases?type=${releaseType}&limit=${limit}`);
             const data = await response.json();
 
-            if (data.success) {
+            console.log('New releases response:', data);
+
+            if (data.success && data.data) {
                 setReleases(data.data);
                 setCurrentIndex(0);
+                console.log(`Loaded ${data.data.length} releases`);
+            } else {
+                console.error('Failed to fetch releases:', data.error);
+                setError(data.error || 'Failed to load releases');
+                setReleases([]);
             }
         } catch (error) {
             console.error('Error fetching releases:', error);
+            setError('Network error loading releases');
+            setReleases([]);
         } finally {
             setLoading(false);
         }
@@ -95,30 +115,87 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
         });
     };
 
+    const getSetImage = (set: SetRelease) => {
+        // Try to get image from sample cards first
+        const cardWithImage = set.sample_cards?.find(card => card.image_url);
+        if (cardWithImage?.image_url) {
+            return cardWithImage.image_url;
+        }
+
+        // Fallback to placeholder
+        return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120'%3E%3Crect width='200' height='120' fill='%23333' rx='8'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='%23666' font-size='14'%3E" + encodeURIComponent(set.name) + "%3C/text%3E%3C/svg%3E";
+    };
+
+    if (loading) {
+        return (
+            <Paper sx={{
+                p: 3,
+                bgcolor: 'grey.800',
+                border: '1px solid rgba(150, 255, 155, 0.2)'
+            }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress sx={{ color: '#96ff9b' }} />
+                </Box>
+            </Paper>
+        );
+    }
+
     return (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{
+            p: 3,
+            bgcolor: 'grey.800',
+            border: '1px solid rgba(150, 255, 155, 0.2)'
+        }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <NewReleases sx={{ color: '#96ff9b' }} />
                     New Releases & Pre-orders
                 </Typography>
 
-                <ToggleButtonGroup
-                    value={releaseType}
-                    exclusive
-                    onChange={(e, value) => value && setReleaseType(value)}
-                    size="small"
-                >
-                    <ToggleButton value="recent">Recent</ToggleButton>
-                    <ToggleButton value="upcoming">Upcoming</ToggleButton>
-                    <ToggleButton value="preorder">Pre-order</ToggleButton>
-                </ToggleButtonGroup>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <ToggleButtonGroup
+                        value={releaseType}
+                        exclusive
+                        onChange={(e, value) => value && setReleaseType(value)}
+                        size="small"
+                        sx={{
+                            '& .MuiToggleButton-root': {
+                                color: 'text.secondary',
+                                borderColor: 'rgba(150, 255, 155, 0.3)',
+                                '&.Mui-selected': {
+                                    color: '#000',
+                                    bgcolor: '#96ff9b',
+                                    borderColor: '#96ff9b'
+                                },
+                                '&:hover': {
+                                    bgcolor: 'rgba(150, 255, 155, 0.1)'
+                                }
+                            }
+                        }}
+                    >
+                        <ToggleButton value="recent">Recent</ToggleButton>
+                        <ToggleButton value="upcoming">Upcoming</ToggleButton>
+                        <ToggleButton value="popular">Popular</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    <IconButton
+                        size="small"
+                        onClick={fetchReleases}
+                        sx={{ color: '#96ff9b' }}
+                    >
+                        <Refresh />
+                    </IconButton>
+                </Box>
             </Box>
 
-            {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress />
-                </Box>
+            {error ? (
+                <Typography color="error" align="center" sx={{ py: 2 }}>
+                    {error}
+                </Typography>
+            ) : releases.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                    No releases found for the selected category.
+                </Typography>
             ) : (
                 <Box sx={{ position: 'relative' }}>
                     <Grid container spacing={2}>
@@ -129,35 +206,68 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                         height: '100%',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        transition: 'transform 0.2s',
-                                        '&:hover': { transform: 'translateY(-4px)' }
+                                        transition: 'all 0.2s ease',
+                                        bgcolor: 'grey.900',
+                                        border: '1px solid rgba(150, 255, 155, 0.1)',
+                                        '&:hover': {
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: '0 8px 24px rgba(150, 255, 155, 0.2)',
+                                            border: '1px solid rgba(150, 255, 155, 0.3)'
+                                        }
                                     }}
                                 >
                                     <CardMedia
                                         component="img"
                                         height="200"
-                                        image={set.images?.logo || '/placeholder-set.png'}
+                                        image={getSetImage(set)}
                                         alt={set.name}
-                                        sx={{ objectFit: 'contain', bgcolor: 'grey.900', p: 2 }}
+                                        sx={{
+                                            objectFit: 'contain',
+                                            bgcolor: 'grey.800',
+                                            p: 2,
+                                            borderRadius: '8px 8px 0 0'
+                                        }}
+                                        onError={(e: any) => {
+                                            e.target.src = getSetImage(set);
+                                        }}
                                     />
-                                    <CardContent sx={{ flexGrow: 1 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            {set.name}
-                                        </Typography>
+                                    <CardContent sx={{ flexGrow: 1, color: 'text.primary' }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                            <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                                                {set.name}
+                                            </Typography>
+                                            {set.is_new && (
+                                                <Chip
+                                                    label="NEW"
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: '#96ff9b',
+                                                        color: '#000',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.7rem'
+                                                    }}
+                                                />
+                                            )}
+                                        </Box>
+
                                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            {set.series} • {set.total_cards} cards
+                                            {set.series || 'Pokemon TCG'} • {set.total_cards} cards
                                         </Typography>
 
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
-                                            <CalendarToday fontSize="small" sx={{ color: 'text.secondary' }} />
-                                            <Typography variant="body2">
+                                            <CalendarToday fontSize="small" sx={{ color: '#96ff9b' }} />
+                                            <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                                 {formatDate(set.release_date)}
                                             </Typography>
-                                            {set.days_until_release && set.days_until_release > 0 && (
+                                            {set.days_since_added !== null && set.days_since_added <= 30 && (
                                                 <Chip
-                                                    label={`${set.days_until_release}d`}
+                                                    label={`${set.days_since_added}d ago`}
                                                     size="small"
-                                                    color="warning"
+                                                    sx={{
+                                                        bgcolor: 'rgba(150, 255, 155, 0.2)',
+                                                        color: '#96ff9b',
+                                                        fontSize: '0.7rem'
+                                                    }}
                                                 />
                                             )}
                                         </Box>
@@ -167,9 +277,39 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                 <Typography variant="body2" color="text.secondary">
                                                     {set.card_count} cards available
                                                 </Typography>
-                                                <Typography variant="body2">
-                                                    Price range: {formatPrice(set.min_price)} - {formatPrice(set.max_price)}
+                                                {set.min_price && set.max_price && (
+                                                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                                                        Price range: {formatPrice(set.min_price)} - {formatPrice(set.max_price)}
+                                                    </Typography>
+                                                )}
+                                                {set.avg_price && (
+                                                    <Typography variant="body2" sx={{ color: '#96ff9b', fontWeight: 500 }}>
+                                                        Avg: {formatPrice(set.avg_price)}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        )}
+
+                                        {/* Show sample cards if available */}
+                                        {set.sample_cards && set.sample_cards.length > 0 && (
+                                            <Box sx={{ mt: 2 }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                                                    Featured Cards:
                                                 </Typography>
+                                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                                    {set.sample_cards.slice(0, 3).map((card, index) => (
+                                                        <Chip
+                                                            key={index}
+                                                            label={card.name}
+                                                            size="small"
+                                                            sx={{
+                                                                bgcolor: 'rgba(150, 255, 155, 0.1)',
+                                                                color: 'text.secondary',
+                                                                fontSize: '0.7rem'
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
                                             </Box>
                                         )}
 
@@ -178,16 +318,20 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                 size="small"
                                                 variant="outlined"
                                                 startIcon={<LocalOffer />}
-                                                onClick={() => router.push(`/marketplace?set=${set.name}`)}
+                                                onClick={() => router.push(`/marketplace?set=${encodeURIComponent(set.name)}`)}
                                                 sx={{
                                                     borderColor: '#96ff9b',
                                                     color: '#96ff9b',
-                                                    flex: 1
+                                                    flex: 1,
+                                                    '&:hover': {
+                                                        borderColor: '#96ff9b',
+                                                        bgcolor: 'rgba(150, 255, 155, 0.1)'
+                                                    }
                                                 }}
                                             >
                                                 View Set
                                             </Button>
-                                            {set.preorder_available && (
+                                            {set.is_featured && (
                                                 <Button
                                                     size="small"
                                                     variant="contained"
@@ -195,10 +339,13 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                     sx={{
                                                         bgcolor: '#96ff9b',
                                                         color: '#000',
-                                                        flex: 1
+                                                        flex: 1,
+                                                        '&:hover': {
+                                                            bgcolor: '#7ee683'
+                                                        }
                                                     }}
                                                 >
-                                                    Pre-order
+                                                    Shop
                                                 </Button>
                                             )}
                                         </Box>
@@ -216,8 +363,13 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                     left: -20,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    bgcolor: 'background.paper',
-                                    '&:hover': { bgcolor: 'action.hover' }
+                                    bgcolor: 'rgba(150, 255, 155, 0.1)',
+                                    border: '1px solid rgba(150, 255, 155, 0.3)',
+                                    color: '#96ff9b',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(150, 255, 155, 0.2)',
+                                        border: '1px solid rgba(150, 255, 155, 0.5)'
+                                    }
                                 }}
                                 onClick={handlePrevious}
                                 disabled={currentIndex === 0}
@@ -230,8 +382,13 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                     right: -20,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    bgcolor: 'background.paper',
-                                    '&:hover': { bgcolor: 'action.hover' }
+                                    bgcolor: 'rgba(150, 255, 155, 0.1)',
+                                    border: '1px solid rgba(150, 255, 155, 0.3)',
+                                    color: '#96ff9b',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(150, 255, 155, 0.2)',
+                                        border: '1px solid rgba(150, 255, 155, 0.5)'
+                                    }
                                 }}
                                 onClick={handleNext}
                                 disabled={currentIndex >= releases.length - 3}

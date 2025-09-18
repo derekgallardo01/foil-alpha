@@ -1,4 +1,4 @@
-// src/app/api/admin/pricing/route.ts - Admin pricing management API
+// src/app/api/admin/pricing/route.ts - FIXED FOR CURRENT SCHEMA
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 
@@ -147,10 +147,10 @@ async function getPricingAnalytics() {
       ORDER BY MIN(market_price)
     `,
 
-        // Recent price updates
+        // Recent price updates - FIXED: Use existing fields
         prisma.card.findMany({
-            where: { last_price_update: { not: null } },
-            orderBy: { last_price_update: 'desc' },
+            where: { last_updated: { not: null } }, // FIXED: Use last_updated instead of last_price_update
+            orderBy: { last_updated: 'desc' }, // FIXED: Use last_updated
             take: 10,
             select: {
                 id: true,
@@ -158,7 +158,7 @@ async function getPricingAnalytics() {
                 set_name: true,
                 rarity: true,
                 market_price: true,
-                last_price_update: true
+                last_updated: true // FIXED: Use last_updated
             }
         }),
 
@@ -286,7 +286,7 @@ async function bulkUpdateByRarity(data: { rarity: string; price_multiplier?: num
     const { rarity, price_multiplier, fixed_price } = data;
 
     let updateData: any = {
-        last_price_update: new Date()
+        last_updated: new Date() // FIXED: Use last_updated instead of last_price_update
     };
 
     if (fixed_price !== undefined) {
@@ -296,7 +296,7 @@ async function bulkUpdateByRarity(data: { rarity: string; price_multiplier?: num
         const result = await prisma.$executeRaw`
       UPDATE cards 
       SET market_price = COALESCE(market_price, 1.0) * ${price_multiplier},
-          last_price_update = NOW()
+          last_updated = NOW()
       WHERE rarity = ${rarity}
     `;
 
@@ -324,7 +324,7 @@ async function bulkUpdateBySet(data: { set_name: string; price_multiplier?: numb
     const { set_name, price_multiplier, fixed_price } = data;
 
     let updateData: any = {
-        last_price_update: new Date()
+        last_updated: new Date() // FIXED: Use last_updated instead of last_price_update
     };
 
     if (fixed_price !== undefined) {
@@ -333,7 +333,7 @@ async function bulkUpdateBySet(data: { set_name: string; price_multiplier?: numb
         const result = await prisma.$executeRaw`
       UPDATE cards 
       SET market_price = COALESCE(market_price, 1.0) * ${price_multiplier},
-          last_price_update = NOW()
+          last_updated = NOW()
       WHERE set_name = ${set_name}
     `;
 
@@ -360,7 +360,7 @@ async function bulkUpdateBySet(data: { set_name: string; price_multiplier?: numb
 async function recalculateAllPrices(data: { strategy?: string; force_overwrite?: boolean }) {
     const { strategy = 'AUTO', force_overwrite = false } = data;
 
-    // Get all cards that need price recalculation (without problematic includes)
+    // Get all cards that need price recalculation
     const whereCondition = force_overwrite
         ? {}
         : { OR: [{ market_price: null }, { market_price: 0 }] };
@@ -374,27 +374,14 @@ async function recalculateAllPrices(data: { strategy?: string; force_overwrite?:
 
     for (const card of cards) {
         try {
-            // Get related data separately if needed
-            const pokemonSet = card.set_id ? await prisma.pokemonSet.findUnique({
-                where: { id: card.set_id }
-            }) : null;
-
-            const rarity_ref = card.rarity_id ? await prisma.rarity.findUnique({
-                where: { id: card.rarity_id }
-            }) : null;
-
-            // Recalculate price using the same logic as import
-            const calculatedPrice = calculateIntelligentPrice({
-                ...card,
-                pokemonSet,
-                rarity_ref
-            }, strategy);
+            // Recalculate price using simplified logic since we don't have separate tables
+            const calculatedPrice = calculateIntelligentPrice(card, strategy);
 
             await prisma.card.update({
                 where: { id: card.id },
                 data: {
                     market_price: calculatedPrice,
-                    last_price_update: new Date()
+                    last_updated: new Date() // FIXED: Use last_updated instead of last_price_update
                 }
             });
 
@@ -458,16 +445,6 @@ function calculateIntelligentPrice(card: any, strategy: string): number {
         basePrice *= 2.0;
     }
 
-    // Set age multiplier (if we have set data)
-    if (card.pokemonSet?.release_date) {
-        const setYear = parseInt(card.pokemonSet.release_date.substring(0, 4));
-        const currentYear = new Date().getFullYear();
-        const yearsDiff = currentYear - setYear;
-
-        if (yearsDiff <= 1) basePrice *= 1.5; // New sets
-        else if (yearsDiff >= 20) basePrice *= 2.0; // Vintage sets
-    }
-
     // Apply marketplace markup
     basePrice *= 1.15;
 
@@ -492,21 +469,21 @@ async function exportPricingToCsv(data: { filters?: any }) {
             id: true,
             name: true,
             set_name: true,
-            set_number: true,
+            card_number: true, // FIXED: Use card_number instead of set_number
             rarity: true,
             card_type: true,
             market_price: true,
-            api_id: true,
+            price_tracker_id: true, // FIXED: Use price_tracker_id instead of api_id
             source: true,
-            last_price_update: true
+            last_updated: true // FIXED: Use last_updated instead of last_price_update
         },
-        orderBy: [{ set_name: 'asc' }, { set_number: 'asc' }]
+        orderBy: [{ set_name: 'asc' }, { card_number: 'asc' }] // FIXED: Use card_number
     });
 
     // Convert to CSV format
-    const csvHeader = 'ID,Name,Set Name,Set Number,Rarity,Type,Current Price,API ID,Source,Last Updated\n';
+    const csvHeader = 'ID,Name,Set Name,Card Number,Rarity,Type,Current Price,Price Tracker ID,Source,Last Updated\n';
     const csvRows = cards.map(card =>
-        `${card.id},"${card.name}","${card.set_name}","${card.set_number || ''}","${card.rarity}","${card.card_type || ''}",${card.market_price || 0},"${card.api_id || ''}","${card.source}","${card.last_price_update?.toISOString() || ''}"`
+        `${card.id},"${card.name}","${card.set_name}","${card.card_number || ''}","${card.rarity}","${card.card_type || ''}",${card.market_price || 0},"${card.price_tracker_id || ''}","${card.source}","${card.last_updated?.toISOString() || ''}"`
     ).join('\n');
 
     const csvContent = csvHeader + csvRows;
@@ -556,7 +533,7 @@ async function importPricingFromCsv(data: { csv_content: string }) {
                 where: { id: cardId },
                 data: {
                     market_price: newPrice,
-                    last_price_update: new Date(),
+                    last_updated: new Date(), // FIXED: Use last_updated instead of last_price_update
                     source: 'MIXED' // Mark as mixed since it's been manually updated
                 }
             });

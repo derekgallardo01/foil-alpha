@@ -1,20 +1,72 @@
-// src/lib/pokemon-price-tracker-api.ts - V2 API VERSION
+// src/lib/pokemon-price-tracker-api.ts - FIXED FOR V2 API
 interface PokemonPriceTrackerCardV2 {
     id: string;
-    tcgPlayerId: string;
+    tcgPlayerId?: string;
     setId: string;
     setName: string;
     name: string;
     cardNumber: string;
     rarity: string;
-    cardType: string;
+    cardType?: string;
     hp?: number;
-    prices?: {
-        market: number;
-        listings: number;
-        lastUpdated: string;
-    };
+    stage?: string;
+
+    // V2 API Image field - this is what we're looking for!
     imageUrl?: string;
+
+    // V2 Pricing data structure
+    prices?: {
+        market?: number;
+        listings?: number;
+        lastUpdated?: string;
+        primaryCondition?: string;
+    };
+
+    // V2 Additional fields
+    tcgPlayerUrl?: string;
+    artist?: string;
+    retreatCost?: number;
+    dataCompleteness?: number;
+    needsDetailedScrape?: boolean;
+    lastScrapedAt?: string;
+
+    // V2 Rich data
+    attacks?: Array<{
+        name: string;
+        cost?: string[];
+        damage?: string;
+        text?: string;
+    }>;
+    weakness?: {
+        type: string;
+        value: string;
+    };
+    resistance?: {
+        type: string;
+        value: string;
+    };
+
+    // V2 eBay graded data
+    ebay?: {
+        salesByGrade?: {
+            [grade: string]: {
+                count: number;
+                totalValue?: number;
+                averagePrice: number;
+                medianPrice?: number;
+                minPrice?: number;
+                maxPrice?: number;
+            };
+        };
+        salesVelocity?: {
+            dailyAverage: number;
+            weeklyAverage: number;
+            monthlyTotal: number;
+        };
+        lastScrapedDate?: string;
+    };
+
+    // V2 Price history
     priceHistory?: {
         conditions?: {
             [condition: string]: {
@@ -34,47 +86,13 @@ interface PokemonPriceTrackerCardV2 {
         latestDate: string;
         lastUpdated: string;
     };
-    ebay?: {
-        salesByGrade: {
-            [grade: string]: {
-                count: number;
-                totalValue?: number;
-                averagePrice: number;
-                medianPrice?: number;
-                minPrice?: number;
-                maxPrice?: number;
-                marketPrice7Day?: number;
-                marketTrend?: string;
-                smartMarketPrice?: {
-                    price: number;
-                    confidence: string;
-                    method: string;
-                    daysUsed: number;
-                };
-            };
-        };
-        salesVelocity?: {
-            dailyAverage: number;
-            weeklyAverage: number;
-            monthlyTotal: number;
-        };
-        priceHistory?: {
-            [grade: string]: {
-                [date: string]: {
-                    average: number;
-                    count: number;
-                    totalValue: number;
-                };
-            };
-        };
-        lastScrapedDate?: string;
-    };
+
     lastUpdated?: string;
 }
 
 interface PokemonPriceTrackerSetV2 {
     id: string;
-    tcgPlayerId: string;
+    tcgPlayerId?: string;
     name: string;
     series?: string;
     releaseDate?: string;
@@ -84,29 +102,26 @@ interface PokemonPriceTrackerSetV2 {
     imageUrl?: string;
 }
 
-interface APIResponse<T> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    message?: string;
-    rate_limit?: {
-        remaining: number;
-        reset_at: string;
-    };
-}
-
 interface V2APIResponse<T> {
     data: T[];
     metadata: {
         total: number;
         count: number;
-        limit: number;
-        offset: number;
-        hasMore: boolean;
-        includes?: {
-            priceHistory: boolean;
-            ebayData: boolean;
-        };
+        limit?: number;
+        offset?: number;
+        page?: number;
+        hasMore?: boolean;
+    };
+}
+
+interface APIResponse<T> {
+    success: boolean;
+    data?: V2APIResponse<T> | T;
+    error?: string;
+    message?: string;
+    rate_limit?: {
+        remaining: number;
+        reset_at: string;
     };
 }
 
@@ -146,25 +161,12 @@ class PokemonPriceTrackerAPI {
             }
 
             const result = await response.json();
-            console.log(`V2 Proxy response for ${action}:`, result);
-
-            // Handle V2 API response structure
-            if (result.success && result.data) {
-                // V2 API wraps data in { data: [...], metadata: {...} }
-                if (result.data.data && Array.isArray(result.data.data)) {
-                    return {
-                        success: true,
-                        data: result.data.data as T,
-                        rate_limit: result.rate_limit
-                    };
-                }
-                // For single responses or different structures
-                return {
-                    success: true,
-                    data: result.data as T,
-                    rate_limit: result.rate_limit
-                };
-            }
+            console.log(`V2 Proxy response for ${action}:`, {
+                success: result.success,
+                hasData: !!result.data,
+                dataStructure: result.data ? Object.keys(result.data) : [],
+                rateLimit: result.rate_limit
+            });
 
             return result;
 
@@ -177,21 +179,78 @@ class PokemonPriceTrackerAPI {
         }
     }
 
-    // Get pricing for specific card by tcgPlayerId or id
+    // Search for cards by name with V2 API
+    // Update the searchCardPricing method in pokemon-price-tracker-api.ts
+    async searchCardPricing(options: {
+        name?: string;
+        setId?: string;
+        limit?: number;
+        page?: number;
+    } = {}): Promise<APIResponse<PokemonPriceTrackerCardV2[]>> {
+        const params: Record<string, any> = {
+            limit: Math.min(options.limit || 1, 5),
+        };
+
+        if (options.name) params.name = options.name;
+        if (options.setId) params.setId = options.setId;
+        if (options.page) params.page = options.page;
+
+        const response = await this.makeProxyRequest<PokemonPriceTrackerCardV2>('searchCardPricing', params);
+
+        if (response.success && response.data) {
+            // Handle both possible response types
+            if (Array.isArray(response.data)) {
+                // Direct array response
+                return {
+                    success: true,
+                    data: response.data,
+                    rate_limit: response.rate_limit
+                };
+            } else {
+                // V2 API wrapped response
+                const v2Data = response.data as V2APIResponse<PokemonPriceTrackerCardV2>;
+                return {
+                    success: true,
+                    data: v2Data.data || [],
+                    rate_limit: response.rate_limit
+                };
+            }
+        }
+
+        return {
+            success: false,
+            error: response.error || 'Search failed',
+            data: []
+        };
+    }
+
     async getCardPricing(cardIdentifier: string): Promise<APIResponse<PokemonPriceTrackerCardV2>> {
-        // Try tcgPlayerId first, fallback to id
-        const params = cardIdentifier.includes('-') ?
-            { id: cardIdentifier } :
-            { tcgPlayerId: cardIdentifier };
+        const params = { id: cardIdentifier };
 
-        const response = await this.makeProxyRequest<PokemonPriceTrackerCardV2[]>('getCardPricing', params);
+        const response = await this.makeProxyRequest<PokemonPriceTrackerCardV2>('getCardPricing', params);
 
-        if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
-            return {
-                success: true,
-                data: response.data[0],
-                rate_limit: response.rate_limit
-            };
+        if (response.success && response.data) {
+            // Handle both possible response types
+            if (Array.isArray(response.data)) {
+                // Direct array response
+                if (response.data.length > 0) {
+                    return {
+                        success: true,
+                        data: response.data[0],
+                        rate_limit: response.rate_limit
+                    };
+                }
+            } else {
+                // V2 API wrapped response
+                const v2Data = response.data as V2APIResponse<PokemonPriceTrackerCardV2>;
+                if (v2Data.data && Array.isArray(v2Data.data) && v2Data.data.length > 0) {
+                    return {
+                        success: true,
+                        data: v2Data.data[0],
+                        rate_limit: response.rate_limit
+                    };
+                }
+            }
         }
 
         return {
@@ -200,46 +259,35 @@ class PokemonPriceTrackerAPI {
         };
     }
 
-    // Search for cards by name with pricing
-    async searchCardPricing(options: {
-        name?: string;
-        setId?: string;
-        limit?: number;
-        page?: number;
-        includeHistory?: boolean;
-    } = {}): Promise<APIResponse<PokemonPriceTrackerCardV2[]>> {
-        const params: Record<string, any> = {
-            limit: Math.min(options.limit || 50, 100),
-            offset: ((options.page || 1) - 1) * (options.limit || 50),
-        };
-
-        if (options.name) params.name = options.name;
-        if (options.setId) params.setId = options.setId;
-
-        return this.makeProxyRequest<PokemonPriceTrackerCardV2[]>('searchCardPricing', params);
-    }
-
-    // Get all cards from a specific set
     async getSetPricing(setId: string): Promise<APIResponse<PokemonPriceTrackerCardV2[]>> {
         const allCards: PokemonPriceTrackerCardV2[] = [];
-        let offset = 0;
+        let page = 1;
         let hasMore = true;
-        const limit = 100;
+        const limit = 50;
 
-        while (hasMore && offset < 1000) { // Safety limit
-            const response = await this.makeProxyRequest<PokemonPriceTrackerCardV2[]>('getSetPricing', {
+        while (hasMore && page <= 10) { // Safety limit of 10 pages (500 cards max)
+            const response = await this.makeProxyRequest<PokemonPriceTrackerCardV2>('getSetPricing', {
                 setId,
-                limit,
-                offset
+                page,
+                limit
             });
 
             if (!response.success || !response.data) {
-                return { success: false, error: response.error || 'Failed to fetch set pricing' };
+                if (page === 1) {
+                    // If first page fails, return error
+                    return { success: false, error: response.error || 'Failed to fetch set pricing' };
+                } else {
+                    // If later pages fail, just stop and return what we have
+                    break;
+                }
             }
 
-            allCards.push(...response.data);
-            hasMore = response.data.length === limit;
-            offset += limit;
+            const cards = Array.isArray(response.data) ? response.data : [];
+            allCards.push(...cards);
+
+            // If we got less than the limit, we've reached the end
+            hasMore = cards.length === limit;
+            page++;
 
             // Rate limiting delay
             if (hasMore) {
@@ -249,10 +297,37 @@ class PokemonPriceTrackerAPI {
 
         return { success: true, data: allCards };
     }
+    async getSets(options: { name?: string } = {}): Promise<APIResponse<PokemonPriceTrackerSetV2[]>> {
+        const params: Record<string, any> = {};
+        if (options.name) params.name = options.name;
 
-    // Get available sets
-    async getSets(): Promise<APIResponse<PokemonPriceTrackerSetV2[]>> {
-        return this.makeProxyRequest<PokemonPriceTrackerSetV2[]>('getSets');
+        const response = await this.makeProxyRequest<PokemonPriceTrackerSetV2>('getSets', params);
+
+        if (response.success && response.data) {
+            // Handle both possible response types
+            if (Array.isArray(response.data)) {
+                // Direct array response
+                return {
+                    success: true,
+                    data: response.data,
+                    rate_limit: response.rate_limit
+                };
+            } else {
+                // V2 API wrapped response
+                const v2Data = response.data as V2APIResponse<PokemonPriceTrackerSetV2>;
+                return {
+                    success: true,
+                    data: v2Data.data || [],
+                    rate_limit: response.rate_limit
+                };
+            }
+        }
+
+        return {
+            success: false,
+            error: response.error || 'Failed to fetch sets',
+            data: []
+        };
     }
 
     // Extract best market price from V2 pricing data
@@ -263,8 +338,8 @@ class PokemonPriceTrackerAPI {
         }
 
         // Fallback to eBay PSA 10 price if available
-        if (card.ebay?.salesByGrade?.psa10?.averagePrice) {
-            return card.ebay.salesByGrade.psa10.averagePrice;
+        if (card.ebay?.salesByGrade?.PSA10?.averagePrice) {
+            return card.ebay.salesByGrade.PSA10.averagePrice;
         }
 
         // Fallback to any available eBay grade
@@ -278,7 +353,12 @@ class PokemonPriceTrackerAPI {
 
     // Get PSA 10 price specifically
     static getPSA10Price(card: PokemonPriceTrackerCardV2): number | null {
-        return card.ebay?.salesByGrade?.psa10?.averagePrice || null;
+        return card.ebay?.salesByGrade?.PSA10?.averagePrice || null;
+    }
+
+    // Get card image URL from V2 API
+    static getImageUrl(card: PokemonPriceTrackerCardV2): string | null {
+        return card.imageUrl || null;
     }
 
     // Get latest price from price history
@@ -299,6 +379,28 @@ class PokemonPriceTrackerAPI {
             return false;
         }
     }
+
+    // Debug method to test V2 API response structure
+    async debugV2Structure(): Promise<any> {
+        try {
+            const response = await fetch(`${this.proxyUrl}?test=v2-structure`);
+            return await response.json();
+        } catch (error) {
+            console.error('V2 debug request failed:', error);
+            return { error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    }
+
+    // Test the exact example from docs
+    async testSetExample(): Promise<any> {
+        try {
+            const response = await fetch(`${this.proxyUrl}?test=v2-set-example`);
+            return await response.json();
+        } catch (error) {
+            console.error('V2 set example test failed:', error);
+            return { error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    }
 }
 
 // Export singleton instance
@@ -311,6 +413,6 @@ export type {
     APIResponse
 };
 
-// For backwards compatibility, also export with old names
+// For backwards compatibility
 export type PokemonPriceTrackerCard = PokemonPriceTrackerCardV2;
 export type PokemonPriceTrackerSet = PokemonPriceTrackerSetV2;

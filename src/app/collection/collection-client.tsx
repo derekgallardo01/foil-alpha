@@ -1,9 +1,10 @@
-// src/app/collection/collection-client.tsx - Enhanced with pricing analytics
+// src/app/collection/collection-client.tsx - Complete Enhanced Collection with Sidebar
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
     Box,
     Container,
@@ -53,6 +54,7 @@ import {
 import Image from "next/image";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Sidebar from "../components/Sidebar"; // Import Sidebar
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
 import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
@@ -292,8 +294,7 @@ function EnhancedCardDisplay({
     const marketPrice = userCard.card.market_price || 0;
     const purchasePrice = userCard.original_purchase_price || 0;
     const currentListingPrice = userCard.fixed_price || userCard.reserve_price || 0;
-    const displayPrice = purchasePrice > 0 ? purchasePrice : marketPrice; // Show purchase price if available
-
+    const displayPrice = purchasePrice > 0 ? purchasePrice : marketPrice;
 
     const profitLoss = marketPrice > 0 && purchasePrice > 0 ? marketPrice - purchasePrice : 0;
     const profitLossPercentage = purchasePrice > 0 ? (profitLoss / purchasePrice) * 100 : 0;
@@ -334,7 +335,6 @@ function EnhancedCardDisplay({
             flexDirection: 'column',
             position: 'relative'
         }}>
-            {/* Price History Button */}
             <IconButton
                 size="small"
                 onClick={() => onShowPriceHistory(userCard)}
@@ -381,21 +381,19 @@ function EnhancedCardDisplay({
                     />
                 </Box>
 
-                {/* Price Information */}
                 <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(150, 255, 155, 0.05)', borderRadius: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="body2" color="text.secondary">
                             {purchasePrice > 0 ? 'Purchase Price' : 'Market Price'}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            {purchasePrice === 0 && getTrendIcon()} {/* Only show trend for market price */}
+                            {purchasePrice === 0 && getTrendIcon()}
                             <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                                 ${displayPrice.toFixed(2)}
                             </Typography>
                         </Box>
                     </Box>
 
-                    {/* Show market price separately if user has purchase price */}
                     {purchasePrice > 0 && marketPrice > 0 && (
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="body2" color="text.secondary">
@@ -410,7 +408,6 @@ function EnhancedCardDisplay({
                         </Box>
                     )}
 
-                    {/* Profit/Loss */}
                     {purchasePrice > 0 && marketPrice > 0 && (
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="body2" color="text.secondary">
@@ -427,7 +424,6 @@ function EnhancedCardDisplay({
                         </Box>
                     )}
 
-                    {/* 24h Change */}
                     {userCard.card.price_change_24h !== undefined && (
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="body2" color="text.secondary">
@@ -446,7 +442,6 @@ function EnhancedCardDisplay({
                     )}
                 </Box>
 
-                {/* Current Listing Status */}
                 {userCard.is_for_sale && (
                     <Box sx={{ mb: 2 }}>
                         <Chip
@@ -490,7 +485,6 @@ function EnhancedCardDisplay({
                     </Box>
                 )}
 
-                {/* Action Buttons */}
                 <Box sx={{ mt: 'auto', display: 'flex', gap: 1, flexDirection: 'column' }}>
                     {!userCard.is_for_sale ? (
                         <Button
@@ -516,7 +510,6 @@ function EnhancedCardDisplay({
                         </Button>
                     )}
 
-                    {/* Price Update Button */}
                     {marketPrice === 0 && (
                         <Button
                             variant="outlined"
@@ -699,6 +692,7 @@ export default function CollectionPage() {
     const [bulkPriceUpdateOpen, setBulkPriceUpdateOpen] = useState(false);
     const [selectedCardsForUpdate, setSelectedCardsForUpdate] = useState<number[]>([]);
     const [collectionSortBy, setCollectionSortBy] = useState('newest');
+    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
     const [sellData, setSellData] = useState<SellDialogData>({
         userCardId: 0,
         cardName: '',
@@ -709,6 +703,8 @@ export default function CollectionPage() {
     });
     const [actionLoading, setActionLoading] = useState(false);
 
+    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
     useEffect(() => {
         if (status === "authenticated") {
             fetchUserCards();
@@ -718,7 +714,6 @@ export default function CollectionPage() {
         }
     }, [status, router]);
 
-    // Auto-refresh pending purchases every 30 seconds
     useEffect(() => {
         if (status === 'authenticated') {
             const interval = setInterval(() => {
@@ -728,16 +723,11 @@ export default function CollectionPage() {
         }
     }, [status]);
 
-
     const fetchUserCards = async () => {
         try {
             setLoading(true);
-            console.log('Fetching user collection...');
-
             const response = await fetch("/api/user/collection", {
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
             });
 
             if (!response.ok) {
@@ -746,25 +736,16 @@ export default function CollectionPage() {
             }
 
             const data = await response.json();
-            console.log('Collection response:', data);
-
-            // Handle both old and new response formats
-            const cards = data.cards || data; // New format has 'cards' property
+            const cards = data.cards || data;
 
             if (Array.isArray(cards)) {
                 setUserCards(cards);
-                console.log(`✅ Loaded ${cards.length} cards in collection`);
-
-                if (cards.length === 0) {
-                    console.log('🔍 Collection is empty - check if user has made any purchases');
-                }
             } else {
-                console.error('❌ Invalid response format:', data);
+                console.error('Invalid response format:', data);
                 setUserCards([]);
             }
-
         } catch (error) {
-            console.error("❌ Error fetching collection:", error);
+            console.error("Error fetching collection:", error);
             toast.error(error instanceof Error ? error.message : "Failed to load collection");
             setUserCards([]);
         } finally {
@@ -782,14 +763,11 @@ export default function CollectionPage() {
 
             const notifications = await response.json();
 
-            // Check if notifications is an array
             if (!Array.isArray(notifications)) {
-                console.error('Notifications is not an array:', notifications);
                 setPendingPurchases([]);
                 return;
             }
 
-            // Filter for purchase confirmation notifications
             const purchaseNotifications = notifications.filter((notif: any) =>
                 (notif.type === 'bid_accepted' || notif.type === 'auction_won') &&
                 notif.data?.action_required === true
@@ -889,7 +867,6 @@ export default function CollectionPage() {
     const handleConfirmPurchase = (purchase: PendingPurchase) => {
         setSelectedPurchase(purchase);
         setConfirmationModalOpen(true);
-    
     };
 
     const handleConfirmationComplete = () => {
@@ -918,7 +895,7 @@ export default function CollectionPage() {
             const data = await response.json();
             if (data.success) {
                 toast.success('Price updated successfully!');
-                fetchUserCards(); // Refresh collection
+                fetchUserCards();
             } else {
                 toast.error('Failed to update price');
             }
@@ -940,7 +917,6 @@ export default function CollectionPage() {
         setSelectedCardsForUpdate([]);
     };
 
-    // Enhanced user cards with profit/loss calculations
     const enhancedUserCards = useMemo(() => {
         return userCards.map(card => {
             const marketPrice = card.card.market_price || 0;
@@ -957,7 +933,6 @@ export default function CollectionPage() {
         });
     }, [userCards]);
 
-    // Sorting function for collection
     const sortedUserCards = useMemo(() => {
         const sorted = [...enhancedUserCards];
 
@@ -1008,33 +983,19 @@ export default function CollectionPage() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
+        <Container sx={{ marginTop: 4, marginBottom: 4, paddingLeft: 0, paddingRight: 0 }}>
+            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
             <ToastContainer position="top-right" />
 
-            {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={40} height={20} />
-                    <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
-                        My Collection
-                    </Typography>
-                </Box>
-                <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
+            {/* Header with Menu Button and Logo */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
+                <IconButton onClick={toggleSidebar}>
+                    <MenuIcon sx={{ color: '#FFFFFF' }} />
+                </IconButton>
+                <Link href="/dashboard">
+                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={120} height={60} priority />
+                </Link>
+                <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
                         variant="outlined"
                         onClick={() => router.push('/wallet')}
@@ -1060,12 +1021,22 @@ export default function CollectionPage() {
                 </Box>
             </Box>
 
-            <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
+            <Box
+                component="section"
+                sx={{
+                    width: "100%",
+                    padding: "20px",
+                    marginTop: "20px",
+                    backgroundColor: "#1E1E1E",
+                    color: "#FFFFFF",
+                    borderRadius: "10px",
+                    boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
+                }}
+            >
                 <Typography variant="h4" sx={{ color: '#96ff9b', mb: 3, textAlign: 'center' }}>
                     {session?.user?.name}'s Card Collection
                 </Typography>
 
-                {/* Pending Purchase Alerts */}
                 {pendingPurchases.length > 0 && (
                     <Alert
                         severity="warning"
@@ -1091,10 +1062,8 @@ export default function CollectionPage() {
                     }}
                 />
 
-                {/* Collection Analytics */}
                 <CollectionAnalytics userCards={enhancedUserCards} />
 
-                {/* Tabs */}
                 <Paper sx={{ mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
                     <Tabs
                         value={currentTab}
@@ -1120,9 +1089,7 @@ export default function CollectionPage() {
                     </Tabs>
                 </Paper>
 
-                {/* Tab Content */}
                 {currentTab === 0 && (
-                    /* My Cards Tab */
                     <>
                         {userCards.length === 0 ? (
                             <Box sx={{ textAlign: 'center', mt: 10 }}>
@@ -1143,7 +1110,6 @@ export default function CollectionPage() {
                             </Box>
                         ) : (
                             <>
-                                {/* Sorting and Bulk Actions */}
                                 <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <FormControl sx={{ minWidth: 200 }}>
                                         <InputLabel sx={{ color: 'text.secondary' }}>Sort By</InputLabel>
@@ -1196,7 +1162,6 @@ export default function CollectionPage() {
                 )}
 
                 {currentTab === 1 && (
-                    /* Pending Purchases Tab */
                     <>
                         {pendingPurchases.length === 0 ? (
                             <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
@@ -1251,7 +1216,7 @@ export default function CollectionPage() {
                                                                 Seller: {purchase.seller_name}
                                                             </Typography>
                                                             <Typography variant="h6" color="primary.main">
-                                                                {formatPrice(purchase.amount)}
+                                                                ${formatPrice(purchase.amount)}
                                                             </Typography>
                                                         </Box>
                                                     </Box>
@@ -1286,9 +1251,9 @@ export default function CollectionPage() {
                         )}
                     </>
                 )}
-            </Container>
+            </Box>
 
-            {/* Sell Dialog */}
+            {/* Modals */}
             <Dialog open={sellDialogOpen} onClose={() => setSellDialogOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>List {sellData.cardName} for Sale</DialogTitle>
                 <DialogContent>
@@ -1360,7 +1325,6 @@ export default function CollectionPage() {
                 </DialogActions>
             </Dialog>
 
-            {/* Price History Modal */}
             <CollectionPriceHistoryModal
                 open={priceHistoryModalOpen}
                 onClose={() => {
@@ -1370,7 +1334,6 @@ export default function CollectionPage() {
                 userCard={selectedCardForHistory}
             />
 
-            {/* Bulk Price Update Modal */}
             <BulkPriceUpdateModal
                 open={bulkPriceUpdateOpen}
                 onClose={() => setBulkPriceUpdateOpen(false)}
@@ -1378,13 +1341,12 @@ export default function CollectionPage() {
                 onUpdateComplete={handlePriceUpdateComplete}
             />
 
-            {/* Purchase Confirmation Modal */}
             <PendingPurchaseModal
                 open={confirmationModalOpen}
                 onClose={() => setConfirmationModalOpen(false)}
                 purchaseData={selectedPurchase}
                 onConfirmationComplete={handleConfirmationComplete}
             />
-        </Box>
+        </Container>
     );
 }
