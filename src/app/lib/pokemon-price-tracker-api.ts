@@ -184,6 +184,12 @@ class PokemonPriceTrackerAPI {
     async searchCardPricing(options: {
         name?: string;
         setId?: string;
+        setName?: string;  // Add this to fix the TypeScript error
+        rarity?: string;
+        cardType?: string;
+        artist?: string;
+        minPrice?: number;
+        maxPrice?: number;
         limit?: number;
         page?: number;
     } = {}): Promise<APIResponse<PokemonPriceTrackerCardV2[]>> {
@@ -193,21 +199,24 @@ class PokemonPriceTrackerAPI {
 
         if (options.name) params.name = options.name;
         if (options.setId) params.setId = options.setId;
+        if (options.setName) params.setName = options.setName; // Add this line
+        if (options.rarity) params.rarity = options.rarity;
+        if (options.cardType) params.cardType = options.cardType;
+        if (options.artist) params.artist = options.artist;
+        if (options.minPrice) params.minPrice = options.minPrice;
+        if (options.maxPrice) params.maxPrice = options.maxPrice;
         if (options.page) params.page = options.page;
 
         const response = await this.makeProxyRequest<PokemonPriceTrackerCardV2>('searchCardPricing', params);
 
         if (response.success && response.data) {
-            // Handle both possible response types
             if (Array.isArray(response.data)) {
-                // Direct array response
                 return {
                     success: true,
                     data: response.data,
                     rate_limit: response.rate_limit
                 };
             } else {
-                // V2 API wrapped response
                 const v2Data = response.data as V2APIResponse<PokemonPriceTrackerCardV2>;
                 return {
                     success: true,

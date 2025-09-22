@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
 
-// GET /api/user-cards - Get user's card collection
+// GET /api/user-cards - Get user's card collection or auctions
 export async function GET(request: NextRequest) {
   console.log('🔍 User-cards API called');
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
+    const userId = parseInt(session.user.id);
+    const { searchParams } = new URL(request.url);
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // Check if this is for "my auctions" page
+    const myAuctions = searchParams.get('my_auctions') === 'true';
+
+    if (myAuctions) {
+      return await getMyAuctions(userId);
     }
 
-    const { searchParams } = new URL(request.url);
+    // Regular user cards functionality
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const forSale = searchParams.get('forSale') === 'true';
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause with specific type
     const where: Prisma.UserCardWhereInput = {
-      owner_id: user.id,
+      owner_id: userId,
     };
 
     if (forSale) {
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
       where.is_sold = false;
     }
 
-    // Get user's cards (without includes that cause issues)
+    // Get user's cards
     const [userCards, totalCount] = await Promise.all([
       prisma.userCard.findMany({
         where,
@@ -55,7 +57,15 @@ export async function GET(request: NextRequest) {
       userCards.map(async (userCard) => {
         // Get card details
         const card = await prisma.card.findUnique({
-          where: { id: userCard.card_id }
+          where: { id: userCard.card_id },
+          select: {
+            id: true,
+            name: true,
+            set_name: true,
+            card_number: true, // FIXED: Use card_number instead of set_number
+            rarity: true,
+            image_url: true
+          }
         });
 
         // Get active bids
@@ -72,22 +82,31 @@ export async function GET(request: NextRequest) {
           bids.map(async (bid) => {
             const bidder = await prisma.user.findUnique({
               where: { id: bid.bidderId },
-              select: { id: true, name: true }
+              select: { id: true, name: true, email: true }
             });
-            return { ...bid, bidder };
+            return {
+              ...bid,
+              bidder: bidder || { id: 0, name: 'Unknown', email: '' },
+              amount: Number(bid.amount),
+              created_at: bid.createdAt.toISOString()
+            };
           })
         );
 
         return {
           ...userCard,
-          card,
+          card: card ? {
+            ...card,
+            set_number: card.card_number, // Map card_number to set_number for frontend
+            small_image_url: card.image_url // Use same image for both
+          } : null,
           bids: bidsWithBidder
         };
       })
     );
 
     return NextResponse.json({
-      userCards: enrichedUserCards,
+      userCards: enrichedUserCards.filter(uc => uc.card !== null),
       pagination: {
         page,
         limit,
@@ -104,24 +123,135 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// NEW: Function to handle My Auctions specifically
+async function getMyAuctions(userId: number) {
+  try {
+    console.log(`Fetching auctions for user ${userId}`);
+
+    // Get user's auction cards
+    const auctionCards = await prisma.userCard.findMany({
+      where: {
+        owner_id: userId,
+        sale_type: 'AUCTION' // Only auction type
+      },
+      orderBy: { created_at: 'desc' },
+      take: 50 // Limit results
+    });
+
+    console.log(`Found ${auctionCards.length} auction cards`);
+
+    // Process each auction with related data
+    const auctionsWithDetails = await Promise.all(
+      auctionCards.map(async (userCard) => {
+        try {
+          // Get card details
+          const card = await prisma.card.findUnique({
+            where: { id: userCard.card_id },
+            select: {
+              id: true,
+              name: true,
+              set_name: true,
+              card_number: true, // FIXED: Use card_number
+              rarity: true,
+              image_url: true
+            }
+          });
+
+          if (!card) {
+            console.warn(`Card not found for userCard ${userCard.id}`);
+            return null;
+          }
+
+          // Get all bids for this auction
+          const bids = await prisma.bid.findMany({
+            where: {
+              userCardId: userCard.id,
+              is_active: true
+            },
+            orderBy: { amount: 'desc' }
+          });
+
+          // Get bidder details for each bid
+          const bidsWithBidders = await Promise.all(
+            bids.map(async (bid) => {
+              const bidder = await prisma.user.findUnique({
+                where: { id: bid.bidderId },
+                select: { id: true, name: true, email: true }
+              });
+
+              return {
+                id: bid.id,
+                amount: Number(bid.amount),
+                bidder: bidder || { id: 0, name: 'Unknown', email: '' },
+                created_at: bid.createdAt.toISOString(),
+                is_active: bid.is_active
+              };
+            })
+          );
+
+          // Calculate time remaining
+          const now = new Date();
+          const auctionEnd = userCard.auction_end ? new Date(userCard.auction_end) : null;
+          const timeRemaining = auctionEnd ? Math.max(0, auctionEnd.getTime() - now.getTime()) : null;
+          const highestBid = bidsWithBidders.length > 0 ? bidsWithBidders[0].amount : null;
+
+          return {
+            id: userCard.id,
+            card: {
+              id: card.id,
+              name: card.name,
+              set_name: card.set_name,
+              set_number: card.card_number, // FIXED: Map card_number to set_number
+              rarity: card.rarity,
+              image_url: card.image_url,
+              small_image_url: card.image_url // Use same image for both
+            },
+            condition: userCard.condition || 'Unknown',
+            reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : 0,
+            auction_end: userCard.auction_end?.toISOString() || '',
+            is_sold: userCard.is_sold,
+            is_for_sale: userCard.is_for_sale,
+            time_remaining: timeRemaining,
+            bids: bidsWithBidders,
+            highest_bid: highestBid,
+            bid_count: bidsWithBidders.length
+          };
+        } catch (error) {
+          console.error(`Error processing auction ${userCard.id}:`, error);
+          return null;
+        }
+      })
+    );
+
+    // Filter out null results
+    const validAuctions = auctionsWithDetails.filter(auction => auction !== null);
+
+    console.log(`Processed ${validAuctions.length} valid auctions`);
+
+    return NextResponse.json(validAuctions);
+
+  } catch (error) {
+    console.error('Error fetching my auctions:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch auctions',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
 // POST /api/user-cards - Add card to user's collection (purchase)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
+    const userId = parseInt(session.user.id);
     const body = await request.json();
     const { card_id, condition = 'NM', notes, purchase_price } = body;
 
@@ -140,11 +270,11 @@ export async function POST(request: NextRequest) {
 
     // Create user card and history record in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create user card (without include that causes issues)
+      // Create user card
       const userCard = await tx.userCard.create({
         data: {
           card_id,
-          owner_id: user.id,
+          owner_id: userId,
           condition,
           notes,
         },
@@ -153,9 +283,9 @@ export async function POST(request: NextRequest) {
       // Create history record
       await tx.cardTransactionHistory.create({
         data: {
-          userCardId: userCard.id, // Fixed: user_card_id → userCardId
-          toUserId: user.id, // Fixed: to_user_id → toUserId
-          action: 'PURCHASE', // Fixed: transaction_type → action
+          userCardId: userCard.id,
+          toUserId: userId,
+          action: 'PURCHASE',
           notes: purchase_price
             ? `Initial purchase - ${condition} condition for $${parseFloat(purchase_price).toFixed(2)}`
             : `Initial purchase - ${condition} condition`,
@@ -164,12 +294,24 @@ export async function POST(request: NextRequest) {
 
       // Get card details separately and return combined result
       const cardDetails = await tx.card.findUnique({
-        where: { id: card_id }
+        where: { id: card_id },
+        select: {
+          id: true,
+          name: true,
+          set_name: true,
+          card_number: true,
+          rarity: true,
+          image_url: true
+        }
       });
 
       return {
         ...userCard,
-        card: cardDetails
+        card: cardDetails ? {
+          ...cardDetails,
+          set_number: cardDetails.card_number, // Map for frontend compatibility
+          small_image_url: cardDetails.image_url
+        } : null
       };
     });
 

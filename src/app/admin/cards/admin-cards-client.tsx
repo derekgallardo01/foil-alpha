@@ -551,11 +551,16 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const setsResponse = await pokemonPriceTrackerAPI.getSets();
             if (setsResponse.success && setsResponse.data) {
                 const setsArray = Array.isArray(setsResponse.data) ? setsResponse.data : [];
+                console.log('Available sets from API:', setsArray.slice(0, 3)); // Log first 3 sets for debugging
+
                 setAvailableSets(setsArray.map((set: any) => ({
-                    id: set.id,
+                    id: set.id, // This should be the correct Pokemon Price Tracker set ID
                     name: set.name,
                     total: set.cardCount || 0,
-                    releaseDate: set.releaseDate || new Date().toISOString()
+                    releaseDate: set.releaseDate || new Date().toISOString(),
+                    // Add debug info
+                    tcgPlayerId: set.tcgPlayerId, // Alternative ID if available
+                    originalSet: set // Keep original for debugging
                 })));
             } else {
                 console.warn('Failed to load sets:', setsResponse.error);
@@ -576,6 +581,7 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
         }
     };
 
+    // Fix for the searchCards function in your admin-cards-client.tsx
     const searchCards = async (page = 1) => {
         try {
             setLoading(true);
@@ -589,12 +595,34 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 page: page
             };
 
-            if (searchTerm) searchParams.name = searchTerm;
+            // FIXED: Ensure at least one filter parameter is provided
+            let hasFilter = false;
+
+            if (searchTerm) {
+                searchParams.name = searchTerm;
+                hasFilter = true;
+            }
             if (selectedSet) {
                 const selectedSetObj = availableSets.find(set => set.name === selectedSet);
                 if (selectedSetObj) {
                     searchParams.setId = selectedSetObj.id;
+                    hasFilter = true;
                 }
+            }
+            if (selectedType) {
+                searchParams.cardType = selectedType;
+                hasFilter = true;
+            }
+            if (selectedRarity) {
+                searchParams.rarity = selectedRarity;
+                hasFilter = true;
+            }
+
+            // FIXED: If no filters provided, default to popular cards search
+            if (!hasFilter) {
+                console.log('No search filters provided, defaulting to popular cards');
+                searchParams.name = 'Pikachu'; // Default search to prevent 400 error
+                setSearchTerm('Pikachu'); // Update the UI to show what we're searching for
             }
 
             updateProgress(0.5, 'Fetching results from Pokemon Price Tracker API', 'searching');
@@ -615,7 +643,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                     } : null
                 });
 
-                // FIXED: Don't transform data - use raw V2 API response
                 const transformedCards = cardsArray.map((card: any) => ({
                     ...card // Use raw V2 API data
                 }));
@@ -730,7 +757,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             setImporting(false);
         }
     };
-
     const importEntireSet = async () => {
         if (!selectedSet) {
             setError('Please select a set to import');
@@ -750,55 +776,177 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const estimatedCards = selectedSetObj.total || 100;
             startProgress(estimatedCards, `Importing ${selectedSet} set...`);
 
-            console.log('Importing set:', selectedSetObj);
+            console.log('Starting set import for MySQL database:', {
+                setName: selectedSetObj.name,
+                setId: selectedSetObj.id,
+                estimatedCards: estimatedCards,
+                databaseType: 'MySQL'
+            });
 
-            // Get all cards from the set via Pokemon Price Tracker API
             let allSetCards: any[] = [];
+            let successMethod = '';
+
+            // Strategy 1: Direct set ID lookup
             try {
+                console.log(`Attempting direct set lookup with ID: ${selectedSetObj.id}`);
+                updateProgress(estimatedCards * 0.25, 'Fetching set data from Pokemon Price Tracker...', 'searching');
+
                 const setCardsResponse = await pokemonPriceTrackerAPI.getSetPricing(selectedSetObj.id);
-                if (setCardsResponse.success && setCardsResponse.data) {
-                    allSetCards = Array.isArray(setCardsResponse.data) ? setCardsResponse.data : [];
-                    console.log(`Retrieved ${allSetCards.length} cards from set ${selectedSet}`);
+
+                if (setCardsResponse.success && setCardsResponse.data && Array.isArray(setCardsResponse.data) && setCardsResponse.data.length > 0) {
+                    allSetCards = setCardsResponse.data;
+                    successMethod = `Direct set ID lookup: ${selectedSetObj.id}`;
+                    console.log(`SUCCESS: Found ${allSetCards.length} cards using direct set ID`);
                 } else {
-                    throw new Error(setCardsResponse.error || 'Failed to fetch set cards');
+                    console.log(`No cards found with direct set ID. Response:`, {
+                        success: setCardsResponse.success,
+                        dataLength: Array.isArray(setCardsResponse.data) ? setCardsResponse.data.length : 'not array',
+                        error: setCardsResponse.error
+                    });
                 }
-            } catch (apiError) {
-                console.error('Error fetching set cards:', apiError);
-                setError('Failed to fetch cards from the selected set');
-                updateProgress(estimatedCards, 'Set import failed', 'error');
-                return;
+            } catch (error) {
+                console.log(`Direct set lookup failed:`, error);
             }
 
+            // Strategy 2: Search by set name if direct lookup fails
             if (allSetCards.length === 0) {
-                setError('No cards found in the selected set');
-                updateProgress(estimatedCards, 'Set import failed', 'error');
+                try {
+                    console.log(`Trying set name search for: ${selectedSet}`);
+                    updateProgress(estimatedCards * 0.5, 'Searching by set name...', 'searching');
+
+                    const nameSearchResponse = await pokemonPriceTrackerAPI.searchCardPricing({
+                        setName: selectedSet,
+                        limit: 200
+                    });
+
+                    if (nameSearchResponse.success && nameSearchResponse.data && Array.isArray(nameSearchResponse.data) && nameSearchResponse.data.length > 0) {
+                        allSetCards = nameSearchResponse.data;
+                        successMethod = `Set name search: ${selectedSet}`;
+                        console.log(`SUCCESS: Found ${allSetCards.length} cards using set name search`);
+                    } else {
+                        console.log(`Set name search failed or returned no results:`, {
+                            success: nameSearchResponse.success,
+                            dataLength: Array.isArray(nameSearchResponse.data) ? nameSearchResponse.data.length : 'not array',
+                            error: nameSearchResponse.error
+                        });
+                    }
+                } catch (error) {
+                    console.log(`Set name search error:`, error);
+                }
+            }
+
+            // Strategy 3: Broad search with filtering if previous methods fail
+            if (allSetCards.length === 0) {
+                try {
+                    console.log(`Attempting broad search with filtering for: ${selectedSet}`);
+                    updateProgress(estimatedCards * 0.75, 'Trying broad search approach...', 'searching');
+
+                    // Try searching for common Pokemon names and filter by set
+                    const broadSearchResponse = await pokemonPriceTrackerAPI.searchCardPricing({
+                        name: 'Pikachu', // Search for a common card
+                        limit: 100
+                    });
+
+                    if (broadSearchResponse.success && broadSearchResponse.data && Array.isArray(broadSearchResponse.data)) {
+                        // Filter results to match our target set
+                        const filteredCards = broadSearchResponse.data.filter((card: any) => {
+                            if (!card.setName) return false;
+                            const cardSetName = card.setName.toLowerCase();
+                            const targetSetName = selectedSet.toLowerCase();
+                            return cardSetName.includes(targetSetName) || targetSetName.includes(cardSetName);
+                        });
+
+                        if (filteredCards.length > 0) {
+                            allSetCards = filteredCards;
+                            successMethod = `Broad search with filtering: ${selectedSet}`;
+                            console.log(`SUCCESS: Found ${allSetCards.length} cards using broad search + filtering`);
+                        } else {
+                            console.log(`Broad search returned ${broadSearchResponse.data.length} cards but none matched set "${selectedSet}"`);
+                        }
+                    } else {
+                        console.log(`Broad search failed:`, broadSearchResponse.error);
+                    }
+                } catch (error) {
+                    console.log(`Broad search error:`, error);
+                }
+            }
+
+            updateProgress(estimatedCards, 'Processing import results...', 'importing');
+
+            // If no cards found after all strategies
+            if (allSetCards.length === 0) {
+                const errorMessage = `No cards found for set "${selectedSet}".
+
+Attempted methods:
+1. Direct set ID lookup (${selectedSetObj.id})
+2. Set name search ("${selectedSet}")
+3. Broad search with filtering
+
+This could mean:
+• The set is not available in Pokemon Price Tracker's database
+• The set ID format is incorrect
+• The set name doesn't match exactly
+
+Please try:
+• Selecting a different set from the dropdown
+• Checking if the set name is spelled correctly
+• Verifying the set exists in Pokemon Price Tracker's database`;
+
+                setError(errorMessage);
+                updateProgress(estimatedCards, 'No cards found for import', 'error');
+                console.error('All import strategies failed for set:', selectedSet);
                 return;
             }
 
+            // Log what we found for MySQL database insertion
+            console.log('Cards ready for MySQL insertion:', {
+                count: allSetCards.length,
+                method: successMethod,
+                sampleCard: {
+                    name: allSetCards[0]?.name,
+                    setName: allSetCards[0]?.setName,
+                    cardNumber: allSetCards[0]?.cardNumber,
+                    hasImageUrl: !!allSetCards[0]?.imageUrl,
+                    hasPrice: !!allSetCards[0]?.prices?.market
+                },
+                mysqlFieldMapping: {
+                    price_tracker_id: allSetCards[0]?.id,
+                    tcg_player_id: allSetCards[0]?.tcgPlayerId,
+                    name: allSetCards[0]?.name,
+                    card_number: allSetCards[0]?.cardNumber,
+                    set_name: allSetCards[0]?.setName,
+                    image_url: allSetCards[0]?.imageUrl,
+                    market_price: allSetCards[0]?.prices?.market
+                }
+            });
+
+            // Progress animation
             let processed = 0;
             const progressInterval = setInterval(() => {
                 if (processed < allSetCards.length - 1) {
                     processed += Math.floor(Math.random() * 3) + 1;
                     processed = Math.min(processed, allSetCards.length - 1);
-                    updateProgress(processed, `Processing cards from ${selectedSet}...`, 'importing');
+                    updateProgress(processed, `Importing ${processed} of ${allSetCards.length} cards to MySQL...`, 'importing');
                 }
             }, 100);
 
-            // Call import API with the fetched card data
+            // Send to your MySQL-compatible import API
             const response = await fetch('/api/cards', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     cardsData: allSetCards,
                     source: 'pokemon_price_tracker',
-                    setImport: true
+                    setImport: true,
+                    databaseType: 'mysql',
+                    importMethod: successMethod
                 }),
             });
 
             clearInterval(progressInterval);
 
             const data = await response.json();
-            console.log('Set import API response:', data);
+            console.log('MySQL import API response:', data);
 
             if (data.success) {
                 const completed = data.results?.imported || 0;
@@ -806,8 +954,15 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 const skipped = data.results?.updated || 0;
 
                 updateStats(completed, failed, skipped);
-                updateProgress(allSetCards.length, 'Set import completed', 'completed');
+                updateProgress(allSetCards.length, 'MySQL import completed', 'completed');
                 completeProgress({ completed, failed, skipped });
+
+                console.log('Import completed for MySQL database:', {
+                    imported: completed,
+                    updated: skipped,
+                    errors: failed,
+                    method: successMethod
+                });
 
                 onImportComplete?.({
                     imported: completed,
@@ -821,13 +976,13 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                     resetProgress();
                 }, 2000);
             } else {
-                setError(data.error || 'Import failed');
-                updateProgress(estimatedCards, 'Set import failed', 'error');
+                setError(data.error || 'MySQL import failed');
+                updateProgress(estimatedCards, 'MySQL import failed', 'error');
             }
         } catch (error) {
-            console.error('Error importing set:', error);
-            setError('Failed to import set');
-            updateProgress(selectedSetObj.total || 100, 'Set import failed', 'error');
+            console.error('MySQL import error:', error);
+            setError(`MySQL import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            updateProgress(selectedSetObj.total || 100, 'MySQL import failed', 'error');
         } finally {
             setImporting(false);
         }

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
             }, { status: 500 });
         }
 
-        // V2 API BASE URL (as shown in your example)
+        // V2 API BASE URL
         const baseUrl = 'https://www.pokemonpricetracker.com/api/v2';
 
         let endpoint = '';
@@ -38,12 +38,43 @@ export async function POST(request: NextRequest) {
             case 'searchCardPricing':
                 endpoint = '/cards';
 
-                // V2 API parameters based on your example
+                // FIXED: Ensure at least one filter parameter is provided
+                let hasFilter = false;
+
                 if (params.name) {
                     queryParams.append('search', params.name);
+                    hasFilter = true;
                 }
                 if (params.setId) {
-                    queryParams.append('set', params.setId); // Note: 'set' not 'setId' in V2
+                    queryParams.append('set', params.setId);
+                    hasFilter = true;
+                }
+                if (params.rarity) {
+                    queryParams.append('rarity', params.rarity);
+                    hasFilter = true;
+                }
+                if (params.cardType) {
+                    queryParams.append('cardType', params.cardType);
+                    hasFilter = true;
+                }
+                if (params.artist) {
+                    queryParams.append('artist', params.artist);
+                    hasFilter = true;
+                }
+                if (params.minPrice) {
+                    queryParams.append('minPrice', params.minPrice.toString());
+                    hasFilter = true;
+                }
+                if (params.maxPrice) {
+                    queryParams.append('maxPrice', params.maxPrice.toString());
+                    hasFilter = true;
+                }
+
+                // FIXED: If no filters provided, add a default search to prevent 400 error
+                if (!hasFilter) {
+                    console.log('No filters provided, adding default search for popular cards');
+                    queryParams.append('search', 'Pikachu'); // Default to popular cards
+                    hasFilter = true;
                 }
 
                 // Limit cards to avoid expensive calls
@@ -61,7 +92,7 @@ export async function POST(request: NextRequest) {
             case 'getCardPricing':
                 endpoint = '/cards';
                 if (params.id) {
-                    queryParams.append('id', params.id);
+                    queryParams.append('tcgPlayerId', params.id);
                 } else if (params.tcgPlayerId) {
                     queryParams.append('tcgPlayerId', params.tcgPlayerId);
                 } else {
@@ -88,6 +119,7 @@ export async function POST(request: NextRequest) {
 
             case 'getSets':
                 endpoint = '/sets';
+                // Sets endpoint doesn't require filters
                 if (params.name) queryParams.append('name', params.name);
                 break;
 
@@ -111,7 +143,7 @@ export async function POST(request: NextRequest) {
                 const bulkResults = [];
                 for (const cardId of params.cardIds) {
                     try {
-                        const cardResponse = await fetch(`${baseUrl}/cards?id=${cardId}`, {
+                        const cardResponse = await fetch(`${baseUrl}/cards?tcgPlayerId=${cardId}`, {
                             headers: {
                                 'Authorization': `Bearer ${apiKey}`,
                                 'Content-Type': 'application/json',
@@ -236,7 +268,7 @@ export async function GET(request: NextRequest) {
             const apiKey = process.env.POKEMON_PRICE_TRACKER_API_KEY;
 
             // Test with a single card to see V2 structure
-            const response = await fetch('https://www.pokemonpricetracker.com/api/v2/cards?name=pikachu&limit=1', {
+            const response = await fetch('https://www.pokemonpricetracker.com/api/v2/cards?search=pikachu&limit=1', {
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
