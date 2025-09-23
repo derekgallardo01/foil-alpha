@@ -198,6 +198,7 @@ async function main() {
         const card = await prisma.card.create({
             data: {
                 ...cardData,
+                card_number: cardData.number,
                 last_updated: new Date(),
                 source: 'API',
                 sync_enabled: true,

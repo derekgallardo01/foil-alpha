@@ -1,23 +1,33 @@
-import { NextResponse } from "next/server";
-import { sendEmail } from '@/app/lib/email';
+import { NextRequest, NextResponse } from 'next/server';
+import { createNotification } from '../../../lib/notification';
 
-export async function GET(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const to = searchParams.get('to') || 'derekgallardo01@gmail.com';
-    const subject = searchParams.get('subject') || 'Test Email from TCG Market';
-    const body = searchParams.get('body') || '<h1>Test Email</h1><p>This is a test email sent from the TCG Market application using Gmail API.</p>';
+    // For testing, use a hardcoded user ID (replace with an actual user ID from your database)
+    const testUserId = 1; // Change this to a real user ID
 
-    const result = await sendEmail(to, subject, body);
+    const result = await createNotification({
+      user_id: testUserId,
+      type: 'SYSTEM_NOTIFICATION',
+      title: 'Email Test Notification',
+      message: 'This is a test to verify that email notifications are working correctly.',
+      data: {
+        test: true,
+        timestamp: new Date().toISOString(),
+        card_name: 'Test Card',
+        amount: 25.99
+      }
+    });
+
     return NextResponse.json({
       success: true,
-      message: "Email sent successfully",
-      data: result
+      notification: result,
+      message: 'Test email notification sent successfully'
     });
   } catch (error) {
-    console.error("Test email API error:", error);
+    console.error('Test email error:', error);
     return NextResponse.json(
-      { error: "Failed to send test email" },
+      { error: 'Failed to send test email', details: (error as Error).message },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
-// src/app/lib/notification.ts - Enhanced with seller name and card image data
+// src/app/lib/notification.ts - Enhanced with email notifications
 import { prisma } from './prisma';
+import { sendEmail } from './email';
 
 export interface CreateNotificationData {
     user_id: number;
@@ -7,6 +8,188 @@ export interface CreateNotificationData {
     title: string;
     message: string;
     data?: any;
+}
+
+// Admin email for notifications
+const ADMIN_EMAIL = 'derekgallardo01@gmail.com';
+
+// Get user email for notifications
+async function getUserEmail(userId: number): Promise<string | null> {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true }
+        });
+        return user?.email || null;
+    } catch (error) {
+        console.error('Error fetching user email:', error);
+        return null;
+    }
+}
+
+// Create email template for notifications
+function createEmailTemplate(notification: {
+    type: string;
+    title: string;
+    message: string;
+    data?: any;
+}): string {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${notification.title}</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0; margin: -20px -20px 20px -20px; }
+            .notification-type { background: #f8f9fa; padding: 10px; border-left: 4px solid #007bff; margin: 10px 0; border-radius: 4px; }
+            .card-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .price-change { font-weight: bold; color: #28a745; }
+            .price-decrease { color: #dc3545; }
+            .action-required { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px; }
+            .card-image { max-width: 100px; height: auto; border-radius: 8px; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>${notification.title}</h1>
+            </div>
+            
+            <div class="notification-type">
+                <strong>Type:</strong> ${notification.type.replace('_', ' ').toUpperCase()}
+            </div>
+            
+            <div class="message">
+                <p>${notification.message}</p>
+            </div>
+            
+            ${notification.data ? generateDataSection(notification.data, notification.type) : ''}
+            
+            <div class="footer">
+                <p>This is an automated notification from TCG Marketplace. Please do not reply to this email.</p>
+                <p>Visit your <a href="#">dashboard</a> to manage your notifications.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+}
+
+function generateDataSection(data: any, type: string): string {
+    let section = '';
+
+    if (data.card_name) {
+        section += `<div class="card-info">`;
+        section += `<h3>📱 ${data.card_name}</h3>`;
+        if (data.card_image) {
+            section += `<img src="${data.card_image}" alt="${data.card_name}" class="card-image">`;
+        }
+        section += `</div>`;
+    }
+
+    if (type === 'PRICE_CHANGE' || type === 'BULK_PRICE_CHANGE') {
+        if (data.old_price && data.new_price) {
+            const isIncrease = data.new_price > data.old_price;
+            section += `<div class="card-info">`;
+            section += `<p><strong>Price Change:</strong></p>`;
+            section += `<p>From: $${data.old_price}</p>`;
+            section += `<p>To: <span class="${isIncrease ? 'price-change' : 'price-decrease'}">$${data.new_price}</span></p>`;
+            if (data.change_percent) {
+                section += `<p>Change: ${data.change_percent > 0 ? '+' : ''}${data.change_percent.toFixed(1)}%</p>`;
+            }
+            section += `</div>`;
+        }
+    }
+
+    if (data.amount) {
+        section += `<div class="card-info"><p><strong>Amount:</strong> $${data.amount}</p></div>`;
+    }
+
+    if (data.action_required) {
+        section += `<div class="action-required">`;
+        section += `<p><strong>⚠️ Action Required</strong></p>`;
+        if (data.expires_at) {
+            section += `<p>Expires: ${new Date(data.expires_at).toLocaleString()}</p>`;
+        }
+        section += `</div>`;
+    }
+
+    if (data.seller_name || data.buyer_name || data.bidder_name) {
+        section += `<div class="card-info">`;
+        if (data.seller_name) section += `<p><strong>Seller:</strong> ${data.seller_name}</p>`;
+        if (data.buyer_name) section += `<p><strong>Buyer:</strong> ${data.buyer_name}</p>`;
+        if (data.bidder_name) section += `<p><strong>Bidder:</strong> ${data.bidder_name}</p>`;
+        section += `</div>`;
+    }
+
+    return section;
+}
+
+// Send email notification
+async function sendNotificationEmail(userId: number, notification: {
+    type: string;
+    title: string;
+    message: string;
+    data?: any;
+}) {
+    try {
+        const userEmail = await getUserEmail(userId);
+        if (!userEmail) {
+            console.log(`No email found for user ${userId}`);
+            return false;
+        }
+
+        const htmlContent = createEmailTemplate(notification);
+        const subject = `TCG Marketplace - ${notification.title}`;
+
+        const result = await sendEmail(userEmail, subject, htmlContent);
+        console.log(`Email sent successfully to ${userEmail}:`, result.id);
+        return true;
+    } catch (error) {
+        console.error('Error sending notification email:', error);
+        return false;
+    }
+}
+
+// Send admin notification email
+async function sendAdminNotificationEmail(notification: {
+    type: string;
+    title: string;
+    message: string;
+    data?: any;
+}, userId?: number) {
+    try {
+        const userData = userId ? await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, email: true }
+        }) : null;
+
+        const adminNotification = {
+            type: notification.type,
+            title: `[ADMIN] ${notification.title}`,
+            message: `Admin Alert: ${notification.message}${userData ? ` (User: ${userData.name} - ${userData.email})` : ''}`,
+            data: {
+                ...notification.data,
+                admin_notification: true,
+                user_info: userData
+            }
+        };
+
+        const htmlContent = createEmailTemplate(adminNotification);
+        const subject = `TCG Admin Alert - ${notification.title}`;
+
+        const result = await sendEmail(ADMIN_EMAIL, subject, htmlContent);
+        console.log(`Admin email sent successfully:`, result.id);
+        return true;
+    } catch (error) {
+        console.error('Error sending admin email:', error);
+        return false;
+    }
 }
 
 export async function createNotification(notificationData: CreateNotificationData) {
@@ -21,6 +204,26 @@ export async function createNotification(notificationData: CreateNotificationDat
                 read: false
             }
         });
+
+        // Send email notification
+        await sendNotificationEmail(notificationData.user_id, {
+            type: notificationData.type,
+            title: notificationData.title,
+            message: notificationData.message,
+            data: notificationData.data
+        });
+
+        // Send admin notification for important events
+        const adminNotificationTypes = ['BID_ACCEPTED', 'PURCHASE_CONFIRMED', 'SALE_COMPLETED', 'AUCTION_WON'];
+        if (adminNotificationTypes.includes(notificationData.type)) {
+            await sendAdminNotificationEmail({
+                type: notificationData.type,
+                title: notificationData.title,
+                message: notificationData.message,
+                data: notificationData.data
+            }, notificationData.user_id);
+        }
+
         return notification;
     } catch (error) {
         console.error('Error creating notification:', error);
@@ -90,7 +293,7 @@ export async function createBidAcceptedNotifications(
             if (!userCard) return null;
             return prisma.card.findUnique({
                 where: { id: userCard.card_id },
-                select: { image_url: true, small_image_url: true }
+                select: { image_url: true } // Fixed: removed small_image_url
             });
         })
     ]);
@@ -104,7 +307,7 @@ export async function createBidAcceptedNotifications(
             message: `Your bid of $${amount.toFixed(2)} for ${cardName} was accepted! You have 24 hours to confirm your purchase.`,
             data: {
                 card_name: cardName,
-                card_image: userCard?.small_image_url || userCard?.image_url,
+                card_image: userCard?.image_url, // Fixed: using only image_url
                 amount,
                 seller_name: seller?.name,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -139,7 +342,7 @@ export async function createAuctionWonNotifications(
             if (!userCard) return null;
             return prisma.card.findUnique({
                 where: { id: userCard.card_id },
-                select: { image_url: true, small_image_url: true }
+                select: { image_url: true } // Fixed: removed small_image_url
             });
         })
     ]);
@@ -153,7 +356,7 @@ export async function createAuctionWonNotifications(
             message: `Congratulations! You won the auction for ${cardName} with a bid of $${winningAmount.toFixed(2)}. You have 24 hours to confirm your purchase.`,
             data: {
                 card_name: cardName,
-                card_image: userCard?.small_image_url || userCard?.image_url,
+                card_image: userCard?.image_url, // Fixed: using only image_url
                 winning_amount: winningAmount,
                 seller_name: seller?.name,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
