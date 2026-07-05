@@ -24,7 +24,6 @@ import {
     Notifications as NotificationIcon,
     MarkEmailRead as MarkReadIcon,
     Delete as DeleteIcon,
-    Menu as MenuIcon,
     Refresh as RefreshIcon,
     CheckCircle as CheckIcon,
     Info as InfoIcon,
@@ -38,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
-import Sidebar from '../components/Sidebar';
+import AppShell from '../components/AppShell';
 import PendingPurchaseModal from '../components/PendingPurchaseModal';
 
 interface Notification {
@@ -65,7 +64,6 @@ interface PendingPurchase {
 export default function NotificationsPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -80,8 +78,6 @@ export default function NotificationsPage() {
         open: false,
         purchaseData: null
     });
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Fetch notifications
     const fetchNotifications = async () => {
@@ -361,14 +357,11 @@ export default function NotificationsPage() {
     const urgentNotifications = notifications.filter(n => isTimeSensitive(n) && !n.read);
 
     return (
-        <Container sx={{ marginTop: 4, marginBottom: 4 }}>
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+        <AppShell>
+            <Container sx={{ marginTop: 4, marginBottom: 4 }}>
 
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <IconButton onClick={toggleSidebar}>
-                    <MenuIcon />
-                </IconButton>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Badge badgeContent={unreadCount} color="error">
                         <NotificationIcon />
@@ -550,6 +543,7 @@ export default function NotificationsPage() {
                 purchaseData={pendingPurchaseModal.purchaseData}
                 onConfirmationComplete={handlePendingPurchaseComplete}
             />
-        </Container>
+            </Container>
+        </AppShell>
     );
 }

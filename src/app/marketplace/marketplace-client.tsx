@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
     Container,
     Typography,
@@ -34,7 +33,6 @@ import {
 } from '@mui/material';
 import {
     Search as SearchIcon,
-    Menu as MenuIcon,
     AccessTime as ClockIcon,
     AttachMoney as DollarIcon,
     Gavel as GavelIcon,
@@ -52,9 +50,8 @@ import {
     CurrencyExchange,
     Clear as ClearIcon,
 } from '@mui/icons-material';
-import Image from 'next/image';
 import { toast } from 'react-toastify';
-import Sidebar from '../components/Sidebar';
+import AppShell from '../components/AppShell';
 import BiddingModal from '../components/BiddingModal';
 import PriceChart from '../components/PriceChart';
 import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../components/PriceDisplay';
@@ -542,7 +539,6 @@ export default function MarketplacePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const { selectedCurrency, isUSDFallback } = useCurrencyContext();
-    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
     const [cards, setCards] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -586,8 +582,6 @@ export default function MarketplacePage() {
 
     // FIXED: Debounced search to prevent excessive API calls
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Fetch unread notifications count
     const fetchNotificationCount = async () => {
@@ -1006,17 +1000,10 @@ export default function MarketplacePage() {
     }
 
     return (
+        <AppShell>
         <Container sx={{ marginTop: 4, marginBottom: 4 }}>
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
             {/* Header with Currency Selector */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
-                <IconButton onClick={toggleSidebar}>
-                    <MenuIcon />
-                </IconButton>
-                <Link href="/dashboard">
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Logo" width={120} height={60} priority />
-                </Link>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', my: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     {/* Currency Selector - Only for non-admin users */}
                     {!isAdmin && (
@@ -1528,5 +1515,6 @@ export default function MarketplacePage() {
                 onPurchaseComplete={handlePurchaseComplete}
             />
         </Container>
+        </AppShell>
     );
 }

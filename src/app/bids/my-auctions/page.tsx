@@ -34,11 +34,10 @@ import {
     Person as PersonIcon,
     AttachMoney as MoneyIcon,
     Check as AcceptIcon,
-    Menu as MenuIcon,
     Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import Sidebar from '../../components/Sidebar';
+import AppShell from '../../components/AppShell';
 
 interface Card {
     id: number;
@@ -75,7 +74,6 @@ interface MyAuction {
 export default function MyAuctionsPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [auctions, setAuctions] = useState<MyAuction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -93,8 +91,6 @@ export default function MyAuctionsPage() {
         bidAmount: 0,
         bidderName: ''
     });
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     const fetchMyAuctions = async () => {
         try {
@@ -243,14 +239,11 @@ export default function MyAuctionsPage() {
     }
 
     return (
-        <Container sx={{ marginTop: 4, marginBottom: 4 }}>
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+        <AppShell>
+            <Container sx={{ marginTop: 4, marginBottom: 4 }}>
 
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
-                <IconButton onClick={toggleSidebar}>
-                    <MenuIcon />
-                </IconButton>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <GavelIcon />
                     My Auctions
@@ -588,6 +581,7 @@ export default function MyAuctionsPage() {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+            </Container>
+        </AppShell>
     );
 }

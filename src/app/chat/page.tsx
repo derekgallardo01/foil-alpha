@@ -8,12 +8,8 @@ import {
   Button,
   Typography,
   Container,
-  Grid,
-  IconButton,
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import Image from "next/image";
-import Sidebar from "../components/Sidebar";
+import AppShell from "../components/AppShell";
 
 // Define the Message interface
 interface Message {
@@ -30,10 +26,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -120,32 +113,9 @@ export default function ChatPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ bgcolor: "#121212", minHeight: "100vh" }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={3}>
-          <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-        </Grid>
-        <Grid item xs={12} md={9}>
-          <Box sx={{ p: 3 }}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                my: 3,
-              }}
-            >
-              <IconButton onClick={toggleSidebar} sx={{ color: "#fff" }}>
-                <MenuIcon />
-              </IconButton>
-              <Image
-                src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                alt="Logo"
-                width={60}
-                height={60}
-                style={{ objectFit: "contain" }}
-              />
-            </Box>
+    <AppShell>
+      <Container maxWidth="lg" sx={{ bgcolor: "#121212", minHeight: "100vh" }}>
+        <Box sx={{ p: 3 }}>
             <Typography variant="h4" sx={{ mb: 2, color: "#fff" }}>
               Foil Alpha Chat
             </Typography>
@@ -239,9 +209,8 @@ export default function ChatPage() {
             >
               {isSending ? "Sending..." : "Send"}
             </Button>
-          </Box>
-        </Grid>
-      </Grid>
-    </Container>
+        </Box>
+      </Container>
+    </AppShell>
   );
 }

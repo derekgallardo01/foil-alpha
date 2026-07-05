@@ -43,7 +43,6 @@ import {
     Person as PersonIcon,
     AttachMoney as MoneyIcon,
     Check as AcceptIcon,
-    Menu as MenuIcon,
     Refresh as RefreshIcon,
     TrendingUp as TrendingUpIcon,
     History as HistoryIcon,
@@ -52,7 +51,7 @@ import {
     Dashboard as DashboardIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import Sidebar from '../../components/Sidebar';
+import AppShell from '../../components/AppShell';
 
 interface Card {
     id: number;
@@ -115,7 +114,6 @@ interface SalesStats {
 export default function SellingDashboard() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [salesData, setSalesData] = useState<SalesData>({ activeSales: [], soldItems: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -142,8 +140,6 @@ export default function SellingDashboard() {
         bidAmount: 0,
         bidderName: ''
     });
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     const fetchSalesData = async () => {
         try {
@@ -314,14 +310,10 @@ export default function SellingDashboard() {
     }
 
     return (
+        <AppShell>
         <Container sx={{ marginTop: 4, marginBottom: 4 }}>
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
-                <IconButton onClick={toggleSidebar}>
-                    <MenuIcon />
-                </IconButton>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <SellIcon />
                     My Sales
@@ -893,5 +885,6 @@ export default function SellingDashboard() {
                 </DialogActions>
             </Dialog>
         </Container>
+        </AppShell>
     );
  }

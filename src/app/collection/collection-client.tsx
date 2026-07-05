@@ -4,7 +4,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
     Box,
     Container,
@@ -34,7 +33,6 @@ import {
     Divider
 } from "@mui/material";
 import {
-    Menu as MenuIcon,
     Sell,
     Gavel,
     AttachMoney,
@@ -51,10 +49,9 @@ import {
     Assessment,
     PriceCheck
 } from "@mui/icons-material";
-import Image from "next/image";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Sidebar from "../components/Sidebar"; // Import Sidebar
+import AppShell from "../components/AppShell";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
 import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
@@ -692,7 +689,6 @@ export default function CollectionPage() {
     const [bulkPriceUpdateOpen, setBulkPriceUpdateOpen] = useState(false);
     const [selectedCardsForUpdate, setSelectedCardsForUpdate] = useState<number[]>([]);
     const [collectionSortBy, setCollectionSortBy] = useState('newest');
-    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
     const [sellData, setSellData] = useState<SellDialogData>({
         userCardId: 0,
         cardName: '',
@@ -702,8 +698,6 @@ export default function CollectionPage() {
         auctionDays: '7'
     });
     const [actionLoading, setActionLoading] = useState(false);
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -983,18 +977,12 @@ export default function CollectionPage() {
     }
 
     return (
+        <AppShell>
         <Container sx={{ marginTop: 4, marginBottom: 4, paddingLeft: 0, paddingRight: 0 }}>
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
             <ToastContainer position="top-right" />
 
-            {/* Header with Menu Button and Logo */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
-                <IconButton onClick={toggleSidebar}>
-                    <MenuIcon sx={{ color: '#FFFFFF' }} />
-                </IconButton>
-                <Link href="/dashboard">
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={120} height={60} priority />
-                </Link>
+            {/* Header actions */}
+            <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", my: 3 }}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
                         variant="outlined"
@@ -1348,5 +1336,6 @@ export default function CollectionPage() {
                 onConfirmationComplete={handleConfirmationComplete}
             />
         </Container>
+        </AppShell>
     );
 }

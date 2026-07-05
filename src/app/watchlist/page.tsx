@@ -10,10 +10,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  IconButton,
 } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import MenuIcon from '@mui/icons-material/Menu';
 import { useTheme } from "@mui/material/styles";
 import he from "he";
 import axios from "axios";
@@ -30,7 +28,7 @@ import {
   Legend,
   TooltipItem,
 } from 'chart.js';
-import Sidebar from "../components/Sidebar"; // Import Sidebar component
+import AppShell from "../components/AppShell";
 
 // Register ChartJS components
 ChartJS.register(
@@ -69,10 +67,7 @@ const Watchlist = () => {
   const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // State for sidebar
   const theme = useTheme();
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen); // Toggle sidebar function
 
   const fetchData = async () => {
     try {
@@ -205,21 +200,8 @@ const Watchlist = () => {
   };
 
   return (
-    <Container sx={{ marginTop: 4, marginBottom: 4, paddingLeft: 0, paddingRight: 0 }}>
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-      {/* Top Bar with Menu Button and Logo */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
-        <IconButton onClick={toggleSidebar}>
-          <MenuIcon sx={{ color: '#FFFFFF' }} />
-        </IconButton>
-        <Image
-          src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-          alt="Logo"
-          width={120}
-          height={60}
-          style={{ height: "60px", width: "auto" }}
-        />
-      </Box>
+    <AppShell>
+      <Container sx={{ marginTop: 4, marginBottom: 4, paddingLeft: 0, paddingRight: 0 }}>
       <Box
         component="section"
         sx={{
@@ -500,7 +482,8 @@ const Watchlist = () => {
           </Typography>
         )}
       </Box>
-    </Container>
+      </Container>
+    </AppShell>
   );
 };
 

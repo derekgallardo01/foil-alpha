@@ -2,30 +2,20 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
     Box,
     Container,
     Typography,
     Button,
-    IconButton,
 } from "@mui/material";
-import {
-    Menu as MenuIcon,
-} from "@mui/icons-material";
-import Image from "next/image";
 import UserWallet from "../components/UserWallet";
-import Sidebar from "../components/Sidebar"; // Import Sidebar
+import AppShell from "../components/AppShell";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useState } from "react";
 
 export default function WalletPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // Add sidebar state
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen); // Add toggle function
 
     if (status === "loading") {
         return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>Loading...</Box>;
@@ -37,33 +27,11 @@ export default function WalletPage() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
+        <AppShell>
             <ToastContainer position="top-right" />
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
-            {/* Header with Menu Button and Logo */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <IconButton onClick={toggleSidebar}>
-                    <MenuIcon sx={{ color: '#FFFFFF' }} />
-                </IconButton>
-                <Link href="/dashboard">
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={120} height={60} priority />
-                </Link>
+            {/* Header */}
+            <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
                         variant="outlined"
@@ -139,6 +107,6 @@ export default function WalletPage() {
                     </Box>
                 </Box>
             </Container>
-        </Box>
+        </AppShell>
     );
 }
