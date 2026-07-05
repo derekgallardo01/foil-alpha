@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         try {
             const recentUpdates = await prisma.card.count({
                 where: {
-                    last_price_update: {
+                    price_last_updated: {
                         gte: new Date(Date.now() - 25 * 60 * 60 * 1000) // Last 25 hours
                     }
                 }
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
             const totalCards = await prisma.card.count({
                 where: {
-                    api_id: { not: null },
+                    tcg_player_id: { not: null },
                     sync_enabled: true
                 }
             });
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
                 const stats = await Promise.all([
                     // Card statistics
                     prisma.card.count(),
-                    prisma.card.count({ where: { api_id: { not: null } } }),
+                    prisma.card.count({ where: { tcg_player_id: { not: null } } }),
                     prisma.card.count({ where: { market_price: { not: null } } }),
 
                     // User statistics
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
                     // Recent activity
                     prisma.card.count({
                         where: {
-                            last_price_update: {
+                            price_last_updated: {
                                 gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
                             }
                         }
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
                     // Test sync with a small sample of cards
                     const sampleCards = await prisma.card.findMany({
                         where: {
-                            api_id: { not: null },
+                            tcg_player_id: { not: null },
                             sync_enabled: true
                         },
                         take: 5,

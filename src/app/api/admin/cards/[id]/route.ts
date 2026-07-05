@@ -206,14 +206,12 @@ export async function PUT(req: NextRequest) {
       data: {
         name: body.name,
         set_name: body.set_name,
-        set_number: body.set_number,
+        card_number: body.set_number,
         rarity: body.rarity,
         card_type: body.card_type,
-        subtype: body.subtype,
         hp: body.hp ?? null,
         image_url: body.image_url,
-        small_image_url: body.small_image_url,
-        tcg_id: body.tcg_id,
+        tcg_player_id: body.tcg_id,
       }
     });
 

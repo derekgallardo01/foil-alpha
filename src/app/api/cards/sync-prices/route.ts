@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
                 price_tracker_id: true,
                 market_price: true,
                 last_updated: true,
-                image_small: true,
+                image_url: true,
             },
             orderBy: [
                 { last_updated: 'asc' },
@@ -219,11 +219,11 @@ export async function POST(request: NextRequest) {
                         data: {
                             market_price: newMarketPrice,
                             last_updated: new Date(),
+                            price_last_updated: new Date(),
                             sync_errors: 0,
                             // Store pricing data in existing JSON fields
-                            tcgplayer_data: pricingResponse.data.prices?.tcgplayer || undefined,
-                            cardmarket_data: pricingResponse.data.prices?.cardmarket || undefined,
-                            ebay_data: pricingResponse.data.prices?.ebay || undefined,
+                            prices_data: (pricingResponse.data.prices as any) ?? undefined,
+                            ebay_data: (pricingResponse.data.ebay as any) ?? undefined,
                         }
                     });
 
@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
                                 old_price: oldPrice,
                                 new_price: newMarketPrice,
                                 sync_batch: true,
-                                pricing_sources: pricingResponse.data.prices || null
+                                pricing_sources: (pricingResponse.data.prices as any) || null
                             }
                         }
                     });

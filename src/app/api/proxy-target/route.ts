@@ -80,54 +80,17 @@ export async function GET(req: Request) {
     const productId = parseInt(tcin); // Use TCIN as product_id
     const now = new Date();
 
-    try {
-      // Debug: Log available Prisma models
-      console.log('Prisma models:', Object.keys(prisma));
-
-      // Ensure product exists
-      await prisma.product.upsert({
-        where: { tcin: tcin! }, // Use tcin as unique field; non-null assertion since tcin is checked
-        update: {
-          title: 'Pokémon Trading Card Game: Scarlet & Violet—Prismatic Evolutions Super-Premium Collection',
-          url: `https://www.target.com/p/A-${tcin}`,
-          stock_status: fulfillment.store_options?.[0]?.order_pickup?.availability_status || 'UNKNOWN',
-          retailer: 'Target',
-        },
-        create: {
-          product_id: productId,
-          tcin: tcin!,
-          title: 'Pokémon Trading Card Game: Scarlet & Violet—Prismatic Evolutions Super-Premium Collection',
-          url: `https://www.target.com/p/A-${tcin}`,
-          stock_status: fulfillment.store_options?.[0]?.order_pickup?.availability_status || 'UNKNOWN',
-          retailer: 'Target',
-        },
-      });
-
-      // Save stock check to pricehistory
-      await prisma.priceHistory.create({
-        data: {
-          product_id: productId,
-          retailer: 'Target',
-          price: 89.99, // Placeholder; update if Target API provides price
-          recorded_at: now,
-          stock_status: fulfillment.store_options?.[0]?.order_pickup?.availability_status || 'UNKNOWN',
-          store_quantity: fulfillment.store_options?.[0]?.location_available_to_promise_quantity || 0,
-          ship_quantity: fulfillment.shipping_options?.available_to_promise_quantity || 0,
-        },
-      });
-
-      console.log('Database: Stock data saved successfully', {
-        product_id: productId,
-        timestamp: now.toISOString(),
-      });
-    } catch (dbError) {
-      console.error('Database: Failed to save stock data', {
-        error: dbError instanceof Error ? dbError.message : 'Unknown error',
-        stack: dbError instanceof Error ? dbError.stack : undefined,
-        timestamp: new Date().toISOString(),
-      });
-      // Continue with response even if DB save fails
-    }
+    // NOTE: Target stock persistence is disabled. The `product` model and the
+    // retailer-style price history table this route was written against are not
+    // part of the current Prisma schema, so the fetched stock data is returned
+    // to the caller but not stored server-side.
+    console.log('Proxy: Target stock data (not persisted — no product/priceHistory model in schema)', {
+      product_id: productId,
+      stock_status: fulfillment.store_options?.[0]?.order_pickup?.availability_status || 'UNKNOWN',
+      store_quantity: fulfillment.store_options?.[0]?.location_available_to_promise_quantity || 0,
+      ship_quantity: fulfillment.shipping_options?.available_to_promise_quantity || 0,
+      timestamp: now.toISOString(),
+    });
 
     return NextResponse.json(data);
   } catch (error) {

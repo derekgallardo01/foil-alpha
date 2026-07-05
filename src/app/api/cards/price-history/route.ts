@@ -56,8 +56,7 @@ export async function GET(request: NextRequest) {
                 name: true,
                 set_name: true,
                 market_price: true,
-                price_trend: true,
-                last_price_update: true,
+                price_last_updated: true,
             }
         });
 
@@ -229,8 +228,8 @@ export async function GET(request: NextRequest) {
                     name: card.name,
                     set_name: card.set_name,
                     current_price: card.market_price ? parseFloat(card.market_price.toString()) : null,
-                    price_trend: card.price_trend,
-                    last_update: card.last_price_update,
+                    price_trend: null,
+                    last_update: card.price_last_updated,
                     user_resell_price: userCard ? (
                         userCard.sale_type === 'FIXED'
                             ? (userCard.fixed_price ? parseFloat(userCard.fixed_price.toString()) : null)

@@ -114,9 +114,24 @@ interface V2APIResponse<T> {
     };
 }
 
+// Raw response shape returned by the proxy: data may be a wrapped V2 payload,
+// a single item, or a bare array. Used internally by makeProxyRequest.
+interface RawAPIResponse<T> {
+    success: boolean;
+    data?: V2APIResponse<T> | T | T[];
+    error?: string;
+    message?: string;
+    rate_limit?: {
+        remaining: number;
+        reset_at: string;
+    };
+}
+
+// Clean public response: the API methods always unwrap to a plain T
+// (either a single item or an array), so consumers never see the union.
 interface APIResponse<T> {
     success: boolean;
-    data?: V2APIResponse<T> | T;
+    data?: T;
     error?: string;
     message?: string;
     rate_limit?: {
@@ -131,7 +146,7 @@ class PokemonPriceTrackerAPI {
     private async makeProxyRequest<T>(
         action: string,
         params: Record<string, any> = {}
-    ): Promise<APIResponse<T>> {
+    ): Promise<RawAPIResponse<T>> {
         try {
             console.log(`Making V2 proxy request - Action: ${action}`, params);
 
@@ -363,6 +378,18 @@ class PokemonPriceTrackerAPI {
     // Get PSA 10 price specifically
     static getPSA10Price(card: PokemonPriceTrackerCardV2): number | null {
         return card.ebay?.salesByGrade?.PSA10?.averagePrice || null;
+    }
+
+    // Summarize the pricing sources available for a card (market + graded eBay)
+    static getPricingSummary(card: PokemonPriceTrackerCardV2): {
+        sources: Record<string, number | null>;
+    } {
+        return {
+            sources: {
+                market: card.prices?.market ?? null,
+                psa10: card.ebay?.salesByGrade?.PSA10?.averagePrice ?? null,
+            },
+        };
     }
 
     // Get card image URL from V2 API
