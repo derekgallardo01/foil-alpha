@@ -331,6 +331,9 @@ import NextAuth, { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import DiscordProvider, { DiscordProfile } from 'next-auth/providers/discord';
 import GoogleProvider from 'next-auth/providers/google';
+import FacebookProvider from 'next-auth/providers/facebook';
+import TwitterProvider from 'next-auth/providers/twitter';
+import AppleProvider from 'next-auth/providers/apple';
 import bcrypt from 'bcryptjs';
 import { getDbConnection } from '../../../lib/db';
 import { sendEmail } from '../../../lib/email';
@@ -356,6 +359,66 @@ interface User {
   google_scopes?: string | null;
   verification_code?: string | null;
   last_login_at?: Date | null;
+}
+
+// OAuth providers are registered only when their credentials are present, so
+// an unconfigured provider never appears in the UI (getProviders reflects this)
+// and can't break sign-in. Add the matching *_CLIENT_ID / *_CLIENT_SECRET env
+// vars to enable each one.
+const oauthProviders: AuthOptions['providers'] = [];
+
+if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
+  oauthProviders.push(
+    DiscordProvider({
+      clientId: process.env.DISCORD_CLIENT_ID,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET,
+      authorization: { params: { scope: 'identify email', access_type: 'offline' } },
+      token: 'https://discord.com/api/oauth2/token',
+    })
+  );
+}
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  oauthProviders.push(
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: { params: { scope: 'profile email', access_type: 'offline', prompt: 'consent' } },
+    })
+  );
+}
+
+if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
+  oauthProviders.push(
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+    })
+  );
+}
+
+// X (Twitter) OAuth 2.0. Note: X only returns an email when the app has the
+// "Request email from users" permission enabled; without it the signIn callback
+// bounces to /login?error=OAuthNoEmail.
+if (process.env.TWITTER_CLIENT_ID && process.env.TWITTER_CLIENT_SECRET) {
+  oauthProviders.push(
+    TwitterProvider({
+      clientId: process.env.TWITTER_CLIENT_ID,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET,
+      version: '2.0',
+    })
+  );
+}
+
+// Apple's clientSecret must be the signed JWT generated from your Apple key
+// (.p8), not a static secret; it also expires and must be regenerated.
+if (process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET) {
+  oauthProviders.push(
+    AppleProvider({
+      clientId: process.env.APPLE_CLIENT_ID,
+      clientSecret: process.env.APPLE_CLIENT_SECRET,
+    })
+  );
 }
 
 export const authOptions: AuthOptions = {
@@ -440,17 +503,7 @@ export const authOptions: AuthOptions = {
         }
       },
     }),
-    DiscordProvider({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-      authorization: { params: { scope: 'identify email', access_type: 'offline' } },
-      token: 'https://discord.com/api/oauth2/token',
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: { params: { scope: 'profile email', access_type: 'offline', prompt: 'consent' } },
-    }),
+    ...oauthProviders,
   ],
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -623,6 +676,48 @@ export const authOptions: AuthOptions = {
             console.log('Updated Google tokens, scopes, and last login for:', user.email);
           }
           if (!account.refresh_token) console.warn('No refresh_token received from Google for:', user.email);
+        } else if (
+          account &&
+          (account.provider === 'facebook' ||
+            account.provider === 'twitter' ||
+            account.provider === 'apple')
+        ) {
+          // Facebook / X / Apple. These providers verify the user's email on
+          // their side, so we trust it and mark the account verified instead of
+          // running the email-code flow used for Discord/Google.
+          if (!user.email) {
+            console.error(`No email returned by ${account.provider}; cannot complete sign-in.`);
+            return `/login?error=OAuthNoEmail`;
+          }
+
+          const [rows]: [RowDataPacket[], unknown] = await pool.execute(
+            'SELECT id, name, email, role, subscriptionStatus, is_verified FROM users WHERE email = ?',
+            [user.email]
+          );
+
+          if (rows.length === 0) {
+            const displayName =
+              user.name || (profile as { name?: string })?.name || `${account.provider} user`;
+            const [result]: [ResultSetHeader, unknown] = await pool.execute(
+              'INSERT INTO users (email, name, password, role, subscriptionStatus, last_login_at, is_verified) VALUES (?, ?, ?, ?, ?, NOW(), ?)',
+              [user.email, displayName, `${account.provider}-user`, 'user', 'inactive', 1]
+            );
+            user.id = result.insertId.toString();
+            user.role = 'user';
+            user.subscriptionStatus = 'inactive';
+            user.isVerified = true;
+            console.log(`Registered new ${account.provider} user:`, user.email);
+          } else {
+            user.id = rows[0].id.toString();
+            user.name = rows[0].name;
+            user.role = rows[0].role;
+            user.subscriptionStatus = rows[0].subscriptionStatus;
+            user.isVerified = !!rows[0].is_verified;
+            await pool.execute('UPDATE users SET last_login_at = NOW() WHERE email = ?', [
+              user.email,
+            ]);
+            console.log(`Updated last login for ${account.provider} user:`, user.email);
+          }
         }
 
         const [userRows]: [RowDataPacket[], unknown] = await pool.execute(

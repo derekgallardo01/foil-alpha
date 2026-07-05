@@ -27,6 +27,7 @@ import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
+import SocialLogins from "../components/SocialLogins";
 
 // DEV MODE: Available test users
 const DEV_USERS = [
@@ -392,6 +393,8 @@ export default function LoginClient() {
                       </Button>
                     </motion.div>
                   </form>
+
+                  <SocialLogins callbackUrl="/dashboard" />
 
                   <motion.div variants={itemVariants}>
                     <Typography variant="body2" sx={{ mt: 2, textAlign: "center", color: "text.secondary" }}>
