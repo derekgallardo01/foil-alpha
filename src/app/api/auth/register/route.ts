@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       console.log("🚀 DEV MODE: Using mock email service");
       const htmlContent = `
         <h2>Email Verification</h2>
-        <p>Welcome to TCG Market! Please verify your email address.</p>
+        <p>Welcome to Foil Alpha! Please verify your email address.</p>
         <p>Your verification code is: <strong>${verificationCode}</strong></p>
         <p>Enter this code on the verification page to activate your account.</p>
       `;
@@ -75,11 +75,11 @@ export async function POST(req: Request) {
       try {
         const htmlContent = `
           <h2>Email Verification</h2>
-          <p>Welcome to TCG Market! Please verify your email address.</p>
+          <p>Welcome to Foil Alpha! Please verify your email address.</p>
           <p>Your verification code is: <strong>${verificationCode}</strong></p>
           <p>Enter this code on the verification page to activate your account.</p>
         `;
-        await sendEmail(email, "Verify Your TCG Market Account", htmlContent);
+        await sendEmail(email, "Verify Your Foil Alpha Account", htmlContent);
       } catch (emailError) {
         console.error("Email sending failed:", emailError);
         // Continue with registration even if email fails

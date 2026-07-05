@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     const htmlContent = `
       <h2>Password Reset Request</h2>
-      <p>You requested a password reset for your TCG Market account.</p>
+      <p>You requested a password reset for your Foil Alpha account.</p>
       <p><a href="${resetLink}" style="color: #96ff9b;">Click here to reset your password</a></p>
       <p>If you didn’t request this, please ignore this email.</p>
     `;

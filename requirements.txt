@@ -1,4 +1,4 @@
-# Python dependencies for TCG Market scraping functionality
+# Python dependencies for Foil Alpha scraping functionality
 # Install with: pip install -r requirements.txt
 
 # Web Scraping Core

@@ -2,7 +2,7 @@
 import AdminCardsClient from "./admin-cards-client";
 
 export const metadata = {
-    title: "Admin - Cards - TCG Market",
+    title: "Admin - Cards - Foil Alpha",
 };
 
 export default function AdminCardsPage() {

@@ -16,7 +16,7 @@ const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
 export async function sendEmail(to: string, subject: string, htmlContent: string) {
   try {
-    const emailContent = `From: "TCG Market" <derekgallardo01@gmail.com>
+    const emailContent = `From: "Foil Alpha" <derekgallardo01@gmail.com>
 To: ${to}
 Subject: ${subject}
 MIME-Version: 1.0

@@ -15,7 +15,7 @@ import decimal
 from urllib.parse import urlparse
 from webdriver_manager.chrome import ChromeDriverManager
 
-load_dotenv('/var/www/my-next-app/.env.local')
+load_dotenv('/var/www/foil-alpha/.env.local')
 
 db_config = {
     'host': os.getenv('MYSQL_HOST'),
@@ -159,7 +159,7 @@ def scrape_url(url):
             sys.stderr.write(f"Failed to find stock status for {url}: {str(e)}\n")
             stockStatus = "Stock status not found"
 
-        screenshot_path = f"/var/www/my-next-app/screenshots/screenshot_{uuid.uuid4().hex[:8]}.png"
+        screenshot_path = f"/var/www/foil-alpha/screenshots/screenshot_{uuid.uuid4().hex[:8]}.png"
         try:
             os.makedirs(os.path.dirname(screenshot_path), exist_ok=True)
             driver.save_screenshot(screenshot_path)

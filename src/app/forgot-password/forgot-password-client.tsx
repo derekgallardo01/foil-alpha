@@ -163,7 +163,7 @@ export default function ForgotPasswordClient() {
             <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)" }}>
               <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                  <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market Logo" width={200} height={100} priority />
+                  <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} priority />
                 </motion.div>
               </Box>
               <Box sx={{ width: "100%" }}>

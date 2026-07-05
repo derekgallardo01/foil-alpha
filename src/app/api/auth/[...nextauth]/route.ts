@@ -136,11 +136,11 @@
 
 //             const htmlContent = `
 //               <h2>Email Verification</h2>
-//               <p>Welcome to TCG Market! Please verify your email address.</p>
+//               <p>Welcome to Foil Alpha! Please verify your email address.</p>
 //               <p>Your verification code is: <strong>${verificationCode}</strong></p>
 //               <p>Enter this code on the verification page to activate your account.</p>
 //             `;
-//             await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+//             await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
 //           } else {
 //             const dbUser: User = {
 //               id: rows[0].id,
@@ -167,11 +167,11 @@
 //                 );
 //                 const htmlContent = `
 //                   <h2>Email Verification</h2>
-//                   <p>Please verify your email address to activate your TCG Market account.</p>
+//                   <p>Please verify your email address to activate your Foil Alpha account.</p>
 //                   <p>Your verification code is: <strong>${verificationCode}</strong></p>
 //                   <p>Enter this code on the verification page.</p>
 //                 `;
-//                 await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+//                 await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
 //               }
 //               return `/verify-email?email=${encodeURIComponent(user.email!)}`;
 //             }
@@ -216,11 +216,11 @@
 
 //             const htmlContent = `
 //               <h2>Email Verification</h2>
-//               <p>Welcome to TCG Market! Please verify your email address.</p>
+//               <p>Welcome to Foil Alpha! Please verify your email address.</p>
 //               <p>Your verification code is: <strong>${verificationCode}</strong></p>
 //               <p>Enter this code on the verification page to activate your account.</p>
 //             `;
-//             await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+//             await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
 //           } else {
 //             const dbUser: User = {
 //               id: rows[0].id,
@@ -247,11 +247,11 @@
 //                 );
 //                 const htmlContent = `
 //                   <h2>Email Verification</h2>
-//                   <p>Please verify your email address to activate your TCG Market account.</p>
+//                   <p>Please verify your email address to activate your Foil Alpha account.</p>
 //                   <p>Your verification code is: <strong>${verificationCode}</strong></p>
 //                   <p>Enter this code on the verification page.</p>
 //                 `;
-//                 await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+//                 await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
 //               }
 //               return `/verify-email?email=${encodeURIComponent(user.email!)}`;
 //             }
@@ -496,11 +496,11 @@ export const authOptions: AuthOptions = {
 
             const htmlContent = `
               <h2>Email Verification</h2>
-              <p>Welcome to TCG Market! Please verify your email address.</p>
+              <p>Welcome to Foil Alpha! Please verify your email address.</p>
               <p>Your verification code is: <strong>${verificationCode}</strong></p>
               <p>Enter this code on the verification page to activate your account.</p>
             `;
-            await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+            await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
           } else {
             const dbUser: User = {
               id: rows[0].id,
@@ -527,11 +527,11 @@ export const authOptions: AuthOptions = {
                 );
                 const htmlContent = `
                   <h2>Email Verification</h2>
-                  <p>Please verify your email address to activate your TCG Market account.</p>
+                  <p>Please verify your email address to activate your Foil Alpha account.</p>
                   <p>Your verification code is: <strong>${verificationCode}</strong></p>
                   <p>Enter this code on the verification page.</p>
                 `;
-                await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+                await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
               }
               return `/verify-email?email=${encodeURIComponent(user.email!)}`;
             }
@@ -576,11 +576,11 @@ export const authOptions: AuthOptions = {
 
             const htmlContent = `
               <h2>Email Verification</h2>
-              <p>Welcome to TCG Market! Please verify your email address.</p>
+              <p>Welcome to Foil Alpha! Please verify your email address.</p>
               <p>Your verification code is: <strong>${verificationCode}</strong></p>
               <p>Enter this code on the verification page to activate your account.</p>
             `;
-            await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+            await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
           } else {
             const dbUser: User = {
               id: rows[0].id,
@@ -607,11 +607,11 @@ export const authOptions: AuthOptions = {
                 );
                 const htmlContent = `
                   <h2>Email Verification</h2>
-                  <p>Please verify your email address to activate your TCG Market account.</p>
+                  <p>Please verify your email address to activate your Foil Alpha account.</p>
                   <p>Your verification code is: <strong>${verificationCode}</strong></p>
                   <p>Enter this code on the verification page.</p>
                 `;
-                await sendEmail(user.email!, 'Verify Your TCG Market Account', htmlContent);
+                await sendEmail(user.email!, 'Verify Your Foil Alpha Account', htmlContent);
               }
               return `/verify-email?email=${encodeURIComponent(user.email!)}`;
             }

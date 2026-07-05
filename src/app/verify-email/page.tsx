@@ -2,7 +2,7 @@
 import VerifyEmailClient from "./verify-email-client";
 
 export const metadata = {
-  title: "Verify Email - TCG Market",
+  title: "Verify Email - Foil Alpha",
 };
 
 export default function VerifyEmailPage() {

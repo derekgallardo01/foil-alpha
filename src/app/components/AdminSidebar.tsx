@@ -361,7 +361,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Image
                         src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                        alt="TCG Market"
+                        alt="Foil Alpha"
                         width={40}
                         height={20}
                     />

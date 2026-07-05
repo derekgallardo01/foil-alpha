@@ -158,12 +158,12 @@ export default function WaitlistPage() {
           email: formData.email,
           phone_number: formData.phone_number || undefined,
           emailData: {
-            subject: "Welcome to TCG Market! Your Waitlist Confirmation",
+            subject: "Welcome to Foil Alpha! Your Waitlist Confirmation",
             body: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <div style="text-align: center; margin-bottom: 20px;">
                   <img src="https://iili.io/FHEvIbS.png" 
-                       alt="TCG Market Logo" 
+                       alt="Foil Alpha Logo" 
                        style="width: 200px; height: 100px;" />
                 </div>
                 <p style="color:rgb(0, 0, 0); margin-bottom: 20px;">
@@ -182,7 +182,7 @@ export default function WaitlistPage() {
                   We’ll keep you updated on our progress and notify you when your access is ready.<br><br>
                   
                   Best regards,<br>
-                  The TCG Market Team
+                  The Foil Alpha Team
                 </p>
               </div>
             `,
@@ -304,7 +304,7 @@ export default function WaitlistPage() {
                   >
                     <Image
                       src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                      alt="TCG Market Logo"
+                      alt="Foil Alpha Logo"
                       width={200}
                       height={100}
                       priority
@@ -1043,7 +1043,7 @@ export default function WaitlistPage() {
         {/* Footer Section */}
         <Box sx={{ textAlign: "center", py: 2, bgcolor: "grey.800", width: "100%", mt: "auto" }}>
           <Typography variant="body2" sx={{ color: "grey.400" }}>
-            2025 TCG Market. All rights reserved.{" "}
+            2025 Foil Alpha. All rights reserved.{" "}
             <Link
               href="/privacy"
               sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}

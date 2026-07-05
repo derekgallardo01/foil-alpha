@@ -58,13 +58,13 @@ async function testEmail(oAuth2Client) {
     console.log(`[${timestamp}] Sending test email...`);
     const message = [
       `To: derekgallardo01@gmail.com`,
-      `Subject: Test Email from TCG Market`,
+      `Subject: Test Email from Foil Alpha`,
       "MIME-Version: 1.0",
       'Content-Type: text/html; charset="UTF-8"',
       "Content-Transfer-Encoding: base64",
       "",
       Buffer.from(
-        `<h1>Test Email</h1><p>This is a test email sent from the TCG Market application using Gmail API.</p>`
+        `<h1>Test Email</h1><p>This is a test email sent from the Foil Alpha application using Gmail API.</p>`
       ).toString("base64"),
     ].join("\n");
 

@@ -266,7 +266,7 @@ async function main() {
             data: {
                 user_id: user.id,
                 type: 'welcome',
-                title: 'Welcome to TCG Market!',
+                title: 'Welcome to Foil Alpha!',
                 message: 'Your account has been created successfully. Start trading Pokemon cards with real market prices!',
                 data: {
                     welcome: true,

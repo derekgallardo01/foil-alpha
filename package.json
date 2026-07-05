@@ -1,5 +1,5 @@
 {
-  "name": "my-next-app",
+  "name": "foil-alpha",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "NODE_ENV=production next start",
     "lint": "next lint",
-    "deploy": "npm run build && pm2 reload tcgmarket",
+    "deploy": "npm run build && pm2 reload foil-alpha",
     "typecheck": "tsc --noEmit",
     "seed": "node seed.cjs",
     "start-cron": "node scripts/setup-cron.js",

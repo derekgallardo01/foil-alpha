@@ -66,7 +66,7 @@ const dailyPriceUpdateJob = cron.schedule('0 0 * * *', async () => {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${CRON_SECRET}`,
-                'User-Agent': 'TCG-Marketplace-Cron/1.0'
+                'User-Agent': 'FoilAlpha-Cron/1.0'
             },
         });
 
@@ -152,7 +152,7 @@ const weeklyCleanupJob = cron.schedule('0 2 * * 0', async () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'TCG-Marketplace-Cron/1.0'
+                'User-Agent': 'FoilAlpha-Cron/1.0'
             },
             body: JSON.stringify({ action: 'cleanup_old_prices' })
         });
@@ -182,7 +182,7 @@ if (process.env.NODE_ENV === 'development' || process.argv.includes('--test')) {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${CRON_SECRET}`,
-                    'User-Agent': 'TCG-Marketplace-Cron-Test/1.0'
+                    'User-Agent': 'FoilAlpha-Cron-Test/1.0'
                 },
             });
 

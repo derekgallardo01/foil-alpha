@@ -7,15 +7,22 @@ import twilio from "twilio";
 
 const prisma = new PrismaClient();
 
+const mailchimpApiKey = process.env.MAILCHIMP_API_KEY || "";
 mailchimp.setConfig({
-  apiKey: process.env.MAILCHIMP_API_KEY!,
-  server: process.env.MAILCHIMP_API_KEY!.split("-")[1],
+  apiKey: mailchimpApiKey,
+  server: mailchimpApiKey.split("-")[1] || "us1",
 });
 
 // Initialize Twilio client
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-const googleSheets = new GoogleSheets();
+let googleSheetsInstance: GoogleSheets | null = null;
+function getGoogleSheets(): GoogleSheets {
+  if (!googleSheetsInstance) {
+    googleSheetsInstance = new GoogleSheets();
+  }
+  return googleSheetsInstance;
+}
 
 interface EmailData {
   subject: string;
@@ -193,7 +200,7 @@ export async function POST(request: Request) {
 
         try {
           console.log(`[${timestamp}] Updating Google Sheets entry for email=${signupEmail}`);
-          await googleSheets.updateEntry({
+          await getGoogleSheets().updateEntry({
             id: Number(existingWaitlist.id),
             email: signupEmail,
             name,
@@ -236,7 +243,7 @@ export async function POST(request: Request) {
           try {
             console.log(`[${timestamp}] Sending SMS to ${phone_number}`);
             await twilioClient.messages.create({
-              body: `Hi ${name}, thanks for joining the TCG Market waitlist! Stay tuned for updates on our June 2026 launch. - TCG Market Team`,
+              body: `Hi ${name}, thanks for joining the Foil Alpha waitlist! Stay tuned for updates on our June 2026 launch. - Foil Alpha Team`,
               from: process.env.TWILIO_PHONE_NUMBER!,
               to: phone_number,
             });
@@ -310,7 +317,7 @@ export async function POST(request: Request) {
           try {
             console.log(`[${timestamp}] Sending SMS to ${phone_number}`);
             await twilioClient.messages.create({
-              body: `Hi ${name}, thanks for joining the TCG Market waitlist! Stay tuned for updates on our June 2026 launch. - TCG Market Team`,
+              body: `Hi ${name}, thanks for joining the Foil Alpha waitlist! Stay tuned for updates on our June 2026 launch. - Foil Alpha Team`,
               from: process.env.TWILIO_PHONE_NUMBER!,
               to: phone_number,
             });
@@ -367,7 +374,7 @@ export async function POST(request: Request) {
             <p><strong>Status:</strong> New Signup</p>
           `;
           console.log(`[${timestamp}] Sending email to derekgallardo01@gmail.com`);
-          await sendEmail("derekgallardo01@gmail.com", "New TCG Market Waitlist Signup", emailContent);
+          await sendEmail("derekgallardo01@gmail.com", "New Foil Alpha Waitlist Signup", emailContent);
           console.log(`[${timestamp}] Email notification sent successfully`);
         } catch (emailError) {
           console.error(`[${timestamp}] Failed to send email notification:`, {
@@ -379,7 +386,7 @@ export async function POST(request: Request) {
         }
 
         try {
-          await googleSheets.addEntry({
+          await getGoogleSheets().addEntry({
             id: Number(waitlistEntry.id),
             email: signupEmail,
             name,

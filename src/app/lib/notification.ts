@@ -71,7 +71,7 @@ function createEmailTemplate(notification: {
             ${notification.data ? generateDataSection(notification.data, notification.type) : ''}
             
             <div class="footer">
-                <p>This is an automated notification from TCG Marketplace. Please do not reply to this email.</p>
+                <p>This is an automated notification from Foil Alpha. Please do not reply to this email.</p>
                 <p>Visit your <a href="#">dashboard</a> to manage your notifications.</p>
             </div>
         </div>
@@ -145,7 +145,7 @@ async function sendNotificationEmail(userId: number, notification: {
         }
 
         const htmlContent = createEmailTemplate(notification);
-        const subject = `TCG Marketplace - ${notification.title}`;
+        const subject = `Foil Alpha - ${notification.title}`;
 
         const result = await sendEmail(userEmail, subject, htmlContent);
         console.log(`Email sent successfully to ${userEmail}:`, result.id);

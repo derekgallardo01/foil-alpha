@@ -14,7 +14,7 @@ async function testEmail() {
     });
 
     const to = 'derekgallardo01@gmail.com';
-    const subject = 'Test Email from TCG Market (email.ts)';
+    const subject = 'Test Email from Foil Alpha (email.ts)';
     const content = `
       <h1>Test Email from email.ts Module</h1>
       <p>This is a test email sent using the email.ts module.</p>

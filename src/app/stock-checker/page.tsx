@@ -192,7 +192,7 @@ export default function StockChecker() {
                   >
                     <Image
                       src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                      alt="TCG Market Logo"
+                      alt="Foil Alpha Logo"
                       width={200}
                       height={100}
                       priority
@@ -330,7 +330,7 @@ export default function StockChecker() {
 
         <Box sx={{ textAlign: 'center', py: 2, bgcolor: 'grey.800', width: '100%', mt: 'auto' }}>
           <Typography variant="body2" sx={{ color: 'grey.400' }}>
-            2025 TCG Market. All rights reserved.{' '}
+            2025 Foil Alpha. All rights reserved.{' '}
             <Link
               href="/privacy"
               sx={{ color: '#96FF9B', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}

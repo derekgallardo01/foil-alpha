@@ -147,7 +147,7 @@ export default function ChatPage() {
               />
             </Box>
             <Typography variant="h4" sx={{ mb: 2, color: "#fff" }}>
-              TCG Market Chat
+              Foil Alpha Chat
             </Typography>
             {status === "loading" && (
               <Typography sx={{ color: "#b0b0b0" }}>Loading...</Typography>

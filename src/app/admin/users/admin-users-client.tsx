@@ -598,7 +598,7 @@ export default function AdminUsersClient() {
           >
             <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market Logo" width={200} height={100} />
+                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} />
               </motion.div>
             </Box>
             <Typography variant="h4" sx={{ mb: 3, textAlign: "center", color: "text.primary" }}>

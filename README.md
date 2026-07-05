@@ -1,4 +1,4 @@
-# TCG Market - Pokemon Card Auction Platform
+# Foil Alpha - Pokemon Card Auction Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-13.4.12-000000?logo=next.js)](https://nextjs.org/)
@@ -6,7 +6,7 @@
 [![Prisma](https://img.shields.io/badge/Prisma-6.10.1-2D3748?logo=prisma)](https://www.prisma.io/)
 [![Node.js](https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js)](https://nodejs.org/)
 
-A comprehensive Pokemon TCG marketplace and auction platform built with Next.js 13+, TypeScript, and modern technologies. This platform provides tools for buying, selling, and auctioning Pokemon cards with real-time market data integration and secure transactions.
+A comprehensive Pokémon card marketplace and auction platform built with Next.js 13+, TypeScript, and modern technologies. This platform provides tools for buying, selling, and auctioning Pokémon cards with real-time market data integration and secure transactions.
 
 > **Last Updated**: June 28, 2025
 
@@ -91,8 +91,8 @@ A comprehensive Pokemon TCG marketplace and auction platform built with Next.js 
 
 #### 1. Clone and Install Node Dependencies
 ```bash
-git clone https://github.com/derekgallardo01/tcg-market.git
-cd tcg-market
+git clone https://github.com/derekgallardo01/foil-alpha.git
+cd foil-alpha
 npm install
 ```
 
@@ -106,16 +106,16 @@ pip install -r requirements.txt
 **Create MySQL Database:**
 ```sql
 -- In MySQL Workbench or command line
-CREATE DATABASE tcg_market;  -- or use existing visitordb
+CREATE DATABASE foilalpha;  -- or use existing visitordb
 CREATE USER 'dev'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON tcg_market.* TO 'dev'@'localhost';
+GRANT ALL PRIVILEGES ON foilalpha.* TO 'dev'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
 **Set Environment Variables:**
 ```bash
 # Create .env file in project root
-DATABASE_URL="mysql://dev:your_password@localhost:3306/tcg_market"
+DATABASE_URL="mysql://dev:your_password@localhost:3306/foilalpha"
 NEXTAUTH_SECRET="your-random-secret-key"
 NEXTAUTH_URL="http://localhost:3000"
 
@@ -210,7 +210,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-  Made with ❤️ by TCG Market Team
+  Made with ❤️ by Foil Alpha Team
 </div>
 - API rate limiting
 - API documentation
@@ -468,8 +468,8 @@ The application uses MySQL with Prisma ORM. The main models include:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/derekgallardo01/tcg-market.git
-cd tcg-market
+git clone https://github.com/derekgallardo01/foil-alpha.git
+cd foil-alpha
 ```
 
 2. Install dependencies:
@@ -482,7 +482,7 @@ yarn install
 3. Set up environment variables:
 Create a `.env` file in the root directory with the following variables:
 ```
-DATABASE_URL="mysql://user:password@localhost:3306/tcg_market"
+DATABASE_URL="mysql://user:password@localhost:3306/foilalpha"
 NEXTAUTH_SECRET="your-secret-key"
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
@@ -520,7 +520,7 @@ The production server will run on `http://localhost:3000` by default
 ## Project Structure
 
 ```
-tcg-market/
+foil-alpha/
 ├── src/
 │   └── app/          # Next.js app directory
 ├── prisma/           # Database schema and migrations

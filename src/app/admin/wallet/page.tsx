@@ -47,7 +47,7 @@ export default function AdminWalletsPage() {
                     <MenuIcon />
                 </IconButton>
                 <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={40} height={20} />
+                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={40} height={20} />
                     <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
                         Wallet Management
                     </Typography>

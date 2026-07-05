@@ -206,7 +206,7 @@ export default function RegisterClient() {
                 >
                   <Image
                     src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                    alt="TCG Market Logo"
+                    alt="Foil Alpha Logo"
                     width={200}
                     height={100}
                     priority
@@ -231,7 +231,7 @@ export default function RegisterClient() {
                   User Registration
                 </Typography>
                 <Typography variant="subtitle1" sx={{ mb: 2, textAlign: "center", color: "text.secondary" }}>
-                  Create your TCG Market account
+                  Create your Foil Alpha account
                 </Typography>
 
                 <motion.div variants={containerVariants} initial="hidden" animate="visible">

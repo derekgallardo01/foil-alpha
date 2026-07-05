@@ -1,8 +1,8 @@
 // src/lib/email-templates.ts - Email templates and configuration
 export const EMAIL_CONFIG = {
     ADMIN_EMAIL: 'whitedevil5633@gmail.com',
-    FROM_NAME: 'TCG Marketplace',
-    REPLY_TO: 'noreply@tcgmarketplace.com',
+    FROM_NAME: 'Foil Alpha',
+    REPLY_TO: 'noreply@foilalpha.com',
     BASE_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000'
 };
 
@@ -284,7 +284,7 @@ export function createEmailTemplate(notification: {
             <div class="footer">
                 <p>This is an automated notification from ${EMAIL_CONFIG.FROM_NAME}.</p>
                 <p><a href="${EMAIL_CONFIG.BASE_URL}/dashboard">Visit Dashboard</a> | <a href="${EMAIL_CONFIG.BASE_URL}/settings">Notification Settings</a></p>
-                <p>© 2024 TCG Marketplace. All rights reserved.</p>
+                <p>© 2024 Foil Alpha. All rights reserved.</p>
             </div>
         </div>
     </body>

@@ -12,11 +12,11 @@ export async function POST() {
     // Dynamic path based on environment
     const isProduction = process.env.NODE_ENV === 'production';
     const scriptPath = isProduction 
-      ? '/var/www/my-next-app/scrape_target.py'
+      ? '/var/www/foil-alpha/scrape_target.py'
       : path.join(process.cwd(), 'scrape_target.py');
     
     const pythonCommand = isProduction 
-      ? '/var/www/my-next-app/myenv/bin/python3'
+      ? '/var/www/foil-alpha/myenv/bin/python3'
       : 'python';
     
     const command = `${pythonCommand} ${scriptPath}`;

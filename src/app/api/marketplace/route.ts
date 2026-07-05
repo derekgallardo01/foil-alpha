@@ -226,7 +226,7 @@ export async function GET(request: NextRequest) {
                     price_trend: 'stable',
                     last_price_update: card.last_updated,
                 },
-                owner: { id: null, name: 'TCG Market', role: 'system' },
+                owner: { id: null, name: 'Foil Alpha', role: 'system' },
                 condition: 'Mint',
                 sale_type: 'FIXED',
                 current_price: marketPrice,

@@ -58,7 +58,7 @@ export default function ActivationSuccessClient() {
               </motion.div>
               <motion.div variants={itemVariants}>
                 <Typography sx={{ mb: 3, textAlign: "center", color: "text.secondary" }}>
-                  Your account has been successfully verified. You can now log in to TCG Market.
+                  Your account has been successfully verified. You can now log in to Foil Alpha.
                 </Typography>
               </motion.div>
               <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

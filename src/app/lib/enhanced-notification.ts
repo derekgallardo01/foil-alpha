@@ -75,7 +75,7 @@ async function sendNotificationEmail(notificationData: CreateNotificationData) {
 
         // Get email subject
         const notificationType = notificationData.type as NotificationType;
-        const subject = EMAIL_SUBJECTS[notificationType] || `TCG Marketplace - ${notificationData.title}`;
+        const subject = EMAIL_SUBJECTS[notificationType] || `Foil Alpha - ${notificationData.title}`;
 
         // Create email content
         const htmlContent = createEmailTemplate({

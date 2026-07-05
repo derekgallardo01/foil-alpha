@@ -1,4 +1,4 @@
-# TCG Market - Complete Dependencies Guide
+# Foil Alpha - Complete Dependencies Guide
 
 ## Node.js Dependencies (package.json)
 

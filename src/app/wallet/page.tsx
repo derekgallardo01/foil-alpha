@@ -62,7 +62,7 @@ export default function WalletPage() {
                     <MenuIcon sx={{ color: '#FFFFFF' }} />
                 </IconButton>
                 <Link href="/dashboard">
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="TCG Market" width={120} height={60} priority />
+                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={120} height={60} priority />
                 </Link>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
