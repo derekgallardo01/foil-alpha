@@ -19,7 +19,8 @@
     "sync:test": "node -e \"fetch('http://localhost:3000/api/test/price-sync').then(r=>r.json()).then(console.log)\"",
     "sync:manual": "node -e \"fetch('http://localhost:3000/api/cards/sync-prices', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force:true})}).then(r=>r.json()).then(console.log)\"",
     "seed:dashboard": "tsx seed-dashboard.ts",
-    "seed:cleanup": "tsx seed-dashboard.ts --cleanup"
+    "seed:cleanup": "tsx seed-dashboard.ts --cleanup",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",

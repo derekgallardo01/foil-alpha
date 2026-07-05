@@ -6,9 +6,25 @@ const execPromise = promisify(exec);
 
 export async function POST() {
   console.time('api-scrape-target');
+
+  // The Python scraper (scrape_target.py + headless Chrome) is not available in
+  // the default Railway runtime. It stays disabled unless a host that provides
+  // Python + Chrome sets ENABLE_SCRAPER=true, so the route degrades gracefully
+  // instead of trying to exec a missing interpreter.
+  if (process.env.ENABLE_SCRAPER !== 'true') {
+    console.timeEnd('api-scrape-target');
+    return new Response(
+      JSON.stringify({
+        error: 'Scraping is disabled in this environment',
+        details: 'Set ENABLE_SCRAPER=true on a host with Python + Chrome to enable it.',
+      }),
+      { status: 503 }
+    );
+  }
+
   try {
     console.log('🚀 Starting scrape process...');
-    
+
     // Dynamic path based on environment
     const isProduction = process.env.NODE_ENV === 'production';
     const scriptPath = isProduction 
