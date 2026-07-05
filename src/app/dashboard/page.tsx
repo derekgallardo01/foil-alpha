@@ -6,7 +6,6 @@ import {
   Container,
   Grid,
   Typography,
-  IconButton,
   Paper,
   Card,
   CardContent,
@@ -16,7 +15,6 @@ import {
   Button
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
   TrendingUp,
   Gavel,
   NewReleases,
@@ -27,8 +25,7 @@ import {
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Sidebar from '../components/Sidebar';
+import AppShell from '../components/AppShell';
 import TrendingCardsTable from '../components/dashboard/TrendingCardsTable';
 import LiveAuctionTable from '../components/dashboard/LiveAuctionTable';
 import NewReleasesCarousel from '../components/dashboard/NewReleasesCarousel';
@@ -56,7 +53,6 @@ interface DashboardStats {
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [stats, setStats] = useState<DashboardStats>({
     totalValue: 0,
@@ -65,8 +61,6 @@ export default function Dashboard() {
     recentSales: 0
   });
   const [lastRefresh, setLastRefresh] = useState(new Date());
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   // Fetch user stats
   const fetchUserStats = async () => {
@@ -108,62 +102,24 @@ export default function Dashboard() {
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100vh",
-        bgcolor: "grey.900",
-        background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-        backgroundSize: "200% 200%",
-        animation: "gradientShift 20s ease infinite",
-        "@keyframes gradientShift": {
-          "0%": { backgroundPosition: "0% 0%" },
-          "50%": { backgroundPosition: "100% 100%" },
-          "100%": { backgroundPosition: "0% 0%" },
-        },
-      }}
-    >
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-        <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-          <MenuIcon />
-        </IconButton>
-        <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={40} height={20} />
-          <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DashboardIcon />
-            Market Dashboard
-          </Typography>
-        </Box>
-        <Box sx={{
-          ml: 'auto',
-          mr: 20, 
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2
-        }}>
+    <AppShell>
+      {/* Page header */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", px: { xs: 2, md: 3 }, pt: 3, pb: 1 }}>
+        <Typography variant="h4" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <DashboardIcon color="primary" />
+          Market Dashboard
+        </Typography>
+        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Last updated: {lastRefresh.toLocaleTimeString()}
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={handleRefresh}
-            sx={{
-              borderColor: '#9B5Cff',
-              color: '#9B5Cff',
-              '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-            }}
-          >
+          <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefresh}>
             Refresh
           </Button>
         </Box>
       </Box>
 
-      <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
         <motion.div initial="hidden" animate="visible" variants={containerVariants}>
           {/* User Stats Cards */}
           {session && (
@@ -375,14 +331,6 @@ export default function Dashboard() {
           )}
         </motion.div>
       </Container>
-
-      <style jsx global>{`
-                @keyframes gradientShift {
-                    0% { background-position: 0% 0%; }
-                    50% { background-position: 100% 100%; }
-                    100% { background-position: 0% 0%; }
-                }
-            `}</style>
-    </Box>
+    </AppShell>
   );
 }
