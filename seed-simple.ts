@@ -197,8 +197,15 @@ async function main() {
     for (const cardData of sampleCards) {
         const card = await prisma.card.create({
             data: {
-                ...cardData,
+                price_tracker_id: cardData.price_tracker_id,
+                name: cardData.name,
                 card_number: cardData.number,
+                rarity: cardData.rarity,
+                set_id: cardData.set_id,
+                set_name: cardData.set_name,
+                image_url: cardData.image_small,
+                market_price: cardData.market_price,
+                price_source: cardData.price_source,
                 last_updated: new Date(),
                 source: 'API',
                 sync_enabled: true,
