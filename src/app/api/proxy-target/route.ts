@@ -3,6 +3,10 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Hits the external Target API at request time; keep it out of the build's
+// static-generation pass so a slow/blocked upstream can't stall the build.
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   console.log('Proxy route hit: /api/proxy-target', {
     timestamp: new Date().toISOString(),

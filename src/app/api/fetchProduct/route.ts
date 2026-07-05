@@ -9,6 +9,11 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 // Update for Windows environment; adjust path as needed
 process.env.WEBDRIVER_CHROME_DRIVER = 'C:/chromedriver/chromedriver.exe';
 
+// This route drives a real browser (Selenium/Chrome) at request time. Marking
+// it dynamic stops Next from executing the handler during the build's static-
+// generation pass, which would hang on hosts without a browser (e.g. Railway).
+export const dynamic = 'force-dynamic';
+
 interface ProductData {
   title: string;
   image: string;
