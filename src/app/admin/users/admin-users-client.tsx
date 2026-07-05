@@ -485,11 +485,11 @@ export default function AdminUsersClient() {
             disabled={rowLoading[Number(params.id)] || actionLoading}
             startIcon={<AccountBalanceWalletIcon />}
             sx={{
-              borderColor: "#96ff9b",
-              color: "#96ff9b",
+              borderColor: "#9B5Cff",
+              color: "#9B5Cff",
               "&:hover": {
-                borderColor: "#96ff9b",
-                backgroundColor: "rgba(150, 255, 155, 0.1)"
+                borderColor: "#9B5Cff",
+                backgroundColor: "rgba(155, 92, 255, 0.1)"
               }
             }}
           >
@@ -592,7 +592,7 @@ export default function AdminUsersClient() {
               bgcolor: "grey.900",
               backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
               borderRadius: 2,
-              boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+              boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
               overflow: "visible",
             }}
           >
@@ -609,25 +609,25 @@ export default function AdminUsersClient() {
             <motion.div variants={itemVariants}>
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} md={4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
+                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(155, 92, 255, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Total Users</Typography>
+                      <Typography variant="h6" sx={{ color: "#9B5Cff" }}>Total Users</Typography>
                       <Typography variant="h4" color="text.primary">{stats.total}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
+                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(155, 92, 255, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Active</Typography>
+                      <Typography variant="h6" sx={{ color: "#9B5Cff" }}>Active</Typography>
                       <Typography variant="h4" color="text.primary">{stats.active}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(150, 255, 155, 0.2)" }}>
+                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(155, 92, 255, 0.2)" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#96ff9b" }}>Frozen Funds</Typography>
+                      <Typography variant="h6" sx={{ color: "#9B5Cff" }}>Frozen Funds</Typography>
                       <Typography variant="h4" color="text.primary">${stats.totalFrozen.toFixed(2)}</Typography>
                     </CardContent>
                   </Card>
@@ -639,13 +639,13 @@ export default function AdminUsersClient() {
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
               <motion.div variants={itemVariants}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 2 }}>
-                  <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={handleAddUser} disabled={actionLoading}>
+                  <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={handleAddUser} disabled={actionLoading}>
                     Add User
                   </Button>
-                  <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={fetchUsers} disabled={loading || actionLoading}>
+                  <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={fetchUsers} disabled={loading || actionLoading}>
                     Refresh
                   </Button>
-                  <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={exportToCSV} disabled={actionLoading}>
+                  <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={exportToCSV} disabled={actionLoading}>
                     Export to CSV
                   </Button>
                 </Box>
@@ -717,7 +717,7 @@ export default function AdminUsersClient() {
             bgcolor: "grey.900",
             backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
             borderRadius: 2,
-            boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+            boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
           }
         }}
       >
@@ -799,9 +799,9 @@ export default function AdminUsersClient() {
                   disabled={walletLoading || walletOperation.amount <= 0}
                   startIcon={walletLoading ? <CircularProgress size={20} /> : <AccountBalanceWalletIcon />}
                   sx={{
-                    bgcolor: "#96ff9b",
+                    bgcolor: "#9B5Cff",
                     color: "grey.900",
-                    "&:hover": { bgcolor: "rgba(150, 255, 155, 0.8)" }
+                    "&:hover": { bgcolor: "rgba(155, 92, 255, 0.8)" }
                   }}
                 >
                   {walletLoading ? 'Processing...' : walletOperation.operation.replace('_', ' ')}
@@ -939,7 +939,7 @@ export default function AdminUsersClient() {
           </Button>
           <Button
             variant="contained"
-            sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+            sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
             onClick={handleSaveUser}
             disabled={actionLoading}
           >
@@ -981,7 +981,7 @@ export default function AdminUsersClient() {
           </Button>
           <Button
             variant="contained"
-            sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+            sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
             onClick={() => {
               confirmAction?.callback();
               setConfirmAction(null);

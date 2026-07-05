@@ -57,7 +57,7 @@ export default function WalletPage() {
             <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header with Menu Button and Logo */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <IconButton onClick={toggleSidebar}>
                     <MenuIcon sx={{ color: '#FFFFFF' }} />
                 </IconButton>
@@ -69,9 +69,9 @@ export default function WalletPage() {
                         variant="outlined"
                         onClick={() => router.push('/marketplace')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Marketplace
@@ -80,9 +80,9 @@ export default function WalletPage() {
                         variant="outlined"
                         onClick={() => router.push('/collection')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         My Collection
@@ -91,7 +91,7 @@ export default function WalletPage() {
             </Box>
 
             <Container maxWidth="md" sx={{ py: 3, flex: 1 }}>
-                <Typography variant="h4" sx={{ color: '#96ff9b', mb: 3, textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ color: '#9B5Cff', mb: 3, textAlign: 'center' }}>
                     Welcome, {session?.user?.name}
                 </Typography>
 
@@ -107,9 +107,9 @@ export default function WalletPage() {
                             variant="contained"
                             onClick={() => router.push('/marketplace')}
                             sx={{
-                                bgcolor: '#96ff9b',
+                                bgcolor: '#9B5Cff',
                                 color: 'grey.900',
-                                '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                             }}
                         >
                             Browse Cards for Sale
@@ -118,9 +118,9 @@ export default function WalletPage() {
                             variant="contained"
                             onClick={() => router.push('/marketplace?filter=auction')}
                             sx={{
-                                bgcolor: '#96ff9b',
+                                bgcolor: '#9B5Cff',
                                 color: 'grey.900',
-                                '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                             }}
                         >
                             View Auctions
@@ -129,9 +129,9 @@ export default function WalletPage() {
                             variant="outlined"
                             onClick={() => router.push('/collection')}
                             sx={{
-                                borderColor: '#96ff9b',
-                                color: '#96ff9b',
-                                '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                borderColor: '#9B5Cff',
+                                color: '#9B5Cff',
+                                '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                             }}
                         >
                             Manage My Cards

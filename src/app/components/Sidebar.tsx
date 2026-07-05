@@ -66,20 +66,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   // Define active and hover styles
   const getMenuItemStyles = (path: string) => ({
     cursor: 'pointer',
-    backgroundColor: isActivePath(path) ? 'rgba(150, 255, 155, 0.15)' : 'transparent',
-    borderLeft: isActivePath(path) ? '4px solid #96ff9b' : '4px solid transparent',
+    backgroundColor: isActivePath(path) ? 'rgba(155, 92, 255, 0.15)' : 'transparent',
+    borderLeft: isActivePath(path) ? '4px solid #9B5Cff' : '4px solid transparent',
     '&:hover': {
       backgroundColor: isActivePath(path)
-        ? 'rgba(150, 255, 155, 0.2)'
-        : 'rgba(150, 255, 155, 0.1)'
+        ? 'rgba(155, 92, 255, 0.2)'
+        : 'rgba(155, 92, 255, 0.1)'
     }
   });
 
   const getIconColor = (path: string) =>
-    isActivePath(path) ? '#96ff9b' : 'inherit';
+    isActivePath(path) ? '#9B5Cff' : 'inherit';
 
   const getTextStyles = (path: string) => ({
-    color: isActivePath(path) ? '#96ff9b' : 'inherit',
+    color: isActivePath(path) ? '#9B5Cff' : 'inherit',
     fontWeight: isActivePath(path) ? 'bold' : 'normal'
   });
 
@@ -264,22 +264,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               sx={{
                 ...getMenuItemStyles("/admin/dashboard"),
                 bgcolor: isActivePath("/admin/dashboard")
-                  ? 'rgba(150, 255, 155, 0.2)'
-                  : 'rgba(150, 255, 155, 0.05)',
+                  ? 'rgba(155, 92, 255, 0.2)'
+                  : 'rgba(155, 92, 255, 0.05)',
                 border: isActivePath("/admin/dashboard")
-                  ? '1px solid #96ff9b'
-                  : '1px solid rgba(150, 255, 155, 0.2)',
+                  ? '1px solid #9B5Cff'
+                  : '1px solid rgba(155, 92, 255, 0.2)',
                 borderRadius: 1,
                 mx: 1,
                 my: 0.5
               }}
             >
               <ListItemIcon>
-                <AdminIcon sx={{ color: '#96ff9b' }} />
+                <AdminIcon sx={{ color: '#9B5Cff' }} />
               </ListItemIcon>
               <ListItemText
                 primary="Admin Panel"
-                primaryTypographyProps={{ color: '#96ff9b', fontWeight: 'bold' }}
+                primaryTypographyProps={{ color: '#9B5Cff', fontWeight: 'bold' }}
               />
             </ListItem>
           )}

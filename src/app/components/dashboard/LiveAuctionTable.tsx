@@ -138,7 +138,7 @@ export default function LiveAuctionTable({
         <Paper sx={{ p: 3, height }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Gavel sx={{ color: '#96ff9b' }} />
+                    <Gavel sx={{ color: '#9B5Cff' }} />
                     Live Auctions
                     <Chip
                         label="LIVE"
@@ -157,9 +157,9 @@ export default function LiveAuctionTable({
                         variant={sortBy === 'ending_soon' ? 'contained' : 'outlined'}
                         onClick={() => setSortBy('ending_soon')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: sortBy === 'ending_soon' ? '#000' : '#96ff9b',
-                            bgcolor: sortBy === 'ending_soon' ? '#96ff9b' : 'transparent'
+                            borderColor: '#9B5Cff',
+                            color: sortBy === 'ending_soon' ? '#000' : '#9B5Cff',
+                            bgcolor: sortBy === 'ending_soon' ? '#9B5Cff' : 'transparent'
                         }}
                     >
                         Ending Soon
@@ -169,9 +169,9 @@ export default function LiveAuctionTable({
                         variant={sortBy === 'most_bids' ? 'contained' : 'outlined'}
                         onClick={() => setSortBy('most_bids')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: sortBy === 'most_bids' ? '#000' : '#96ff9b',
-                            bgcolor: sortBy === 'most_bids' ? '#96ff9b' : 'transparent'
+                            borderColor: '#9B5Cff',
+                            color: sortBy === 'most_bids' ? '#000' : '#9B5Cff',
+                            bgcolor: sortBy === 'most_bids' ? '#9B5Cff' : 'transparent'
                         }}
                     >
                         Most Bids
@@ -181,9 +181,9 @@ export default function LiveAuctionTable({
                         variant={sortBy === 'highest_price' ? 'contained' : 'outlined'}
                         onClick={() => setSortBy('highest_price')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: sortBy === 'highest_price' ? '#000' : '#96ff9b',
-                            bgcolor: sortBy === 'highest_price' ? '#96ff9b' : 'transparent'
+                            borderColor: '#9B5Cff',
+                            color: sortBy === 'highest_price' ? '#000' : '#9B5Cff',
+                            bgcolor: sortBy === 'highest_price' ? '#9B5Cff' : 'transparent'
                         }}
                     >
                         Highest Price
@@ -295,7 +295,7 @@ export default function LiveAuctionTable({
                                             variant="contained"
                                             onClick={() => router.push(`/marketplace?auction=${auction.id}`)}
                                             sx={{
-                                                bgcolor: '#96ff9b',
+                                                bgcolor: '#9B5Cff',
                                                 color: '#000',
                                                 '&:hover': { bgcolor: '#7ee683' }
                                             }}

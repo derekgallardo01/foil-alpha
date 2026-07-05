@@ -212,27 +212,27 @@ export default function AdminPendingTransactionsPage() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+                    <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#96ff9b' }}>
+                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
                         <PaymentIcon />
                         Pending Purchase Confirmations
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton onClick={fetchPendingTransactions} title="Refresh" sx={{ color: '#96ff9b' }}>
+                    <IconButton onClick={fetchPendingTransactions} title="Refresh" sx={{ color: '#9B5Cff' }}>
                         <RefreshIcon />
                     </IconButton>
                     <Button
                         variant="outlined"
                         onClick={() => router.push('/admin/transactions')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         All Transactions
@@ -249,12 +249,12 @@ export default function AdminPendingTransactionsPage() {
                 )}
 
                 {/* Overview Card */}
-                <Card sx={{ mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                <Card sx={{ mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                             <WarningIcon sx={{ color: 'warning.main', fontSize: 32 }} />
                             <Box>
-                                <Typography variant="h5" sx={{ color: '#96ff9b' }}>
+                                <Typography variant="h5" sx={{ color: '#9B5Cff' }}>
                                     {pendingTransactions.length} Pending Confirmations
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -276,7 +276,7 @@ export default function AdminPendingTransactionsPage() {
 
                 {/* Pending Transactions */}
                 {pendingTransactions.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                    <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                         <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                         <Typography variant="h6" color="text.secondary">
                             No pending confirmations
@@ -315,7 +315,7 @@ export default function AdminPendingTransactionsPage() {
                                         <CardContent>
                                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                                 <WarningIcon sx={{ color: 'warning.main', mr: 1 }} />
-                                                <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
                                                     Transaction #{transaction.id}
                                                 </Typography>
                                                 {isExpired && (
@@ -410,10 +410,10 @@ export default function AdminPendingTransactionsPage() {
                                                     <CompleteIcon />
                                                 }
                                                 sx={{
-                                                    bgcolor: isExpired ? 'error.main' : '#96ff9b',
+                                                    bgcolor: isExpired ? 'error.main' : '#9B5Cff',
                                                     color: isExpired ? 'white' : 'grey.900',
                                                     '&:hover': {
-                                                        bgcolor: isExpired ? 'error.dark' : 'rgba(150, 255, 155, 0.8)'
+                                                        bgcolor: isExpired ? 'error.dark' : 'rgba(155, 92, 255, 0.8)'
                                                     }
                                                 }}
                                             >
@@ -439,8 +439,8 @@ export default function AdminPendingTransactionsPage() {
                 )}
 
                 {/* Help Section */}
-                <Paper sx={{ p: 3, mt: 3, bgcolor: 'rgba(150, 255, 155, 0.05)', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
+                <Paper sx={{ p: 3, mt: 3, bgcolor: 'rgba(155, 92, 255, 0.05)', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2 }}>
                         About Pending Confirmations
                     </Typography>
                     <Typography variant="body2" color="text.secondary" paragraph>

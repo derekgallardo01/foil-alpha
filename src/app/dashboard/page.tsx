@@ -127,13 +127,13 @@ export default function Dashboard() {
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
       {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
-        <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+      <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+        <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
           <MenuIcon />
         </IconButton>
         <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={40} height={20} />
-          <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
             <DashboardIcon />
             Market Dashboard
           </Typography>
@@ -153,9 +153,9 @@ export default function Dashboard() {
             startIcon={<Refresh />}
             onClick={handleRefresh}
             sx={{
-              borderColor: '#96ff9b',
-              color: '#96ff9b',
-              '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+              borderColor: '#9B5Cff',
+              color: '#9B5Cff',
+              '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
             }}
           >
             Refresh
@@ -170,19 +170,19 @@ export default function Dashboard() {
             <motion.div variants={itemVariants}>
               <Grid container spacing={3} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
                         Collection Value
                       </Typography>
-                      <Typography variant="h4" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
+                      <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                         ${stats.totalValue.toFixed(2)}
                       </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
                         Total Cards
@@ -194,7 +194,7 @@ export default function Dashboard() {
                   </Card>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
                         Active Bids
@@ -206,7 +206,7 @@ export default function Dashboard() {
                   </Card>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
                         Recent Sales
@@ -223,22 +223,22 @@ export default function Dashboard() {
 
           {/* Main Dashboard Tabs */}
           <motion.div variants={itemVariants}>
-            <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
+            <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)', mb: 3 }}>
               <Tabs
                 value={activeTab}
                 onChange={handleTabChange}
                 variant="scrollable"
                 scrollButtons="auto"
                 sx={{
-                  borderBottom: '1px solid rgba(150, 255, 155, 0.2)',
+                  borderBottom: '1px solid rgba(155, 92, 255, 0.2)',
                   '& .MuiTab-root': {
                     color: 'text.secondary',
                     '&.Mui-selected': {
-                      color: '#96ff9b'
+                      color: '#9B5Cff'
                     }
                   },
                   '& .MuiTabs-indicator': {
-                    backgroundColor: '#96ff9b'
+                    backgroundColor: '#9B5Cff'
                   }
                 }}
               >
@@ -286,7 +286,7 @@ export default function Dashboard() {
                 </Grid>
                 {/* Price Chart for Top Trending Card */}
                 <Grid item xs={12}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <Typography variant="h6" gutterBottom>
                       Price Trend Analysis
                     </Typography>
@@ -304,7 +304,7 @@ export default function Dashboard() {
                   <LiveAuctionTable limit={20} height={700} autoRefresh={true} />
                 </Grid>
                 <Grid item xs={12}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="h6">
                         Auction Activity
@@ -331,7 +331,7 @@ export default function Dashboard() {
                   <NewReleasesCarousel limit={12} />
                 </Grid>
                 <Grid item xs={12}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <Typography variant="h6" gutterBottom>
                       Release Calendar
                     </Typography>
@@ -351,7 +351,7 @@ export default function Dashboard() {
                   <PopularityMetrics limit={10} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <Typography variant="h6" gutterBottom>
                       Popularity Trends
                     </Typography>
@@ -361,7 +361,7 @@ export default function Dashboard() {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <Typography variant="h6" gutterBottom>
                       Market Insights
                     </Typography>

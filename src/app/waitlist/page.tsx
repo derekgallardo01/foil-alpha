@@ -247,7 +247,7 @@ export default function WaitlistPage() {
             width: "100%",
             height: "100%",
             background:
-              "radial-gradient(circle, rgba(150, 255, 155, 0.1) 1px, transparent 1px), radial-gradient(circle, rgba(239, 83, 80, 0.2) 2px, transparent 2px)",
+              "radial-gradient(circle, rgba(155, 92, 255, 0.1) 1px, transparent 1px), radial-gradient(circle, rgba(239, 83, 80, 0.2) 2px, transparent 2px)",
             backgroundSize: "20px 20px, 30px 30px",
             backgroundPosition: "0 0, 15px 15px",
             opacity: 0.3,
@@ -279,7 +279,7 @@ export default function WaitlistPage() {
                   bgcolor: "grey.900",
                   backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                   borderRadius: 2,
-                  boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                  boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
                   position: "relative",
                   "&:before": {
                     content: '""',
@@ -317,10 +317,10 @@ export default function WaitlistPage() {
                     variant="h5"
                     sx={{
                       textAlign: "center",
-                      color: "#96FF9B",
+                      color: "#9B5Cff",
                       mb: 1,
                       fontWeight: "bold",
-                      textShadow: "0 0 10px rgba(150, 255, 155, 0.5)",
+                      textShadow: "0 0 10px rgba(155, 92, 255, 0.5)",
                       "@media (prefers-reduced-motion: reduce)": {
                         textShadow: "none",
                       },
@@ -356,11 +356,11 @@ export default function WaitlistPage() {
                               },
                               "&:hover fieldset": {
                                 borderColor: "rgba(255, 255, 255, 0.4)",
-                                boxShadow: "0 0 8px rgba(150, 255, 155, 0.3)",
+                                boxShadow: "0 0 8px rgba(155, 92, 255, 0.3)",
                               },
                               "&.Mui-focused fieldset": {
                                 borderColor: "blue.500",
-                                boxShadow: "0 0 12px rgba(150, 255, 155, 0.5)",
+                                boxShadow: "0 0 12px rgba(155, 92, 255, 0.5)",
                               },
                             },
                           }}
@@ -386,11 +386,11 @@ export default function WaitlistPage() {
                               },
                               "&:hover fieldset": {
                                 borderColor: "rgba(255, 255, 255, 0.4)",
-                                boxShadow: "0 0 8px rgba(150, 255, 155, 0.3)",
+                                boxShadow: "0 0 8px rgba(155, 92, 255, 0.3)",
                               },
                               "&.Mui-focused fieldset": {
                                 borderColor: "blue.500",
-                                boxShadow: "0 0 12px rgba(150, 255, 155, 0.5)",
+                                boxShadow: "0 0 12px rgba(155, 92, 255, 0.5)",
                               },
                             },
                           }}
@@ -415,11 +415,11 @@ export default function WaitlistPage() {
                               },
                               "&:hover fieldset": {
                                 borderColor: "rgba(255, 255, 255, 0.4)",
-                                boxShadow: "0 0 8px rgba(150, 255, 155, 0.3)",
+                                boxShadow: "0 0 8px rgba(155, 92, 255, 0.3)",
                               },
                               "&.Mui-focused fieldset": {
                                 borderColor: "blue.500",
-                                boxShadow: "0 0 12px rgba(150, 255, 155, 0.5)",
+                                boxShadow: "0 0 12px rgba(155, 92, 255, 0.5)",
                               },
                             },
                           }}
@@ -439,7 +439,7 @@ export default function WaitlistPage() {
                             bgcolor: "blue.600",
                             "&:hover": {
                               bgcolor: "blue.700",
-                              boxShadow: "0 0 15px rgba(150, 255, 155, 0.5)",
+                              boxShadow: "0 0 15px rgba(155, 92, 255, 0.5)",
                               transform: "scale(1.02)",
                               transition: "all 0.3s ease",
                             },
@@ -457,7 +457,7 @@ export default function WaitlistPage() {
                               left: 0,
                               width: "100%",
                               height: "100%",
-                              background: "radial-gradient(circle, rgba(150, 255, 155, 0.3) 0%, transparent 70%)",
+                              background: "radial-gradient(circle, rgba(155, 92, 255, 0.3) 0%, transparent 70%)",
                               opacity: 0,
                               transition: "opacity 0.3s ease",
                             },
@@ -502,7 +502,7 @@ export default function WaitlistPage() {
                                 left: "-50%",
                                 width: "200%",
                                 height: "200%",
-                                background: "radial-gradient(circle, rgba(150, 255, 155, 0.5) 0%, transparent 70%)",
+                                background: "radial-gradient(circle, rgba(155, 92, 255, 0.5) 0%, transparent 70%)",
                                 animation: "confetti 1s ease-out",
                               },
                               "@keyframes confetti": {
@@ -525,9 +525,9 @@ export default function WaitlistPage() {
                           <Typography
                             variant="h6"
                             sx={{
-                              color: "#96FF9B",
+                              color: "#9B5Cff",
                               fontWeight: "bold",
-                              textShadow: "0 0 10px rgba(150, 255, 155, 0.5)",
+                              textShadow: "0 0 10px rgba(155, 92, 255, 0.5)",
                               "@media (prefers-reduced-motion: reduce)": {
                                 textShadow: "none",
                               },
@@ -548,19 +548,19 @@ export default function WaitlistPage() {
                                 mt: 1,
                                 fontWeight: "bold",
                                 letterSpacing: "0.05em",
-                                color: "#96FF9B",
+                                color: "#9B5Cff",
                                 display: "inline-block",
                                 px: 2,
                                 py: 1,
                                 borderRadius: "12px",
                                 bgcolor: "grey.800",
-                                boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)",
-                                border: "1px solid rgba(150, 255, 155, 0.3)",
+                                boxShadow: "0 0 5px rgba(155, 92, 255, 0.3)",
+                                border: "1px solid rgba(155, 92, 255, 0.3)",
                                 animation: "pulse 2s ease-in-out infinite",
                                 "@keyframes pulse": {
-                                  "0%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)" },
-                                  "50%": { transform: "scale(1.02)", boxShadow: "0 0 10px rgba(150, 255, 155, 0.5)" },
-                                  "100%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(150, 255, 155, 0.3)" },
+                                  "0%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(155, 92, 255, 0.3)" },
+                                  "50%": { transform: "scale(1.02)", boxShadow: "0 0 10px rgba(155, 92, 255, 0.5)" },
+                                  "100%": { transform: "scale(1)", boxShadow: "0 0 5px rgba(155, 92, 255, 0.3)" },
                                 },
                                 "@media (prefers-reduced-motion: reduce)": {
                                   animation: "none",
@@ -592,12 +592,12 @@ export default function WaitlistPage() {
                   bgcolor: "grey.900",
                   backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                   borderRadius: 2,
-                  boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                  boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
                   mb: 4,
                   transition: "all 0.3s ease",
                   "&:hover": {
                     transform: "translateY(-5px)",
-                    boxShadow: "0 0 20px rgba(150, 255, 155, 0.5)",
+                    boxShadow: "0 0 20px rgba(155, 92, 255, 0.5)",
                   },
                 }}
               >
@@ -658,12 +658,12 @@ export default function WaitlistPage() {
                         style={{ maxWidth: "100%", height: "auto" }}
                       >
                         <g opacity="0.1">
-                          <line x1="10" y1="20" x2="130" y2="20" stroke="#96FF9B" strokeWidth="0.5" />
-                          <line x1="10" y1="40" x2="130" y2="40" stroke="#96FF9B" strokeWidth="0.5" />
-                          <line x1="10" y1="60" x2="130" y2="60" stroke="#96FF9B" strokeWidth="0.5" />
-                          <line x1="30" y1="0" x2="30" y2="80" stroke="#96FF9B" strokeWidth="0.5" />
-                          <line x1="70" y1="0" x2="70" y2="80" stroke="#96FF9B" strokeWidth="0.5" />
-                          <line x1="110" y1="0" x2="110" y2="80" stroke="#96FF9B" strokeWidth="0.5" />
+                          <line x1="10" y1="20" x2="130" y2="20" stroke="#9B5Cff" strokeWidth="0.5" />
+                          <line x1="10" y1="40" x2="130" y2="40" stroke="#9B5Cff" strokeWidth="0.5" />
+                          <line x1="10" y1="60" x2="130" y2="60" stroke="#9B5Cff" strokeWidth="0.5" />
+                          <line x1="30" y1="0" x2="30" y2="80" stroke="#9B5Cff" strokeWidth="0.5" />
+                          <line x1="70" y1="0" x2="70" y2="80" stroke="#9B5Cff" strokeWidth="0.5" />
+                          <line x1="110" y1="0" x2="110" y2="80" stroke="#9B5Cff" strokeWidth="0.5" />
                         </g>
                         <defs>
                           <linearGradient
@@ -674,9 +674,9 @@ export default function WaitlistPage() {
                             y2="30"
                             gradientUnits="userSpaceOnUse"
                           >
-                            <stop offset="0%" stopColor="#96FF9B" stopOpacity="0.3" />
-                            <stop offset="50%" stopColor="#96FF9B" stopOpacity="1" />
-                            <stop offset="100%" stopColor="#96FF9B" stopOpacity="0.3" />
+                            <stop offset="0%" stopColor="#9B5Cff" stopOpacity="0.3" />
+                            <stop offset="50%" stopColor="#9B5Cff" stopOpacity="1" />
+                            <stop offset="100%" stopColor="#9B5Cff" stopOpacity="0.3" />
                           </linearGradient>
                         </defs>
                         <path
@@ -701,13 +701,13 @@ export default function WaitlistPage() {
                             </feMerge>
                           </filter>
                         </defs>
-                        <circle cx="10" cy="70" r="3" fill="#96FF9B" filter="url(#glow)" />
-                        <circle cx="30" cy="50" r="3" fill="#96FF9B" filter="url(#glow)" />
-                        <circle cx="50" cy="60" r="3" fill="#96FF9B" filter="url(#glow)" />
-                        <circle cx="70" cy="40" r="3" fill="#96FF9B" filter="url(#glow)" />
-                        <circle cx="90" cy="50" r="3" fill="#96FF9B" filter="url(#glow)" />
-                        <circle cx="110" cy="30" r="3" fill="#96FF9B" filter="url(#glow)" />
-                        <circle cx="130" cy="50" r="3" fill="#96FF9B" filter="url(#glow)" />
+                        <circle cx="10" cy="70" r="3" fill="#9B5Cff" filter="url(#glow)" />
+                        <circle cx="30" cy="50" r="3" fill="#9B5Cff" filter="url(#glow)" />
+                        <circle cx="50" cy="60" r="3" fill="#9B5Cff" filter="url(#glow)" />
+                        <circle cx="70" cy="40" r="3" fill="#9B5Cff" filter="url(#glow)" />
+                        <circle cx="90" cy="50" r="3" fill="#9B5Cff" filter="url(#glow)" />
+                        <circle cx="110" cy="30" r="3" fill="#9B5Cff" filter="url(#glow)" />
+                        <circle cx="130" cy="50" r="3" fill="#9B5Cff" filter="url(#glow)" />
                       </svg>
                     </Box>
                   </Box>
@@ -724,12 +724,12 @@ export default function WaitlistPage() {
                   bgcolor: "grey.900",
                   backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                   borderRadius: 2,
-                  boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                  boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
                   mb: 4,
                   transition: "all 0.3s ease",
                   "&:hover": {
                     transform: "translateY(-5px)",
-                    boxShadow: "0 0 20px rgba(150, 255, 155, 0.5)",
+                    boxShadow: "0 0 20px rgba(155, 92, 255, 0.5)",
                   },
                 }}
               >
@@ -809,7 +809,7 @@ export default function WaitlistPage() {
                         <circle cx="50" cy="50" r="10" fill="#fff" stroke="#000" strokeWidth="2" filter="url(#glow)" />
                         <path
                           d="M50 35 V50 M50 55 V60"
-                          stroke="#96FF9B"
+                          stroke="#9B5Cff"
                           strokeWidth="3"
                           strokeLinecap="round"
                           filter="url(#glow)"
@@ -817,7 +817,7 @@ export default function WaitlistPage() {
                         <g opacity="0.8">
                           <path
                             d="M30 20 A30 30 0 0 1 40 10"
-                            stroke="#96FF9B"
+                            stroke="#9B5Cff"
                             strokeWidth="1"
                             filter="url(#glow)"
                           >
@@ -830,7 +830,7 @@ export default function WaitlistPage() {
                           </path>
                           <path
                             d="M70 80 A30 30 0 0 0 60 90"
-                            stroke="#96FF9B"
+                            stroke="#9B5Cff"
                             strokeWidth="1"
                             filter="url(#glow)"
                           >
@@ -867,12 +867,12 @@ export default function WaitlistPage() {
                   bgcolor: "grey.900",
                   backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                   borderRadius: 2,
-                  boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                  boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
                   mb: 4,
                   transition: "all 0.3s ease",
                   "&:hover": {
                     transform: "translateY(-5px)",
-                    boxShadow: "0 0 20px rgba(150, 255, 155, 0.5)",
+                    boxShadow: "0 0 20px rgba(155, 92, 255, 0.5)",
                   },
                 }}
               >
@@ -924,9 +924,9 @@ export default function WaitlistPage() {
                           variant="outlined"
                           size="small"
                           sx={{
-                            bgcolor: "rgba(150, 255, 155, 0.1)",
+                            bgcolor: "rgba(155, 92, 255, 0.1)",
                             color: "success.main",
-                            borderColor: "rgba(150, 255, 155, 0.2)",
+                            borderColor: "rgba(155, 92, 255, 0.2)",
                           }}
                         />
                       </Tooltip>
@@ -936,9 +936,9 @@ export default function WaitlistPage() {
                           variant="outlined"
                           size="small"
                           sx={{
-                            bgcolor: "rgba(150, 255, 155, 0.1)",
+                            bgcolor: "rgba(155, 92, 255, 0.1)",
                             color: "success.main",
-                            borderColor: "rgba(150, 255, 155, 0.2)",
+                            borderColor: "rgba(155, 92, 255, 0.2)",
                           }}
                         />
                       </Tooltip>
@@ -957,12 +957,12 @@ export default function WaitlistPage() {
                   bgcolor: "grey.900",
                   backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                   borderRadius: 2,
-                  boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                  boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
                   mb: 4,
                   transition: "all 0.3s ease",
                   "&:hover": {
                     transform: "translateY(-5px)",
-                    boxShadow: "0 0 20px rgba(150, 255, 155, 0.5)",
+                    boxShadow: "0 0 20px rgba(155, 92, 255, 0.5)",
                   },
                 }}
               >
@@ -1014,9 +1014,9 @@ export default function WaitlistPage() {
                           variant="outlined"
                           size="small"
                           sx={{
-                            bgcolor: "rgba(150, 255, 155, 0.1)",
+                            bgcolor: "rgba(155, 92, 255, 0.1)",
                             color: "success.main",
-                            borderColor: "rgba(150, 255, 155, 0.2)",
+                            borderColor: "rgba(155, 92, 255, 0.2)",
                           }}
                         />
                       </Tooltip>
@@ -1026,9 +1026,9 @@ export default function WaitlistPage() {
                           variant="outlined"
                           size="small"
                           sx={{
-                            bgcolor: "rgba(150, 255, 155, 0.1)",
+                            bgcolor: "rgba(155, 92, 255, 0.1)",
                             color: "success.main",
-                            borderColor: "rgba(150, 255, 155, 0.2)",
+                            borderColor: "rgba(155, 92, 255, 0.2)",
                           }}
                         />
                       </Tooltip>
@@ -1046,14 +1046,14 @@ export default function WaitlistPage() {
             2025 Foil Alpha. All rights reserved.{" "}
             <Link
               href="/privacy"
-              sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+              sx={{ color: "#9B5Cff", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
             >
               Privacy Policy
             </Link>{" "}
             |{" "}
             <Link
               href="/about"
-              sx={{ color: "#96FF9B", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+              sx={{ color: "#9B5Cff", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
             >
               Learn More
             </Link>

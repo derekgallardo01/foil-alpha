@@ -218,11 +218,11 @@ export default function AdminWalletManagement() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                     <MenuIcon />
                 </IconButton>
-                <Typography variant="h5" sx={{ ml: 2, color: '#96ff9b', fontWeight: 'bold' }}>
+                <Typography variant="h5" sx={{ ml: 2, color: '#9B5Cff', fontWeight: 'bold' }}>
                     Platform Wallet Management
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
@@ -231,9 +231,9 @@ export default function AdminWalletManagement() {
                         startIcon={<Refresh />}
                         onClick={fetchWalletData}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Refresh
@@ -243,9 +243,9 @@ export default function AdminWalletManagement() {
                         startIcon={<MonetizationOn />}
                         onClick={() => setAdjustmentDialog(true)}
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         Manual Adjustment
@@ -262,9 +262,9 @@ export default function AdminWalletManagement() {
                     <Grid container spacing={3}>
                         {/* Wallet Overview */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <AccountBalance />
                                         Platform Wallet Overview
                                     </Typography>
@@ -328,9 +328,9 @@ export default function AdminWalletManagement() {
 
                         {/* Monthly Stats */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <TrendingUp />
                                         Monthly Performance
                                     </Typography>
@@ -356,7 +356,7 @@ export default function AdminWalletManagement() {
                                             </Box>
                                         </Grid>
                                     </Grid>
-                                    <Divider sx={{ my: 2, borderColor: 'rgba(150, 255, 155, 0.2)' }} />
+                                    <Divider sx={{ my: 2, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
                                     <Box sx={{ textAlign: 'center' }}>
                                         <Typography variant="h6" color="text.primary">
                                             {formatCurrency(data.stats.daily_average)}
@@ -371,9 +371,9 @@ export default function AdminWalletManagement() {
 
                         {/* Transaction Summary */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Receipt />
                                         Transaction Summary
                                     </Typography>
@@ -405,10 +405,10 @@ export default function AdminWalletManagement() {
 
                         {/* Recent Transactions */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="h6" sx={{ color: '#9B5Cff', display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Receipt />
                                             Recent Transactions
                                         </Typography>
@@ -417,9 +417,9 @@ export default function AdminWalletManagement() {
                                             startIcon={<Download />}
                                             size="small"
                                             sx={{
-                                                borderColor: '#96ff9b',
-                                                color: '#96ff9b',
-                                                '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                borderColor: '#9B5Cff',
+                                                color: '#9B5Cff',
+                                                '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                             }}
                                         >
                                             Export
@@ -429,12 +429,12 @@ export default function AdminWalletManagement() {
                                         <Table stickyHeader>
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Date</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Type</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Amount</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Balance After</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Description</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Rate</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Date</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Type</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Amount</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Balance After</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Description</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Rate</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -484,7 +484,7 @@ export default function AdminWalletManagement() {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle sx={{ color: '#96ff9b' }}>
+                <DialogTitle sx={{ color: '#9B5Cff' }}>
                     Manual Wallet Adjustment
                 </DialogTitle>
                 <DialogContent>

@@ -280,7 +280,7 @@ export default function AdminDashboard() {
         {
             title: "Total Users",
             value: stats.totalUsers.toLocaleString(),
-            icon: <People sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            icon: <People sx={{ fontSize: 40, color: '#9B5Cff' }} />,
             change: "+12%",
             changeType: "up" as const,
             link: "/admin/users"
@@ -288,7 +288,7 @@ export default function AdminDashboard() {
         {
             title: "Active Users",
             value: stats.activeUsers.toLocaleString(),
-            icon: <People sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            icon: <People sx={{ fontSize: 40, color: '#9B5Cff' }} />,
             change: "+8%",
             changeType: "up" as const,
             link: "/admin/users"
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
         {
             title: "Total Cards",
             value: stats.totalCards.toLocaleString(), // *** FIXED: Now shows actual count ***
-            icon: <Store sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            icon: <Store sx={{ fontSize: 40, color: '#9B5Cff' }} />,
             change: "+25%",
             changeType: "up" as const,
             link: "/admin/cards"
@@ -304,7 +304,7 @@ export default function AdminDashboard() {
         {
             title: "Active Auctions",
             value: stats.activeAuctions.toLocaleString(),
-            icon: <Gavel sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            icon: <Gavel sx={{ fontSize: 40, color: '#9B5Cff' }} />,
             change: "-5%",
             changeType: "down" as const,
             link: "/admin/auctions"
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
         {
             title: "Total Sales",
             value: stats.totalSales.toLocaleString(),
-            icon: <TrendingUp sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            icon: <TrendingUp sx={{ fontSize: 40, color: '#9B5Cff' }} />,
             change: "+18%",
             changeType: "up" as const,
             link: "/admin/transactions"
@@ -320,7 +320,7 @@ export default function AdminDashboard() {
         {
             title: "Active Listings",
             value: stats.activeListings.toLocaleString(),
-            icon: <Store sx={{ fontSize: 40, color: '#96ff9b' }} />,
+            icon: <Store sx={{ fontSize: 40, color: '#9B5Cff' }} />,
             change: "+10%",
             changeType: "up" as const,
             link: "/admin/listings"
@@ -328,7 +328,7 @@ export default function AdminDashboard() {
     ];
 
     const getActivityIcon = (type: RecentActivity['type']) => {
-        const iconProps = { sx: { color: '#96ff9b' } };
+        const iconProps = { sx: { color: '#9B5Cff' } };
         switch (type) {
             case 'user_registered': return <People {...iconProps} />;
             case 'card_sold': return <Store {...iconProps} />;
@@ -374,13 +374,13 @@ export default function AdminDashboard() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                     <MenuIcon />
                 </IconButton>
                 <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={40} height={20} />
-                    <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
+                    <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                         Admin Dashboard
                     </Typography>
                 </Box>
@@ -390,9 +390,9 @@ export default function AdminDashboard() {
                         startIcon={<Refresh />}
                         onClick={fetchDashboardData}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Refresh
@@ -410,7 +410,7 @@ export default function AdminDashboard() {
                                     <Card
                                         sx={{
                                             bgcolor: 'grey.800',
-                                            border: '1px solid rgba(150, 255, 155, 0.2)',
+                                            border: '1px solid rgba(155, 92, 255, 0.2)',
                                             cursor: 'pointer',
                                             transition: 'transform 0.2s',
                                             '&:hover': { transform: 'translateY(-2px)' }
@@ -437,7 +437,7 @@ export default function AdminDashboard() {
                                             <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
                                                 {stat.value}
                                             </Typography>
-                                            <Typography variant="body2" sx={{ color: '#96ff9b' }}>
+                                            <Typography variant="body2" sx={{ color: '#9B5Cff' }}>
                                                 {stat.title}
                                             </Typography>
                                         </CardContent>
@@ -456,17 +456,17 @@ export default function AdminDashboard() {
                                     sx={{
                                         p: 3,
                                         bgcolor: 'grey.800',
-                                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                                        border: '1px solid rgba(155, 92, 255, 0.2)',
                                         height: '400px'
                                     }}
                                 >
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2 }}>
                                         Recent Activity
                                     </Typography>
                                     <List sx={{ maxHeight: '300px', overflow: 'auto' }}>
                                         {recentActivity.map((activity) => (
                                             <ListItem key={activity.id} sx={{ px: 0 }}>
-                                                <Avatar sx={{ bgcolor: 'rgba(150, 255, 155, 0.1)', mr: 2 }}>
+                                                <Avatar sx={{ bgcolor: 'rgba(155, 92, 255, 0.1)', mr: 2 }}>
                                                     {getActivityIcon(activity.type)}
                                                 </Avatar>
                                                 <ListItemText
@@ -512,11 +512,11 @@ export default function AdminDashboard() {
                                     sx={{
                                         p: 3,
                                         bgcolor: 'grey.800',
-                                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                                        border: '1px solid rgba(155, 92, 255, 0.2)',
                                         height: '400px'
                                     }}
                                 >
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2 }}>
                                         Quick Actions
                                     </Typography>
                                     <Grid container spacing={2}>
@@ -527,9 +527,9 @@ export default function AdminDashboard() {
                                                 startIcon={<People />}
                                                 onClick={() => router.push('/admin/users')}
                                                 sx={{
-                                                    borderColor: '#96ff9b',
-                                                    color: '#96ff9b',
-                                                    '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                    borderColor: '#9B5Cff',
+                                                    color: '#9B5Cff',
+                                                    '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                                 }}
                                             >
                                                 Manage Users
@@ -542,9 +542,9 @@ export default function AdminDashboard() {
                                                 startIcon={<Store />}
                                                 onClick={() => router.push('/admin/cards')}
                                                 sx={{
-                                                    borderColor: '#96ff9b',
-                                                    color: '#96ff9b',
-                                                    '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                    borderColor: '#9B5Cff',
+                                                    color: '#9B5Cff',
+                                                    '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                                 }}
                                             >
                                                 Manage Cards
@@ -557,9 +557,9 @@ export default function AdminDashboard() {
                                                 startIcon={<Gavel />}
                                                 onClick={() => router.push('/admin/auctions')}
                                                 sx={{
-                                                    borderColor: '#96ff9b',
-                                                    color: '#96ff9b',
-                                                    '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                    borderColor: '#9B5Cff',
+                                                    color: '#9B5Cff',
+                                                    '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                                 }}
                                             >
                                                 Manage Auctions
@@ -572,9 +572,9 @@ export default function AdminDashboard() {
                                                 startIcon={<TrendingUp />}
                                                 onClick={() => router.push('/admin/transactions')}
                                                 sx={{
-                                                    borderColor: '#96ff9b',
-                                                    color: '#96ff9b',
-                                                    '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                    borderColor: '#9B5Cff',
+                                                    color: '#9B5Cff',
+                                                    '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                                 }}
                                             >
                                                 View Transactions
@@ -587,9 +587,9 @@ export default function AdminDashboard() {
                                                 startIcon={<Assessment />}
                                                 onClick={() => router.push('/admin/analytics/dashboard')}
                                                 sx={{
-                                                    bgcolor: '#96ff9b',
+                                                    bgcolor: '#9B5Cff',
                                                     color: 'grey.900',
-                                                    '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                                                    '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                                                 }}
                                             >
                                                 View Analytics
@@ -607,10 +607,10 @@ export default function AdminDashboard() {
                                     sx={{
                                         p: 3,
                                         bgcolor: 'grey.800',
-                                        border: '1px solid rgba(150, 255, 155, 0.2)'
+                                        border: '1px solid rgba(155, 92, 255, 0.2)'
                                     }}
                                 >
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2 }}>
                                         System Status
                                     </Typography>
                                     <Grid container spacing={3}>

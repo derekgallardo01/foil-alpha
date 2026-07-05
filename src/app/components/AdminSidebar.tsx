@@ -357,7 +357,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
     const drawerContent = (
         <Box sx={{ width: 280, height: '100%', bgcolor: 'grey.900' }}>
             {/* Header */}
-            <Box sx={{ p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Box sx={{ p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Image
                         src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
@@ -365,14 +365,14 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                         width={40}
                         height={20}
                     />
-                    <Typography variant="h6" sx={{ ml: 1, color: '#96ff9b', fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ ml: 1, color: '#9B5Cff', fontWeight: 'bold' }}>
                         Admin Panel
                     </Typography>
                 </Box>
 
                 {/* Admin Profile */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar sx={{ bgcolor: '#96ff9b', color: 'grey.900', width: 32, height: 32 }}>
+                    <Avatar sx={{ bgcolor: '#9B5Cff', color: 'grey.900', width: 32, height: 32 }}>
                         {session?.user?.name?.charAt(0).toUpperCase()}
                     </Avatar>
                     <Box>
@@ -383,7 +383,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                             label="Admin"
                             size="small"
                             sx={{
-                                bgcolor: '#96ff9b',
+                                bgcolor: '#9B5Cff',
                                 color: 'grey.900',
                                 height: 18,
                                 fontSize: '0.7rem'
@@ -397,7 +397,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
             <List sx={{ py: 1, px: 1 }}>
                 {navigationItems.map((item) => (
                     <Box key={item.title}>
-                        {item.divider && <Divider sx={{ my: 1, borderColor: 'rgba(150, 255, 155, 0.2)' }} />}
+                        {item.divider && <Divider sx={{ my: 1, borderColor: 'rgba(155, 92, 255, 0.2)' }} />}
 
                         <ListItem disablePadding>
                             <ListItemButton
@@ -405,11 +405,11 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                                 sx={{
                                     borderRadius: 1,
                                     mb: 0.5,
-                                    bgcolor: isParentActive(item) ? 'rgba(150, 255, 155, 0.1)' : 'transparent',
-                                    color: isParentActive(item) ? '#96ff9b' : 'text.secondary',
+                                    bgcolor: isParentActive(item) ? 'rgba(155, 92, 255, 0.1)' : 'transparent',
+                                    color: isParentActive(item) ? '#9B5Cff' : 'text.secondary',
                                     '&:hover': {
-                                        bgcolor: 'rgba(150, 255, 155, 0.05)',
-                                        color: '#96ff9b',
+                                        bgcolor: 'rgba(155, 92, 255, 0.05)',
+                                        color: '#9B5Cff',
                                     },
                                 }}
                             >
@@ -436,7 +436,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                                         label={item.badge}
                                         size="small"
                                         sx={{
-                                            bgcolor: '#96ff9b',
+                                            bgcolor: '#9B5Cff',
                                             color: 'grey.900',
                                             height: 20,
                                             fontSize: '0.7rem'
@@ -467,11 +467,11 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                                                 sx={{
                                                     borderRadius: 1,
                                                     mb: 0.5,
-                                                    bgcolor: isItemActive(child.path) ? 'rgba(150, 255, 155, 0.15)' : 'transparent',
-                                                    color: isItemActive(child.path) ? '#96ff9b' : 'text.secondary',
+                                                    bgcolor: isItemActive(child.path) ? 'rgba(155, 92, 255, 0.15)' : 'transparent',
+                                                    color: isItemActive(child.path) ? '#9B5Cff' : 'text.secondary',
                                                     '&:hover': {
-                                                        bgcolor: 'rgba(150, 255, 155, 0.08)',
-                                                        color: '#96ff9b',
+                                                        bgcolor: 'rgba(155, 92, 255, 0.08)',
+                                                        color: '#9B5Cff',
                                                     },
                                                 }}
                                             >
@@ -498,7 +498,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                                                         label={child.badge}
                                                         size="small"
                                                         sx={{
-                                                            bgcolor: '#96ff9b',
+                                                            bgcolor: '#9B5Cff',
                                                             color: 'grey.900',
                                                             height: 18,
                                                             fontSize: '0.65rem'
@@ -516,7 +516,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
             </List>
 
             {/* Footer with Logout */}
-            <Box sx={{ mt: 'auto', p: 2, borderTop: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Box sx={{ mt: 'auto', p: 2, borderTop: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <ListItemButton
                     onClick={handleLogout}
                     sx={{
@@ -540,11 +540,11 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                 </ListItemButton>
 
                 {/* Admin Info */}
-                <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(150, 255, 155, 0.05)', borderRadius: 1 }}>
+                <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(155, 92, 255, 0.05)', borderRadius: 1 }}>
                     <Typography variant="caption" color="text.secondary" display="block">
                         Logged in as
                     </Typography>
-                    <Typography variant="body2" color="#96ff9b" fontWeight="bold">
+                    <Typography variant="body2" color="#9B5Cff" fontWeight="bold">
                         {session?.user?.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -565,7 +565,7 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProp
                 '& .MuiDrawer-paper': {
                     bgcolor: 'grey.900',
                     backgroundImage: 'linear-gradient(#000000, rgba(0, 0, 0, 0))',
-                    borderRight: '1px solid rgba(150, 255, 155, 0.2)',
+                    borderRight: '1px solid rgba(155, 92, 255, 0.2)',
                 },
             }}
         >

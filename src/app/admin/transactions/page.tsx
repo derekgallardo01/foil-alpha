@@ -324,12 +324,12 @@ const AdminTransactionsPage = () => {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+                    <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#96ff9b' }}>
+                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
                         <TransactionIcon />
                         Transaction Management
                     </Typography>
@@ -340,14 +340,14 @@ const AdminTransactionsPage = () => {
                         startIcon={<ExportIcon />}
                         onClick={exportTransactions}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Export CSV
                     </Button>
-                    <IconButton onClick={fetchTransactions} title="Refresh" sx={{ color: '#96ff9b' }}>
+                    <IconButton onClick={fetchTransactions} title="Refresh" sx={{ color: '#9B5Cff' }}>
                         <RefreshIcon />
                     </IconButton>
                 </Box>
@@ -364,9 +364,9 @@ const AdminTransactionsPage = () => {
                 {/* Statistics Cards - Using actual data from API */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#96ff9b' }}>
+                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
                                     {stats.totalSales.toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -376,7 +376,7 @@ const AdminTransactionsPage = () => {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: 'warning.main' }}>
                                     {stats.pendingTransactions.toLocaleString()}
@@ -388,7 +388,7 @@ const AdminTransactionsPage = () => {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                     {transactions.length.toLocaleString()}
@@ -400,9 +400,9 @@ const AdminTransactionsPage = () => {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#96ff9b' }}>
+                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
                                     {formatPrice(stats.monthlyRevenue)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -414,7 +414,7 @@ const AdminTransactionsPage = () => {
                 </Grid>
 
                 {/* Filters */}
-                <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12} md={3}>
                             <TextField
@@ -476,9 +476,9 @@ const AdminTransactionsPage = () => {
                         mb: 3,
                         '& .MuiTab-root': {
                             color: 'text.secondary',
-                            '&.Mui-selected': { color: '#96ff9b' }
+                            '&.Mui-selected': { color: '#9B5Cff' }
                         },
-                        '& .MuiTabs-indicator': { backgroundColor: '#96ff9b' }
+                        '& .MuiTabs-indicator': { backgroundColor: '#9B5Cff' }
                     }}
                 >
                     <Tab label={`All (${transactions.length})`} />
@@ -488,20 +488,20 @@ const AdminTransactionsPage = () => {
                 </Tabs>
 
                 {/* Transactions Table */}
-                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <TableContainer>
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>ID</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Card</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Buyer</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Seller</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Amount</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Type</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Status</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Date</TableCell>
-                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Actions</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>ID</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Card</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Buyer</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Seller</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Amount</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Type</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Status</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Date</TableCell>
+                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -578,7 +578,7 @@ const AdminTransactionsPage = () => {
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => showTransactionDetails(transaction)}
-                                                    sx={{ color: '#96ff9b' }}
+                                                    sx={{ color: '#9B5Cff' }}
                                                 >
                                                     <ViewIcon />
                                                 </IconButton>
@@ -601,7 +601,7 @@ const AdminTransactionsPage = () => {
                         }}
                         rowsPerPageOptions={[10, 25, 50, 100]}
                         sx={{
-                            borderTop: '1px solid rgba(150, 255, 155, 0.2)',
+                            borderTop: '1px solid rgba(155, 92, 255, 0.2)',
                             '.MuiTablePagination-toolbar': { color: 'text.secondary' },
                             '.MuiTablePagination-selectLabel': { color: 'text.secondary' },
                             '.MuiTablePagination-displayedRows': { color: 'text.secondary' },
@@ -619,13 +619,13 @@ const AdminTransactionsPage = () => {
                 PaperProps={{
                     sx: {
                         bgcolor: 'grey.900',
-                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                        border: '1px solid rgba(155, 92, 255, 0.2)',
                     }
                 }}
             >
                 {selectedTransaction && (
                     <>
-                        <DialogTitle sx={{ color: '#96ff9b' }}>
+                        <DialogTitle sx={{ color: '#9B5Cff' }}>
                             Transaction #{selectedTransaction.id}
                         </DialogTitle>
                         <DialogContent>

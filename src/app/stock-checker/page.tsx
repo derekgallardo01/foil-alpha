@@ -181,7 +181,7 @@ export default function StockChecker() {
                   bgcolor: 'grey.900',
                   backgroundImage: 'linear-gradient(#000000, rgba(0, 0, 0, 0))',
                   borderRadius: 2,
-                  boxShadow: '0 0 10px rgba(150, 255, 155, 0.21)',
+                  boxShadow: '0 0 10px rgba(155, 92, 255, 0.21)',
                 }}
               >
                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
@@ -204,10 +204,10 @@ export default function StockChecker() {
                   variant="h5"
                   sx={{
                     textAlign: 'center',
-                    color: '#96FF9B',
+                    color: '#9B5Cff',
                     mb: 1,
                     fontWeight: 'bold',
-                    textShadow: '0 0 10px rgba(150, 255, 155, 0.5)',
+                    textShadow: '0 0 10px rgba(155, 92, 255, 0.5)',
                   }}
                 >
                   Pokémon Stock Availability
@@ -253,7 +253,7 @@ export default function StockChecker() {
                           bgcolor: 'grey.900',
                           backgroundImage: 'linear-gradient(#000000, rgba(0, 0, 0, 0))',
                           borderRadius: 2,
-                          boxShadow: '0 0 10px rgba(150, 255, 155, 0.21)',
+                          boxShadow: '0 0 10px rgba(155, 92, 255, 0.21)',
                         }}
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
@@ -264,9 +264,9 @@ export default function StockChecker() {
                               fontWeight: 'bold',
                               bgcolor:
                                 availabilityStatus === 'In Stock'
-                                  ? 'rgba(150, 255, 155, 0.2)'
+                                  ? 'rgba(155, 92, 255, 0.2)'
                                   : 'rgba(239, 83, 80, 0.2)',
-                              color: availabilityStatus === 'In Stock' ? '#96FF9B' : '#EF5350',
+                              color: availabilityStatus === 'In Stock' ? '#9B5Cff' : '#EF5350',
                             }}
                           />
                         </Box>
@@ -333,14 +333,14 @@ export default function StockChecker() {
             2025 Foil Alpha. All rights reserved.{' '}
             <Link
               href="/privacy"
-              sx={{ color: '#96FF9B', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+              sx={{ color: '#9B5Cff', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
             >
               Privacy Policy
             </Link>{' '}
             |{' '}
             <Link
               href="/about"
-              sx={{ color: '#96FF9B', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+              sx={{ color: '#9B5Cff', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
             >
               Learn More
             </Link>

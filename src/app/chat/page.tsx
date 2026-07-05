@@ -190,7 +190,7 @@ export default function ChatPage() {
                         "&:hover": { bgcolor: "#353535" },
                       }}
                     >
-                      <span style={{ color: "#96ff9b" }}>
+                      <span style={{ color: "#9B5Cff" }}>
                         {msg.author?.username || "Unknown"}
                       </span>
                       : {displayText}
@@ -216,8 +216,8 @@ export default function ChatPage() {
                   bgcolor: "#2c2c2c",
                   color: "#e0e0e0",
                   "& fieldset": { borderColor: "#424242" },
-                  "&:hover fieldset": { borderColor: "#96ff9b" },
-                  "&.Mui-focused fieldset": { borderColor: "#96ff9b" },
+                  "&:hover fieldset": { borderColor: "#9B5Cff" },
+                  "&.Mui-focused fieldset": { borderColor: "#9B5Cff" },
                 },
                 "& .MuiInputBase-input::placeholder": {
                   color: "#b0b0b0",
@@ -230,7 +230,7 @@ export default function ChatPage() {
               onClick={sendMessage}
               variant="contained"
               sx={{
-                bgcolor: "#96ff9b",
+                bgcolor: "#9B5Cff",
                 color: "#121212",
                 "&:hover": { bgcolor: "#7de686" },
                 "&:disabled": { bgcolor: "#424242", color: "#b0b0b0" },

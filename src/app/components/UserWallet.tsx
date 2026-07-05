@@ -126,7 +126,7 @@ export default function UserWallet() {
     if (status === "loading" || loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                <CircularProgress sx={{ color: '#96ff9b' }} />
+                <CircularProgress sx={{ color: '#9B5Cff' }} />
                 <Typography sx={{ ml: 2, color: 'text.secondary' }}>
                     Loading wallet...
                 </Typography>
@@ -136,7 +136,7 @@ export default function UserWallet() {
 
     if (status === "unauthenticated") {
         return (
-            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <CardContent>
                     <Typography color="error">Please log in to view your wallet</Typography>
                 </CardContent>
@@ -147,10 +147,10 @@ export default function UserWallet() {
     // Show admin message instead of wallet
     if (session?.user?.role === 'admin') {
         return (
-            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
+            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)', mb: 3 }}>
                 <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                    <AdminPanelSettings sx={{ fontSize: 60, color: '#96ff9b', mb: 2 }} />
-                    <Typography variant="h5" sx={{ color: '#96ff9b', mb: 2 }}>
+                    <AdminPanelSettings sx={{ fontSize: 60, color: '#9B5Cff', mb: 2 }} />
+                    <Typography variant="h5" sx={{ color: '#9B5Cff', mb: 2 }}>
                         Admin Account
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
@@ -163,9 +163,9 @@ export default function UserWallet() {
                         variant="contained"
                         href="/admin/users"
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         Go to User Management
@@ -177,7 +177,7 @@ export default function UserWallet() {
 
     if (error) {
         return (
-            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <CardContent>
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {error}
@@ -186,9 +186,9 @@ export default function UserWallet() {
                         variant="outlined"
                         onClick={handleRefresh}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Retry
@@ -200,7 +200,7 @@ export default function UserWallet() {
 
     if (!wallet) {
         return (
-            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <CardContent>
                     <Typography color="text.secondary">Wallet not found. Contact admin to create your wallet.</Typography>
                 </CardContent>
@@ -209,12 +209,12 @@ export default function UserWallet() {
     }
 
     return (
-        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
+        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)', mb: 3 }}>
             <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AccountBalanceWallet sx={{ color: '#96ff9b', fontSize: 28 }} />
-                        <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
+                        <AccountBalanceWallet sx={{ color: '#9B5Cff', fontSize: 28 }} />
+                        <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                             My Wallet
                         </Typography>
                         {isUSDFallback && (
@@ -239,9 +239,9 @@ export default function UserWallet() {
                             onClick={handleRefresh}
                             disabled={loading}
                             sx={{
-                                borderColor: '#96ff9b',
-                                color: '#96ff9b',
-                                '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                borderColor: '#9B5Cff',
+                                color: '#9B5Cff',
+                                '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                             }}
                         >
                             Refresh
@@ -266,11 +266,11 @@ export default function UserWallet() {
                         p: 3,
                         bgcolor: 'grey.700',
                         borderRadius: 2,
-                        border: '1px solid rgba(150, 255, 155, 0.3)'
+                        border: '1px solid rgba(155, 92, 255, 0.3)'
                     }}>
                         <LargePriceDisplay
                             usdAmount={wallet.balance}
-                            sx={{ color: '#96ff9b', fontWeight: 'bold', mb: 1 }}
+                            sx={{ color: '#9B5Cff', fontWeight: 'bold', mb: 1 }}
                         />
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Total Balance
@@ -287,11 +287,11 @@ export default function UserWallet() {
                         p: 3,
                         bgcolor: 'grey.700',
                         borderRadius: 2,
-                        border: '1px solid rgba(150, 255, 155, 0.3)'
+                        border: '1px solid rgba(155, 92, 255, 0.3)'
                     }}>
                         <LargePriceDisplay
                             usdAmount={wallet.available_balance}
-                            sx={{ color: '#96ff9b', fontWeight: 'bold', mb: 1 }}
+                            sx={{ color: '#9B5Cff', fontWeight: 'bold', mb: 1 }}
                         />
                         <Typography variant="body1" color="text.primary" fontWeight="bold">
                             Available to Spend
@@ -330,7 +330,7 @@ export default function UserWallet() {
                 <Box sx={{
                     mb: 3,
                     p: 2,
-                    bgcolor: 'rgba(150, 255, 155, 0.05)',
+                    bgcolor: 'rgba(155, 92, 255, 0.05)',
                     borderRadius: 1,
                     textAlign: 'center'
                 }}>
@@ -349,11 +349,11 @@ export default function UserWallet() {
                     )}
                 </Box>
 
-                <Divider sx={{ my: 3, borderColor: 'rgba(150, 255, 155, 0.2)' }} />
+                <Divider sx={{ my: 3, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <History sx={{ color: '#96ff9b' }} />
-                    <Typography variant="h6" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
+                    <History sx={{ color: '#9B5Cff' }} />
+                    <Typography variant="h6" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                         Recent Transactions
                     </Typography>
                 </Box>
@@ -366,7 +366,7 @@ export default function UserWallet() {
                                 sx={{
                                     px: 0,
                                     py: 1.5,
-                                    borderBottom: '1px solid rgba(150, 255, 155, 0.1)',
+                                    borderBottom: '1px solid rgba(155, 92, 255, 0.1)',
                                     '&:last-child': { borderBottom: 'none' }
                                 }}
                             >

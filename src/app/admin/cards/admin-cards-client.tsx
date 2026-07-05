@@ -471,8 +471,8 @@ function StatsCard({ icon, title, value, subtitle, color = "primary" }: {
                 flexDirection: 'column',
                 '&:hover': {
                     transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(150, 255, 155, 0.15)',
-                    borderColor: '#96ff9b'
+                    boxShadow: '0 8px 24px rgba(155, 92, 255, 0.15)',
+                    borderColor: '#9B5Cff'
                 }
             }}
         >
@@ -1120,7 +1120,7 @@ Please try:
                                                 height: '100%',
                                                 position: 'relative',
                                                 transition: 'all 0.3s ease',
-                                                border: selectedCards.has(card.id) ? '2px solid #96ff9b' : '1px solid transparent',
+                                                border: selectedCards.has(card.id) ? '2px solid #9B5Cff' : '1px solid transparent',
                                                 opacity: importing ? 0.6 : 1,
                                                 '&:hover': {
                                                     transform: importing ? 'none' : 'translateY(-4px)',
@@ -1213,7 +1213,7 @@ Please try:
                                     variant="contained"
                                     onClick={importEntireSet}
                                     disabled={importing || !selectedSet}
-                                    sx={{ height: '56px', bgcolor: '#96ff9b', color: 'grey.900' }}
+                                    sx={{ height: '56px', bgcolor: '#9B5Cff', color: 'grey.900' }}
                                     startIcon={importing ? <CircularProgress size={20} /> : <DownloadIcon />}
                                 >
                                     {importing ? 'Importing...' : 'Import Entire Set'}
@@ -1240,7 +1240,7 @@ Please try:
                         variant="contained"
                         onClick={importSelectedCards}
                         disabled={importing || selectedCards.size === 0}
-                        sx={{ bgcolor: '#96ff9b', color: 'grey.900' }}
+                        sx={{ bgcolor: '#9B5Cff', color: 'grey.900' }}
                         startIcon={importing ? <CircularProgress size={20} /> : <DownloadIcon />}
                     >
                         {importing ? 'Importing...' : `Import ${selectedCards.size} Card${selectedCards.size !== 1 ? 's' : ''}`}
@@ -1580,7 +1580,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                             variant="contained"
                             onClick={handleStartSync}
                             disabled={loading}
-                            sx={{ bgcolor: '#96ff9b', color: 'grey.900' }}
+                            sx={{ bgcolor: '#9B5Cff', color: 'grey.900' }}
                             startIcon={loading ? <CircularProgress size={20} /> : <Sync />}
                         >
                             {loading ? 'Syncing...' : 'Start Sync'}
@@ -2301,7 +2301,7 @@ export default function AdminCardsClient() {
                             bgcolor: "grey.900",
                             backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                             borderRadius: 3,
-                            boxShadow: "0 0 20px rgba(150, 255, 155, 0.15)",
+                            boxShadow: "0 0 20px rgba(155, 92, 255, 0.15)",
                             overflow: "visible",
                         }}
                     >
@@ -2372,7 +2372,7 @@ export default function AdminCardsClient() {
                                         {/* <Tooltip title="Add a new card to the collection">
                                             <Button
                                                 variant="contained"
-                                                sx={{ bgcolor: "#96ff9b", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
                                                 onClick={handleAddCard}
                                                 disabled={actionLoading}
                                                 startIcon={<AddIcon />}
@@ -2383,7 +2383,7 @@ export default function AdminCardsClient() {
                                         <Tooltip title="Import multiple cards at once using CSV format">
                                             <Button
                                                 variant="contained"
-                                                sx={{ bgcolor: "#96ff9b", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
                                                 onClick={() => setBulkCreateOpen(true)}
                                                 disabled={actionLoading}
                                                 startIcon={<UploadIcon />}
@@ -2418,7 +2418,7 @@ export default function AdminCardsClient() {
                                         <Tooltip title="Refresh the card list">
                                             <Button
                                                 variant="contained"
-                                                sx={{ bgcolor: "#96ff9b", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
                                                 onClick={fetchCards}
                                                 disabled={loading || actionLoading}
                                                 startIcon={<RefreshIcon />}
@@ -2562,7 +2562,7 @@ export default function AdminCardsClient() {
                                             bgcolor: "grey.800",
                                             mb: 3,
                                             borderRadius: 2,
-                                            border: "2px solid #96ff9b",
+                                            border: "2px solid #9B5Cff",
                                         }}
                                     >
                                         <Typography sx={{ flex: "1 1 100%", color: "text.primary", fontWeight: 'medium' }}>
@@ -2682,13 +2682,13 @@ export default function AdminCardsClient() {
                                                 },
                                                 "& .MuiDataGrid-row": {
                                                     "&:hover": {
-                                                        bgcolor: "rgba(150, 255, 155, 0.04)",
+                                                        bgcolor: "rgba(155, 92, 255, 0.04)",
                                                         cursor: 'pointer'
                                                     },
                                                     "&.Mui-selected": {
-                                                        bgcolor: "rgba(150, 255, 155, 0.08)",
+                                                        bgcolor: "rgba(155, 92, 255, 0.08)",
                                                         "&:hover": {
-                                                            bgcolor: "rgba(150, 255, 155, 0.12)"
+                                                            bgcolor: "rgba(155, 92, 255, 0.12)"
                                                         }
                                                     }
                                                 },
@@ -2709,7 +2709,7 @@ export default function AdminCardsClient() {
                                                 "& .MuiCheckbox-root": {
                                                     color: "text.secondary",
                                                     "&.Mui-checked": {
-                                                        color: "#96ff9b"
+                                                        color: "#9B5Cff"
                                                     }
                                                 },
                                                 "& .MuiDataGrid-columnSeparator": {
@@ -2919,7 +2919,7 @@ export default function AdminCardsClient() {
                     </Button>
                     <Button
                         variant="contained"
-                        sx={{ bgcolor: "#96ff9b", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                        sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
                         onClick={handleSaveCard}
                         disabled={actionLoading}
                         startIcon={actionLoading ? <CircularProgress size={20} /> : null}
@@ -2990,7 +2990,7 @@ export default function AdminCardsClient() {
                     </Button>
                     <Button
                         variant="contained"
-                        sx={{ bgcolor: "#96ff9b", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                        sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
                         onClick={handleBulkCreate}
                         disabled={actionLoading || !bulkCardsText.trim()}
                         startIcon={actionLoading ? <CircularProgress size={20} /> : <UploadIcon />}

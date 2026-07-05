@@ -131,10 +131,10 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
             <Paper sx={{
                 p: 3,
                 bgcolor: 'grey.800',
-                border: '1px solid rgba(150, 255, 155, 0.2)'
+                border: '1px solid rgba(155, 92, 255, 0.2)'
             }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress sx={{ color: '#96ff9b' }} />
+                    <CircularProgress sx={{ color: '#9B5Cff' }} />
                 </Box>
             </Paper>
         );
@@ -144,11 +144,11 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
         <Paper sx={{
             p: 3,
             bgcolor: 'grey.800',
-            border: '1px solid rgba(150, 255, 155, 0.2)'
+            border: '1px solid rgba(155, 92, 255, 0.2)'
         }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <NewReleases sx={{ color: '#96ff9b' }} />
+                    <NewReleases sx={{ color: '#9B5Cff' }} />
                     New Releases & Pre-orders
                 </Typography>
 
@@ -161,14 +161,14 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                         sx={{
                             '& .MuiToggleButton-root': {
                                 color: 'text.secondary',
-                                borderColor: 'rgba(150, 255, 155, 0.3)',
+                                borderColor: 'rgba(155, 92, 255, 0.3)',
                                 '&.Mui-selected': {
                                     color: '#000',
-                                    bgcolor: '#96ff9b',
-                                    borderColor: '#96ff9b'
+                                    bgcolor: '#9B5Cff',
+                                    borderColor: '#9B5Cff'
                                 },
                                 '&:hover': {
-                                    bgcolor: 'rgba(150, 255, 155, 0.1)'
+                                    bgcolor: 'rgba(155, 92, 255, 0.1)'
                                 }
                             }
                         }}
@@ -181,7 +181,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                     <IconButton
                         size="small"
                         onClick={fetchReleases}
-                        sx={{ color: '#96ff9b' }}
+                        sx={{ color: '#9B5Cff' }}
                     >
                         <Refresh />
                     </IconButton>
@@ -208,11 +208,11 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                         flexDirection: 'column',
                                         transition: 'all 0.2s ease',
                                         bgcolor: 'grey.900',
-                                        border: '1px solid rgba(150, 255, 155, 0.1)',
+                                        border: '1px solid rgba(155, 92, 255, 0.1)',
                                         '&:hover': {
                                             transform: 'translateY(-4px)',
-                                            boxShadow: '0 8px 24px rgba(150, 255, 155, 0.2)',
-                                            border: '1px solid rgba(150, 255, 155, 0.3)'
+                                            boxShadow: '0 8px 24px rgba(155, 92, 255, 0.2)',
+                                            border: '1px solid rgba(155, 92, 255, 0.3)'
                                         }
                                     }}
                                 >
@@ -241,7 +241,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                     label="NEW"
                                                     size="small"
                                                     sx={{
-                                                        bgcolor: '#96ff9b',
+                                                        bgcolor: '#9B5Cff',
                                                         color: '#000',
                                                         fontWeight: 600,
                                                         fontSize: '0.7rem'
@@ -255,7 +255,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                         </Typography>
 
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
-                                            <CalendarToday fontSize="small" sx={{ color: '#96ff9b' }} />
+                                            <CalendarToday fontSize="small" sx={{ color: '#9B5Cff' }} />
                                             <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                                 {formatDate(set.release_date)}
                                             </Typography>
@@ -264,8 +264,8 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                     label={`${set.days_since_added}d ago`}
                                                     size="small"
                                                     sx={{
-                                                        bgcolor: 'rgba(150, 255, 155, 0.2)',
-                                                        color: '#96ff9b',
+                                                        bgcolor: 'rgba(155, 92, 255, 0.2)',
+                                                        color: '#9B5Cff',
                                                         fontSize: '0.7rem'
                                                     }}
                                                 />
@@ -283,7 +283,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                     </Typography>
                                                 )}
                                                 {set.avg_price && (
-                                                    <Typography variant="body2" sx={{ color: '#96ff9b', fontWeight: 500 }}>
+                                                    <Typography variant="body2" sx={{ color: '#9B5Cff', fontWeight: 500 }}>
                                                         Avg: {formatPrice(set.avg_price)}
                                                     </Typography>
                                                 )}
@@ -303,7 +303,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                             label={card.name}
                                                             size="small"
                                                             sx={{
-                                                                bgcolor: 'rgba(150, 255, 155, 0.1)',
+                                                                bgcolor: 'rgba(155, 92, 255, 0.1)',
                                                                 color: 'text.secondary',
                                                                 fontSize: '0.7rem'
                                                             }}
@@ -320,12 +320,12 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                 startIcon={<LocalOffer />}
                                                 onClick={() => router.push(`/marketplace?set=${encodeURIComponent(set.name)}`)}
                                                 sx={{
-                                                    borderColor: '#96ff9b',
-                                                    color: '#96ff9b',
+                                                    borderColor: '#9B5Cff',
+                                                    color: '#9B5Cff',
                                                     flex: 1,
                                                     '&:hover': {
-                                                        borderColor: '#96ff9b',
-                                                        bgcolor: 'rgba(150, 255, 155, 0.1)'
+                                                        borderColor: '#9B5Cff',
+                                                        bgcolor: 'rgba(155, 92, 255, 0.1)'
                                                     }
                                                 }}
                                             >
@@ -337,7 +337,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                     variant="contained"
                                                     startIcon={<ShoppingCart />}
                                                     sx={{
-                                                        bgcolor: '#96ff9b',
+                                                        bgcolor: '#9B5Cff',
                                                         color: '#000',
                                                         flex: 1,
                                                         '&:hover': {
@@ -363,12 +363,12 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                     left: -20,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    bgcolor: 'rgba(150, 255, 155, 0.1)',
-                                    border: '1px solid rgba(150, 255, 155, 0.3)',
-                                    color: '#96ff9b',
+                                    bgcolor: 'rgba(155, 92, 255, 0.1)',
+                                    border: '1px solid rgba(155, 92, 255, 0.3)',
+                                    color: '#9B5Cff',
                                     '&:hover': {
-                                        bgcolor: 'rgba(150, 255, 155, 0.2)',
-                                        border: '1px solid rgba(150, 255, 155, 0.5)'
+                                        bgcolor: 'rgba(155, 92, 255, 0.2)',
+                                        border: '1px solid rgba(155, 92, 255, 0.5)'
                                     }
                                 }}
                                 onClick={handlePrevious}
@@ -382,12 +382,12 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                     right: -20,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    bgcolor: 'rgba(150, 255, 155, 0.1)',
-                                    border: '1px solid rgba(150, 255, 155, 0.3)',
-                                    color: '#96ff9b',
+                                    bgcolor: 'rgba(155, 92, 255, 0.1)',
+                                    border: '1px solid rgba(155, 92, 255, 0.3)',
+                                    color: '#9B5Cff',
                                     '&:hover': {
-                                        bgcolor: 'rgba(150, 255, 155, 0.2)',
-                                        border: '1px solid rgba(150, 255, 155, 0.5)'
+                                        bgcolor: 'rgba(155, 92, 255, 0.2)',
+                                        border: '1px solid rgba(155, 92, 255, 0.5)'
                                     }
                                 }}
                                 onClick={handleNext}

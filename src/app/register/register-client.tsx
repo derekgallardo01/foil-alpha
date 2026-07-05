@@ -196,7 +196,7 @@ export default function RegisterClient() {
                 bgcolor: "grey.900",
                 backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                 borderRadius: 2,
-                boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
               }}
             >
               <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
@@ -339,7 +339,7 @@ export default function RegisterClient() {
                         type="submit"
                         fullWidth
                         variant="contained"
-                        sx={{ mt: 3, bgcolor: "#96ff9b", color: "grey.900" }}
+                        sx={{ mt: 3, bgcolor: "#9B5Cff", color: "grey.900" }}
                         disabled={loading || success}
                         aria-label="Register"
                       >

@@ -93,7 +93,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
     };
 
     const getPopularityColor = (score: number) => {
-        if (score > 1000) return '#96ff9b';
+        if (score > 1000) return '#9B5Cff';
         if (score > 500) return '#FFD54F';
         if (score > 100) return '#FF7043';
         return '#66BB6A';
@@ -107,7 +107,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
             'Rare Holo': '#AB47BC',
             'Ultra Rare': '#FF7043',
             'Secret Rare': '#EF5350',
-            'VMAX': '#96ff9b',
+            'VMAX': '#9B5Cff',
             'VSTAR': '#FFD54F',
             'Promo': '#9C27B0'
         };
@@ -123,10 +123,10 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
             <Paper sx={{
                 p: 3,
                 bgcolor: 'grey.800',
-                border: '1px solid rgba(150, 255, 155, 0.2)'
+                border: '1px solid rgba(155, 92, 255, 0.2)'
             }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress sx={{ color: '#96ff9b' }} />
+                    <CircularProgress sx={{ color: '#9B5Cff' }} />
                 </Box>
             </Paper>
         );
@@ -137,10 +137,10 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
             <Paper sx={{
                 p: 3,
                 bgcolor: 'grey.800',
-                border: '1px solid rgba(150, 255, 155, 0.2)'
+                border: '1px solid rgba(155, 92, 255, 0.2)'
             }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <Whatshot sx={{ color: '#96ff9b' }} />
+                    <Whatshot sx={{ color: '#9B5Cff' }} />
                     Most Popular Cards
                 </Typography>
                 <Typography color="error" align="center" sx={{ py: 2 }}>
@@ -154,11 +154,11 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
         <Paper sx={{
             p: 3,
             bgcolor: 'grey.800',
-            border: '1px solid rgba(150, 255, 155, 0.2)'
+            border: '1px solid rgba(155, 92, 255, 0.2)'
         }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Whatshot sx={{ color: '#96ff9b' }} />
+                    <Whatshot sx={{ color: '#9B5Cff' }} />
                     Most Popular Cards
                 </Typography>
 
@@ -170,14 +170,14 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                     sx={{
                         '& .MuiToggleButton-root': {
                             color: 'text.secondary',
-                            borderColor: 'rgba(150, 255, 155, 0.3)',
+                            borderColor: 'rgba(155, 92, 255, 0.3)',
                             '&.Mui-selected': {
                                 color: '#000',
-                                bgcolor: '#96ff9b',
-                                borderColor: '#96ff9b'
+                                bgcolor: '#9B5Cff',
+                                borderColor: '#9B5Cff'
                             },
                             '&:hover': {
-                                bgcolor: 'rgba(150, 255, 155, 0.1)'
+                                bgcolor: 'rgba(155, 92, 255, 0.1)'
                             }
                         }
                     }}
@@ -199,13 +199,13 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                         <Card
                             sx={{
                                 mb: 3,
-                                background: 'linear-gradient(135deg, rgba(150, 255, 155, 0.15) 0%, rgba(150, 255, 155, 0.05) 100%)',
-                                border: '1px solid rgba(150, 255, 155, 0.3)',
+                                background: 'linear-gradient(135deg, rgba(155, 92, 255, 0.15) 0%, rgba(155, 92, 255, 0.05) 100%)',
+                                border: '1px solid rgba(155, 92, 255, 0.3)',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
                                 '&:hover': {
                                     transform: 'translateY(-2px)',
-                                    boxShadow: '0 8px 24px rgba(150, 255, 155, 0.2)'
+                                    boxShadow: '0 8px 24px rgba(155, 92, 255, 0.2)'
                                 }
                             }}
                             onClick={() => router.push(`/marketplace?card=${topCard.id}`)}
@@ -247,7 +247,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                 icon={<Star />}
                                                 label="#1 Most Popular"
                                                 sx={{
-                                                    bgcolor: '#96ff9b',
+                                                    bgcolor: '#9B5Cff',
                                                     color: '#000',
                                                     fontWeight: 600
                                                 }}
@@ -257,7 +257,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                         <Grid container spacing={2} sx={{ mt: 2 }}>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <Visibility sx={{ color: '#96ff9b', mb: 0.5 }} />
+                                                    <Visibility sx={{ color: '#9B5Cff', mb: 0.5 }} />
                                                     <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                                         {topCard.view_count.toLocaleString()}
                                                     </Typography>
@@ -266,7 +266,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             </Grid>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <LocalOffer sx={{ color: '#96ff9b', mb: 0.5 }} />
+                                                    <LocalOffer sx={{ color: '#9B5Cff', mb: 0.5 }} />
                                                     <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                                         {topCard.active_listings}
                                                     </Typography>
@@ -275,7 +275,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             </Grid>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <TrendingUp sx={{ color: '#96ff9b', mb: 0.5 }} />
+                                                    <TrendingUp sx={{ color: '#9B5Cff', mb: 0.5 }} />
                                                     <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                                         {topCard.recent_sales}
                                                     </Typography>
@@ -284,7 +284,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             </Grid>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="h6" sx={{ color: '#96ff9b', fontWeight: 600 }}>
+                                                    <Typography variant="h6" sx={{ color: '#9B5Cff', fontWeight: 600 }}>
                                                         {formatPrice(topCard.market_price)}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">Market Price</Typography>
@@ -305,19 +305,19 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                 component="div"
                                 sx={{
                                     cursor: 'pointer',
-                                    borderBottom: index < popularCards.length - 2 ? '1px solid rgba(150, 255, 155, 0.1)' : 'none',
+                                    borderBottom: index < popularCards.length - 2 ? '1px solid rgba(155, 92, 255, 0.1)' : 'none',
                                     px: 2,
                                     py: 1.5,
                                     transition: 'background-color 0.2s ease',
                                     '&:hover': {
-                                        bgcolor: 'rgba(150, 255, 155, 0.05)'
+                                        bgcolor: 'rgba(155, 92, 255, 0.05)'
                                     }
                                 }}
                                 onClick={() => router.push(`/marketplace?card=${card.id}`)}
                             >
                                 <ListItemAvatar>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b', fontWeight: 600, minWidth: 24 }}>
+                                        <Typography variant="h6" sx={{ color: '#9B5Cff', fontWeight: 600, minWidth: 24 }}>
                                             #{index + 2}
                                         </Typography>
                                         <Avatar
@@ -354,7 +354,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                 {card.set_name}
                                             </Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Visibility sx={{ fontSize: 14, color: '#96ff9b' }} />
+                                                <Visibility sx={{ fontSize: 14, color: '#9B5Cff' }} />
                                                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                                                     {card.view_count.toLocaleString()}
                                                 </Typography>
@@ -364,7 +364,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                 />
                                 <ListItemSecondaryAction>
                                     <Box sx={{ textAlign: 'right' }}>
-                                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#96ff9b' }}>
+                                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#9B5Cff' }}>
                                             {formatPrice(card.market_price)}
                                         </Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
@@ -374,7 +374,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                 sx={{
                                                     width: 60,
                                                     height: 4,
-                                                    bgcolor: 'rgba(150, 255, 155, 0.1)',
+                                                    bgcolor: 'rgba(155, 92, 255, 0.1)',
                                                     borderRadius: 2,
                                                     '& .MuiLinearProgress-bar': {
                                                         bgcolor: getPopularityColor(card.popularity_score),

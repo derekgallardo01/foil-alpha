@@ -42,13 +42,13 @@ export default function AdminWalletsPage() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: "1px solid rgba(150, 255, 155, 0.2)" }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: "1px solid rgba(155, 92, 255, 0.2)" }}>
+                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                     <MenuIcon />
                 </IconButton>
                 <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={40} height={20} />
-                    <Typography variant="h5" sx={{ color: '#96ff9b', fontWeight: 'bold' }}>
+                    <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                         Wallet Management
                     </Typography>
                 </Box>
@@ -58,9 +58,9 @@ export default function AdminWalletsPage() {
                         startIcon={<ArrowBack />}
                         onClick={() => router.push('/admin/users')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Back to Users
@@ -70,8 +70,8 @@ export default function AdminWalletsPage() {
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 <Box sx={{ textAlign: 'center', mb: 6 }}>
-                    <AccountBalanceWallet sx={{ fontSize: 80, color: '#96ff9b', mb: 2 }} />
-                    <Typography variant="h3" sx={{ color: '#96ff9b', mb: 2, fontWeight: 'bold' }}>
+                    <AccountBalanceWallet sx={{ fontSize: 80, color: '#9B5Cff', mb: 2 }} />
+                    <Typography variant="h3" sx={{ color: '#9B5Cff', mb: 2, fontWeight: 'bold' }}>
                         Wallet Management System
                     </Typography>
                     <Typography variant="h6" sx={{ color: 'text.secondary', mb: 4, maxWidth: 600, mx: 'auto' }}>
@@ -84,14 +84,14 @@ export default function AdminWalletsPage() {
                     <Grid item xs={12} md={4}>
                         <Card sx={{
                             bgcolor: 'grey.800',
-                            border: '1px solid rgba(150, 255, 155, 0.2)',
+                            border: '1px solid rgba(155, 92, 255, 0.2)',
                             height: '100%',
                             transition: 'transform 0.2s',
                             '&:hover': { transform: 'translateY(-4px)' }
                         }}>
                             <CardContent sx={{ textAlign: 'center', p: 4 }}>
-                                <Person sx={{ fontSize: 50, color: '#96ff9b', mb: 2 }} />
-                                <Typography variant="h5" sx={{ color: '#96ff9b', mb: 2 }}>
+                                <Person sx={{ fontSize: 50, color: '#9B5Cff', mb: 2 }} />
+                                <Typography variant="h5" sx={{ color: '#9B5Cff', mb: 2 }}>
                                     User Management
                                 </Typography>
                                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -101,9 +101,9 @@ export default function AdminWalletsPage() {
                                     variant="contained"
                                     onClick={() => router.push('/admin/users')}
                                     sx={{
-                                        bgcolor: '#96ff9b',
+                                        bgcolor: '#9B5Cff',
                                         color: 'grey.900',
-                                        '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                                        '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                                     }}
                                 >
                                     Go to Users
@@ -115,14 +115,14 @@ export default function AdminWalletsPage() {
                     <Grid item xs={12} md={4}>
                         <Card sx={{
                             bgcolor: 'grey.800',
-                            border: '1px solid rgba(150, 255, 155, 0.2)',
+                            border: '1px solid rgba(155, 92, 255, 0.2)',
                             height: '100%',
                             transition: 'transform 0.2s',
                             '&:hover': { transform: 'translateY(-4px)' }
                         }}>
                             <CardContent sx={{ textAlign: 'center', p: 4 }}>
-                                <AccountBalanceWallet sx={{ fontSize: 50, color: '#96ff9b', mb: 2 }} />
-                                <Typography variant="h5" sx={{ color: '#96ff9b', mb: 2 }}>
+                                <AccountBalanceWallet sx={{ fontSize: 50, color: '#9B5Cff', mb: 2 }} />
+                                <Typography variant="h5" sx={{ color: '#9B5Cff', mb: 2 }}>
                                     Direct Operations
                                 </Typography>
                                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -140,14 +140,14 @@ export default function AdminWalletsPage() {
                     <Grid item xs={12} md={4}>
                         <Card sx={{
                             bgcolor: 'grey.800',
-                            border: '1px solid rgba(150, 255, 155, 0.2)',
+                            border: '1px solid rgba(155, 92, 255, 0.2)',
                             height: '100%',
                             transition: 'transform 0.2s',
                             '&:hover': { transform: 'translateY(-4px)' }
                         }}>
                             <CardContent sx={{ textAlign: 'center', p: 4 }}>
-                                <Settings sx={{ fontSize: 50, color: '#96ff9b', mb: 2 }} />
-                                <Typography variant="h5" sx={{ color: '#96ff9b', mb: 2 }}>
+                                <Settings sx={{ fontSize: 50, color: '#9B5Cff', mb: 2 }} />
+                                <Typography variant="h5" sx={{ color: '#9B5Cff', mb: 2 }}>
                                     Full Tracking
                                 </Typography>
                                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -166,11 +166,11 @@ export default function AdminWalletsPage() {
                 <Box sx={{
                     textAlign: 'center',
                     p: 4,
-                    bgcolor: 'rgba(150, 255, 155, 0.05)',
+                    bgcolor: 'rgba(155, 92, 255, 0.05)',
                     borderRadius: 2,
-                    border: '1px solid rgba(150, 255, 155, 0.2)'
+                    border: '1px solid rgba(155, 92, 255, 0.2)'
                 }}>
-                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
+                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2 }}>
                         🚀 No Admin Wallet Required
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -183,12 +183,12 @@ export default function AdminWalletsPage() {
                         size="large"
                         onClick={() => router.push('/admin/users')}
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
                             px: 4,
                             py: 1.5,
                             fontSize: '1.1rem',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         Start Managing Wallets

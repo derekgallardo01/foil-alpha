@@ -112,7 +112,7 @@ export default function WaitlistSignupsPage() {
           width: "100%",
           height: "100%",
           background:
-            "radial-gradient(circle, rgba(150, 255, 155, 0.1) 1px, transparent 1px), radial-gradient(circle, rgba(239, 83, 80, 0.2) 2px, transparent 2px)",
+            "radial-gradient(circle, rgba(155, 92, 255, 0.1) 1px, transparent 1px), radial-gradient(circle, rgba(239, 83, 80, 0.2) 2px, transparent 2px)",
           backgroundSize: "20px 20px, 30px 30px",
           backgroundPosition: "0 0, 15px 15px",
           opacity: 0.3,
@@ -138,7 +138,7 @@ export default function WaitlistSignupsPage() {
             bgcolor: "grey.900",
             backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
             borderRadius: 2,
-            boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+            boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
             position: "relative",
             width: "100%",
           }}
@@ -147,10 +147,10 @@ export default function WaitlistSignupsPage() {
             variant="h4"
             sx={{
               textAlign: "center",
-              color: "#96FF9B",
+              color: "#9B5Cff",
               mb: 3,
               fontWeight: "bold",
-              textShadow: "0 0 10px rgba(150, 255, 155, 0.5)",
+              textShadow: "0 0 10px rgba(155, 92, 255, 0.5)",
               "@media (prefers-reduced-motion: reduce)": {
                 textShadow: "none",
               },
@@ -219,8 +219,8 @@ export default function WaitlistSignupsPage() {
                             px: 1,
                             py: 0.5,
                             borderRadius: 1,
-                            bgcolor: "rgba(150, 255, 155, 0.1)",
-                            color: "rgba(150, 255, 155, 1)",
+                            bgcolor: "rgba(155, 92, 255, 0.1)",
+                            color: "rgba(155, 92, 255, 1)",
                             whiteSpace: "pre-wrap",
                             maxHeight: "100px",
                             overflow: "auto",

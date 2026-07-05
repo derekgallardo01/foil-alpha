@@ -206,11 +206,11 @@ export default function CommissionManagement() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                     <MenuIcon />
                 </IconButton>
-                <Typography variant="h5" sx={{ ml: 2, color: '#96ff9b', fontWeight: 'bold' }}>
+                <Typography variant="h5" sx={{ ml: 2, color: '#9B5Cff', fontWeight: 'bold' }}>
                     Commission Management
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
@@ -220,9 +220,9 @@ export default function CommissionManagement() {
                         onClick={fetchCommissionData}
                         disabled={loading}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Refresh
@@ -233,9 +233,9 @@ export default function CommissionManagement() {
                         onClick={saveCommissionSettings}
                         disabled={saving}
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         {saving ? 'Saving...' : 'Save Settings'}
@@ -252,9 +252,9 @@ export default function CommissionManagement() {
                     <Grid container spacing={3}>
                         {/* Admin Wallet Info */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <AccountBalance />
                                         Platform Wallet
                                     </Typography>
@@ -302,9 +302,9 @@ export default function CommissionManagement() {
 
                         {/* Global Commission Setting */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Percent />
                                         Global Commission Rate
                                     </Typography>
@@ -320,11 +320,11 @@ export default function CommissionManagement() {
                                         }}
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
-                                                '& fieldset': { borderColor: 'rgba(150, 255, 155, 0.2)' },
-                                                '&:hover fieldset': { borderColor: '#96ff9b' },
-                                                '&.Mui-focused fieldset': { borderColor: '#96ff9b' },
+                                                '& fieldset': { borderColor: 'rgba(155, 92, 255, 0.2)' },
+                                                '&:hover fieldset': { borderColor: '#9B5Cff' },
+                                                '&.Mui-focused fieldset': { borderColor: '#9B5Cff' },
                                             },
-                                            '& .MuiInputLabel-root': { color: '#96ff9b' },
+                                            '& .MuiInputLabel-root': { color: '#9B5Cff' },
                                             '& .MuiInputBase-input': { color: 'text.primary' },
                                         }}
                                     />
@@ -337,9 +337,9 @@ export default function CommissionManagement() {
 
                         {/* Commission Calculation Example */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <TrendingUp />
                                         Commission Calculation
                                     </Typography>
@@ -347,7 +347,7 @@ export default function CommissionManagement() {
                                         <Typography variant="body2" color="text.secondary" gutterBottom>
                                             Example: $100 card with {globalCommission}% commission
                                         </Typography>
-                                        <Divider sx={{ my: 1, borderColor: 'rgba(150, 255, 155, 0.2)' }} />
+                                        <Divider sx={{ my: 1, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
                                         <Typography variant="body2" color="text.primary">
                                             • Card Price: $100.00
                                         </Typography>
@@ -370,9 +370,9 @@ export default function CommissionManagement() {
 
                         {/* Rarity-Specific Commission Rates */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2 }}>
+                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2 }}>
                                         Rarity-Specific Commission Rates
                                     </Typography>
                                     <Alert severity="info" sx={{ mb: 2 }}>
@@ -382,11 +382,11 @@ export default function CommissionManagement() {
                                         <Table>
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Rarity</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Symbol</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Color</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Commission Rate (%)</TableCell>
-                                                    <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Status</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Rarity</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Symbol</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Color</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Commission Rate (%)</TableCell>
+                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Status</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -427,9 +427,9 @@ export default function CommissionManagement() {
                                                                 sx={{
                                                                     width: 120,
                                                                     '& .MuiOutlinedInput-root': {
-                                                                        '& fieldset': { borderColor: 'rgba(150, 255, 155, 0.2)' },
-                                                                        '&:hover fieldset': { borderColor: '#96ff9b' },
-                                                                        '&.Mui-focused fieldset': { borderColor: '#96ff9b' },
+                                                                        '& fieldset': { borderColor: 'rgba(155, 92, 255, 0.2)' },
+                                                                        '&:hover fieldset': { borderColor: '#9B5Cff' },
+                                                                        '&.Mui-focused fieldset': { borderColor: '#9B5Cff' },
                                                                     },
                                                                     '& .MuiInputBase-input': { color: 'text.primary' },
                                                                 }}
@@ -467,9 +467,9 @@ export default function CommissionManagement() {
                                     onClick={fetchCommissionData}
                                     disabled={loading}
                                     sx={{
-                                        borderColor: '#96ff9b',
-                                        color: '#96ff9b',
-                                        '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                        borderColor: '#9B5Cff',
+                                        color: '#9B5Cff',
+                                        '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                     }}
                                 >
                                     Reset Changes
@@ -481,9 +481,9 @@ export default function CommissionManagement() {
                                     disabled={saving}
                                     size="large"
                                     sx={{
-                                        bgcolor: '#96ff9b',
+                                        bgcolor: '#9B5Cff',
                                         color: 'grey.900',
-                                        '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' },
+                                        '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' },
                                         px: 4
                                     }}
                                 >

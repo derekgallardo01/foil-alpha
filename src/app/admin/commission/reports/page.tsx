@@ -145,23 +145,23 @@ export default function CommissionReports() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                     <MenuIcon />
                 </IconButton>
-                <Typography variant="h5" sx={{ ml: 2, color: '#96ff9b', fontWeight: 'bold' }}>
+                <Typography variant="h5" sx={{ ml: 2, color: '#9B5Cff', fontWeight: 'bold' }}>
                     Commission Reports & Analytics
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
                     <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <InputLabel sx={{ color: '#96ff9b' }}>Period</InputLabel>
+                        <InputLabel sx={{ color: '#9B5Cff' }}>Period</InputLabel>
                         <Select
                             value={dateRange}
                             onChange={(e) => setDateRange(e.target.value)}
                             sx={{
-                                color: '#96ff9b',
-                                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(150, 255, 155, 0.2)' },
-                                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#96ff9b' },
+                                color: '#9B5Cff',
+                                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(155, 92, 255, 0.2)' },
+                                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9B5Cff' },
                             }}
                         >
                             <MenuItem value="7">Last 7 days</MenuItem>
@@ -175,9 +175,9 @@ export default function CommissionReports() {
                         startIcon={<Refresh />}
                         onClick={fetchReportData}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Refresh
@@ -186,9 +186,9 @@ export default function CommissionReports() {
                         variant="contained"
                         startIcon={<Download />}
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         Export
@@ -208,7 +208,7 @@ export default function CommissionReports() {
                             <Grid item xs={12}>
                                 <Grid container spacing={2}>
                                     <Grid item xs={12} md={2.4}>
-                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                             <CardContent sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 'bold' }}>
                                                     {formatCurrency(reportData.summary.total_revenue)}
@@ -223,7 +223,7 @@ export default function CommissionReports() {
                                         </Card>
                                     </Grid>
                                     <Grid item xs={12} md={2.4}>
-                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                             <CardContent sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'info.main', fontWeight: 'bold' }}>
                                                     {formatCurrency(reportData.summary.total_commissions)}
@@ -238,7 +238,7 @@ export default function CommissionReports() {
                                         </Card>
                                     </Grid>
                                     <Grid item xs={12} md={2.4}>
-                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                             <CardContent sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
                                                     {formatCurrency(reportData.summary.total_marketplace_sales)}
@@ -253,7 +253,7 @@ export default function CommissionReports() {
                                         </Card>
                                     </Grid>
                                     <Grid item xs={12} md={2.4}>
-                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                             <CardContent sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'secondary.main', fontWeight: 'bold' }}>
                                                     {reportData.summary.avg_commission_rate.toFixed(1)}%
@@ -268,7 +268,7 @@ export default function CommissionReports() {
                                         </Card>
                                     </Grid>
                                     <Grid item xs={12} md={2.4}>
-                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                             <CardContent sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
                                                     {reportData.summary.total_transactions}
@@ -287,9 +287,9 @@ export default function CommissionReports() {
 
                             {/* Commission by Rarity */}
                             <Grid item xs={12} md={6}>
-                                <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                     <CardContent>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <PieChart />
                                             Commission by Card Rarity
                                         </Typography>
@@ -297,10 +297,10 @@ export default function CommissionReports() {
                                             <Table size="small">
                                                 <TableHead>
                                                     <TableRow>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Rarity</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Commission</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Transactions</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Avg Rate</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Rarity</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Commission</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Transactions</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Avg Rate</TableCell>
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>
@@ -329,9 +329,9 @@ export default function CommissionReports() {
 
                             {/* Top Performing Cards */}
                             <Grid item xs={12} md={6}>
-                                <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                     <CardContent>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <BarChart />
                                             Top Revenue Generating Cards
                                         </Typography>
@@ -339,10 +339,10 @@ export default function CommissionReports() {
                                             <Table size="small" stickyHeader>
                                                 <TableHead>
                                                     <TableRow>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Card</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Commission</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Sales</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold', bgcolor: 'grey.800' }}>Avg Price</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Card</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Commission</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Sales</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Avg Price</TableCell>
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>
@@ -371,9 +371,9 @@ export default function CommissionReports() {
 
                             {/* Monthly Breakdown */}
                             <Grid item xs={12}>
-                                <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                     <CardContent>
-                                        <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <TrendingUp />
                                             Monthly Revenue Breakdown
                                         </Typography>
@@ -381,12 +381,12 @@ export default function CommissionReports() {
                                             <Table>
                                                 <TableHead>
                                                     <TableRow>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Month</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Commissions</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Marketplace Sales</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Total Revenue</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Transactions</TableCell>
-                                                        <TableCell sx={{ color: '#96ff9b', fontWeight: 'bold' }}>Growth</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Month</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Commissions</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Marketplace Sales</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Total Revenue</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Transactions</TableCell>
+                                                        <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Growth</TableCell>
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>

@@ -407,7 +407,7 @@ export default function AdminUsersClient() {
       <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
           <motion.div initial={{ rotateY: 180 }} animate={{ rotateY: 0 }} transition={{ duration: 0.6 }}>
-            <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)" }}>
+            <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)" }}>
               <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
                   <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} />
@@ -424,10 +424,10 @@ export default function AdminUsersClient() {
                 <motion.div variants={containerVariants} initial="hidden" animate="visible">
                   <motion.div variants={itemVariants}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-                      <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={handleAddUser} disabled={actionLoading}>
+                      <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={handleAddUser} disabled={actionLoading}>
                         Add User
                       </Button>
-                      <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={fetchUsers} disabled={loading || actionLoading}>
+                      <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={fetchUsers} disabled={loading || actionLoading}>
                         Refresh
                       </Button>
                     </Box>
@@ -736,7 +736,7 @@ export default function AdminUsersClient() {
           <Button onClick={() => setEditUser(null)} disabled={actionLoading}>
             Cancel
           </Button>
-          <Button variant="contained" sx={{ bgcolor: "#96ff9b", color: "grey.900" }} onClick={handleSaveUser} disabled={actionLoading}>
+          <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={handleSaveUser} disabled={actionLoading}>
             {actionLoading ? <CircularProgress size={24} /> : "Save"}
           </Button>
         </DialogActions>

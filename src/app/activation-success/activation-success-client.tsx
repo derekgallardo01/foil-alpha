@@ -49,7 +49,7 @@ export default function ActivationSuccessClient() {
     >
       <Container maxWidth="sm">
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)" }}>
+        <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)" }}>
         <motion.div variants={containerVariants} initial="hidden" animate="visible">
               <motion.div variants={itemVariants}>
                 <Typography variant="h4" sx={{ mb: 2, textAlign: "center", color: "text.primary" }}>
@@ -65,7 +65,7 @@ export default function ActivationSuccessClient() {
                 <Button
                   fullWidth
                   variant="contained"
-                  sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+                  sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
                   onClick={handleLoginRedirect} // Use handler to pass email
                   aria-label="Go to Login"
                 >

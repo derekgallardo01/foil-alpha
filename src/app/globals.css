@@ -1,37 +1,29 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Global CSS. The visual system lives in the MUI theme (src/app/theme.ts);
+   this file only holds a few structural rules and keyframes that can't live
+   in the theme. Body background/typography are owned by MUI CssBaseline. */
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Smart overlay positioning - no header spacing needed */
+/* Smart overlay positioning for the fixed header status widget */
 .header-status-overlay {
   position: fixed !important;
   z-index: 9999 !important;
   pointer-events: none;
 }
 
-.header-status-overlay>* {
+.header-status-overlay > * {
   pointer-events: auto;
 }
 
-/* Enhanced notification menu for mobile */
+.header-status-overlay * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.header-status-overlay button,
+.header-status-overlay .MuiIconButton-root {
+  pointer-events: auto;
+}
+
+/* Notification menu on small screens */
 @media (max-width: 768px) {
   .MuiMenu-paper {
     max-width: calc(100vw - 16px) !important;
@@ -43,76 +35,39 @@ body {
   }
 }
 
-/* Prevent content selection on overlay elements */
-.header-status-overlay * {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-/* Ensure overlay elements don't interfere with page scrolling */
-.header-status-overlay {
-  pointer-events: none;
-}
-
-.header-status-overlay button,
-.header-status-overlay .MuiIconButton-root {
-  pointer-events: auto;
-}
-
-/* In a global CSS file (e.g., styles/globals.css) */
+/* Typewriter effect (chat) */
 @keyframes typing {
-  0% {
-    width: 0;
-  }
-
-  50% {
-    width: 100%;
-  }
-
-  100% {
-    width: 0;
-  }
+  0% { width: 0; }
+  50% { width: 100%; }
+  100% { width: 0; }
 }
 
 .typingEffect {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "JetBrains Mono Variable", ui-monospace, monospace;
   overflow: hidden;
   white-space: nowrap;
   border-right: 3px solid;
   animation: typing 3s steps(30) 0s 1 normal both;
 }
 
+/* Animated gradient background (decorative) */
 @keyframes gradientBackground {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .dynamic-background {
   height: 100vh;
-  background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #fbc2eb, #a18cd1);
+  background: linear-gradient(-45deg, #0a0e15, #160e2a, #0b1420, #1a1030);
   background-size: 400% 400%;
   animation: gradientBackground 15s ease infinite;
 }
 
+/* Brand glow pulse (Holo violet) */
 @keyframes pulseGlow {
-  0% {
-    box-shadow: 0 0 10px 0px rgba(0, 255, 0, 0.6), 0 0 20px 5px rgba(0, 255, 0, 0.3);
-  }
-
-  100% {
-    box-shadow: 0 0 30px 10px rgba(0, 255, 0, 0.1), 0 0 50px 20px rgba(0, 255, 0, 0.2);
-  }
+  0% { box-shadow: 0 0 10px 0px rgba(155, 92, 255, 0.5), 0 0 20px 5px rgba(155, 92, 255, 0.25); }
+  100% { box-shadow: 0 0 30px 10px rgba(34, 211, 238, 0.1), 0 0 50px 20px rgba(155, 92, 255, 0.2); }
 }
 
 .pulsatingGlow {
@@ -127,6 +82,7 @@ body {
   animation: pulseGlow 10s infinite alternate;
 }
 
+/* Watchlist table — dark, theme-consistent */
 .watchlist-table {
   width: 100%;
   border-collapse: collapse;
@@ -139,19 +95,27 @@ body {
 }
 
 .watchlist-table th {
-  background-color: #f4f4f4;
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .watchlist-table tr:nth-child(even) {
-  background-color: #f9f9f9;
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 .watchlist-table tr:hover {
-  background-color: #e0e0e0;
+  background-color: rgba(155, 92, 255, 0.08);
 }
 
 .no-items-message {
   text-align: center;
   font-style: italic;
-  color: #888;
+  color: #8fa0b4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typingEffect,
+  .dynamic-background,
+  .pulsatingGlow {
+    animation: none;
+  }
 }

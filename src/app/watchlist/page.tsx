@@ -150,11 +150,11 @@ const Watchlist = () => {
       return {
         label: `Price History (${retailer})`,
         data: prices,
-        borderColor: retailer === 'Target' ? '#96ff9b' : 
+        borderColor: retailer === 'Target' ? '#9B5Cff' : 
                     retailer === 'Walmart' ? '#ffcc00' : 
                     retailer === 'BestBuy' ? '#ff4444' : 
                     retailer === 'GameStop' ? '#00bcd4' : '#9c27b0',
-        backgroundColor: retailer === 'Target' ? 'rgba(150, 255, 155, 0.2)' : 
+        backgroundColor: retailer === 'Target' ? 'rgba(155, 92, 255, 0.2)' : 
                         retailer === 'Walmart' ? 'rgba(255, 204, 0, 0.2)' : 
                         retailer === 'BestBuy' ? 'rgba(255, 68, 68, 0.2)' : 
                         retailer === 'GameStop' ? 'rgba(0, 188, 212, 0.2)' : 'rgba(156, 39, 176, 0.2)',
@@ -239,14 +239,14 @@ const Watchlist = () => {
           variant="contained"
           onClick={triggerScrape}
           disabled={loading}
-          sx={{ marginBottom: "20px", backgroundColor: "#96ff9b", color: "#1E1E1E" }}
+          sx={{ marginBottom: "20px", backgroundColor: "#9B5Cff", color: "#1E1E1E" }}
         >
           {loading ? "Refreshing..." : "Refresh Products"}
         </Button>
 
         {loading ? (
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "200px" }}>
-            <CircularProgress size={60} thickness={4} sx={{ color: "#96ff9b", marginBottom: "20px" }} />
+            <CircularProgress size={60} thickness={4} sx={{ color: "#9B5Cff", marginBottom: "20px" }} />
             <Typography variant="body1" sx={{ color: "#90a4ae", fontSize: "1.2rem" }}>
               Fetching product data...
             </Typography>
@@ -324,7 +324,7 @@ const Watchlist = () => {
                 {/* Display Latest Prices and Trends for Each Retailer */}
                 <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
                   <span style={{ color: "rgb(144 164 174)" }}>Target: </span>
-                  <span style={{ color: "#96ff9b", fontWeight: "bold" }}>{latestTargetPrice}</span>
+                  <span style={{ color: "#9B5Cff", fontWeight: "bold" }}>{latestTargetPrice}</span>
                   {targetTrend && (
                     <span style={{ 
                       color: targetTrend === '↑' ? '#E57373' : targetTrend === '↓' ? '#66BB6A' : '#90a4ae',
@@ -445,7 +445,7 @@ const Watchlist = () => {
                             <Typography sx={{ fontSize: '0.9rem' }}>
                               {price.retailer} - {new Date(price.recorded_at).toLocaleString()}
                             </Typography>
-                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#96ff9b' }}>
+                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#9B5Cff' }}>
                               {price.price}
                             </Typography>
                           </Box>

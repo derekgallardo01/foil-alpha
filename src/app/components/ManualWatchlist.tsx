@@ -270,7 +270,7 @@ const ManualWatchlist: React.FC<ManualWatchlistProps> = ({
                         fullWidth
                       />
                     </TableCell>
-                    <TableCell sx={{ color: item.stock_status === "in_stock" ? "#96ff9b" : "#e56060" }}>
+                    <TableCell sx={{ color: item.stock_status === "in_stock" ? "#9B5Cff" : "#e56060" }}>
                       {item.stock_status}
                     </TableCell>
                     <TableCell>

@@ -148,8 +148,8 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
     }, [userCards]);
 
     return (
-        <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
-            <Typography variant="h6" sx={{ color: '#96ff9b', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+            <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Assessment />
                 Collection Analytics
             </Typography>
@@ -329,7 +329,7 @@ function EnhancedCardDisplay({
     return (
         <Card sx={{
             bgcolor: 'grey.800',
-            border: '1px solid rgba(150, 255, 155, 0.2)',
+            border: '1px solid rgba(155, 92, 255, 0.2)',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -360,7 +360,7 @@ function EnhancedCardDisplay({
             />
 
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="h6" sx={{ color: '#96ff9b', mb: 1 }}>
+                <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 1 }}>
                     {userCard.card.name}
                 </Typography>
 
@@ -381,7 +381,7 @@ function EnhancedCardDisplay({
                     />
                 </Box>
 
-                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(150, 255, 155, 0.05)', borderRadius: 1 }}>
+                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(155, 92, 255, 0.05)', borderRadius: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="body2" color="text.secondary">
                             {purchasePrice > 0 ? 'Purchase Price' : 'Market Price'}
@@ -492,9 +492,9 @@ function EnhancedCardDisplay({
                             startIcon={<Sell />}
                             onClick={() => onSellCard(userCard)}
                             sx={{
-                                bgcolor: '#96ff9b',
+                                bgcolor: '#9B5Cff',
                                 color: 'grey.900',
-                                '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                             }}
                         >
                             List for Sale
@@ -516,7 +516,7 @@ function EnhancedCardDisplay({
                             size="small"
                             startIcon={<PriceCheck />}
                             onClick={() => onUpdatePrice(userCard.card.id)}
-                            sx={{ borderColor: '#96ff9b', color: '#96ff9b' }}
+                            sx={{ borderColor: '#9B5Cff', color: '#9B5Cff' }}
                         >
                             Get Price Data
                         </Button>
@@ -664,9 +664,9 @@ function BulkPriceUpdateModal({
                         onClick={handleBulkUpdate}
                         disabled={updating}
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         {updating ? <CircularProgress size={20} /> : 'Update Prices'}
@@ -1000,9 +1000,9 @@ export default function CollectionPage() {
                         variant="outlined"
                         onClick={() => router.push('/wallet')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         My Wallet
@@ -1011,9 +1011,9 @@ export default function CollectionPage() {
                         variant="outlined"
                         onClick={() => router.push('/marketplace')}
                         sx={{
-                            borderColor: '#96ff9b',
-                            color: '#96ff9b',
-                            '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                            borderColor: '#9B5Cff',
+                            color: '#9B5Cff',
+                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                         }}
                     >
                         Marketplace
@@ -1033,7 +1033,7 @@ export default function CollectionPage() {
                     boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
                 }}
             >
-                <Typography variant="h4" sx={{ color: '#96ff9b', mb: 3, textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ color: '#9B5Cff', mb: 3, textAlign: 'center' }}>
                     {session?.user?.name}'s Card Collection
                 </Typography>
 
@@ -1064,14 +1064,14 @@ export default function CollectionPage() {
 
                 <CollectionAnalytics userCards={enhancedUserCards} />
 
-                <Paper sx={{ mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                <Paper sx={{ mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                     <Tabs
                         value={currentTab}
                         onChange={(e, newValue) => setCurrentTab(newValue)}
                         sx={{
                             '& .MuiTab-root': { color: 'text.secondary' },
-                            '& .Mui-selected': { color: '#96ff9b' },
-                            '& .MuiTabs-indicator': { backgroundColor: '#96ff9b' }
+                            '& .Mui-selected': { color: '#9B5Cff' },
+                            '& .MuiTabs-indicator': { backgroundColor: '#9B5Cff' }
                         }}
                     >
                         <Tab
@@ -1100,9 +1100,9 @@ export default function CollectionPage() {
                                     variant="contained"
                                     onClick={() => router.push('/marketplace')}
                                     sx={{
-                                        bgcolor: '#96ff9b',
+                                        bgcolor: '#9B5Cff',
                                         color: 'grey.900',
-                                        '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                                        '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                                     }}
                                 >
                                     Browse Marketplace
@@ -1133,9 +1133,9 @@ export default function CollectionPage() {
                                             onClick={handleBulkPriceUpdate}
                                             startIcon={<PriceCheck />}
                                             sx={{
-                                                borderColor: '#96ff9b',
-                                                color: '#96ff9b',
-                                                '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                borderColor: '#9B5Cff',
+                                                color: '#9B5Cff',
+                                                '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                             }}
                                         >
                                             Update Prices ({selectedCardsForUpdate.length})
@@ -1164,7 +1164,7 @@ export default function CollectionPage() {
                 {currentTab === 1 && (
                     <>
                         {pendingPurchases.length === 0 ? (
-                            <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                                 <Typography variant="h6" color="text.secondary">
                                     No pending purchases
@@ -1188,7 +1188,7 @@ export default function CollectionPage() {
                                                 <CardContent>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                                         <Warning sx={{ color: isExpired ? 'error.main' : 'warning.main', mr: 1 }} />
-                                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
                                                             {isExpired ? 'Purchase Expired' : 'Confirm Purchase'}
                                                         </Typography>
                                                         <Chip
@@ -1228,9 +1228,9 @@ export default function CollectionPage() {
                                                             onClick={() => handleConfirmPurchase(purchase)}
                                                             startIcon={<CheckCircle />}
                                                             sx={{
-                                                                bgcolor: '#96ff9b',
+                                                                bgcolor: '#9B5Cff',
                                                                 color: 'grey.900',
-                                                                '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                                                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                                                             }}
                                                         >
                                                             Confirm Purchase
@@ -1315,9 +1315,9 @@ export default function CollectionPage() {
                         onClick={handleConfirmSale}
                         disabled={actionLoading || (!sellData.fixedPrice && sellData.saleType === 'FIXED') || (!sellData.reservePrice && sellData.saleType === 'AUCTION')}
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         {actionLoading ? 'Listing...' : `List for ${sellData.saleType === 'FIXED' ? 'Sale' : 'Auction'}`}

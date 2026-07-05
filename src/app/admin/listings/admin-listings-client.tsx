@@ -551,7 +551,7 @@ export default function AdminListingsClient() {
                             bgcolor: "grey.900",
                             backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
                             borderRadius: 2,
-                            boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)",
+                            boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
                             overflow: "visible",
                         }}
                     >
@@ -579,7 +579,7 @@ export default function AdminListingsClient() {
                                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 2 }}>
                                     <Button
                                         variant="contained"
-                                        sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+                                        sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
                                         onClick={handleCreateListing}
                                         disabled={actionLoading}
                                         startIcon={<AddIcon />}
@@ -588,7 +588,7 @@ export default function AdminListingsClient() {
                                     </Button>
                                     <Button
                                         variant="contained"
-                                        sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+                                        sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
                                         onClick={fetchListings}
                                         disabled={loading || actionLoading}
                                     >
@@ -676,7 +676,7 @@ export default function AdminListingsClient() {
                                         sx={{
                                             bgcolor: "grey.800",
                                             mb: 2,
-                                            borderBottom: "2px solid #96ff9b",
+                                            borderBottom: "2px solid #9B5Cff",
                                         }}
                                     >
                                         <Typography sx={{ flex: "1 1 100%", color: "text.primary" }}>
@@ -917,7 +917,7 @@ export default function AdminListingsClient() {
                     </Button>
                     <Button
                         variant="contained"
-                        sx={{ bgcolor: "#96ff9b", color: "grey.900" }}
+                        sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
                         onClick={handleSaveListing}
                         disabled={actionLoading}
                     >

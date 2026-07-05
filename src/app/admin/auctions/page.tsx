@@ -351,12 +351,12 @@ export default function AdminAuctionManagement() {
             <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(150, 255, 155, 0.2)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <IconButton onClick={toggleSidebar} sx={{ color: '#96ff9b' }}>
+                    <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#96ff9b' }}>
+                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
                         <GavelIcon />
                         Auction Management
                     </Typography>
@@ -368,14 +368,14 @@ export default function AdminAuctionManagement() {
                         onClick={handleProcessAuctions}
                         disabled={actionLoading !== null}
                         sx={{
-                            bgcolor: '#96ff9b',
+                            bgcolor: '#9B5Cff',
                             color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(150, 255, 155, 0.8)' }
+                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
                         }}
                     >
                         Process All Auctions
                     </Button>
-                    <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: '#96ff9b' }}>
+                    <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: '#9B5Cff' }}>
                         <RefreshIcon />
                     </IconButton>
                 </Box>
@@ -392,9 +392,9 @@ export default function AdminAuctionManagement() {
                 {/* Statistics Cards */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#96ff9b' }}>
+                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
                                     {stats.activeAuctionsCount || activeAuctions.length}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -404,7 +404,7 @@ export default function AdminAuctionManagement() {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: 'warning.main' }}>
                                     {pendingTransactions.length}
@@ -416,7 +416,7 @@ export default function AdminAuctionManagement() {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                     {endedAuctions.filter(a => a.is_sold).length}
@@ -428,9 +428,9 @@ export default function AdminAuctionManagement() {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#96ff9b' }}>
+                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
                                     ${totalActiveValue.toFixed(2)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -442,14 +442,14 @@ export default function AdminAuctionManagement() {
                 </Grid>
 
                 {/* Tabs */}
-                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)', mb: 3 }}>
+                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)', mb: 3 }}>
                     <Tabs
                         value={activeTab}
                         onChange={(e, newValue) => setActiveTab(newValue)}
                         sx={{
                             '& .MuiTab-root': { color: 'text.secondary' },
-                            '& .Mui-selected': { color: '#96ff9b' },
-                            '& .MuiTabs-indicator': { backgroundColor: '#96ff9b' }
+                            '& .Mui-selected': { color: '#9B5Cff' },
+                            '& .MuiTabs-indicator': { backgroundColor: '#9B5Cff' }
                         }}
                     >
                         <Tab
@@ -473,7 +473,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {activeAuctions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                     <GavelIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No active auctions
@@ -491,7 +491,7 @@ export default function AdminAuctionManagement() {
                                         display: 'flex',
                                         flexDirection: 'column',
                                         bgcolor: 'grey.800',
-                                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                                        border: '1px solid rgba(155, 92, 255, 0.2)',
                                         position: 'relative',
                                         overflow: 'visible'
                                     }}>
@@ -520,7 +520,7 @@ export default function AdminAuctionManagement() {
                                             }}
                                         />
                                         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                            <Typography variant="h6" sx={{ color: '#96ff9b', mb: 1 }}>
+                                            <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 1 }}>
                                                 {auction.card?.name || 'Unknown Card'}
                                             </Typography>
 
@@ -593,7 +593,7 @@ export default function AdminAuctionManagement() {
                                                             borderRadius: 3,
                                                             bgcolor: 'grey.700',
                                                             '& .MuiLinearProgress-bar': {
-                                                                bgcolor: auction.time_remaining < 3600000 ? 'error.main' : '#96ff9b',
+                                                                bgcolor: auction.time_remaining < 3600000 ? 'error.main' : '#9B5Cff',
                                                                 borderRadius: 3,
                                                             },
                                                         }}
@@ -608,9 +608,9 @@ export default function AdminAuctionManagement() {
                                                     fullWidth
                                                     onClick={() => showAuctionDetails(auction)}
                                                     sx={{
-                                                        borderColor: '#96ff9b',
-                                                        color: '#96ff9b',
-                                                        '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                        borderColor: '#9B5Cff',
+                                                        color: '#9B5Cff',
+                                                        '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                                     }}
                                                 >
                                                     View Details
@@ -643,7 +643,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {endedAuctions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                     <ClockIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No ended auctions
@@ -675,7 +675,7 @@ export default function AdminAuctionManagement() {
                                         />
                                         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                                <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
                                                     {auction.card?.name || 'Unknown Card'}
                                                 </Typography>
                                                 <Chip
@@ -736,9 +736,9 @@ export default function AdminAuctionManagement() {
                                                     fullWidth
                                                     onClick={() => showAuctionDetails(auction)}
                                                     sx={{
-                                                        borderColor: '#96ff9b',
-                                                        color: '#96ff9b',
-                                                        '&:hover': { borderColor: '#96ff9b', backgroundColor: 'rgba(150, 255, 155, 0.1)' }
+                                                        borderColor: '#9B5Cff',
+                                                        color: '#9B5Cff',
+                                                        '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
                                                     }}
                                                 >
                                                     View Details
@@ -757,7 +757,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {pendingTransactions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                     <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No pending confirmations
@@ -795,7 +795,7 @@ export default function AdminAuctionManagement() {
                                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                         <WarningIcon sx={{ color: isExpired ? 'error.main' : 'warning.main' }} />
-                                                        <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
                                                             Transaction #{transaction.id}
                                                         </Typography>
                                                     </Box>
@@ -892,10 +892,10 @@ export default function AdminAuctionManagement() {
                                                     }
                                                     sx={{
                                                         mt: 2,
-                                                        bgcolor: isExpired ? 'error.main' : '#96ff9b',
+                                                        bgcolor: isExpired ? 'error.main' : '#9B5Cff',
                                                         color: isExpired ? 'white' : 'grey.900',
                                                         '&:hover': {
-                                                            bgcolor: isExpired ? 'error.dark' : 'rgba(150, 255, 155, 0.8)'
+                                                            bgcolor: isExpired ? 'error.dark' : 'rgba(155, 92, 255, 0.8)'
                                                         }
                                                     }}
                                                 >
@@ -923,11 +923,11 @@ export default function AdminAuctionManagement() {
                 PaperProps={{
                     sx: {
                         bgcolor: 'grey.900',
-                        border: '1px solid rgba(150, 255, 155, 0.2)',
+                        border: '1px solid rgba(155, 92, 255, 0.2)',
                     }
                 }}
             >
-                <DialogTitle sx={{ bgcolor: 'grey.800', color: '#96ff9b' }}>
+                <DialogTitle sx={{ bgcolor: 'grey.800', color: '#9B5Cff' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <GavelIcon />
                         <Typography variant="h6">
@@ -955,7 +955,7 @@ export default function AdminAuctionManagement() {
                                     <Grid item xs={8}>
                                         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
                                             <Box>
-                                                <Typography variant="h6" sx={{ color: '#96ff9b' }}>
+                                                <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
                                                     {selectedAuction.card?.name || 'Unknown Card'}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
@@ -1038,7 +1038,7 @@ export default function AdminAuctionManagement() {
 
                             {/* Bids List */}
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="h6" gutterBottom sx={{ color: '#96ff9b', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6" gutterBottom sx={{ color: '#9B5Cff', display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <TrendingUp />
                                     Bid History ({selectedAuction.bid_count} bids)
                                 </Typography>
@@ -1110,7 +1110,7 @@ export default function AdminAuctionManagement() {
                             </Box>
 
                             {/* Additional Info */}
-                            <Paper sx={{ p: 2, bgcolor: 'rgba(150, 255, 155, 0.05)', border: '1px solid rgba(150, 255, 155, 0.2)' }}>
+                            <Paper sx={{ p: 2, bgcolor: 'rgba(155, 92, 255, 0.05)', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
                                 <Typography variant="body2" color="text.secondary">
                                     <strong>Auction ID:</strong> #{selectedAuction.id}
                                 </Typography>
@@ -1133,8 +1133,8 @@ export default function AdminAuctionManagement() {
                     )}
                 </DialogContent>
 
-                <DialogActions sx={{ bgcolor: 'grey.800', borderTop: '1px solid rgba(150, 255, 155, 0.2)' }}>
-                    <Button onClick={() => setDetailsModalOpen(false)} sx={{ color: '#96ff9b' }}>
+                <DialogActions sx={{ bgcolor: 'grey.800', borderTop: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                    <Button onClick={() => setDetailsModalOpen(false)} sx={{ color: '#9B5Cff' }}>
                         Close
                     </Button>
                     {selectedAuction && getAuctionStatus(selectedAuction).label === 'Active' && (

@@ -90,7 +90,7 @@ export default function VerifyEmailClient() {
       <ToastContainer position="top-right" />
       <Container maxWidth="sm">
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(150, 255, 155, 0.21)" }}>
+        <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)" }}>
         <Typography variant="h4" sx={{ mb: 2, textAlign: "center", color: "text.primary" }}>
               Verify Your Email
             </Typography>
@@ -126,7 +126,7 @@ export default function VerifyEmailClient() {
                     type="submit"
                     fullWidth
                     variant="contained"
-                    sx={{ mt: 3, bgcolor: "#96ff9b", color: "grey.900" }}
+                    sx={{ mt: 3, bgcolor: "#9B5Cff", color: "grey.900" }}
                     disabled={loading}
                     aria-label="Verify Email"
                   >

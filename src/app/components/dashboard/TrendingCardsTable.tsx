@@ -135,7 +135,7 @@ export default function TrendingCardsTable({
             'Rare Holo': '#AB47BC',
             'Ultra Rare': '#FF7043',
             'Secret Rare': '#EF5350',
-            'VMAX': '#96ff9b',
+            'VMAX': '#9B5Cff',
             'VSTAR': '#FFD54F',
             'Promo': '#9C27B0'
         };
@@ -163,7 +163,7 @@ export default function TrendingCardsTable({
             labels: sparkline.map(() => ''),
             datasets: [{
                 data: sparkline.map(s => s.price),
-                borderColor: isIncreasing ? '#96ff9b' : '#ff6b6b',
+                borderColor: isIncreasing ? '#9B5Cff' : '#ff6b6b',
                 borderWidth: 2,
                 fill: false,
                 tension: 0.4,
@@ -195,11 +195,11 @@ export default function TrendingCardsTable({
             p: 3,
             height,
             bgcolor: 'grey.800',
-            border: '1px solid rgba(150, 255, 155, 0.2)'
+            border: '1px solid rgba(155, 92, 255, 0.2)'
         }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TrendingUp sx={{ color: '#96ff9b' }} />
+                    <TrendingUp sx={{ color: '#9B5Cff' }} />
                     Trending Cards
                 </Typography>
 
@@ -212,14 +212,14 @@ export default function TrendingCardsTable({
                         sx={{
                             '& .MuiToggleButton-root': {
                                 color: 'text.secondary',
-                                borderColor: 'rgba(150, 255, 155, 0.3)',
+                                borderColor: 'rgba(155, 92, 255, 0.3)',
                                 '&.Mui-selected': {
                                     color: '#000',
-                                    bgcolor: '#96ff9b',
-                                    borderColor: '#96ff9b'
+                                    bgcolor: '#9B5Cff',
+                                    borderColor: '#9B5Cff'
                                 },
                                 '&:hover': {
-                                    bgcolor: 'rgba(150, 255, 155, 0.1)'
+                                    bgcolor: 'rgba(155, 92, 255, 0.1)'
                                 }
                             }
                         }}
@@ -249,14 +249,14 @@ export default function TrendingCardsTable({
                         sx={{
                             '& .MuiToggleButton-root': {
                                 color: 'text.secondary',
-                                borderColor: 'rgba(150, 255, 155, 0.3)',
+                                borderColor: 'rgba(155, 92, 255, 0.3)',
                                 '&.Mui-selected': {
                                     color: '#000',
-                                    bgcolor: '#96ff9b',
-                                    borderColor: '#96ff9b'
+                                    bgcolor: '#9B5Cff',
+                                    borderColor: '#9B5Cff'
                                 },
                                 '&:hover': {
-                                    bgcolor: 'rgba(150, 255, 155, 0.1)'
+                                    bgcolor: 'rgba(155, 92, 255, 0.1)'
                                 }
                             }
                         }}
@@ -269,7 +269,7 @@ export default function TrendingCardsTable({
                     <IconButton
                         size="small"
                         onClick={fetchTrendingCards}
-                        sx={{ color: '#96ff9b' }}
+                        sx={{ color: '#9B5Cff' }}
                     >
                         <Refresh />
                     </IconButton>
@@ -280,7 +280,7 @@ export default function TrendingCardsTable({
                 maxHeight: height - 120,
                 bgcolor: 'grey.900',
                 borderRadius: 1,
-                border: '1px solid rgba(150, 255, 155, 0.1)'
+                border: '1px solid rgba(155, 92, 255, 0.1)'
             }}>
                 <Table stickyHeader size="small">
                     <TableHead>
@@ -318,7 +318,7 @@ export default function TrendingCardsTable({
                                         <Typography color="error" gutterBottom>
                                             {error}
                                         </Typography>
-                                        <IconButton onClick={fetchTrendingCards} sx={{ color: '#96ff9b' }}>
+                                        <IconButton onClick={fetchTrendingCards} sx={{ color: '#9B5Cff' }}>
                                             <Refresh />
                                         </IconButton>
                                     </Box>
@@ -341,7 +341,7 @@ export default function TrendingCardsTable({
                                         cursor: 'pointer',
                                         bgcolor: 'grey.900',
                                         '&:hover': {
-                                            bgcolor: 'rgba(150, 255, 155, 0.05)'
+                                            bgcolor: 'rgba(155, 92, 255, 0.05)'
                                         }
                                     }}
                                     onClick={() => router.push(`/marketplace?card=${card.id}`)}
@@ -386,14 +386,14 @@ export default function TrendingCardsTable({
                                     <TableCell align="right">
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                                             {card.price_change_7d && card.price_change_7d > 0 ? (
-                                                <TrendingUp sx={{ fontSize: 16, color: '#96ff9b' }} />
+                                                <TrendingUp sx={{ fontSize: 16, color: '#9B5Cff' }} />
                                             ) : (
                                                 <TrendingDown sx={{ fontSize: 16, color: '#ff6b6b' }} />
                                             )}
                                             <Typography
                                                 variant="body2"
                                                 sx={{
-                                                    color: card.price_change_7d && card.price_change_7d > 0 ? '#96ff9b' : '#ff6b6b',
+                                                    color: card.price_change_7d && card.price_change_7d > 0 ? '#9B5Cff' : '#ff6b6b',
                                                     fontWeight: 500
                                                 }}
                                             >
