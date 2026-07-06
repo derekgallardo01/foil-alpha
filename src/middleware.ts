@@ -1,32 +1,29 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function middleware(request: NextRequest) {
-  // Get the pathname of the request
+/**
+ * Routing for the entry points:
+ * - Signed-in users hitting `/`, `/login`, or `/register` skip the forms and
+ *   go straight to `/dashboard`.
+ * - Signed-out users hitting `/` land on `/login`.
+ */
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const isAuthed = !!token;
 
-  // Check if we're in production
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  // In production, only allow the waitlist page and API routes
-  if (isProduction) {
-    // Allow API routes
-    if (pathname.startsWith('/api/')) return NextResponse.next();
-    
-    // Allow static assets
-    if (pathname.startsWith('/_next/')) return NextResponse.next();
-    
-    // Allow the waitlist page
-    if (pathname === '/' || pathname === '/waitlist') return NextResponse.next();
-    
-    // Redirect all other routes to the waitlist page
-   // return NextResponse.redirect(new URL('/waitlist', request.url));
+  if (isAuthed && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // In development, allow all routes
+  if (!isAuthed && pathname === "/") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ["/", "/login", "/register"],
 };
