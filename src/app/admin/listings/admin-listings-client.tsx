@@ -173,7 +173,6 @@ export default function AdminListingsClient() {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
             });
 
@@ -208,7 +207,6 @@ export default function AdminListingsClient() {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
             });
 
@@ -497,7 +495,6 @@ export default function AdminListingsClient() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`,
                 },
                 body: JSON.stringify(newListing),
             });
@@ -550,7 +547,6 @@ export default function AdminListingsClient() {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`,
                 },
                 body: JSON.stringify(body),
             });

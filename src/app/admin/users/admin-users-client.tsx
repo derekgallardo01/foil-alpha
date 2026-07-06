@@ -170,7 +170,6 @@ export default function AdminUsersClient() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
       });
       if (!response.ok) throw new Error("Failed to fetch users");
@@ -215,7 +214,6 @@ export default function AdminUsersClient() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({
           user_id: selectedUserForWallet.id,
@@ -282,7 +280,6 @@ export default function AdminUsersClient() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
       });
 
@@ -319,7 +316,6 @@ export default function AdminUsersClient() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
       });
       if (!response.ok) throw new Error("Failed to fetch activity log");

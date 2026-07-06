@@ -57,6 +57,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { CardGridSkeleton } from '../../components/ui/Skeletons';
+import { getRarityColor } from '../../lib/rarity';
 
 interface Card {
     id: number;
@@ -225,17 +226,6 @@ export default function SellingDashboard() {
         if (sale.sale_type === 'FIXED') return { label: 'Fixed Price', color: 'primary' as const };
         if (sale.time_remaining && sale.time_remaining > 0) return { label: 'Active', color: 'success' as const };
         return { label: 'Ended', color: 'error' as const };
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
     };
 
     const handleAcceptBid = (bid: Bid) => {

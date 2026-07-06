@@ -78,6 +78,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/StatCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { formatPrice, formatCompactPrice } from "../../lib/format";
+import { getRarityColor } from "../../lib/rarity";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from "../../lib/pokemon-price-tracker-api";
 
@@ -382,18 +383,6 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
         </Paper>
     );
 }
-
-// Rarity color mapping function
-const getRarityColor = (rarity: string) => {
-    switch (rarity.toLowerCase()) {
-        case 'common': return 'default' as const;
-        case 'uncommon': return 'success' as const;
-        case 'rare': return 'primary' as const;
-        case 'holo rare': return 'secondary' as const;
-        case 'ultra rare': return 'error' as const;
-        default: return 'default' as const;
-    }
-};
 
 // Plain integer/count formatter (non-currency). Currency uses shared formatPrice from lib/format.
 const formatNumber = (num: number): string => num.toLocaleString();
@@ -1514,7 +1503,6 @@ export default function AdminCardsClient() {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
             });
 
@@ -1953,7 +1941,6 @@ export default function AdminCardsClient() {
                 method,
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
                 body: JSON.stringify(sanitizedCard),
             });
@@ -1986,7 +1973,7 @@ export default function AdminCardsClient() {
         try {
             const response = await fetch(`/api/admin/cards/${cardId}`, {
                 method: "DELETE",
-                headers: { "Authorization": `Bearer ${session.accessToken}` },
+                headers: {},
             });
 
             if (!response.ok) throw new Error("Failed to delete card");
@@ -2029,7 +2016,6 @@ export default function AdminCardsClient() {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`,
                 },
                 body: JSON.stringify({ cards }),
             });

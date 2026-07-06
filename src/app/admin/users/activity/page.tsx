@@ -125,7 +125,6 @@ export default function UserActivityPage() {
 
             const response = await fetch(`/api/admin/users/activity?${params}`, {
                 headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
                 },
             });
 

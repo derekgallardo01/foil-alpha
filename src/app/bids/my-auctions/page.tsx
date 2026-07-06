@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
+import { getRarityColor } from '../../lib/rarity';
 
 interface Card {
     id: number;
@@ -158,17 +159,6 @@ export default function MyAuctionsPage() {
         if (!auction.is_for_sale) return { label: 'Ended', color: 'error' as const };
         if (auction.time_remaining && auction.time_remaining > 0) return { label: 'Active', color: 'primary' as const };
         return { label: 'Ended', color: 'error' as const };
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
     };
 
     const handleAcceptBid = (bid: Bid) => {

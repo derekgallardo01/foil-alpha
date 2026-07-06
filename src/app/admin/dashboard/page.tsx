@@ -96,7 +96,6 @@ export default function AdminDashboard() {
             // Fetch users data
             const usersResponse = await fetch("/api/admin/users", {
                 headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
                 },
             });
 
@@ -106,7 +105,6 @@ export default function AdminDashboard() {
             // Fetch cards data with all=true to get total count
             const cardsResponse = await fetch("/api/admin/cards?all=true", {
                 headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
                 },
             });
 
@@ -128,7 +126,6 @@ export default function AdminDashboard() {
             try {
                 const auctionsResponse = await fetch("/api/admin/auctions?status=active", {
                     headers: {
-                        "Authorization": `Bearer ${session?.accessToken}`,
                     },
                 });
 
@@ -149,7 +146,6 @@ export default function AdminDashboard() {
                 // Get all transactions to calculate stats
                 const transactionsResponse = await fetch("/api/admin/transactions?limit=1000", {
                     headers: {
-                        "Authorization": `Bearer ${session?.accessToken}`,
                     },
                 });
 
@@ -199,7 +195,6 @@ export default function AdminDashboard() {
             try {
                 const recentTransResponse = await fetch("/api/admin/transactions?limit=5", {
                     headers: {
-                        "Authorization": `Bearer ${session?.accessToken}`,
                     },
                 });
 

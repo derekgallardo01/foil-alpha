@@ -30,6 +30,7 @@ import {
     TrendingUp as TrendingIcon,
     Info as InfoIcon
 } from '@mui/icons-material';
+import { getRarityColor } from '../lib/rarity';
 
 interface Card {
     id: number;
@@ -137,17 +138,6 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
 
     const formatDateTime = (dateString: string) => {
         return new Date(dateString).toLocaleString();
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
     };
 
     const getMinimumBid = () => {

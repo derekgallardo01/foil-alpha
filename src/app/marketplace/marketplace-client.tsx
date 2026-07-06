@@ -59,6 +59,7 @@ import PriceChart from '../components/PriceChart';
 import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../components/PriceDisplay';
 import CurrencySelector from '../components/CurrencySelector';
 import { useCurrencyContext } from '../lib/currency-context';
+import { getRarityColor } from '../lib/rarity';
 import PurchaseConfirmationModal from '../components/PurchaseConfirmationModal';
 import PageHeader from '../components/ui/PageHeader';
 import ErrorState from '../components/ui/ErrorState';
@@ -902,23 +903,6 @@ export default function MarketplacePage() {
     const handleBidPlaced = () => {
         fetchCards();
         fetchNotificationCount();
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common':
-                return 'default' as const;
-            case 'uncommon':
-                return 'success' as const;
-            case 'rare':
-                return 'primary' as const;
-            case 'holo rare':
-                return 'secondary' as const;
-            case 'ultra rare':
-                return 'error' as const;
-            default:
-                return 'default' as const;
-        }
     };
 
     if (status === 'loading') {

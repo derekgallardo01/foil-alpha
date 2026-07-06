@@ -62,6 +62,7 @@ import EmptyState from "../components/ui/EmptyState";
 import PageHeader from "../components/ui/PageHeader";
 import StatCard from "../components/StatCard";
 import { formatPrice } from "../lib/format";
+import { getRarityColor } from "../lib/rarity";
 import { CardGridSkeleton } from "../components/ui/Skeletons";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
@@ -205,16 +206,6 @@ function EnhancedCardDisplay({
                 return <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />;
             default:
                 return <TrendingFlat sx={{ fontSize: 16, color: 'text.secondary' }} />;
-        }
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default';
-            case 'uncommon': return 'primary';
-            case 'rare': return 'secondary';
-            case 'rare holo': return 'warning';
-            default: return 'default';
         }
     };
 
@@ -739,7 +730,6 @@ export default function CollectionPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    "Authorization": `Bearer ${session?.accessToken}`,
                 },
                 body: JSON.stringify(requestBody),
             });
@@ -765,9 +755,7 @@ export default function CollectionPage() {
         try {
             const response = await fetch(`/api/user/collection/${userCardId}/sell`, {
                 method: 'DELETE',
-                headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
-                },
+                headers: {},
             });
 
             if (!response.ok) throw new Error('Failed to remove from sale');

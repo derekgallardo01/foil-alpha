@@ -30,6 +30,7 @@ import {
     Person as PersonIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+import { getRarityColor } from '../lib/rarity';
 
 interface Card {
     id: number;
@@ -88,17 +89,6 @@ export default function PurchaseConfirmationModal({
     const formatPrice = (price: number | null) => {
         if (!price) return 'N/A';
         return `$${Number(price).toFixed(2)}`;
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
     };
 
     // Calculate commission when modal opens
