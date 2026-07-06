@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
+import { requireAdmin } from '../../../../lib/auth';
 
 function getIdFromRequest(request: NextRequest): string | null {
   const url = new URL(request.url);
@@ -26,8 +27,8 @@ export async function GET(request: NextRequest) {
   if (isNaN(listingId)) return NextResponse.json({ error: 'Invalid listing ID' }, { status: 400 });
 
   try {
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-    if (user.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
 
     // Get the listing
     const listing = await prisma.userCard.findUnique({
@@ -120,8 +121,8 @@ export async function PUT(request: NextRequest) {
   if (isNaN(listingId)) return NextResponse.json({ error: 'Invalid listing ID' }, { status: 400 });
 
   try {
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-    if (user.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
 
     const body: UpdateListingData = await request.json();
     const { is_for_sale, sale_type, fixed_price, reserve_price, auction_duration_hours, notes } = body;
@@ -256,8 +257,8 @@ export async function DELETE(request: NextRequest) {
   if (isNaN(listingId)) return NextResponse.json({ error: 'Invalid listing ID' }, { status: 400 });
 
   try {
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-    if (user.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
 
     const existingListing = await prisma.userCard.findUnique({
       where: { id: listingId }

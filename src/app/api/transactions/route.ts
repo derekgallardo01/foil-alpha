@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
+import { requireUser } from '../../lib/auth';
 
 // POST /api/transactions - Handle card purchase
 export async function POST(request: NextRequest) {
   try {
-    // const user = await getCurrentUser(request);
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User' };
-
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const body = await request.json();
     const { user_card_id, transaction_type } = body;
@@ -138,12 +136,9 @@ export async function POST(request: NextRequest) {
 // GET /api/transactions - Get user's transaction history
 export async function GET(request: NextRequest) {
   try {
-    // const user = await getCurrentUser(request);
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User' };
-
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');

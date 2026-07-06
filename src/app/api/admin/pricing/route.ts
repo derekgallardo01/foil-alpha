@@ -1,19 +1,13 @@
 // src/app/api/admin/pricing/route.ts - FIXED FOR CURRENT SCHEMA
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
-
-const isAdmin = (user: unknown): user is { role: string } => {
-    return typeof user === 'object' && user !== null && 'role' in user && (user as { role: unknown }).role === 'admin';
-};
+import { requireAdmin } from '../../../lib/auth';
 
 // GET /api/admin/pricing - Get pricing analytics and management data
 export async function GET(request: NextRequest) {
     try {
-        const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-
-        if (!isAdmin(user)) {
-            return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
 
         const { searchParams } = new URL(request.url);
         const action = searchParams.get('action');
@@ -46,11 +40,8 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/pricing - Bulk pricing operations
 export async function POST(request: NextRequest) {
     try {
-        const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-
-        if (!isAdmin(user)) {
-            return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
 
         const body = await request.json();
         const { action, data } = body;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 
 // Types
 interface CardFilter {
@@ -42,18 +43,11 @@ interface BulkCreateResult {
   errors: Array<{ card: CardData; error: string }>;
 }
 
-const isAdmin = (user: unknown): user is { role: string } => {
-  return typeof user === 'object' && user !== null && 'role' in user && (user as { role: unknown }).role === 'admin';
-};
-
 // GET /api/admin/cards
 export async function GET(request: NextRequest) {
   try {
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-
-    if (!isAdmin(user)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
@@ -182,11 +176,8 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/cards
 export async function POST(request: NextRequest) {
   try {
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-
-    if (!isAdmin(user)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
 
     const body: CardData = await request.json();
     const {
@@ -272,11 +263,8 @@ export async function POST(request: NextRequest) {
 // PUT /api/admin/cards/bulk
 export async function PUT(request: NextRequest) {
   try {
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-
-    if (!isAdmin(user)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
 
     const body = await request.json();
     const { cards }: { cards: CardData[] } = body;
