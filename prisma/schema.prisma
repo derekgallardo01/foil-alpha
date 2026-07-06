@@ -156,7 +156,7 @@ model Bid {
   id         Int      @id @default(autoincrement())
   userCardId Int
   bidderId   Int
-  amount     Float
+  amount     Decimal  @db.Decimal(10, 2)
   is_active  Boolean  @default(true)
   createdAt  DateTime @default(now())
 
