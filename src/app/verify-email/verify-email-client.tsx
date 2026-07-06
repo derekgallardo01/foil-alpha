@@ -13,8 +13,7 @@ import {
   Paper,
 } from "@mui/material";
 import { motion } from "framer-motion";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -80,7 +79,6 @@ export default function VerifyEmailClient() {
           `radial-gradient(120% 120% at 20% 0%, #160e2a, ${t.palette.background.default} 62%)`,
       }}
     >
-      <ToastContainer position="top-right" />
       <Container maxWidth="sm">
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Paper elevation={0} sx={{ p: 4, bgcolor: "background.paper", border: 1, borderColor: "divider", borderRadius: 2, boxShadow: 3 }}>

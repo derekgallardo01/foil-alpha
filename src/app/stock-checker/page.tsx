@@ -15,8 +15,7 @@ import {
 } from '@mui/material';
 import { motion, useInView } from 'framer-motion';
 import Wordmark from '../components/Wordmark';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 
 interface StockInfo {
   isOutOfStockInAllStores: boolean;
@@ -148,7 +147,6 @@ export default function StockChecker() {
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={isLoading}>
         <CircularProgress color="inherit" />
       </Backdrop>

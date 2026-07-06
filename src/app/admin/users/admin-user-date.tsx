@@ -32,8 +32,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { motion } from "framer-motion";
 import Wordmark from "../../components/Wordmark";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 
 // Animation variants
@@ -397,7 +396,6 @@ export default function AdminUsersClient() {
         },
       }}
     >
-      <ToastContainer position="top-right" />
       <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
         <CircularProgress color="inherit" />
       </Backdrop>

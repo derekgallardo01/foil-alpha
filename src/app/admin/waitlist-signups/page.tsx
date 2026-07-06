@@ -18,8 +18,7 @@ import {
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import { alpha } from "@mui/material/styles";
-import "react-toastify/dist/ReactToastify.css";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import AppShell from "../../components/AppShell";
 
 // Define the WaitlistEntry interface
@@ -247,7 +246,6 @@ export default function WaitlistSignupsPage() {
           )}
         </Paper>
       </Container>
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
     </Box>
     </AppShell>
   );

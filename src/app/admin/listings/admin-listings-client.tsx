@@ -37,8 +37,7 @@ import GavelIcon from "@mui/icons-material/Gavel";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
@@ -518,7 +517,6 @@ export default function AdminListingsClient() {
                 p: 3,
             }}
         >
-            <ToastContainer position="top-right" />
             <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
                 <CircularProgress color="inherit" />
             </Backdrop>

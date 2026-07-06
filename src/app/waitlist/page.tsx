@@ -17,8 +17,7 @@ import {
 } from "@mui/material";
 import { motion, useInView } from "framer-motion";
 import Wordmark from "../components/Wordmark";
-import "react-toastify/dist/ReactToastify.css";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 
 // Reusable AnimatedCard component
 interface AnimatedCardProps {
@@ -217,7 +216,6 @@ export default function WaitlistPage() {
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
       <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
         <CircularProgress color="inherit" />
       </Backdrop>

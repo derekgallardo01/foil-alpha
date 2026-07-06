@@ -50,8 +50,7 @@ import {
     PriceCheck,
     Collections as CollectionsIcon
 } from "@mui/icons-material";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import AppShell from "../components/AppShell";
 import ErrorState from "../components/ui/ErrorState";
 import EmptyState from "../components/ui/EmptyState";
@@ -976,7 +975,6 @@ export default function CollectionPage() {
     return (
         <AppShell>
         <Container sx={{ marginTop: 4, marginBottom: 4, paddingLeft: 0, paddingRight: 0 }}>
-            <ToastContainer position="top-right" />
 
             {/* Header actions */}
             <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", my: 3 }}>

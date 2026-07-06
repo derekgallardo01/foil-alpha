@@ -14,8 +14,7 @@ import {
   Backdrop,
 } from "@mui/material";
 import { motion } from "framer-motion";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { GoogleAnalytics, event as gaEvent } from "nextjs-google-analytics";
 
 // Custom error type
@@ -157,7 +156,6 @@ export default function ResetPasswordClient() {
           `radial-gradient(120% 120% at 20% 0%, #160e2a, ${t.palette.background.default} 62%)`,
       }}
     >
-      <ToastContainer position="top-right" />
       <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
         <CircularProgress color="inherit" />
       </Backdrop>

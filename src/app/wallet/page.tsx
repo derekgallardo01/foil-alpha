@@ -12,8 +12,7 @@ import {
 import UserWallet from "../components/UserWallet";
 import AddFundsCard from "../components/AddFundsCard";
 import AppShell from "../components/AppShell";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 export default function WalletPage() {
     const router = useRouter();
@@ -42,7 +41,6 @@ export default function WalletPage() {
 
     return (
         <AppShell>
-            <ToastContainer position="top-right" />
 
             {/* Header */}
             <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
