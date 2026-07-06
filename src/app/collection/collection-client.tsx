@@ -66,6 +66,7 @@ import { getRarityColor } from "../lib/rarity";
 import { CardGridSkeleton } from "../components/ui/Skeletons";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
+import PriceHistoryModal from "../components/PriceHistoryModal";
 import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
 
 interface UserCard {
@@ -443,42 +444,6 @@ function EnhancedCardDisplay({
                 </Typography>
             </CardContent>
         </Card>
-    );
-}
-
-// Price History Modal Component
-function CollectionPriceHistoryModal({
-    open,
-    onClose,
-    userCard
-}: {
-    open: boolean;
-    onClose: () => void;
-    userCard: EnhancedUserCard | null;
-}) {
-    if (!userCard) return null;
-
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-            <DialogTitle>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Timeline />
-                    Price History - {userCard.card.name}
-                </Box>
-            </DialogTitle>
-            <DialogContent sx={{ height: 600 }}>
-                <PriceChart
-                    cardId={userCard.card.id}
-                    userCardId={userCard.id}
-                    height={550}
-                    showUserPrice={true}
-                    autoRefresh={false}
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Close</Button>
-            </DialogActions>
-        </Dialog>
     );
 }
 
@@ -1223,13 +1188,15 @@ export default function CollectionPage() {
                 </DialogActions>
             </Dialog>
 
-            <CollectionPriceHistoryModal
+            <PriceHistoryModal
                 open={priceHistoryModalOpen}
                 onClose={() => {
                     setPriceHistoryModalOpen(false);
                     setSelectedCardForHistory(null);
                 }}
-                userCard={selectedCardForHistory}
+                cardId={selectedCardForHistory?.card.id}
+                userCardId={selectedCardForHistory?.id}
+                cardName={selectedCardForHistory?.card.name || ''}
             />
 
             <BulkPriceUpdateModal

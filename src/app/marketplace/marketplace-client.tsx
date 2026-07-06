@@ -56,6 +56,7 @@ import { toast } from 'react-toastify';
 import AppShell from '../components/AppShell';
 import BiddingModal from '../components/BiddingModal';
 import PriceChart from '../components/PriceChart';
+import PriceHistoryModal from '../components/PriceHistoryModal';
 import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../components/PriceDisplay';
 import CurrencySelector from '../components/CurrencySelector';
 import { useCurrencyContext } from '../lib/currency-context';
@@ -245,44 +246,6 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
                 </Typography>
             )}
         </Box>
-    );
-}
-
-// Price History Modal Component
-function PriceHistoryModal({
-    open,
-    onClose,
-    cardId,
-    userCardId,
-    cardName
-}: {
-    open: boolean;
-    onClose: () => void;
-    cardId?: number;
-    userCardId?: number;
-    cardName: string;
-}) {
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-            <DialogTitle>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <History />
-                    Price History - {cardName}
-                </Box>
-            </DialogTitle>
-            <DialogContent sx={{ height: 600 }}>
-                <PriceChart
-                    cardId={cardId}
-                    userCardId={userCardId}
-                    height={550}
-                    showUserPrice={true}
-                    autoRefresh={false}
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Close</Button>
-            </DialogActions>
-        </Dialog>
     );
 }
 
