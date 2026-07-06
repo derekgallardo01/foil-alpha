@@ -352,6 +352,39 @@ model PriceSyncLog {
   @@map("price_sync_logs")
 }
 
+/// Retail sealed-product tracking (the stock-checker / watchlist "bundles").
+/// Accessed via raw SQL in /api/products; modeled here so the tables exist and
+/// can be managed. Columns must match the raw SQL in src/app/api/products.
+model Product {
+  product_id   Int       @id
+  tcin         String?   @unique @db.VarChar(50)
+  retailer     String?   @db.VarChar(100)
+  title        String?   @db.VarChar(500)
+  url          String?   @db.VarChar(1000)
+  image        String?   @db.VarChar(1000)
+  screenshot   String?   @db.VarChar(1000)
+  stock_status String?   @db.VarChar(100)
+  release_date DateTime? @db.Date
+  created_at   DateTime  @default(now()) @db.DateTime(0)
+
+  @@map("products")
+}
+
+model RetailPriceHistory {
+  id             Int      @id @default(autoincrement())
+  product_id     Int
+  retailer       String?  @db.VarChar(100)
+  price          Decimal? @db.Decimal(10, 2)
+  recorded_at    DateTime @default(now()) @db.DateTime(0)
+  stock_status   String?  @db.VarChar(100)
+  store_quantity Int?     @default(0)
+  ship_quantity  Int?     @default(0)
+
+  @@index([product_id], map: "idx_ph_product")
+  @@index([recorded_at], map: "idx_ph_recorded")
+  @@map("pricehistory")
+}
+
 enum CardSource {
   API
   MANUAL
