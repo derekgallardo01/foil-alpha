@@ -114,13 +114,13 @@ export default function ChatPage() {
 
   return (
     <AppShell>
-      <Container maxWidth="lg" sx={{ bgcolor: "#121212", minHeight: "100vh" }}>
+      <Container maxWidth="lg" sx={{ minHeight: "100vh" }}>
         <Box sx={{ p: 3 }}>
-            <Typography variant="h4" sx={{ mb: 2, color: "#fff" }}>
+            <Typography variant="h4" sx={{ mb: 2, color: "primary.main" }}>
               Foil Alpha Chat
             </Typography>
             {status === "loading" && (
-              <Typography sx={{ color: "#b0b0b0" }}>Loading...</Typography>
+              <Typography sx={{ color: "text.secondary" }}>Loading...</Typography>
             )}
             {error && (
               <Typography color="error" sx={{ mb: 2 }}>
@@ -132,10 +132,11 @@ export default function ChatPage() {
                 mb: 2,
                 maxHeight: 400,
                 overflowY: "auto",
-                bgcolor: "#1e1e1e",
+                bgcolor: "background.default",
                 borderRadius: 2,
                 p: 2,
-                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+                border: 1,
+                borderColor: "divider",
               }}
             >
               {Array.isArray(messages) && messages.length > 0 ? (
@@ -151,24 +152,24 @@ export default function ChatPage() {
                     <Typography
                       key={msg.id}
                       sx={{
-                        color: "#e0e0e0",
+                        color: "text.primary",
                         py: 1,
                         px: 2,
-                        bgcolor: "#2c2c2c",
+                        bgcolor: "background.paper",
                         borderRadius: 1,
                         mb: 1,
-                        "&:hover": { bgcolor: "#353535" },
+                        "&:hover": { bgcolor: "action.hover" },
                       }}
                     >
-                      <span style={{ color: "#9B5Cff" }}>
+                      <Box component="span" sx={{ color: "primary.main" }}>
                         {msg.author?.username || "Unknown"}
-                      </span>
+                      </Box>
                       : {displayText}
                     </Typography>
                   );
                 })
               ) : (
-                <Typography sx={{ color: "#b0b0b0" }}>
+                <Typography sx={{ color: "text.secondary" }}>
                   No messages yet.
                 </Typography>
               )}
@@ -183,14 +184,14 @@ export default function ChatPage() {
               sx={{
                 mb: 1,
                 "& .MuiOutlinedInput-root": {
-                  bgcolor: "#2c2c2c",
-                  color: "#e0e0e0",
-                  "& fieldset": { borderColor: "#424242" },
-                  "&:hover fieldset": { borderColor: "#9B5Cff" },
-                  "&.Mui-focused fieldset": { borderColor: "#9B5Cff" },
+                  bgcolor: "background.paper",
+                  color: "text.primary",
+                  "& fieldset": { borderColor: "divider" },
+                  "&:hover fieldset": { borderColor: "primary.main" },
+                  "&.Mui-focused fieldset": { borderColor: "primary.main" },
                 },
                 "& .MuiInputBase-input::placeholder": {
-                  color: "#b0b0b0",
+                  color: "text.secondary",
                   opacity: 1,
                 },
               }}
@@ -199,12 +200,6 @@ export default function ChatPage() {
             <Button
               onClick={sendMessage}
               variant="contained"
-              sx={{
-                bgcolor: "#9B5Cff",
-                color: "#121212",
-                "&:hover": { bgcolor: "#7de686" },
-                "&:disabled": { bgcolor: "#424242", color: "#b0b0b0" },
-              }}
               disabled={status !== "authenticated" || !input.trim() || isSending}
             >
               {isSending ? "Sending..." : "Send"}

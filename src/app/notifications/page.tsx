@@ -364,9 +364,19 @@ export default function NotificationsPage() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Badge badgeContent={unreadCount} color="error">
-                        <NotificationIcon />
+                        <NotificationIcon sx={{ color: 'primary.main' }} />
                     </Badge>
-                    Notifications
+                    <Box
+                        component="span"
+                        sx={{
+                            background: (t) => t.foil.gradient,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}
+                    >
+                        Notifications
+                    </Box>
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <IconButton onClick={fetchNotifications} title="Refresh">
@@ -434,14 +444,14 @@ export default function NotificationsPage() {
                                 sx={{
                                     cursor: 'pointer',
                                     opacity: notification.read ? 0.7 : 1,
-                                    border: notification.read ? 'none' : '2px solid',
-                                    borderColor: notification.read ? 'none' :
+                                    border: 1,
+                                    borderColor: notification.read ? 'divider' :
                                         isUrgent ? 'warning.main' : 'primary.main',
-                                    backgroundColor: isUrgent && !notification.read ?
-                                        'rgba(255, 152, 0, 0.1)' : 'background.paper',
+                                    backgroundColor: 'background.paper',
                                     '&:hover': {
                                         transform: 'translateY(-2px)',
-                                        boxShadow: 4,
+                                        borderColor: notification.read ? 'divider' :
+                                            isUrgent ? 'warning.main' : 'primary.main',
                                     },
                                     transition: 'all 0.2s ease-in-out',
                                 }}

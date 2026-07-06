@@ -245,8 +245,18 @@ export default function MyAuctionsPage() {
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <GavelIcon />
-                    My Auctions
+                    <GavelIcon sx={{ color: 'primary.main' }} />
+                    <Box
+                        component="span"
+                        sx={{
+                            background: (t) => t.foil.gradient,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}
+                    >
+                        My Auctions
+                    </Box>
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <IconButton onClick={fetchMyAuctions} title="Refresh">
@@ -310,7 +320,7 @@ export default function MyAuctionsPage() {
                                                     height="200"
                                                     image={auction.card.small_image_url || auction.card.image_url || '/placeholder-card.png'}
                                                     alt={auction.card.name}
-                                                    sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
+                                                    sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
                                                     onError={(e) => {
                                                         (e.target as HTMLImageElement).src = '/placeholder-card.png';
                                                     }}
@@ -367,7 +377,7 @@ export default function MyAuctionsPage() {
                                                         <Typography variant="body2" color="text.secondary">
                                                             Reserve:
                                                         </Typography>
-                                                        <Typography variant="body1">
+                                                        <Typography variant="mono" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                                             {formatPrice(auction.reserve_price)}
                                                         </Typography>
                                                     </Box>
@@ -377,8 +387,8 @@ export default function MyAuctionsPage() {
                                                             Highest Bid:
                                                         </Typography>
                                                         <Typography
-                                                            variant="h6"
-                                                            color={auction.highest_bid ? 'primary.main' : 'text.secondary'}
+                                                            variant="mono"
+                                                            sx={{ fontSize: '1.2rem', fontWeight: 700, color: auction.highest_bid ? 'text.primary' : 'text.secondary' }}
                                                         >
                                                             {formatPrice(auction.highest_bid)}
                                                         </Typography>
@@ -513,7 +523,7 @@ export default function MyAuctionsPage() {
                                                                     />
                                                                 )}
                                                             </Box>
-                                                            <Typography variant="h6" color="primary.main">
+                                                            <Typography variant="mono" sx={{ fontSize: '1.2rem', fontWeight: 700, color: 'text.primary' }}>
                                                                 {formatPrice(bid.amount)}
                                                             </Typography>
                                                         </Box>

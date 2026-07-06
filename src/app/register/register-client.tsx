@@ -162,17 +162,10 @@ export default function RegisterClient() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        bgcolor: "grey.900",
         p: 3,
         position: "relative",
-        background: "linear-gradient(181deg, #000000bd, #031e04, #0000002b, #000000d4)",
-        backgroundSize: "200% 200%",
-        animation: "gradientShift 20s ease infinite",
-        "@keyframes gradientShift": {
-          "0%": { backgroundPosition: "0% 0%" },
-          "50%": { backgroundPosition: "100% 100%" },
-          "100%": { backgroundPosition: "0% 0%" },
-        },
+        background: (t) =>
+          `radial-gradient(120% 120% at 20% 0%, #160e2a, ${t.palette.background.default} 62%)`,
       }}
     >
       <ToastContainer position="top-right" />
@@ -190,16 +183,17 @@ export default function RegisterClient() {
         >
           <motion.div initial={{ rotateY: 180 }} animate={{ rotateY: 0 }} transition={{ duration: 0.6 }}>
             <Paper
-              elevation={6}
+              elevation={0}
               sx={{
                 p: 4,
-                bgcolor: "grey.900",
-                backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                bgcolor: "background.paper",
+                border: 1,
+                borderColor: "divider",
                 borderRadius: 2,
-                boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
+                boxShadow: 3,
               }}
             >
-              <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
+              <Box sx={{ mb: 1, display: "flex", justifyContent: "center" }}>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -214,6 +208,21 @@ export default function RegisterClient() {
                   />
                 </motion.div>
               </Box>
+              <Typography
+                variant="h5"
+                component="p"
+                sx={{
+                  mb: 2,
+                  textAlign: "center",
+                  background: (t) => t.foil.gradient,
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  fontWeight: 800,
+                }}
+              >
+                Foil Alpha
+              </Typography>
 
               {/* DEV MODE: Info Alert */}
               {devMode && (
@@ -339,7 +348,8 @@ export default function RegisterClient() {
                         type="submit"
                         fullWidth
                         variant="contained"
-                        sx={{ mt: 3, bgcolor: "#9B5Cff", color: "grey.900" }}
+                        color="primary"
+                        sx={{ mt: 3 }}
                         disabled={loading || success}
                         aria-label="Register"
                       >

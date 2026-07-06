@@ -315,8 +315,18 @@ export default function SellingDashboard() {
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SellIcon />
-                    My Sales
+                    <SellIcon sx={{ color: 'primary.main' }} />
+                    <Box
+                        component="span"
+                        sx={{
+                            background: (t) => t.foil.gradient,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}
+                    >
+                        My Sales
+                    </Box>
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <IconButton onClick={fetchSalesData} title="Refresh">
@@ -347,10 +357,10 @@ export default function SellingDashboard() {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box>
-                                    <Typography color="textSecondary" gutterBottom>
+                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
                                         Active Sales
                                     </Typography>
-                                    <Typography variant="h4">
+                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
                                         {stats.totalActiveSales}
                                     </Typography>
                                 </Box>
@@ -365,10 +375,10 @@ export default function SellingDashboard() {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box>
-                                    <Typography color="textSecondary" gutterBottom>
+                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
                                         Total Sold
                                     </Typography>
-                                    <Typography variant="h4">
+                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
                                         {stats.totalSoldItems}
                                     </Typography>
                                 </Box>
@@ -383,10 +393,10 @@ export default function SellingDashboard() {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box>
-                                    <Typography color="textSecondary" gutterBottom>
+                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
                                         Total Revenue
                                     </Typography>
-                                    <Typography variant="h4" color="success.main">
+                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'success.main' }}>
                                         {formatPrice(stats.totalRevenue)}
                                     </Typography>
                                 </Box>
@@ -401,10 +411,10 @@ export default function SellingDashboard() {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box>
-                                    <Typography color="textSecondary" gutterBottom>
+                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
                                         Total Bids
                                     </Typography>
-                                    <Typography variant="h4">
+                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
                                         {stats.totalBidsReceived}
                                     </Typography>
                                 </Box>
@@ -492,7 +502,7 @@ export default function SellingDashboard() {
                                                             height="200"
                                                             image={sale.card.small_image_url || sale.card.image_url || '/placeholder-card.png'}
                                                             alt={sale.card.name}
-                                                            sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
+                                                            sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
                                                             onError={(e) => {
                                                                 (e.target as HTMLImageElement).src = '/placeholder-card.png';
                                                             }}
@@ -548,7 +558,7 @@ export default function SellingDashboard() {
                                                                     <Typography variant="body2" color="text.secondary">
                                                                         Price:
                                                                     </Typography>
-                                                                    <Typography variant="h6" color="primary.main">
+                                                                    <Typography variant="mono" sx={{ fontSize: '1.2rem', fontWeight: 700, color: 'text.primary' }}>
                                                                         {formatPrice(sale.fixed_price)}
                                                                     </Typography>
                                                                 </Box>
@@ -559,8 +569,8 @@ export default function SellingDashboard() {
                                                                             Current Bid:
                                                                         </Typography>
                                                                         <Typography
-                                                                            variant="h6"
-                                                                            color={sale.highest_bid ? 'primary.main' : 'text.secondary'}
+                                                                            variant="mono"
+                                                                            sx={{ fontSize: '1.2rem', fontWeight: 700, color: sale.highest_bid ? 'text.primary' : 'text.secondary' }}
                                                                         >
                                                                             {formatPrice(sale.highest_bid || sale.reserve_price)}
                                                                         </Typography>
@@ -691,7 +701,7 @@ export default function SellingDashboard() {
                                                         />
                                                     </TableCell>
                                                     <TableCell align="right">
-                                                        <Typography variant="h6" color="success.main">
+                                                        <Typography variant="mono" sx={{ fontSize: '1.2rem', fontWeight: 700, color: 'success.main' }}>
                                                             {formatPrice(item.sale_price)}
                                                         </Typography>
                                                     </TableCell>
@@ -815,7 +825,7 @@ export default function SellingDashboard() {
                                                                             <Chip label="Highest Bid" color="primary" size="small" />
                                                                         )}
                                                                     </Box>
-                                                                    <Typography variant="h6" color="primary.main">
+                                                                    <Typography variant="mono" sx={{ fontSize: '1.2rem', fontWeight: 700, color: 'text.primary' }}>
                                                                         {formatPrice(bid.amount)}
                                                                     </Typography>
                                                                 </Box>

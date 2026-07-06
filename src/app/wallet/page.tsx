@@ -31,15 +31,15 @@ export default function WalletPage() {
             <ToastContainer position="top-right" />
 
             {/* Header */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
                         variant="outlined"
                         onClick={() => router.push('/marketplace')}
                         sx={{
-                            borderColor: '#9B5Cff',
-                            color: '#9B5Cff',
-                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
+                            borderColor: 'primary.main',
+                            color: 'primary.main',
+                            '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' }
                         }}
                     >
                         Marketplace
@@ -48,9 +48,9 @@ export default function WalletPage() {
                         variant="outlined"
                         onClick={() => router.push('/collection')}
                         sx={{
-                            borderColor: '#9B5Cff',
-                            color: '#9B5Cff',
-                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
+                            borderColor: 'primary.main',
+                            color: 'primary.main',
+                            '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' }
                         }}
                     >
                         My Collection
@@ -59,7 +59,7 @@ export default function WalletPage() {
             </Box>
 
             <Container maxWidth="md" sx={{ py: 3, flex: 1 }}>
-                <Typography variant="h4" sx={{ color: '#9B5Cff', mb: 3, textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ color: 'primary.main', mb: 3, textAlign: 'center' }}>
                     Welcome, {session?.user?.name}
                 </Typography>
 
@@ -74,22 +74,12 @@ export default function WalletPage() {
                         <Button
                             variant="contained"
                             onClick={() => router.push('/marketplace')}
-                            sx={{
-                                bgcolor: '#9B5Cff',
-                                color: 'grey.900',
-                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                            }}
                         >
                             Browse Cards for Sale
                         </Button>
                         <Button
                             variant="contained"
                             onClick={() => router.push('/marketplace?filter=auction')}
-                            sx={{
-                                bgcolor: '#9B5Cff',
-                                color: 'grey.900',
-                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                            }}
                         >
                             View Auctions
                         </Button>
@@ -97,9 +87,9 @@ export default function WalletPage() {
                             variant="outlined"
                             onClick={() => router.push('/collection')}
                             sx={{
-                                borderColor: '#9B5Cff',
-                                color: '#9B5Cff',
-                                '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
+                                borderColor: 'primary.main',
+                                color: 'primary.main',
+                                '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' }
                             }}
                         >
                             Manage My Cards

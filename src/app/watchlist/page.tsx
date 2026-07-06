@@ -208,33 +208,34 @@ const Watchlist = () => {
           width: "100%",
           padding: "20px",
           marginTop: "20px",
-          backgroundColor: "#1E1E1E",
-          color: "#FFFFFF",
-          borderRadius: "10px",
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
+          backgroundColor: "background.paper",
+          color: "text.primary",
+          borderRadius: 2,
+          border: 1,
+          borderColor: "divider",
         }}
       >
-        <Typography variant="h2" color="#ffffff" sx={{ marginBottom: "20px", fontSize: "2rem" }}>
+        <Typography variant="h2" sx={{ marginBottom: "20px", fontSize: "2rem", color: "primary.main" }}>
           Product Watchlist
         </Typography>
         <Button
           variant="contained"
           onClick={triggerScrape}
           disabled={loading}
-          sx={{ marginBottom: "20px", backgroundColor: "#9B5Cff", color: "#1E1E1E" }}
+          sx={{ marginBottom: "20px" }}
         >
           {loading ? "Refreshing..." : "Refresh Products"}
         </Button>
 
         {loading ? (
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "200px" }}>
-            <CircularProgress size={60} thickness={4} sx={{ color: "#9B5Cff", marginBottom: "20px" }} />
-            <Typography variant="body1" sx={{ color: "#90a4ae", fontSize: "1.2rem" }}>
+            <CircularProgress size={60} thickness={4} sx={{ color: "primary.main", marginBottom: "20px" }} />
+            <Typography variant="body1" sx={{ color: "text.secondary", fontSize: "1.2rem" }}>
               Fetching product data...
             </Typography>
           </Box>
         ) : error ? (
-          <Typography variant="body1" sx={{ textAlign: "center", fontSize: "18px", color: "#E57373", padding: "20px" }}>
+          <Typography variant="body1" sx={{ textAlign: "center", fontSize: "18px", color: "error.main", padding: "20px" }}>
             Error: {error}
           </Typography>
         ) : products.length > 0 ? (
@@ -272,20 +273,21 @@ const Watchlist = () => {
             const latestBarnesNoblePrice = latestBarnesNoblePriceEntry ? latestBarnesNoblePriceEntry.price : 'N/A';
 
             return (
-              <div
+              <Box
                 key={`${product.product_id}-${index}`}
-                style={{
-                  backgroundColor: "#2A2A2A",
+                sx={{
+                  backgroundColor: "background.default",
                   padding: "15px",
-                  borderRadius: "8px",
+                  borderRadius: 2,
                   marginBottom: "20px",
-                  boxShadow: "0px 2px 6px rgba(0, 0, 0, 0.2)",
+                  border: 1,
+                  borderColor: "divider",
                 }}
               >
-                <Typography variant="h3" sx={{ fontSize: "1.5rem", color: "#90a4ae", fontWeight: "bold", marginBottom: "8px" }}>
+                <Typography variant="h3" sx={{ fontSize: "1.5rem", color: "text.secondary", fontWeight: "bold", marginBottom: "8px" }}>
                   Product {index + 1}
                 </Typography>
-                <Typography variant="h4" sx={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "8px", color: "#FFFFFF" }}>
+                <Typography variant="h4" sx={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "8px", color: "text.primary" }}>
                   {he.decode(product.title)}
                 </Typography>
                 <a href={product.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "200px" }}>
@@ -296,7 +298,7 @@ const Watchlist = () => {
                     alt={product.title}
                     style={{
                       borderRadius: "8px",
-                      border: `2px solid ${theme.palette.primary.main}`,
+                      border: `1px solid ${theme.palette.divider}`,
                       display: "block",
                       marginBottom: "10px",
                     }}
@@ -304,12 +306,12 @@ const Watchlist = () => {
                 </a>
 
                 {/* Display Latest Prices and Trends for Each Retailer */}
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Target: </span>
-                  <span style={{ color: "#9B5Cff", fontWeight: "bold" }}>{latestTargetPrice}</span>
+                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "text.primary" }}>
+                  <span style={{ color: theme.palette.text.secondary }}>Target: </span>
+                  <span style={{ color: theme.palette.text.primary, fontWeight: "bold", fontFamily: '"JetBrains Mono Variable", monospace' }}>{latestTargetPrice}</span>
                   {targetTrend && (
                     <span style={{ 
-                      color: targetTrend === '↑' ? '#E57373' : targetTrend === '↓' ? '#66BB6A' : '#90a4ae',
+                      color: targetTrend === '↑' ? theme.palette.success.main : targetTrend === '↓' ? theme.palette.error.main : theme.palette.text.secondary,
                       marginLeft: '8px',
                       fontSize: '1.2rem'
                     }}>
@@ -317,12 +319,12 @@ const Watchlist = () => {
                     </span>
                   )}
                 </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Walmart: </span>
-                  <span style={{ color: "#ffcc00", fontWeight: "bold" }}>{latestWalmartPrice}</span>
+                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "text.primary" }}>
+                  <span style={{ color: theme.palette.text.secondary }}>Walmart: </span>
+                  <span style={{ color: theme.palette.text.primary, fontWeight: "bold", fontFamily: '"JetBrains Mono Variable", monospace' }}>{latestWalmartPrice}</span>
                   {walmartTrend && (
                     <span style={{ 
-                      color: walmartTrend === '↑' ? '#E57373' : walmartTrend === '↓' ? '#66BB6A' : '#90a4ae',
+                      color: walmartTrend === '↑' ? theme.palette.success.main : walmartTrend === '↓' ? theme.palette.error.main : theme.palette.text.secondary,
                       marginLeft: '8px',
                       fontSize: '1.2rem'
                     }}>
@@ -330,12 +332,12 @@ const Watchlist = () => {
                     </span>
                   )}
                 </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>BestBuy: </span>
-                  <span style={{ color: "#ff4444", fontWeight: "bold" }}>{latestBestbuyPrice}</span>
+                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "text.primary" }}>
+                  <span style={{ color: theme.palette.text.secondary }}>BestBuy: </span>
+                  <span style={{ color: theme.palette.text.primary, fontWeight: "bold", fontFamily: '"JetBrains Mono Variable", monospace' }}>{latestBestbuyPrice}</span>
                   {bestbuyTrend && (
                     <span style={{ 
-                      color: bestbuyTrend === '↑' ? '#E57373' : bestbuyTrend === '↓' ? '#66BB6A' : '#90a4ae',
+                      color: bestbuyTrend === '↑' ? theme.palette.success.main : bestbuyTrend === '↓' ? theme.palette.error.main : theme.palette.text.secondary,
                       marginLeft: '8px',
                       fontSize: '1.2rem'
                     }}>
@@ -343,12 +345,12 @@ const Watchlist = () => {
                     </span>
                   )}
                 </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>GameStop: </span>
-                  <span style={{ color: "#00bcd4", fontWeight: "bold" }}>{latestGamestopPrice}</span>
+                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "text.primary" }}>
+                  <span style={{ color: theme.palette.text.secondary }}>GameStop: </span>
+                  <span style={{ color: theme.palette.text.primary, fontWeight: "bold", fontFamily: '"JetBrains Mono Variable", monospace' }}>{latestGamestopPrice}</span>
                   {gamestopTrend && (
                     <span style={{ 
-                      color: gamestopTrend === '↑' ? '#E57373' : gamestopTrend === '↓' ? '#66BB6A' : '#90a4ae',
+                      color: gamestopTrend === '↑' ? theme.palette.success.main : gamestopTrend === '↓' ? theme.palette.error.main : theme.palette.text.secondary,
                       marginLeft: '8px',
                       fontSize: '1.2rem'
                     }}>
@@ -356,12 +358,12 @@ const Watchlist = () => {
                     </span>
                   )}
                 </Typography>
-                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "#FFFFFF" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Barnes & Noble: </span>
-                  <span style={{ color: "#9c27b0", fontWeight: "bold" }}>{latestBarnesNoblePrice}</span>
+                <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "5px", color: "text.primary" }}>
+                  <span style={{ color: theme.palette.text.secondary }}>Barnes & Noble: </span>
+                  <span style={{ color: theme.palette.text.primary, fontWeight: "bold", fontFamily: '"JetBrains Mono Variable", monospace' }}>{latestBarnesNoblePrice}</span>
                   {barnesNobleTrend && (
                     <span style={{ 
-                      color: barnesNobleTrend === '↑' ? '#E57373' : barnesNobleTrend === '↓' ? '#66BB6A' : '#90a4ae',
+                      color: barnesNobleTrend === '↑' ? theme.palette.success.main : barnesNobleTrend === '↓' ? theme.palette.error.main : theme.palette.text.secondary,
                       marginLeft: '8px',
                       fontSize: '1.2rem'
                     }}>
@@ -370,10 +372,10 @@ const Watchlist = () => {
                   )}
                 </Typography>
                 <Typography variant="body1" sx={{ fontSize: "1rem", fontWeight: "500", marginBottom: "5px" }}>
-                  <span style={{ color: "rgb(144 164 174)" }}>Stock Status: </span>
+                  <span style={{ color: theme.palette.text.secondary }}>Stock Status: </span>
                   <span
                     style={{
-                      color: product.stockStatus.toLowerCase() === "in stock" ? "#66BB6A" : "#E57373",
+                      color: product.stockStatus.toLowerCase() === "in stock" ? theme.palette.success.main : theme.palette.error.main,
                       fontWeight: "bold",
                     }}
                   >
@@ -382,8 +384,8 @@ const Watchlist = () => {
                 </Typography>
                 {product.release_date && (
                   <Typography variant="body1" sx={{ fontSize: "1rem", fontWeight: "500", marginBottom: "10px" }}>
-                    <span style={{ color: "rgb(144 164 174)" }}>Release Date: </span>
-                    <span style={{ color: "#FFFFFF", fontWeight: "bold" }}>
+                    <span style={{ color: theme.palette.text.secondary }}>Release Date: </span>
+                    <span style={{ color: theme.palette.text.primary, fontWeight: "bold", fontFamily: '"JetBrains Mono Variable", monospace' }}>
                       {new Date(product.release_date).toLocaleDateString()}
                     </span>
                   </Typography>
@@ -391,8 +393,8 @@ const Watchlist = () => {
 
                 {/* Price History Accordion with Combined Chart */}
                 {productPriceHistory.length > 0 && (
-                  <Accordion sx={{ backgroundColor: "#333333", color: "#FFFFFF", marginBottom: "10px" }}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#FFFFFF" }} />}>
+                  <Accordion sx={{ backgroundColor: "background.paper", color: "text.primary", marginBottom: "10px", border: 1, borderColor: "divider" }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "text.secondary" }} />}>
                       <Typography>Price History (All Retailers)</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
@@ -404,8 +406,8 @@ const Watchlist = () => {
                       </Box>
                       <Box sx={{ 
                         maxHeight: '150px', 
-                        overflowY: 'auto', 
-                        backgroundColor: '#2A2A2A',
+                        overflowY: 'auto',
+                        backgroundColor: 'background.default',
                         padding: '10px',
                         borderRadius: '4px',
                       }}>
@@ -416,18 +418,19 @@ const Watchlist = () => {
                               display: 'flex',
                               justifyContent: 'space-between',
                               padding: '5px 0',
-                              borderBottom: idx === productPriceHistory.length - 1 ? 'none' : '1px solid #455A64',
-                              color: '#90a4ae',
+                              borderBottom: idx === productPriceHistory.length - 1 ? 'none' : 1,
+                              borderColor: 'divider',
+                              color: 'text.secondary',
                               '&:hover': {
-                                backgroundColor: '#3A3A3A',
-                                color: '#FFFFFF',
+                                backgroundColor: 'action.hover',
+                                color: 'text.primary',
                               },
                             }}
                           >
                             <Typography sx={{ fontSize: '0.9rem' }}>
                               {price.retailer} - {new Date(price.recorded_at).toLocaleString()}
                             </Typography>
-                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#9B5Cff' }}>
+                            <Typography variant="mono" sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'text.primary' }}>
                               {price.price}
                             </Typography>
                           </Box>
@@ -443,13 +446,13 @@ const Watchlist = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{
-                    borderColor: "primary",
-                    color: "#ffffff",
+                    borderColor: "divider",
+                    color: "text.primary",
                     padding: "8px 15px",
                     marginRight: "10px",
                     borderRadius: "6px",
                     fontWeight: "bold",
-                    "&:hover": { backgroundColor: "primary", color: "#ffffff" },
+                    "&:hover": { backgroundColor: "action.hover", borderColor: "divider" },
                   }}
                 >
                   View Product
@@ -461,23 +464,23 @@ const Watchlist = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     sx={{
-                      borderColor: "secondary",
-                      color: "#ffffff",
+                      borderColor: "divider",
+                      color: "text.primary",
                       padding: "8px 15px",
                       borderRadius: "6px",
                       fontWeight: "bold",
-                      "&:hover": { backgroundColor: "secondary", color: "#ffffff" },
+                      "&:hover": { backgroundColor: "action.hover", borderColor: "divider" },
                     }}
                   >
                     View Screenshot
                   </Button>
                 )}
-                <Divider sx={{ borderBottom: "0.5px solid #455A64", marginY: "10px" }} />
-              </div>
+                <Divider sx={{ marginY: "10px" }} />
+              </Box>
             );
           })
         ) : (
-          <Typography sx={{ textAlign: "center", fontSize: "18px", padding: "20px" }}>
+          <Typography sx={{ textAlign: "center", fontSize: "18px", padding: "20px", color: "text.secondary" }}>
             No product details found
           </Typography>
         )}

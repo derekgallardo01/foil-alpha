@@ -260,7 +260,7 @@ const ManualWatchlist: React.FC<ManualWatchlistProps> = ({
                         View Product
                       </Link>
                     </TableCell>
-                    <TableCell>{item.price}</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono Variable", monospace' }}>{item.price}</TableCell>
                     <TableCell>{formatDate(item.date_recorded)}</TableCell>
                     <TableCell>
                       <TextField
@@ -270,7 +270,7 @@ const ManualWatchlist: React.FC<ManualWatchlistProps> = ({
                         fullWidth
                       />
                     </TableCell>
-                    <TableCell sx={{ color: item.stock_status === "in_stock" ? "#9B5Cff" : "#e56060" }}>
+                    <TableCell sx={{ color: item.stock_status === "in_stock" ? "success.main" : "error.main" }}>
                       {item.stock_status}
                     </TableCell>
                     <TableCell>

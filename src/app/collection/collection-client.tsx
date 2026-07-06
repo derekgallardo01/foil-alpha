@@ -145,8 +145,8 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
     }, [userCards]);
 
     return (
-        <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-            <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
+            <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Assessment />
                 Collection Analytics
             </Typography>
@@ -154,8 +154,8 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
             <Grid container spacing={3}>
                 {/* Summary Cards */}
                 <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'grey.700', textAlign: 'center', p: 2 }}>
-                        <Typography variant="h4" color="primary">
+                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
+                        <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'primary.main' }}>
                             {analytics.totalCards}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -165,8 +165,8 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
                 </Grid>
 
                 <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'grey.700', textAlign: 'center', p: 2 }}>
-                        <Typography variant="h4" color="success.main">
+                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
+                        <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
                             ${analytics.totalMarketValue.toFixed(0)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -176,10 +176,11 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
                 </Grid>
 
                 <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'grey.700', textAlign: 'center', p: 2 }}>
+                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
                         <Typography
-                            variant="h4"
-                            color={analytics.profitLoss >= 0 ? 'success.main' : 'error.main'}
+                            variant="mono"
+                            component="div"
+                            sx={{ fontSize: 30, fontWeight: 700, color: analytics.profitLoss >= 0 ? 'success.main' : 'error.main' }}
                         >
                             {analytics.profitLoss >= 0 ? '+' : ''}${analytics.profitLoss.toFixed(0)}
                         </Typography>
@@ -190,10 +191,11 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
                 </Grid>
 
                 <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'grey.700', textAlign: 'center', p: 2 }}>
+                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
                         <Typography
-                            variant="h4"
-                            color={analytics.profitLossPercentage >= 0 ? 'success.main' : 'error.main'}
+                            variant="mono"
+                            component="div"
+                            sx={{ fontSize: 30, fontWeight: 700, color: analytics.profitLossPercentage >= 0 ? 'success.main' : 'error.main' }}
                         >
                             {analytics.profitLossPercentage >= 0 ? '+' : ''}{analytics.profitLossPercentage.toFixed(1)}%
                         </Typography>
@@ -241,7 +243,7 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
                                             <Typography variant="body2" noWrap sx={{ flex: 1, mr: 1 }}>
                                                 {card.card.name}
                                             </Typography>
-                                            <Typography variant="body2" color="success.main">
+                                            <Typography variant="mono" color="success.main">
                                                 +${card.profit_loss?.toFixed(2)}
                                             </Typography>
                                         </Box>
@@ -259,7 +261,7 @@ function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
                                             <Typography variant="body2" noWrap sx={{ flex: 1, mr: 1 }}>
                                                 {card.card.name}
                                             </Typography>
-                                            <Typography variant="body2" color="error.main">
+                                            <Typography variant="mono" color="error.main">
                                                 ${card.profit_loss?.toFixed(2)}
                                             </Typography>
                                         </Box>
@@ -325,8 +327,6 @@ function EnhancedCardDisplay({
 
     return (
         <Card sx={{
-            bgcolor: 'grey.800',
-            border: '1px solid rgba(155, 92, 255, 0.2)',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -339,10 +339,12 @@ function EnhancedCardDisplay({
                     position: 'absolute',
                     top: 8,
                     right: 8,
-                    bgcolor: 'rgba(0, 0, 0, 0.7)',
-                    color: 'white',
+                    bgcolor: 'background.default',
+                    color: 'text.primary',
+                    border: 1,
+                    borderColor: 'divider',
                     zIndex: 1,
-                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.9)' }
+                    '&:hover': { bgcolor: 'action.hover' }
                 }}
             >
                 <Timeline sx={{ fontSize: 16 }} />
@@ -353,11 +355,11 @@ function EnhancedCardDisplay({
                 height="200"
                 image={userCard.card.image_url || '/placeholder-card.png'}
                 alt={userCard.card.name}
-                sx={{ objectFit: 'contain', bgcolor: 'grey.700' }}
+                sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
             />
 
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 1 }}>
+                <Typography variant="h6" sx={{ color: 'primary.main', mb: 1 }}>
                     {userCard.card.name}
                 </Typography>
 
@@ -378,14 +380,14 @@ function EnhancedCardDisplay({
                     />
                 </Box>
 
-                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(155, 92, 255, 0.05)', borderRadius: 1 }}>
+                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.default', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="body2" color="text.secondary">
                             {purchasePrice > 0 ? 'Purchase Price' : 'Market Price'}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             {purchasePrice === 0 && getTrendIcon()}
-                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                            <Typography variant="mono" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                 ${displayPrice.toFixed(2)}
                             </Typography>
                         </Box>
@@ -398,7 +400,7 @@ function EnhancedCardDisplay({
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 {getTrendIcon()}
-                                <Typography variant="body2">
+                                <Typography variant="mono" sx={{ color: 'text.primary' }}>
                                     ${marketPrice.toFixed(2)}
                                 </Typography>
                             </Box>
@@ -411,10 +413,10 @@ function EnhancedCardDisplay({
                                 P&L
                             </Typography>
                             <Box sx={{ textAlign: 'right' }}>
-                                <Typography variant="body2" sx={{ color: getProfitLossColor(), fontWeight: 'bold' }}>
+                                <Typography variant="mono" component="div" sx={{ color: getProfitLossColor(), fontWeight: 700 }}>
                                     {profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: getProfitLossColor() }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 12, color: getProfitLossColor() }}>
                                     ({profitLossPercentage >= 0 ? '+' : ''}{profitLossPercentage.toFixed(1)}%)
                                 </Typography>
                             </Box>
@@ -427,10 +429,10 @@ function EnhancedCardDisplay({
                                 24h Change
                             </Typography>
                             <Typography
-                                variant="body2"
+                                variant="mono"
                                 sx={{
                                     color: userCard.card.price_change_24h >= 0 ? 'success.main' : 'error.main',
-                                    fontWeight: 'bold'
+                                    fontWeight: 700
                                 }}
                             >
                                 {userCard.card.price_change_24h >= 0 ? '+' : ''}{userCard.card.price_change_24h.toFixed(1)}%
@@ -448,10 +450,10 @@ function EnhancedCardDisplay({
                             icon={userCard.sale_type === 'FIXED' ? <AttachMoney /> : <Gavel />}
                         />
 
-                        <Box sx={{ mt: 1, p: 1, bgcolor: 'rgba(76, 175, 80, 0.1)', borderRadius: 1 }}>
+                        <Box sx={{ mt: 1, p: 1, bgcolor: 'background.default', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                             {userCard.sale_type === 'FIXED' && userCard.fixed_price && (
                                 <Box>
-                                    <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                                    <Typography variant="mono" component="div" sx={{ color: 'success.main', fontWeight: 700 }}>
                                         Listed: ${userCard.fixed_price.toFixed(2)}
                                     </Typography>
                                     {marketPrice > 0 && (
@@ -470,7 +472,7 @@ function EnhancedCardDisplay({
 
                             {userCard.sale_type === 'AUCTION' && (
                                 <Box>
-                                    <Typography variant="body2" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
+                                    <Typography variant="mono" component="div" sx={{ color: 'warning.main', fontWeight: 700 }}>
                                         Reserve: ${userCard.reserve_price?.toFixed(2) || '0.00'}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
@@ -488,11 +490,6 @@ function EnhancedCardDisplay({
                             variant="contained"
                             startIcon={<Sell />}
                             onClick={() => onSellCard(userCard)}
-                            sx={{
-                                bgcolor: '#9B5Cff',
-                                color: 'grey.900',
-                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                            }}
                         >
                             List for Sale
                         </Button>
@@ -501,7 +498,6 @@ function EnhancedCardDisplay({
                             variant="outlined"
                             color="error"
                             onClick={() => onRemoveFromSale(userCard.id, userCard.card.name)}
-                            sx={{ borderColor: 'error.main', color: 'error.main' }}
                         >
                             Remove from Sale
                         </Button>
@@ -510,10 +506,10 @@ function EnhancedCardDisplay({
                     {marketPrice === 0 && (
                         <Button
                             variant="outlined"
+                            color="primary"
                             size="small"
                             startIcon={<PriceCheck />}
                             onClick={() => onUpdatePrice(userCard.card.id)}
-                            sx={{ borderColor: '#9B5Cff', color: '#9B5Cff' }}
                         >
                             Get Price Data
                         </Button>
@@ -630,19 +626,19 @@ function BulkPriceUpdateModal({
                         </Alert>
                         <Grid container spacing={2}>
                             <Grid item xs={4}>
-                                <Typography variant="h4" color="primary" align="center">
+                                <Typography variant="mono" component="div" align="center" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
                                     {results.successful_updates}
                                 </Typography>
                                 <Typography variant="body2" align="center">Updated</Typography>
                             </Grid>
                             <Grid item xs={4}>
-                                <Typography variant="h4" color="warning.main" align="center">
+                                <Typography variant="mono" component="div" align="center" sx={{ fontSize: 30, fontWeight: 700, color: 'warning.main' }}>
                                     {results.skipped_cards}
                                 </Typography>
                                 <Typography variant="body2" align="center">Skipped</Typography>
                             </Grid>
                             <Grid item xs={4}>
-                                <Typography variant="h4" color="error.main" align="center">
+                                <Typography variant="mono" component="div" align="center" sx={{ fontSize: 30, fontWeight: 700, color: 'error.main' }}>
                                     {results.failed_updates}
                                 </Typography>
                                 <Typography variant="body2" align="center">Failed</Typography>
@@ -660,11 +656,6 @@ function BulkPriceUpdateModal({
                         variant="contained"
                         onClick={handleBulkUpdate}
                         disabled={updating}
-                        sx={{
-                            bgcolor: '#9B5Cff',
-                            color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                        }}
                     >
                         {updating ? <CircularProgress size={20} /> : 'Update Prices'}
                     </Button>
@@ -986,42 +977,36 @@ export default function CollectionPage() {
                 <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
                         variant="outlined"
+                        color="primary"
                         onClick={() => router.push('/wallet')}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: '#9B5Cff',
-                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                        }}
                     >
                         My Wallet
                     </Button>
                     <Button
                         variant="outlined"
+                        color="primary"
                         onClick={() => router.push('/marketplace')}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: '#9B5Cff',
-                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                        }}
                     >
                         Marketplace
                     </Button>
                 </Box>
             </Box>
 
-            <Box
+            <Paper
                 component="section"
+                variant="outlined"
                 sx={{
                     width: "100%",
-                    padding: "20px",
-                    marginTop: "20px",
-                    backgroundColor: "#1E1E1E",
-                    color: "#FFFFFF",
-                    borderRadius: "10px",
-                    boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
+                    p: "20px",
+                    mt: "20px",
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
                 }}
             >
-                <Typography variant="h4" sx={{ color: '#9B5Cff', mb: 3, textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ color: 'primary.main', mb: 3, textAlign: 'center' }}>
                     {session?.user?.name}'s Card Collection
                 </Typography>
 
@@ -1052,14 +1037,14 @@ export default function CollectionPage() {
 
                 <CollectionAnalytics userCards={enhancedUserCards} />
 
-                <Paper sx={{ mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                <Paper variant="outlined" sx={{ mb: 3, border: 1, borderColor: 'divider' }}>
                     <Tabs
                         value={currentTab}
                         onChange={(e, newValue) => setCurrentTab(newValue)}
                         sx={{
                             '& .MuiTab-root': { color: 'text.secondary' },
-                            '& .Mui-selected': { color: '#9B5Cff' },
-                            '& .MuiTabs-indicator': { backgroundColor: '#9B5Cff' }
+                            '& .Mui-selected': { color: 'primary.main' },
+                            '& .MuiTabs-indicator': { backgroundColor: 'primary.main' }
                         }}
                     >
                         <Tab
@@ -1087,11 +1072,6 @@ export default function CollectionPage() {
                                 <Button
                                     variant="contained"
                                     onClick={() => router.push('/marketplace')}
-                                    sx={{
-                                        bgcolor: '#9B5Cff',
-                                        color: 'grey.900',
-                                        '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                                    }}
                                 >
                                     Browse Marketplace
                                 </Button>
@@ -1118,13 +1098,9 @@ export default function CollectionPage() {
                                     {selectedCardsForUpdate.length > 0 && (
                                         <Button
                                             variant="outlined"
+                                            color="primary"
                                             onClick={handleBulkPriceUpdate}
                                             startIcon={<PriceCheck />}
-                                            sx={{
-                                                borderColor: '#9B5Cff',
-                                                color: '#9B5Cff',
-                                                '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                                            }}
                                         >
                                             Update Prices ({selectedCardsForUpdate.length})
                                         </Button>
@@ -1152,7 +1128,7 @@ export default function CollectionPage() {
                 {currentTab === 1 && (
                     <>
                         {pendingPurchases.length === 0 ? (
-                            <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
                                 <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                                 <Typography variant="h6" color="text.secondary">
                                     No pending purchases
@@ -1170,13 +1146,13 @@ export default function CollectionPage() {
                                     return (
                                         <Grid item xs={12} md={6} key={index}>
                                             <Card sx={{
-                                                bgcolor: 'grey.800',
-                                                border: isExpired ? '1px solid rgba(244, 67, 54, 0.5)' : '1px solid rgba(255, 152, 0, 0.5)'
+                                                border: 1,
+                                                borderColor: isExpired ? 'error.main' : 'warning.main'
                                             }}>
                                                 <CardContent>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                                         <Warning sx={{ color: isExpired ? 'error.main' : 'warning.main', mr: 1 }} />
-                                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                                        <Typography variant="h6" sx={{ color: 'primary.main' }}>
                                                             {isExpired ? 'Purchase Expired' : 'Confirm Purchase'}
                                                         </Typography>
                                                         <Chip
@@ -1203,7 +1179,7 @@ export default function CollectionPage() {
                                                             <Typography variant="body2" color="text.secondary">
                                                                 Seller: {purchase.seller_name}
                                                             </Typography>
-                                                            <Typography variant="h6" color="primary.main">
+                                                            <Typography variant="mono" sx={{ fontSize: 20, fontWeight: 700, color: 'text.primary' }}>
                                                                 ${formatPrice(purchase.amount)}
                                                             </Typography>
                                                         </Box>
@@ -1215,11 +1191,6 @@ export default function CollectionPage() {
                                                             fullWidth
                                                             onClick={() => handleConfirmPurchase(purchase)}
                                                             startIcon={<CheckCircle />}
-                                                            sx={{
-                                                                bgcolor: '#9B5Cff',
-                                                                color: 'grey.900',
-                                                                '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                                                            }}
                                                         >
                                                             Confirm Purchase
                                                         </Button>
@@ -1239,7 +1210,7 @@ export default function CollectionPage() {
                         )}
                     </>
                 )}
-            </Box>
+            </Paper>
 
             {/* Modals */}
             <Dialog open={sellDialogOpen} onClose={() => setSellDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -1302,11 +1273,6 @@ export default function CollectionPage() {
                         variant="contained"
                         onClick={handleConfirmSale}
                         disabled={actionLoading || (!sellData.fixedPrice && sellData.saleType === 'FIXED') || (!sellData.reservePrice && sellData.saleType === 'AUCTION')}
-                        sx={{
-                            bgcolor: '#9B5Cff',
-                            color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                        }}
                     >
                         {actionLoading ? 'Listing...' : `List for ${sellData.saleType === 'FIXED' ? 'Sale' : 'Auction'}`}
                     </Button>
