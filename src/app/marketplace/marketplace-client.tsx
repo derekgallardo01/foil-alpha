@@ -30,6 +30,7 @@ import {
     DialogActions,
     Slider,
     FormLabel,
+    LinearProgress,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -49,6 +50,7 @@ import {
     Add as AddIcon,
     CurrencyExchange,
     Clear as ClearIcon,
+    Storefront as StorefrontIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../components/AppShell';
@@ -58,6 +60,10 @@ import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../componen
 import CurrencySelector from '../components/CurrencySelector';
 import { useCurrencyContext } from '../lib/currency-context';
 import PurchaseConfirmationModal from '../components/PurchaseConfirmationModal';
+import PageHeader from '../components/ui/PageHeader';
+import ErrorState from '../components/ui/ErrorState';
+import EmptyState from '../components/ui/EmptyState';
+import { CardGridSkeleton } from '../components/ui/Skeletons';
 
 interface Card {
     id: number;
@@ -602,21 +608,6 @@ export default function MarketplacePage() {
                 params.append('sort_by', sortBy);
             }
 
-            // FIXED: Add debug logging to see what parameters are being sent
-            console.log('Client sending parameters:', {
-                search: debouncedSearchTerm,
-                set: selectedSet,
-                rarity: selectedRarity,
-                type: selectedType,
-                sale_type: selectedSaleType,
-                price_status: priceStatusFilter,
-                sort_by: sortBy,
-                price_min: priceRange[0] > 0 ? priceRange[0] : null,
-                price_max: priceRange[1] < 10000 ? priceRange[1] : null
-            });
-
-            console.log('Fetching marketplace with params:', params.toString());
-
             const response = await fetch(`/api/marketplace?${params.toString()}`, {
                 method: 'GET',
                 headers: {
@@ -654,13 +645,6 @@ export default function MarketplacePage() {
             }
 
             const data: MarketplaceResponse = await response.json();
-            console.log('Marketplace data received:', {
-                listingsCount: data.listings?.length || 0,
-                pagination: data.pagination,
-                hasFilters: !!data.filters,
-                showingAll: data.pagination?.showAll
-            });
-
             setCards(data.listings || []);
 
             // FIXED: Update filter options with proper structure
@@ -677,13 +661,6 @@ export default function MarketplacePage() {
                     }
                 }
             }
-
-            // Debug the data
-            if (data.listings?.length > 0) {
-                console.log('Sample listing:', data.listings[0]);
-                console.log(`📊 Total cards shown: ${data.listings.length} (Total available: ${data.pagination?.total})`);
-            }
-
         } catch (err) {
             console.error('Marketplace fetch error:', err);
             setError(err instanceof Error ? err.message : 'Unknown error occurred');
@@ -960,55 +937,41 @@ export default function MarketplacePage() {
 
     return (
         <AppShell>
-        <Container sx={{ marginTop: 4, marginBottom: 4 }}>
-            {/* Header with Currency Selector */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', my: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    {/* Currency Selector - Only for non-admin users */}
-                    {!isAdmin && (
-                        <Box sx={{ minWidth: 120 }}>
-                            <CurrencySelector size="small" />
-                        </Box>
-                    )}
-                    <IconButton
-                        onClick={() => router.push('/notifications')}
-                        color={unreadNotifications > 0 ? 'primary' : 'default'}
-                    >
-                        <Badge badgeContent={unreadNotifications} color="error">
-                            <NotificationIcon />
-                        </Badge>
-                    </IconButton>
-                    <IconButton onClick={() => fetchCards(true)} title="Refresh">
-                        <RefreshIcon />
-                    </IconButton>
-                    <Button variant="outlined" onClick={() => router.push('/wallet')} size="small">
-                        My Wallet
-                    </Button>
-                    <Button variant="outlined" onClick={() => router.push('/collection')} size="small">
-                        My Collection
-                    </Button>
-                    <Typography variant="body2">Welcome, {session?.user?.name}</Typography>
-                </Box>
-            </Box>
-
-            <Box sx={{ my: 3 }}>
-                <Typography
-                    variant="h4"
-                    gutterBottom
-                    sx={{
-                        display: 'inline-block',
-                        background: (t) => t.foil.gradient,
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                    }}
-                >
-                    Card Marketplace
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    Discover and purchase Pokémon cards from other collectors
-                </Typography>
-            </Box>
+            <PageHeader
+                title="Card Marketplace"
+                icon={<StorefrontIcon />}
+                actions={
+                    <>
+                        {!isAdmin && (
+                            <Box sx={{ minWidth: 120 }}>
+                                <CurrencySelector size="small" />
+                            </Box>
+                        )}
+                        <IconButton
+                            onClick={() => router.push('/notifications')}
+                            color={unreadNotifications > 0 ? 'primary' : 'default'}
+                            aria-label="Notifications"
+                        >
+                            <Badge badgeContent={unreadNotifications} color="error">
+                                <NotificationIcon />
+                            </Badge>
+                        </IconButton>
+                        <IconButton onClick={() => fetchCards(true)} title="Refresh" aria-label="Refresh listings">
+                            <RefreshIcon />
+                        </IconButton>
+                        <Button variant="outlined" onClick={() => router.push('/wallet')} size="small">
+                            Wallet
+                        </Button>
+                        <Button variant="outlined" onClick={() => router.push('/collection')} size="small">
+                            Collection
+                        </Button>
+                    </>
+                }
+            />
+        <Container maxWidth="xl" sx={{ pb: 4 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                Discover and purchase Pokémon cards from other collectors
+            </Typography>
 
             {/* Currency Info Banners */}
             {!isAdmin && selectedCurrency !== 'USD' && !isUSDFallback && (
@@ -1197,48 +1160,61 @@ export default function MarketplacePage() {
                 </Box>
             </Paper>
 
-            {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                    {error.includes('Failed to fetch marketplace cards')
-                        ? `Unable to load marketplace cards. Please try again later or contact support. (${error})`
-                        : `Error: ${error}`}
-                </Alert>
-            )}
-
-            {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress />
-                </Box>
+            {error && cards.length === 0 ? (
+                <ErrorState
+                    message="We couldn't load the marketplace right now."
+                    onRetry={() => fetchCards(true)}
+                />
+            ) : loading && cards.length === 0 ? (
+                <CardGridSkeleton count={8} />
             ) : cards.length === 0 ? (
-                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                    <Typography variant="h6" color="text.secondary">
-                        No cards found matching your criteria
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Try adjusting your search or filters
-                    </Typography>
-                    <Button
-                        onClick={clearAllFilters}
-                        sx={{ mt: 2 }}
-                        variant="outlined"
-                        startIcon={<ClearIcon />}
-                    >
-                        Clear All Filters
-                    </Button>
-                </Paper>
+                <EmptyState
+                    icon={<StorefrontIcon />}
+                    title="No cards match your filters"
+                    description="Try adjusting your search or filters to see more listings."
+                    action={
+                        <Button onClick={clearAllFilters} variant="outlined" startIcon={<ClearIcon />}>
+                            Clear all filters
+                        </Button>
+                    }
+                />
             ) : (
-                <Grid container spacing={3}>
+                <Box sx={{ position: 'relative' }}>
+                    {/* Keep results mounted during a refetch (filter/refresh) — just dim
+                        them and show a thin progress bar instead of blanking the grid. */}
+                    {loading && (
+                        <LinearProgress sx={{ position: 'absolute', top: -10, left: 0, right: 0, borderRadius: 1, zIndex: 1 }} />
+                    )}
+                    {error && (
+                        <Alert
+                            severity="warning"
+                            sx={{ mb: 2 }}
+                            action={
+                                <Button color="inherit" size="small" onClick={() => fetchCards(true)}>
+                                    Retry
+                                </Button>
+                            }
+                        >
+                            Couldn't refresh listings — showing your last results.
+                        </Alert>
+                    )}
+                    <Grid
+                        container
+                        spacing={3}
+                        sx={{
+                            opacity: loading ? 0.55 : 1,
+                            transition: 'opacity 0.2s ease',
+                            pointerEvents: loading ? 'none' : 'auto',
+                        }}
+                    >
                     {cards.map((listing) => {
                         const isCardPurchasing = purchasingCards.has(listing.id);
                         const isCardBidding = biddingCards.has(listing.id);
                         const isOwnCard = !!(listing.owner.id && listing.owner.id === parseInt(session?.user?.id || '0'));
                         const isAuctionActive = listing.sale_type === 'AUCTION' && listing.time_remaining && listing.time_remaining > 0;
 
-                        // Cast to enhanced listing for price comparison
+                        // Read-only view for price comparison (no mutation during render).
                         const enhancedListing = listing as EnhancedListing;
-                        enhancedListing.card.market_price = listing.card.market_price;
-                        enhancedListing.card.price_trend = listing.card.price_trend;
-                        enhancedListing.card.price_change_24h = listing.card.price_change_24h;
 
                         return (
                             <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
@@ -1247,6 +1223,7 @@ export default function MarketplacePage() {
                                         <CardMedia
                                             component="img"
                                             height="200"
+                                            loading="lazy"
                                             image={listing.card.small_image_url || listing.card.image_url || '/placeholder-card.png'}
                                             alt={listing.card.name}
                                             sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
@@ -1450,7 +1427,8 @@ export default function MarketplacePage() {
                             </Grid>
                         );
                     })}
-                </Grid>
+                    </Grid>
+                </Box>
             )}
 
             {/* Price History Modal */}

@@ -30,6 +30,7 @@ import AppShell from '../components/AppShell';
 import StatCard from '../components/StatCard';
 import ForecastPanel from '../components/ForecastPanel';
 import ErrorState from '../components/ui/ErrorState';
+import PageHeader from '../components/ui/PageHeader';
 import { StatRowSkeleton } from '../components/ui/Skeletons';
 import { formatPrice } from '../lib/format';
 import TrendingCardsTable from '../components/dashboard/TrendingCardsTable';
@@ -69,6 +70,7 @@ export default function Dashboard() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState(false);
+  const [topCard, setTopCard] = useState<{ id: number; name: string } | null>(null);
 
   // Fetch user stats
   const fetchUserStats = async () => {
@@ -107,6 +109,19 @@ export default function Dashboard() {
     }
   }, [status, session]);
 
+  // Resolve the actual top-trending card for the forecast/chart (replaces the
+  // old hardcoded "Charizard" / cardId={1} placeholder).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/dashboard/trending-cards?limit=1&type=price')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const card = d?.data?.[0];
+        if (card?.id) setTopCard({ id: card.id, name: card.name });
+      })
+      .catch(() => {});
+  }, [status]);
+
   const handleRefresh = () => {
     setLastRefresh(new Date());
     fetchUserStats();
@@ -118,21 +133,20 @@ export default function Dashboard() {
 
   return (
     <AppShell>
-      {/* Page header */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", px: { xs: 2, md: 3 }, pt: 3, pb: 1 }}>
-        <Typography variant="h4" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <DashboardIcon color="primary" />
-          Market Dashboard
-        </Typography>
-        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Last updated: {lastRefresh.toLocaleTimeString()}
-          </Typography>
-          <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefresh}>
-            Refresh
-          </Button>
-        </Box>
-      </Box>
+      <PageHeader
+        title="Market Dashboard"
+        icon={<DashboardIcon />}
+        actions={
+          <>
+            <Typography variant="body2" color="text.secondary">
+              Updated {lastRefresh.toLocaleTimeString()}
+            </Typography>
+            <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefresh}>
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <motion.div initial="hidden" animate="visible" variants={containerVariants}>
@@ -225,19 +239,22 @@ export default function Dashboard() {
                 <Grid item xs={12}>
                   <TrendingCardsTable limit={20} height={600} />
                 </Grid>
-                {/* Price forecast (Phase 2) */}
-                <Grid item xs={12}>
-                  <ForecastPanel cardId={1} title="Charizard — Price Forecast" />
-                </Grid>
-                {/* Price Chart for Top Trending Card */}
-                <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Price Trend Analysis
-                    </Typography>
-                    <PriceChart cardId={1} height={300} />
-                  </Paper>
-                </Grid>
+                {/* Price forecast + trend for the actual top-trending card (Phase 2) */}
+                {topCard && (
+                  <>
+                    <Grid item xs={12}>
+                      <ForecastPanel cardId={topCard.id} title={`${topCard.name} — Price Forecast`} />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Paper variant="outlined" sx={{ p: 3 }}>
+                        <Typography variant="h6" gutterBottom>
+                          {topCard.name} — Price Trend
+                        </Typography>
+                        <PriceChart cardId={topCard.id} height={300} />
+                      </Paper>
+                    </Grid>
+                  </>
+                )}
               </Grid>
             </motion.div>
           )}

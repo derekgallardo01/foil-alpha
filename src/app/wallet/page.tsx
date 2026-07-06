@@ -8,16 +8,19 @@ import {
     Container,
     Typography,
     Button,
+    CircularProgress,
 } from "@mui/material";
+import { AccountBalanceWallet as WalletIcon } from "@mui/icons-material";
 import UserWallet from "../components/UserWallet";
 import AddFundsCard from "../components/AddFundsCard";
 import AppShell from "../components/AppShell";
+import PageHeader from "../components/ui/PageHeader";
 import { toast } from "react-toastify";
 
 export default function WalletPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { data: session, status } = useSession();
+    const { status } = useSession();
 
     useEffect(() => {
         const deposit = searchParams.get("deposit");
@@ -30,51 +33,45 @@ export default function WalletPage() {
         }
     }, [searchParams, router]);
 
+    // Redirect in an effect, never during render.
+    useEffect(() => {
+        if (status === "unauthenticated") {
+            router.push("/login");
+        }
+    }, [status, router]);
+
     if (status === "loading") {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>Loading...</Box>;
+        return (
+            <AppShell>
+                <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+                    <CircularProgress />
+                </Box>
+            </AppShell>
+        );
     }
 
     if (status === "unauthenticated") {
-        router.push("/login");
         return null;
     }
 
     return (
         <AppShell>
-
-            {/* Header */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/marketplace')}
-                        sx={{
-                            borderColor: 'primary.main',
-                            color: 'primary.main',
-                            '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' }
-                        }}
-                    >
-                        Marketplace
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/collection')}
-                        sx={{
-                            borderColor: 'primary.main',
-                            color: 'primary.main',
-                            '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' }
-                        }}
-                    >
-                        My Collection
-                    </Button>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Wallet"
+                icon={<WalletIcon />}
+                actions={
+                    <>
+                        <Button variant="outlined" onClick={() => router.push('/marketplace')}>
+                            Marketplace
+                        </Button>
+                        <Button variant="outlined" onClick={() => router.push('/collection')}>
+                            Collection
+                        </Button>
+                    </>
+                }
+            />
 
             <Container maxWidth="md" sx={{ py: 3, flex: 1 }}>
-                <Typography variant="h4" sx={{ color: 'primary.main', mb: 3, textAlign: 'center' }}>
-                    Welcome, {session?.user?.name}
-                </Typography>
-
                 <UserWallet />
 
                 <AddFundsCard />

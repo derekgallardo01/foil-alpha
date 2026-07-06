@@ -52,6 +52,11 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
+import StatCard from '../../components/StatCard';
+import PageHeader from '../../components/ui/PageHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import { CardGridSkeleton } from '../../components/ui/Skeletons';
 
 interface Card {
     id: number;
@@ -309,127 +314,52 @@ export default function SellingDashboard() {
         return null;
     }
 
+    const hasData = salesData.activeSales.length > 0 || salesData.soldItems.length > 0;
+
     return (
         <AppShell>
-        <Container sx={{ marginTop: 4, marginBottom: 4 }}>
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
-                <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SellIcon sx={{ color: 'primary.main' }} />
-                    <Box
-                        component="span"
-                        sx={{
-                            background: (t) => t.foil.gradient,
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                        }}
-                    >
-                        My Sales
-                    </Box>
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton onClick={fetchSalesData} title="Refresh">
-                        <RefreshIcon />
-                    </IconButton>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/collection')}
-                        size="small"
-                        startIcon={<ShoppingCartIcon />}
-                    >
-                        Sell Cards
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/marketplace')}
-                        size="small"
-                    >
-                        Marketplace
-                    </Button>
-                </Box>
-            </Box>
-
+            <PageHeader
+                title="My Sales"
+                icon={<SellIcon />}
+                actions={
+                    <>
+                        <IconButton onClick={fetchSalesData} title="Refresh" aria-label="Refresh sales">
+                            <RefreshIcon />
+                        </IconButton>
+                        <Button
+                            variant="outlined"
+                            onClick={() => router.push('/collection')}
+                            size="small"
+                            startIcon={<ShoppingCartIcon />}
+                        >
+                            Sell Cards
+                        </Button>
+                        <Button variant="outlined" onClick={() => router.push('/marketplace')} size="small">
+                            Marketplace
+                        </Button>
+                    </>
+                }
+            />
+        <Container maxWidth="xl" sx={{ pb: 4 }}>
             {/* Quick Stats Cards */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid container spacing={3} sx={{ mb: 3, mt: 0 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Active Sales
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
-                                        {stats.totalActiveSales}
-                                    </Typography>
-                                </Box>
-                                <SellIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                    <StatCard label="Active Sales" value={stats.totalActiveSales} icon={<SellIcon fontSize="small" />} />
                 </Grid>
-
                 <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Total Sold
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
-                                        {stats.totalSoldItems}
-                                    </Typography>
-                                </Box>
-                                <HistoryIcon sx={{ fontSize: 40, color: 'success.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                    <StatCard label="Total Sold" value={stats.totalSoldItems} icon={<HistoryIcon fontSize="small" />} />
                 </Grid>
-
                 <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Total Revenue
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'success.main' }}>
-                                        {formatPrice(stats.totalRevenue)}
-                                    </Typography>
-                                </Box>
-                                <MoneyIcon sx={{ fontSize: 40, color: 'success.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                    <StatCard accent label="Total Revenue" value={formatPrice(stats.totalRevenue)} icon={<MoneyIcon fontSize="small" />} />
                 </Grid>
-
                 <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Total Bids
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
-                                        {stats.totalBidsReceived}
-                                    </Typography>
-                                </Box>
-                                <GavelIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                    <StatCard label="Total Bids" value={stats.totalBidsReceived} icon={<GavelIcon fontSize="small" />} />
                 </Grid>
             </Grid>
 
             {/* Error State */}
-            {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                    Error: {error}
-                </Alert>
+            {error && hasData && (
+                <ErrorState variant="inline" message="Couldn't refresh your sales." onRetry={fetchSalesData} />
             )}
 
             {/* Content Tabs */}
@@ -458,34 +388,32 @@ export default function SellingDashboard() {
                 </Tabs>
             </Paper>
 
-            {/* Loading State */}
-            {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress />
-                </Box>
+            {/* Loading / content — spinner only on first load so the 30s auto-refresh
+                doesn't blank the tabs. */}
+            {loading && !hasData ? (
+                <CardGridSkeleton count={6} />
+            ) : error && !hasData ? (
+                <ErrorState message="We couldn't load your sales right now." onRetry={fetchSalesData} />
             ) : (
                 <>
                     {/* Active Sales Tab */}
                     {currentTab === 0 && (
                         <>
                             {salesData.activeSales.length === 0 ? (
-                                <Paper sx={{ p: 4, textAlign: 'center' }}>
-                                    <SellIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No active sales or auctions
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        List your cards in your collection to start selling
-                                    </Typography>
-                                    <Button
-                                        variant="contained"
-                                        onClick={() => router.push('/collection')}
-                                        sx={{ mt: 2 }}
-                                        startIcon={<ShoppingCartIcon />}
-                                    >
-                                        Go to Collection
-                                    </Button>
-                                </Paper>
+                                <EmptyState
+                                    icon={<SellIcon />}
+                                    title="No active sales or auctions"
+                                    description="List cards from your collection to start selling."
+                                    action={
+                                        <Button
+                                            variant="contained"
+                                            onClick={() => router.push('/collection')}
+                                            startIcon={<ShoppingCartIcon />}
+                                        >
+                                            Go to Collection
+                                        </Button>
+                                    }
+                                />
                             ) : (
                                 <Grid container spacing={3}>
                                     {salesData.activeSales.map((sale) => {
@@ -500,6 +428,7 @@ export default function SellingDashboard() {
                                                         <CardMedia
                                                             component="img"
                                                             height="200"
+                                                            loading="lazy"
                                                             image={sale.card.small_image_url || sale.card.image_url || '/placeholder-card.png'}
                                                             alt={sale.card.name}
                                                             sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
@@ -637,15 +566,11 @@ export default function SellingDashboard() {
                     {currentTab === 1 && (
                         <>
                             {salesData.soldItems.length === 0 ? (
-                                <Paper sx={{ p: 4, textAlign: 'center' }}>
-                                    <HistoryIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No sales history yet
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        Your completed sales will appear here
-                                    </Typography>
-                                </Paper>
+                                <EmptyState
+                                    icon={<HistoryIcon />}
+                                    title="No sales history yet"
+                                    description="Your completed sales will appear here."
+                                />
                             ) : (
                                 <TableContainer component={Paper}>
                                     <Table>
@@ -680,14 +605,14 @@ export default function SellingDashboard() {
                                                                 <Typography variant="body2" fontWeight="medium">
                                                                     {item.card.name}
                                                                 </Typography>
-                                                                <Typography variant="caption" color="text.secondary">
+                                                                <Typography variant="caption" color="text.secondary" display="block">
                                                                     {item.card.set_name}
                                                                 </Typography>
-                                                                <br />
                                                                 <Chip
                                                                     label={item.condition}
                                                                     size="small"
                                                                     variant="outlined"
+                                                                    sx={{ mt: 0.5 }}
                                                                 />
                                                             </Box>
                                                         </Box>
