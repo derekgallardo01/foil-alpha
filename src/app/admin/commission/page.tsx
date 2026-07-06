@@ -13,7 +13,6 @@ import {
     TextField,
     Button,
     Grid,
-    CircularProgress,
     Table,
     TableBody,
     TableCell,
@@ -36,6 +35,10 @@ import {
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import AppShell from "../../components/AppShell";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import { StatRowSkeleton } from "../../components/ui/Skeletons";
+import { formatPrice } from "../../lib/format";
 
 interface Rarity {
     id: number;
@@ -173,49 +176,32 @@ export default function CommissionManagement() {
         }));
     };
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <CircularProgress />
-            </Box>
-        );
-    }
-
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography
-                    variant="h4"
-                    sx={{
-                        fontWeight: 800,
-                        background: (theme) => theme.foil.gradient,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                    }}
-                >
-                    Commission Management
-                </Typography>
-                <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Refresh />}
-                        onClick={fetchCommissionData}
-                        disabled={loading}
-                    >
-                        Refresh
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<Save />}
-                        onClick={saveCommissionSettings}
-                        disabled={saving}
-                    >
-                        {saving ? 'Saving...' : 'Save Settings'}
-                    </Button>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Commission"
+                icon={<Percent />}
+                actions={
+                    <>
+                        <Button
+                            variant="outlined"
+                            startIcon={<Refresh />}
+                            onClick={fetchCommissionData}
+                            disabled={loading}
+                        >
+                            Refresh
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<Save />}
+                            onClick={saveCommissionSettings}
+                            disabled={saving}
+                        >
+                            {saving ? 'Saving...' : 'Save Settings'}
+                        </Button>
+                    </>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 <motion.div
@@ -223,6 +209,9 @@ export default function CommissionManagement() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
+                    {loading ? (
+                    <StatRowSkeleton count={3} />
+                    ) : (
                     <Grid container spacing={3}>
                         {/* Admin Wallet Info */}
                         <Grid item xs={12}>
@@ -235,34 +224,13 @@ export default function CommissionManagement() {
                                     {data.admin_wallet ? (
                                         <Grid container spacing={3}>
                                             <Grid item xs={12} md={4}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
-                                                        ${data.admin_wallet.balance.toFixed(2)}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Current Balance
-                                                    </Typography>
-                                                </Box>
+                                                <StatCard label="Current Balance" value={formatPrice(data.admin_wallet.balance)} accent />
                                             </Grid>
                                             <Grid item xs={12} md={4}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
-                                                        ${data.admin_wallet.total_commissions.toFixed(2)}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Total Commissions
-                                                    </Typography>
-                                                </Box>
+                                                <StatCard label="Total Commissions" value={formatPrice(data.admin_wallet.total_commissions)} />
                                             </Grid>
                                             <Grid item xs={12} md={4}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
-                                                        ${data.admin_wallet.total_marketplace_sales.toFixed(2)}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Marketplace Sales
-                                                    </Typography>
-                                                </Box>
+                                                <StatCard label="Marketplace Sales" value={formatPrice(data.admin_wallet.total_marketplace_sales)} />
                                             </Grid>
                                         </Grid>
                                     ) : (
@@ -317,16 +285,16 @@ export default function CommissionManagement() {
                                             • Card Price: $100.00
                                         </Typography>
                                         <Typography variant="body2" color="success.main">
-                                            • Commission: ${(100 * parseFloat(globalCommission || "0") / 100).toFixed(2)}
+                                            • Commission: {formatPrice(100 * parseFloat(globalCommission || "0") / 100)}
                                         </Typography>
                                         <Typography variant="body2" color="text.primary">
-                                            • Buyer Pays: ${(100 + (100 * parseFloat(globalCommission || "0") / 100)).toFixed(2)}
+                                            • Buyer Pays: {formatPrice(100 + (100 * parseFloat(globalCommission || "0") / 100))}
                                         </Typography>
                                         <Typography variant="body2" color="text.primary">
-                                            • Seller Receives: ${(100 - (100 * parseFloat(globalCommission || "0") / 100)).toFixed(2)}
+                                            • Seller Receives: {formatPrice(100 - (100 * parseFloat(globalCommission || "0") / 100))}
                                         </Typography>
                                         <Typography variant="body2" color="success.main">
-                                            • Platform Gets: ${(100 * parseFloat(globalCommission || "0") / 100).toFixed(2)}
+                                            • Platform Gets: {formatPrice(100 * parseFloat(globalCommission || "0") / 100)}
                                         </Typography>
                                     </Box>
                                 </CardContent>
@@ -439,6 +407,7 @@ export default function CommissionManagement() {
                             </Box>
                         </Grid>
                     </Grid>
+                    )}
                 </motion.div>
             </Container>
         </AppShell>

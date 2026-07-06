@@ -74,7 +74,10 @@ import { GoogleAnalytics } from "nextjs-google-analytics";
 import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
-import Wordmark from "../../components/Wordmark";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import EmptyState from "../../components/ui/EmptyState";
+import { formatPrice, formatCompactPrice } from "../../lib/format";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from "../../lib/pokemon-price-tracker-api";
 
@@ -392,21 +395,8 @@ const getRarityColor = (rarity: string) => {
     }
 };
 
-// Utility function for formatting currency
-const formatPrice = (price: number | undefined): string => {
-    if (price === undefined || price === null) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(price);
-};
-
-// Utility function for formatting numbers with commas
-const formatNumber = (num: number): string => {
-    return new Intl.NumberFormat('en-US').format(num);
-};
+// Plain integer/count formatter (non-currency). Currency uses shared formatPrice from lib/format.
+const formatNumber = (num: number): string => num.toLocaleString();
 
 // Price Trend Chip Component
 function PriceTrendChip({ trend, change }: { trend?: string; change?: number }) {
@@ -444,63 +434,6 @@ function PriceTrendChip({ trend, change }: { trend?: string; change?: number }) 
                 variant="outlined"
             />
         </Tooltip>
-    );
-}
-
-// Enhanced Stats Card Component
-function StatsCard({ icon, title, value, subtitle, color = "primary" }: {
-    icon: React.ReactNode;
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    color?: "primary" | "secondary" | "success" | "error" | "warning" | "info";
-}) {
-    return (
-        <Paper
-            variant="outlined"
-            sx={{
-                p: 2.5,
-                borderRadius: 2,
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                transition: 'all 0.3s ease',
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                '&:hover': {
-                    transform: 'translateY(-4px)',
-                    borderColor: 'primary.main'
-                }
-            }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{
-                    p: 1.5,
-                    borderRadius: '50%',
-                    bgcolor: `${color}.main`,
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    {icon}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        {title}
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'text.primary', typography: 'mono' }}>
-                        {value}
-                    </Typography>
-                    {subtitle && (
-                        <Typography variant="caption" color="text.secondary">
-                            {subtitle}
-                        </Typography>
-                    )}
-                </Box>
-            </Box>
-        </Paper>
     );
 }
 
@@ -549,7 +482,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const setsResponse = await pokemonPriceTrackerAPI.getSets();
             if (setsResponse.success && setsResponse.data) {
                 const setsArray = Array.isArray(setsResponse.data) ? setsResponse.data : [];
-                console.log('Available sets from API:', setsArray.slice(0, 3)); // Log first 3 sets for debugging
 
                 setAvailableSets(setsArray.map((set: any) => ({
                     id: set.id, // This should be the correct Pokemon Price Tracker set ID
@@ -618,7 +550,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
 
             // FIXED: If no filters provided, default to popular cards search
             if (!hasFilter) {
-                console.log('No search filters provided, defaulting to popular cards');
                 searchParams.name = 'Pikachu'; // Default search to prevent 400 error
                 setSearchTerm('Pikachu'); // Update the UI to show what we're searching for
             }
@@ -629,17 +560,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
 
             if (searchResponse.success && searchResponse.data) {
                 const cardsArray = Array.isArray(searchResponse.data) ? searchResponse.data : [];
-
-                console.log('Admin client received V2 data:', {
-                    count: cardsArray.length,
-                    firstCard: cardsArray[0],
-                    hasCorrectFields: cardsArray[0] ? {
-                        cardNumber: cardsArray[0].cardNumber,
-                        setName: cardsArray[0].setName,
-                        imageUrl: cardsArray[0].imageUrl,
-                        prices: cardsArray[0].prices
-                    } : null
-                });
 
                 const transformedCards = cardsArray.map((card: any) => ({
                     ...card // Use raw V2 API data
@@ -694,9 +614,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
 
             // FIXED: Get only selected cards, not all search results
             const selectedCardData = searchResults.filter(card => selectedCards.has(card.id));
-            console.log('Cards being sent for import:', selectedCardData);
-            console.log('Number of cards:', selectedCardData.length);
-            console.log('Sample card structure:', selectedCardData[0]);
 
             let processed = 0;
             const progressInterval = setInterval(() => {
@@ -719,7 +636,6 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             clearInterval(progressInterval);
 
             const data = await response.json();
-            console.log('Import API response:', data);
 
             if (data.success) {
                 const completed = data.results?.imported || 0;
@@ -774,19 +690,11 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
             const estimatedCards = selectedSetObj.total || 100;
             startProgress(estimatedCards, `Importing ${selectedSet} set...`);
 
-            console.log('Starting set import for MySQL database:', {
-                setName: selectedSetObj.name,
-                setId: selectedSetObj.id,
-                estimatedCards: estimatedCards,
-                databaseType: 'MySQL'
-            });
-
             let allSetCards: any[] = [];
             let successMethod = '';
 
             // Strategy 1: Direct set ID lookup
             try {
-                console.log(`Attempting direct set lookup with ID: ${selectedSetObj.id}`);
                 updateProgress(estimatedCards * 0.25, 'Fetching set data from Pokemon Price Tracker...', 'searching');
 
                 const setCardsResponse = await pokemonPriceTrackerAPI.getSetPricing(selectedSetObj.id);
@@ -794,22 +702,14 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                 if (setCardsResponse.success && setCardsResponse.data && Array.isArray(setCardsResponse.data) && setCardsResponse.data.length > 0) {
                     allSetCards = setCardsResponse.data;
                     successMethod = `Direct set ID lookup: ${selectedSetObj.id}`;
-                    console.log(`SUCCESS: Found ${allSetCards.length} cards using direct set ID`);
-                } else {
-                    console.log(`No cards found with direct set ID. Response:`, {
-                        success: setCardsResponse.success,
-                        dataLength: Array.isArray(setCardsResponse.data) ? setCardsResponse.data.length : 'not array',
-                        error: setCardsResponse.error
-                    });
                 }
             } catch (error) {
-                console.log(`Direct set lookup failed:`, error);
+                console.error(`Direct set lookup failed:`, error);
             }
 
             // Strategy 2: Search by set name if direct lookup fails
             if (allSetCards.length === 0) {
                 try {
-                    console.log(`Trying set name search for: ${selectedSet}`);
                     updateProgress(estimatedCards * 0.5, 'Searching by set name...', 'searching');
 
                     const nameSearchResponse = await pokemonPriceTrackerAPI.searchCardPricing({
@@ -820,23 +720,15 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                     if (nameSearchResponse.success && nameSearchResponse.data && Array.isArray(nameSearchResponse.data) && nameSearchResponse.data.length > 0) {
                         allSetCards = nameSearchResponse.data;
                         successMethod = `Set name search: ${selectedSet}`;
-                        console.log(`SUCCESS: Found ${allSetCards.length} cards using set name search`);
-                    } else {
-                        console.log(`Set name search failed or returned no results:`, {
-                            success: nameSearchResponse.success,
-                            dataLength: Array.isArray(nameSearchResponse.data) ? nameSearchResponse.data.length : 'not array',
-                            error: nameSearchResponse.error
-                        });
                     }
                 } catch (error) {
-                    console.log(`Set name search error:`, error);
+                    console.error(`Set name search error:`, error);
                 }
             }
 
             // Strategy 3: Broad search with filtering if previous methods fail
             if (allSetCards.length === 0) {
                 try {
-                    console.log(`Attempting broad search with filtering for: ${selectedSet}`);
                     updateProgress(estimatedCards * 0.75, 'Trying broad search approach...', 'searching');
 
                     // Try searching for common Pokemon names and filter by set
@@ -857,15 +749,10 @@ function PokemonImportModal({ open, onClose, onImportComplete }: {
                         if (filteredCards.length > 0) {
                             allSetCards = filteredCards;
                             successMethod = `Broad search with filtering: ${selectedSet}`;
-                            console.log(`SUCCESS: Found ${allSetCards.length} cards using broad search + filtering`);
-                        } else {
-                            console.log(`Broad search returned ${broadSearchResponse.data.length} cards but none matched set "${selectedSet}"`);
                         }
-                    } else {
-                        console.log(`Broad search failed:`, broadSearchResponse.error);
                     }
                 } catch (error) {
-                    console.log(`Broad search error:`, error);
+                    console.error(`Broad search error:`, error);
                 }
             }
 
@@ -896,28 +783,6 @@ Please try:
                 return;
             }
 
-            // Log what we found for MySQL database insertion
-            console.log('Cards ready for MySQL insertion:', {
-                count: allSetCards.length,
-                method: successMethod,
-                sampleCard: {
-                    name: allSetCards[0]?.name,
-                    setName: allSetCards[0]?.setName,
-                    cardNumber: allSetCards[0]?.cardNumber,
-                    hasImageUrl: !!allSetCards[0]?.imageUrl,
-                    hasPrice: !!allSetCards[0]?.prices?.market
-                },
-                mysqlFieldMapping: {
-                    price_tracker_id: allSetCards[0]?.id,
-                    tcg_player_id: allSetCards[0]?.tcgPlayerId,
-                    name: allSetCards[0]?.name,
-                    card_number: allSetCards[0]?.cardNumber,
-                    set_name: allSetCards[0]?.setName,
-                    image_url: allSetCards[0]?.imageUrl,
-                    market_price: allSetCards[0]?.prices?.market
-                }
-            });
-
             // Progress animation
             let processed = 0;
             const progressInterval = setInterval(() => {
@@ -944,7 +809,6 @@ Please try:
             clearInterval(progressInterval);
 
             const data = await response.json();
-            console.log('MySQL import API response:', data);
 
             if (data.success) {
                 const completed = data.results?.imported || 0;
@@ -954,13 +818,6 @@ Please try:
                 updateStats(completed, failed, skipped);
                 updateProgress(allSetCards.length, 'MySQL import completed', 'completed');
                 completeProgress({ completed, failed, skipped });
-
-                console.log('Import completed for MySQL database:', {
-                    imported: completed,
-                    updated: skipped,
-                    errors: failed,
-                    method: successMethod
-                });
 
                 onImportComplete?.({
                     imported: completed,
@@ -1478,35 +1335,32 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
 
                         <Grid container spacing={2}>
                             <Grid item xs={6} md={3}>
-                                <StatsCard
+                                <StatCard
                                     icon={<PriceCheck />}
-                                    title="Cards Updated"
+                                    label="Cards Updated"
                                     value={formatNumber(syncResults.successful_updates)}
-                                    color="success"
                                 />
                             </Grid>
                             <Grid item xs={6} md={3}>
-                                <StatsCard
+                                <StatCard
                                     icon={<Warning />}
-                                    title="Skipped"
+                                    label="Skipped"
                                     value={formatNumber(syncResults.skipped_cards)}
-                                    color="warning"
                                 />
                             </Grid>
                             <Grid item xs={6} md={3}>
-                                <StatsCard
+                                <StatCard
                                     icon={<DeleteIcon />}
-                                    title="Failed"
+                                    label="Failed"
                                     value={formatNumber(syncResults.failed_updates)}
-                                    color="error"
                                 />
                             </Grid>
                             <Grid item xs={6} md={3}>
-                                <StatsCard
+                                <StatCard
                                     icon={<AttachMoney />}
-                                    title="Avg. Price"
+                                    label="Avg. Price"
                                     value={formatPrice(syncResults.pricing_summary?.avg_market_price)}
-                                    color="primary"
+                                    accent
                                 />
                             </Grid>
                         </Grid>
@@ -1674,7 +1528,6 @@ export default function AdminCardsClient() {
             setCards(data.cards || []);
 
             const totalMessage = `Loaded ${data.cards?.length || 0} cards from database`;
-            console.log(`✅ ${totalMessage}`);
             toast.success(totalMessage, { autoClose: 3000 });
 
             setTimeout(resetMainProgress, 2000);
@@ -2209,8 +2062,6 @@ export default function AdminCardsClient() {
     };
 
     const handlePokemonImportComplete = (results: any) => {
-        console.log('🎉 Import completed with results:', results);
-
         if (results) {
             let importedCount = 0;
             let updatedCount = 0;
@@ -2238,15 +2089,12 @@ export default function AdminCardsClient() {
                 if (errorCount > 0) message += ` ${formatNumber(errorCount)} had errors.`;
 
                 toast.success(message, { autoClose: 5000 });
-                console.log(`✅ ${message}`);
             } else {
                 const noCardsMessage = 'Import completed - No new cards were added. All cards may already exist.';
                 toast.info(noCardsMessage);
-                console.log(`ℹ️ ${noCardsMessage}`);
             }
 
             // Always refresh the cards list after import to get the most up-to-date data
-            console.log('🔄 Refreshing cards list...');
             fetchCards();
         } else {
             const errorMessage = 'Import completed but no results were returned';
@@ -2257,6 +2105,46 @@ export default function AdminCardsClient() {
 
     return (
         <AppShell variant="admin">
+        <PageHeader
+            title="Cards"
+            icon={<Inventory />}
+            actions={
+                <>
+                    <Tooltip title="Import cards directly from Pokémon TCG API with progress tracking">
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => setPokemonImportOpen(true)}
+                            disabled={actionLoading}
+                            startIcon={<DownloadIcon />}
+                        >
+                            Import Pokémon Cards
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Sync market prices for all cards with progress tracking">
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            onClick={() => setPriceSyncOpen(true)}
+                            disabled={actionLoading}
+                            startIcon={<Sync />}
+                        >
+                            Sync Prices
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Refresh the card list">
+                        <Button
+                            variant="outlined"
+                            onClick={fetchCards}
+                            disabled={loading || actionLoading}
+                            startIcon={<RefreshIcon />}
+                        >
+                            Refresh
+                        </Button>
+                    </Tooltip>
+                </>
+            }
+        />
         <Box
             sx={{
                 display: "flex",
@@ -2270,7 +2158,7 @@ export default function AdminCardsClient() {
                 <CircularProgress color="inherit" />
             </Backdrop>
 
-            <GoogleAnalytics trackPageViews debugMode={true} />
+            <GoogleAnalytics trackPageViews debugMode={false} />
 
             <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1 }}>
                 <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
@@ -2285,27 +2173,6 @@ export default function AdminCardsClient() {
                             overflow: "visible",
                         }}
                     >
-                        <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                                <Wordmark size={40} />
-                            </motion.div>
-                        </Box>
-
-                        <Typography
-                            variant="h4"
-                            sx={{
-                                mb: 4,
-                                textAlign: "center",
-                                fontWeight: 'bold',
-                                background: (theme) => theme.foil.gradient,
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                            }}
-                        >
-                            Admin - Card Management
-                        </Typography>
-
                         {/* Main Progress Display */}
                         <ProgressDisplay progress={mainProgress} />
 
@@ -2313,113 +2180,38 @@ export default function AdminCardsClient() {
                         <motion.div variants={itemVariants}>
                             <Grid container spacing={2} sx={{ mb: 4 }}>
                                 <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                    <StatCard
                                         icon={<Inventory />}
-                                        title="Total Cards"
+                                        label="Total Cards"
                                         value={formatNumber(stats.total)}
-                                        color="primary"
+                                        accent
                                     />
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                    <StatCard
                                         icon={<Category />}
-                                        title="Total Owned"
+                                        label="Total Owned"
                                         value={formatNumber(stats.totalOwned)}
-                                        subtitle={`${stats.uniqueSets} unique sets`}
-                                        color="info"
                                     />
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                    <StatCard
                                         icon={<Store />}
-                                        title="For Sale"
+                                        label="For Sale"
                                         value={formatNumber(stats.forSale)}
-                                        color="success"
                                     />
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                    <StatCard
                                         icon={<AttachMoney />}
-                                        title="Market Value"
-                                        value={formatPrice(stats.totalMarketValue)}
-                                        subtitle={`Avg: ${formatPrice(stats.avgMarketPrice)}`}
-                                        color="warning"
+                                        label="Market Value"
+                                        value={formatCompactPrice(stats.totalMarketValue)}
                                     />
                                 </Grid>
                             </Grid>
                         </motion.div>
 
                         <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                            {/* Action Buttons */}
-                            <motion.div variants={itemVariants}>
-                                <Stack
-                                    direction={{ xs: 'column', sm: 'row' }}
-                                    spacing={2}
-                                    sx={{ mb: 4 }}
-                                    justifyContent="space-between"
-                                    flexWrap="wrap"
-                                >
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                        {/* <Tooltip title="Add a new card to the collection">
-                                            <Button
-                                                variant="contained"
-                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
-                                                onClick={handleAddCard}
-                                                disabled={actionLoading}
-                                                startIcon={<AddIcon />}
-                                            >
-                                                Add Card
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip title="Import multiple cards at once using CSV format">
-                                            <Button
-                                                variant="contained"
-                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
-                                                onClick={() => setBulkCreateOpen(true)}
-                                                disabled={actionLoading}
-                                                startIcon={<UploadIcon />}
-                                            >
-                                                Bulk Create
-                                            </Button>
-                                        </Tooltip> */}
-                                        <Tooltip title="Import cards directly from Pokémon TCG API with progress tracking">
-                                            <Button
-                                                variant="contained"
-                                                color="primary"
-                                                onClick={() => setPokemonImportOpen(true)}
-                                                disabled={actionLoading}
-                                                startIcon={<DownloadIcon />}
-                                            >
-                                                Import Pokémon Cards
-                                            </Button>
-                                        </Tooltip>
-                                    </Stack>
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                        <Tooltip title="Sync market prices for all cards with progress tracking">
-                                            <Button
-                                                variant="contained"
-                                                color="secondary"
-                                                onClick={() => setPriceSyncOpen(true)}
-                                                disabled={actionLoading}
-                                                startIcon={<Sync />}
-                                            >
-                                                Sync Prices
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip title="Refresh the card list">
-                                            <Button
-                                                variant="outlined"
-                                                onClick={fetchCards}
-                                                disabled={loading || actionLoading}
-                                                startIcon={<RefreshIcon />}
-                                            >
-                                                Refresh
-                                            </Button>
-                                        </Tooltip>
-                                    </Stack>
-                                </Stack>
-                            </motion.div>
-
                             {/* Column Visibility Toggle */}
                             <motion.div variants={itemVariants}>
                                 <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'background.paper', borderRadius: 2, border: 1, borderColor: 'divider' }}>
@@ -2731,14 +2523,11 @@ export default function AdminCardsClient() {
                             </motion.div>
 
                             {filteredCards.length === 0 && !error && (
-                                <Box sx={{ textAlign: 'center', py: 8 }}>
-                                    <Typography variant="h6" sx={{ color: "text.secondary", mb: 2 }}>
-                                        No cards found
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                                        Try adjusting your filters or add new cards to the collection
-                                    </Typography>
-                                </Box>
+                                <EmptyState
+                                    icon={<Inventory />}
+                                    title="No cards found"
+                                    description="Try adjusting your filters."
+                                />
                             )}
                         </motion.div>
                     </Paper>

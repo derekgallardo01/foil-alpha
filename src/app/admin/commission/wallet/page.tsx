@@ -11,7 +11,6 @@ import {
     CardContent,
     Typography,
     Grid,
-    CircularProgress,
     Table,
     TableBody,
     TableCell,
@@ -20,7 +19,6 @@ import {
     TableRow,
     Paper,
     Chip,
-    Alert,
     Divider,
     Button,
     TextField,
@@ -42,6 +40,11 @@ import {
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import AppShell from "../../../components/AppShell";
+import PageHeader from "../../../components/ui/PageHeader";
+import StatCard from "../../../components/StatCard";
+import { StatRowSkeleton } from "../../../components/ui/Skeletons";
+import ErrorState from "../../../components/ui/ErrorState";
+import { formatPrice } from "../../../lib/format";
 
 interface AdminWallet {
     id: number;
@@ -172,60 +175,30 @@ export default function AdminWalletManagement() {
         }
     };
 
-    const formatCurrency = (amount: number | null | undefined) => {
-        const numAmount = Number(amount) || 0;
-        return `$${numAmount.toFixed(2)}`;
-    };
-
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <CircularProgress />
-            </Box>
-        );
-    }
-
-    if (!data) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <Alert severity="error">Failed to load wallet data</Alert>
-            </Box>
-        );
-    }
-
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography
-                    variant="h4"
-                    sx={{
-                        fontWeight: 800,
-                        background: (theme) => theme.foil.gradient,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                    }}
-                >
-                    Platform Wallet Management
-                </Typography>
-                <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Refresh />}
-                        onClick={fetchWalletData}
-                    >
-                        Refresh
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<MonetizationOn />}
-                        onClick={() => setAdjustmentDialog(true)}
-                    >
-                        Manual Adjustment
-                    </Button>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Platform Wallet"
+                icon={<AccountBalance />}
+                actions={
+                    <>
+                        <Button
+                            variant="outlined"
+                            startIcon={<Refresh />}
+                            onClick={fetchWalletData}
+                        >
+                            Refresh
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<MonetizationOn />}
+                            onClick={() => setAdjustmentDialog(true)}
+                        >
+                            Manual Adjustment
+                        </Button>
+                    </>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 <motion.div
@@ -233,6 +206,11 @@ export default function AdminWalletManagement() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
+                    {loading ? (
+                    <StatRowSkeleton count={4} />
+                    ) : !data ? (
+                    <ErrorState message="Couldn't load wallet data." onRetry={fetchWalletData} />
+                    ) : (
                     <Grid container spacing={3}>
                         {/* Wallet Overview */}
                         <Grid item xs={12}>
@@ -244,56 +222,16 @@ export default function AdminWalletManagement() {
                                     </Typography>
                                     <Grid container spacing={3}>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-                                                <Typography variant="mono" component="div" sx={{ fontSize: 38, color: 'success.main', fontWeight: 700 }}>
-                                                    {formatCurrency(data.admin_wallet.balance)}
-                                                </Typography>
-                                                <Typography variant="body1" color="text.primary" fontWeight="bold">
-                                                    Current Balance
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Available funds
-                                                </Typography>
-                                            </Box>
+                                            <StatCard label="Current Balance" value={formatPrice(data.admin_wallet.balance)} accent />
                                         </Grid>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-                                                <Typography variant="mono" component="div" sx={{ fontSize: 30, color: 'success.main', fontWeight: 700 }}>
-                                                    {formatCurrency(data.admin_wallet.total_commissions)}
-                                                </Typography>
-                                                <Typography variant="body1" color="text.primary" fontWeight="bold">
-                                                    Total Commissions
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    All-time commission earnings
-                                                </Typography>
-                                            </Box>
+                                            <StatCard label="Total Commissions" value={formatPrice(data.admin_wallet.total_commissions)} />
                                         </Grid>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-                                                <Typography variant="mono" component="div" sx={{ fontSize: 30, color: 'success.main', fontWeight: 700 }}>
-                                                    {formatCurrency(data.admin_wallet.total_marketplace_sales)}
-                                                </Typography>
-                                                <Typography variant="body1" color="text.primary" fontWeight="bold">
-                                                    Marketplace Sales
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Direct platform sales
-                                                </Typography>
-                                            </Box>
+                                            <StatCard label="Marketplace Sales" value={formatPrice(data.admin_wallet.total_marketplace_sales)} />
                                         </Grid>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-                                                <Typography variant="mono" component="div" sx={{ fontSize: 30, color: 'success.main', fontWeight: 700 }}>
-                                                    {formatCurrency(data.admin_wallet.total_commissions + data.admin_wallet.total_marketplace_sales)}
-                                                </Typography>
-                                                <Typography variant="body1" color="text.primary" fontWeight="bold">
-                                                    Total Revenue
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Commissions + Sales
-                                                </Typography>
-                                            </Box>
+                                            <StatCard label="Total Revenue" value={formatPrice(data.admin_wallet.total_commissions + data.admin_wallet.total_marketplace_sales)} />
                                         </Grid>
                                     </Grid>
                                 </CardContent>
@@ -312,7 +250,7 @@ export default function AdminWalletManagement() {
                                         <Grid item xs={6}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700 }} color="success.main">
-                                                    {formatCurrency(data.stats.monthly_commissions)}
+                                                    {formatPrice(data.stats.monthly_commissions)}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
                                                     This Month Commissions
@@ -322,7 +260,7 @@ export default function AdminWalletManagement() {
                                         <Grid item xs={6}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700 }} color="info.main">
-                                                    {formatCurrency(data.stats.monthly_marketplace_sales)}
+                                                    {formatPrice(data.stats.monthly_marketplace_sales)}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
                                                     This Month Sales
@@ -333,7 +271,7 @@ export default function AdminWalletManagement() {
                                     <Divider sx={{ my: 2 }} />
                                     <Box sx={{ textAlign: 'center' }}>
                                         <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="text.primary">
-                                            {formatCurrency(data.stats.daily_average)}
+                                            {formatPrice(data.stats.daily_average)}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             Daily Average Revenue
@@ -390,6 +328,8 @@ export default function AdminWalletManagement() {
                                             variant="outlined"
                                             startIcon={<Download />}
                                             size="small"
+                                            disabled
+                                            title="Export coming soon"
                                         >
                                             Export
                                         </Button>
@@ -423,10 +363,10 @@ export default function AdminWalletManagement() {
                                                             color: transaction.amount >= 0 ? 'success.main' : 'error.main',
                                                             fontWeight: 'bold'
                                                         }}>
-                                                            <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{transaction.amount >= 0 ? '+' : ''}{formatCurrency(transaction.amount)}</Typography>
+                                                            <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{transaction.amount >= 0 ? '+' : ''}{formatPrice(transaction.amount)}</Typography>
                                                         </TableCell>
                                                         <TableCell sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                                                            <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{formatCurrency(transaction.balance_after)}</Typography>
+                                                            <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{formatPrice(transaction.balance_after)}</Typography>
                                                         </TableCell>
                                                         <TableCell sx={{ color: 'text.primary', maxWidth: 300 }}>
                                                             {transaction.description}
@@ -443,6 +383,7 @@ export default function AdminWalletManagement() {
                             </Card>
                         </Grid>
                     </Grid>
+                    )}
                 </motion.div>
             </Container>
 

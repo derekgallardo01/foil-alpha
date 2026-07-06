@@ -15,7 +15,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    CircularProgress,
     Chip,
     IconButton,
     TextField,
@@ -24,8 +23,6 @@ import {
     FormControl,
     InputLabel,
     Grid,
-    Card,
-    CardContent,
     Avatar,
     Tooltip,
 } from "@mui/material";
@@ -37,10 +34,16 @@ import {
     Gavel as BidIcon,
     AccountBalanceWallet as WalletIcon,
     FilterList as FilterIcon,
+    History as HistoryIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
 import AppShell from "../../../components/AppShell";
+import PageHeader from "../../../components/ui/PageHeader";
+import StatCard from "../../../components/StatCard";
+import EmptyState from "../../../components/ui/EmptyState";
+import ErrorState from "../../../components/ui/ErrorState";
+import { StatRowSkeleton } from "../../../components/ui/Skeletons";
 
 interface ActivityLog {
     id: number;
@@ -85,6 +88,7 @@ export default function UserActivityPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [activities, setActivities] = useState<ActivityLog[]>([]);
     const [stats, setStats] = useState<ActivityStats>({
         totalActivities: 0,
@@ -110,6 +114,7 @@ export default function UserActivityPage() {
     const fetchActivities = async () => {
         try {
             setLoading(true);
+            setError(false);
 
             // Build query params
             const params = new URLSearchParams();
@@ -137,6 +142,7 @@ export default function UserActivityPage() {
 
         } catch (error) {
             console.error("Error fetching activities:", error);
+            setError(true);
             toast.error("Failed to fetch user activities");
         } finally {
             setLoading(false);
@@ -151,83 +157,71 @@ export default function UserActivityPage() {
         fetchActivities();
     };
 
-    if (loading) {
+    if (loading && activities.length === 0) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <CircularProgress />
-            </Box>
+            <AppShell variant="admin">
+                <PageHeader title="User Activity" icon={<HistoryIcon />} />
+                <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
+                    <StatRowSkeleton count={4} />
+                </Container>
+            </AppShell>
         );
     }
 
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                    User Activity
-                </Typography>
-                <Box sx={{ ml: 'auto' }}>
+            <PageHeader
+                title="User Activity"
+                icon={<HistoryIcon />}
+                actions={
                     <IconButton onClick={fetchActivities} sx={{ color: 'primary.main' }}>
                         <RefreshIcon />
                     </IconButton>
-                </Box>
-            </Box>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
+                {/* Error */}
+                {error && (
+                    <Box sx={{ mb: 3 }}>
+                        <ErrorState
+                            variant="inline"
+                            message="Couldn't load activity."
+                            onRetry={fetchActivities}
+                        />
+                    </Box>
+                )}
+
                 {/* Stats Cards */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography color="text.secondary" gutterBottom>
-                                    Total Activities
-                                </Typography>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
-                                    {stats.totalActivities.toLocaleString()}
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Total Activities"
+                            value={stats.totalActivities.toLocaleString()}
+                            accent
+                        />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography color="text.secondary" gutterBottom>
-                                    Today's Activities
-                                </Typography>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
-                                    {stats.todayActivities.toLocaleString()}
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Today's Activities"
+                            value={stats.todayActivities.toLocaleString()}
+                        />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography color="text.secondary" gutterBottom>
-                                    Active Users
-                                </Typography>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
-                                    {stats.activeUsers.toLocaleString()}
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Active Users"
+                            value={stats.activeUsers.toLocaleString()}
+                        />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography color="text.secondary" gutterBottom>
-                                    Most Active User
-                                </Typography>
-                                <Typography variant="h6" sx={{ color: 'text.primary' }}>
-                                    {stats.mostActiveUser?.name || 'N/A'}
-                                </Typography>
-                                {stats.mostActiveUser && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        {stats.mostActiveUser.activityCount} activities
-                                    </Typography>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Most Active User"
+                            value={
+                                stats.mostActiveUser
+                                    ? `${stats.mostActiveUser.name} (${stats.mostActiveUser.activityCount})`
+                                    : 'N/A'
+                            }
+                        />
                     </Grid>
                 </Grid>
 
@@ -298,6 +292,7 @@ export default function UserActivityPage() {
                 </Paper>
 
                 {/* Activity Table */}
+                {activities.length > 0 ? (
                 <Paper variant="outlined" sx={{ border: 1, borderColor: 'divider' }}>
                     <TableContainer sx={{ bgcolor: 'background.default' }}>
                         <Table>
@@ -355,6 +350,9 @@ export default function UserActivityPage() {
                         </Table>
                     </TableContainer>
                 </Paper>
+                ) : !error ? (
+                    <EmptyState icon={<HistoryIcon />} title="No activity found" />
+                ) : null}
             </Container>
         </AppShell>
     );

@@ -9,7 +9,6 @@ import {
   CircularProgress,
   Container,
   Paper,
-  Backdrop,
   TextField,
   Button,
   Dialog,
@@ -25,8 +24,6 @@ import {
   Chip,
   Divider,
   Grid,
-  Card,
-  CardContent,
   List,
   ListItem,
   ListItemText,
@@ -44,6 +41,10 @@ import { GoogleAnalytics } from "nextjs-google-analytics";
 import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import ErrorState from "../../components/ui/ErrorState";
+import { StatRowSkeleton } from "../../components/ui/Skeletons";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 // Animation variants
@@ -164,6 +165,7 @@ export default function AdminUsersClient() {
     }
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch("/api/admin/users", {
         method: "GET",
         headers: {
@@ -173,7 +175,6 @@ export default function AdminUsersClient() {
       });
       if (!response.ok) throw new Error("Failed to fetch users");
       const data = await response.json();
-      console.log("Fetched users with wallet info:", data);
       setUsers(data || []);
       setLastFetchTime(now);
       setFetchAttempts((prev) => prev + 1);
@@ -540,11 +541,9 @@ export default function AdminUsersClient() {
 
   return (
     <AppShell variant="admin">
-      <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
+      <PageHeader title="Users" />
 
-      <GoogleAnalytics trackPageViews debugMode={true} />
+      <GoogleAnalytics trackPageViews debugMode={false} />
 
       <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
@@ -558,48 +557,29 @@ export default function AdminUsersClient() {
               overflow: "visible",
             }}
           >
-            <Typography
-              variant="h4"
-              sx={{
-                mb: 3,
-                textAlign: "center",
-                background: (theme) => theme.foil.gradient,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              Admin - Users & Wallets
-            </Typography>
-
             {/* Stats Dashboard - Without Total Balance */}
             <motion.div variants={itemVariants}>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Total Users</Typography>
-                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "text.primary" }}>{stats.total}</Typography>
-                    </CardContent>
-                  </Card>
+              {loading && users.length === 0 ? (
+                <Box sx={{ mb: 3 }}>
+                  <StatRowSkeleton count={3} />
+                </Box>
+              ) : error ? (
+                <Box sx={{ mb: 3 }}>
+                  <ErrorState variant="inline" message="Couldn't load users." onRetry={fetchUsers} />
+                </Box>
+              ) : (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} md={4}>
+                    <StatCard label="Total Users" value={stats.total} accent />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <StatCard label="Active" value={stats.active} />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <StatCard label="Frozen Funds" value={`$${stats.totalFrozen.toFixed(2)}`} />
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Active</Typography>
-                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "success.main" }}>{stats.active}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Frozen Funds</Typography>
-                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "warning.main" }}>${stats.totalFrozen.toFixed(2)}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+              )}
             </motion.div>
 
             {/* Your existing controls and filters */}

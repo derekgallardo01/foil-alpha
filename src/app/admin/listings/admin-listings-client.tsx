@@ -41,7 +41,11 @@ import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
-import Wordmark from "../../components/Wordmark";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
+import { formatPrice, formatTimeLeft } from "../../lib/format";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 // Animation variants
@@ -232,23 +236,6 @@ export default function AdminListingsClient() {
     // Debounced Search
     const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
 
-    const formatPrice = useCallback((price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
-    }, []);
-
-    const formatTimeLeft = useCallback((timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    }, []);
-
     const getStatusColor = useCallback((listing: Listing) => {
         if (listing.is_sold) return 'success';
         if (!listing.is_for_sale) return 'default';
@@ -386,7 +373,7 @@ export default function AdminListingsClient() {
                     <Typography variant="mono" color="text.primary">{params.row.bid_count}</Typography>
                     {params.row.sale_type === 'AUCTION' && params.row.time_left_ms && (
                         <Typography variant="caption" color="text.secondary">
-                            {formatTimeLeft(params.row.time_left_ms)}
+                            {formatTimeLeft(params.row.auction_end)}
                         </Typography>
                     )}
                 </Box>
@@ -442,7 +429,7 @@ export default function AdminListingsClient() {
                 </Box>
             ),
         },
-    ], [visibleColumns, formatPrice, getStatusText, getStatusColor, formatTimeLeft, rowLoading, actionLoading, handleEditListing, handleDeleteListing]);
+    ], [visibleColumns, getStatusText, getStatusColor, rowLoading, actionLoading, handleEditListing, handleDeleteListing]);
 
     const handleCreateListing = useCallback(() => {
         setNewListing({
@@ -543,38 +530,11 @@ export default function AdminListingsClient() {
                             overflow: "visible",
                         }}
                     >
-                        <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                                <Wordmark size={40} />
-                            </motion.div>
-                        </Box>
-                        <Typography
-                            variant="h4"
-                            sx={{
-                                mb: 3,
-                                textAlign: "center",
-                                background: (theme) => theme.foil.gradient,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                backgroundClip: "text",
-                            }}
-                        >
-                            Admin - Marketplace Listings
-                        </Typography>
-
-                        {/* Listing Stats Dashboard */}
-                        <motion.div variants={itemVariants}>
-                            <Box sx={{ mb: 2, display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 2 }}>
-                                <Typography sx={{ color: "text.secondary" }}>Total Listings: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.total}</Typography></Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Active: <Typography component="span" variant="mono" sx={{ color: "success.main" }}>{stats.active}</Typography></Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Sold: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.sold}</Typography></Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Total Bids: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.totalBids}</Typography></Typography>
-                            </Box>
-                        </motion.div>
-
-                        <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                            <motion.div variants={itemVariants}>
-                                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 2 }}>
+                        <PageHeader
+                            title="Listings"
+                            icon={<GavelIcon />}
+                            actions={
+                                <>
                                     <Button
                                         variant="contained"
                                         color="primary"
@@ -592,9 +552,29 @@ export default function AdminListingsClient() {
                                     >
                                         Refresh
                                     </Button>
-                                </Box>
-                            </motion.div>
+                                </>
+                            }
+                        />
 
+                        {/* Listing Stats Dashboard */}
+                        <motion.div variants={itemVariants}>
+                            <Grid container spacing={2} sx={{ mb: 3 }}>
+                                <Grid item xs={6} md={3}>
+                                    <StatCard label="Total Listings" value={stats.total} accent />
+                                </Grid>
+                                <Grid item xs={6} md={3}>
+                                    <StatCard label="Active" value={stats.active} />
+                                </Grid>
+                                <Grid item xs={6} md={3}>
+                                    <StatCard label="Sold" value={stats.sold} />
+                                </Grid>
+                                <Grid item xs={6} md={3}>
+                                    <StatCard label="Total Bids" value={stats.totalBids} />
+                                </Grid>
+                            </Grid>
+                        </motion.div>
+
+                        <motion.div variants={containerVariants} initial="hidden" animate="visible">
                             {/* Column Visibility Toggle */}
                             <motion.div variants={itemVariants}>
                                 <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -696,6 +676,19 @@ export default function AdminListingsClient() {
                                 </motion.div>
                             )}
 
+                            {/* Fetch error surface */}
+                            {error && (
+                                <motion.div variants={itemVariants}>
+                                    <Box sx={{ mb: 2 }}>
+                                        <ErrorState
+                                            variant="inline"
+                                            message={error}
+                                            onRetry={fetchListings}
+                                        />
+                                    </Box>
+                                </motion.div>
+                            )}
+
                             {/* Listings DataGrid */}
                             <motion.div variants={itemVariants}>
                                 <Box sx={{ height: 600, width: "100%" }}>
@@ -729,9 +722,11 @@ export default function AdminListingsClient() {
                             </motion.div>
 
                             {listings.length === 0 && !error && (
-                                <Typography variant="body1" sx={{ mt: 2, textAlign: "center", color: "text.secondary" }}>
-                                    No listings found. Create your first marketplace listing!
-                                </Typography>
+                                <EmptyState
+                                    icon={<GavelIcon />}
+                                    title="No listings found"
+                                    description="Create your first marketplace listing to get started."
+                                />
                             )}
                         </motion.div>
                     </Paper>

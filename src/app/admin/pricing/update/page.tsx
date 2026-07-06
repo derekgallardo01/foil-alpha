@@ -2,6 +2,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import {
     Box,
     Paper,
@@ -10,7 +12,6 @@ import {
     Grid,
     Card,
     CardContent,
-    Alert,
     CircularProgress,
     LinearProgress,
     Chip,
@@ -36,7 +37,6 @@ import {
     Schedule,
     TrendingUp,
     TrendingDown,
-    AttachMoney,
     Speed,
     Error as ErrorIcon,
     CheckCircle,
@@ -45,6 +45,11 @@ import {
     Stop
 } from '@mui/icons-material';
 import AppShell from "../../../components/AppShell";
+import PageHeader from "../../../components/ui/PageHeader";
+import StatCard from "../../../components/StatCard";
+import ErrorState from "../../../components/ui/ErrorState";
+import { StatRowSkeleton } from "../../../components/ui/Skeletons";
+import { formatPrice } from "../../../lib/format";
 
 interface PricingSyncResult {
     total_cards: number;
@@ -78,6 +83,8 @@ interface CronStatus {
 }
 
 export default function AdminPricingUpdatePage() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const [syncResult, setSyncResult] = useState<PricingSyncResult | null>(null);
     const [cronStatus, setCronStatus] = useState<CronStatus | null>(null);
     const [loading, setLoading] = useState(false);
@@ -88,12 +95,20 @@ export default function AdminPricingUpdatePage() {
     const [showErrorDialog, setShowErrorDialog] = useState(false);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-    // Fetch cron status on component mount
+    // Redirect if not admin
     useEffect(() => {
+        if (status === 'authenticated' && session?.user?.role !== 'admin') {
+            router.push('/unauthorized');
+        }
+    }, [status, session, router]);
+
+    // Fetch cron status on component mount (admins only)
+    useEffect(() => {
+        if (status !== 'authenticated' || session?.user?.role !== 'admin') return;
         fetchCronStatus();
         const interval = setInterval(fetchCronStatus, 30000); // Refresh every 30 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [status, session]);
 
     const fetchCronStatus = async () => {
         try {
@@ -149,7 +164,7 @@ export default function AdminPricingUpdatePage() {
             const response = await fetch('/api/cron/daily-price-sync', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'test-secret'}`,
+                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? ''}`,
                     'Content-Type': 'application/json',
                 },
             });
@@ -178,21 +193,31 @@ export default function AdminPricingUpdatePage() {
         }
     };
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-        }).format(value);
-    };
+    if (status === 'loading') {
+        return (
+            <AppShell variant="admin">
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                    <CircularProgress />
+                </Box>
+            </AppShell>
+        );
+    }
+    if (status === 'unauthenticated' || session?.user?.role !== 'admin') {
+        return null;
+    }
 
     return (
         <AppShell variant="admin">
+        <PageHeader
+            title="Price Sync"
+            icon={<Schedule />}
+            actions={
+                <IconButton onClick={fetchCronStatus} title="Refresh" sx={{ color: 'primary.main' }}>
+                    <Refresh />
+                </IconButton>
+            }
+        />
         <Box sx={{ p: 3 }}>
-            <Typography variant="h4" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AttachMoney />
-                Price Update Management
-            </Typography>
-
             {/* Cron Status Section */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
                 <Grid item xs={12}>
@@ -206,34 +231,13 @@ export default function AdminPricingUpdatePage() {
                             {cronStatus ? (
                                 <Grid container spacing={2}>
                                     <Grid item xs={12} sm={6} md={3}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="text.primary">
-                                                {cronStatus.total_cards_with_api}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Total Cards with API
-                                            </Typography>
-                                        </Box>
+                                        <StatCard label="Total Cards with API" value={cronStatus.total_cards_with_api.toLocaleString()} />
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="success.main">
-                                                {cronStatus.recent_updates_24h}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Updated (24h)
-                                            </Typography>
-                                        </Box>
+                                        <StatCard label="Updated (24h)" value={cronStatus.recent_updates_24h.toLocaleString()} />
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="warning.main">
-                                                {cronStatus.stale_cards}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Stale Cards
-                                            </Typography>
-                                        </Box>
+                                        <StatCard label="Stale Cards" value={cronStatus.stale_cards.toLocaleString()} />
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
                                         <Box sx={{ textAlign: 'center' }}>
@@ -249,7 +253,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                 </Grid>
                             ) : (
-                                <CircularProgress />
+                                <StatRowSkeleton count={4} />
                             )}
                         </CardContent>
                     </Card>
@@ -359,9 +363,13 @@ export default function AdminPricingUpdatePage() {
 
             {/* Error Display */}
             {error && (
-                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-                    {error}
-                </Alert>
+                <Box sx={{ mb: 3 }}>
+                    <ErrorState
+                        variant="inline"
+                        message="Price sync failed."
+                        onRetry={() => handleManualSync(false)}
+                    />
+                </Box>
             )}
 
             {/* Sync Results */}
@@ -378,36 +386,16 @@ export default function AdminPricingUpdatePage() {
                                 {/* Summary Stats */}
                                 <Grid container spacing={2} sx={{ mb: 3 }}>
                                     <Grid item xs={6} sm={3}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="text.primary">
-                                                {syncResult.total_cards}
-                                            </Typography>
-                                            <Typography variant="body2">Total Cards</Typography>
-                                        </Box>
+                                        <StatCard label="Total Cards" value={syncResult.total_cards.toLocaleString()} />
                                     </Grid>
                                     <Grid item xs={6} sm={3}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="success.main">
-                                                {syncResult.successful_updates}
-                                            </Typography>
-                                            <Typography variant="body2">Updated</Typography>
-                                        </Box>
+                                        <StatCard label="Updated" value={syncResult.successful_updates.toLocaleString()} />
                                     </Grid>
                                     <Grid item xs={6} sm={3}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="error.main">
-                                                {syncResult.failed_updates}
-                                            </Typography>
-                                            <Typography variant="body2">Failed</Typography>
-                                        </Box>
+                                        <StatCard label="Failed" value={syncResult.failed_updates.toLocaleString()} />
                                     </Grid>
                                     <Grid item xs={6} sm={3}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="text.secondary">
-                                                {syncResult.skipped_cards}
-                                            </Typography>
-                                            <Typography variant="body2">Skipped</Typography>
-                                        </Box>
+                                        <StatCard label="Skipped" value={syncResult.skipped_cards.toLocaleString()} />
                                     </Grid>
                                 </Grid>
 
@@ -419,46 +407,31 @@ export default function AdminPricingUpdatePage() {
                                 </Typography>
                                 <Grid container spacing={2}>
                                     <Grid item xs={12} sm={6} md={3}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <TrendingUp color="success" />
-                                            <Box>
-                                                <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="success.main">
-                                                    {syncResult.pricing_summary.cards_with_increases}
-                                                </Typography>
-                                                <Typography variant="body2">Price Increases</Typography>
-                                            </Box>
-                                        </Box>
+                                        <StatCard
+                                            label="Price Increases"
+                                            value={syncResult.pricing_summary.cards_with_increases.toLocaleString()}
+                                            icon={<TrendingUp color="success" />}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <TrendingDown color="error" />
-                                            <Box>
-                                                <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="error.main">
-                                                    {syncResult.pricing_summary.cards_with_decreases}
-                                                </Typography>
-                                                <Typography variant="body2">Price Decreases</Typography>
-                                            </Box>
-                                        </Box>
+                                        <StatCard
+                                            label="Price Decreases"
+                                            value={syncResult.pricing_summary.cards_with_decreases.toLocaleString()}
+                                            icon={<TrendingDown color="error" />}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
-                                        <Box>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="success.main">
-                                                {formatCurrency(syncResult.pricing_summary.total_market_value)}
-                                            </Typography>
-                                            <Typography variant="body2">Total Market Value</Typography>
-                                        </Box>
+                                        <StatCard
+                                            label="Total Market Value"
+                                            value={formatPrice(syncResult.pricing_summary.total_market_value)}
+                                            accent
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
-                                        <Box>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color={
-                                                syncResult.pricing_summary.avg_price_change > 0 ? 'success.main' :
-                                                    syncResult.pricing_summary.avg_price_change < 0 ? 'error.main' : 'text.primary'
-                                            }>
-                                                {syncResult.pricing_summary.avg_price_change > 0 ? '+' : ''}
-                                                {syncResult.pricing_summary.avg_price_change.toFixed(2)}%
-                                            </Typography>
-                                            <Typography variant="body2">Avg Price Change</Typography>
-                                        </Box>
+                                        <StatCard
+                                            label="Avg Price Change"
+                                            value={`${syncResult.pricing_summary.avg_price_change > 0 ? '+' : ''}${syncResult.pricing_summary.avg_price_change.toFixed(2)}%`}
+                                        />
                                     </Grid>
                                 </Grid>
 
@@ -467,7 +440,7 @@ export default function AdminPricingUpdatePage() {
                                     <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1 }}>
                                         <Typography variant="body1">
                                             <strong>Highest Value Card:</strong> {syncResult.pricing_summary.highest_value_card.name}
-                                            {' - '}{formatCurrency(syncResult.pricing_summary.highest_value_card.price)}
+                                            {' - '}{formatPrice(syncResult.pricing_summary.highest_value_card.price)}
                                         </Typography>
                                     </Box>
                                 )}

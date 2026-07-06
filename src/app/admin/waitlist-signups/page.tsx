@@ -5,7 +5,6 @@ import {
   Box,
   Container,
   Paper,
-  Typography,
   Table,
   TableBody,
   TableCell,
@@ -16,10 +15,12 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
-import { Delete as DeleteIcon } from "@mui/icons-material";
+import { Delete as DeleteIcon, PeopleAlt as PeopleAltIcon } from "@mui/icons-material";
 import { alpha } from "@mui/material/styles";
 import { toast } from "react-toastify";
 import AppShell from "../../components/AppShell";
+import PageHeader from "../../components/ui/PageHeader";
+import ErrorState from "../../components/ui/ErrorState";
 
 // Define the WaitlistEntry interface
 interface WaitlistEntry {
@@ -35,8 +36,10 @@ interface WaitlistEntry {
 export default function WaitlistSignupsPage() {
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchWaitlistEntries = async () => {
+    setLoading(true);
     try {
       const response = await fetch("/api/admin/waitlist", {
         method: "GET",
@@ -49,8 +52,14 @@ export default function WaitlistSignupsPage() {
         throw new Error(data.error || "Failed to fetch waitlist entries");
       }
       setWaitlistEntries(data.entries);
+      setError(null);
     } catch (error) {
       console.error("Error fetching waitlist entries:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch waitlist entries. Please try again later.";
+      setError(message);
       toast.error("Failed to fetch waitlist entries. Please try again later.");
     } finally {
       setLoading(false);
@@ -133,24 +142,19 @@ export default function WaitlistSignupsPage() {
             width: "100%",
           }}
         >
-          <Typography
-            variant="h4"
-            sx={{
-              textAlign: "center",
-              mb: 3,
-              fontWeight: 800,
-              background: (theme) => theme.foil.gradient,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            Waitlist Signups
-          </Typography>
+          <PageHeader title="Waitlist Signups" icon={<PeopleAltIcon />} />
 
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
               <CircularProgress color="inherit" />
+            </Box>
+          ) : error ? (
+            <Box sx={{ my: 3 }}>
+              <ErrorState
+                variant="inline"
+                message={error}
+                onRetry={fetchWaitlistEntries}
+              />
             </Box>
           ) : (
             <TableContainer>
