@@ -49,7 +49,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/StatCard';
 import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
-import { formatPrice } from '../../lib/format';
+import { formatPrice, formatDuration, formatDateTime } from '../../lib/format';
 
 interface Card {
     id: number;
@@ -179,22 +179,6 @@ export default function AdminAuctionManagement() {
             return () => clearInterval(interval);
         }
     }, [status, session]);
-
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
-    };
 
     const getAuctionStatus = (auction: AuctionData) => {
         if (auction.is_sold) return { label: 'Sold', color: 'success' as const };
@@ -513,7 +497,7 @@ export default function AdminAuctionManagement() {
                                                             fontWeight: 'bold'
                                                         }}
                                                     >
-                                                        {formatTimeLeft(auction.time_remaining)}
+                                                        {formatDuration(auction.time_remaining)}
                                                     </Typography>
                                                 </Box>
 
@@ -772,7 +756,7 @@ export default function AdminAuctionManagement() {
                                                                 Time Remaining
                                                             </Typography>
                                                             <Typography variant="body2" sx={{ color: isExpired ? 'error.main' : 'warning.main', fontWeight: 'bold' }}>
-                                                                {isExpired ? 'Expired' : formatTimeLeft(timeLeft)}
+                                                                {isExpired ? 'Expired' : formatDuration(timeLeft)}
                                                             </Typography>
                                                             <LinearProgress
                                                                 variant="determinate"
@@ -912,7 +896,7 @@ export default function AdminAuctionManagement() {
                                                 </Typography>
                                                 {selectedAuction.time_remaining && selectedAuction.time_remaining > 0 && (
                                                     <Typography variant="caption" sx={{ color: 'warning.main' }}>
-                                                        {formatTimeLeft(selectedAuction.time_remaining)} remaining
+                                                        {formatDuration(selectedAuction.time_remaining)} remaining
                                                     </Typography>
                                                 )}
                                             </Grid>

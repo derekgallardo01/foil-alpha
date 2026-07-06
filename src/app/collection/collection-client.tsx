@@ -61,7 +61,7 @@ import ErrorState from "../components/ui/ErrorState";
 import EmptyState from "../components/ui/EmptyState";
 import PageHeader from "../components/ui/PageHeader";
 import StatCard from "../components/StatCard";
-import { formatPrice } from "../lib/format";
+import { formatPrice, formatDuration } from "../lib/format";
 import { getRarityColor } from "../lib/rarity";
 import { CardGridSkeleton } from "../components/ui/Skeletons";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
@@ -839,20 +839,6 @@ export default function CollectionPage() {
         }
     }, [sortedUserCards, typeFilter]);
 
-    const formatTimeLeft = (expiresAt: string) => {
-        const now = new Date();
-        const expires = new Date(expiresAt);
-        const diffMs = expires.getTime() - now.getTime();
-
-        if (diffMs <= 0) return 'Expired';
-
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    };
-
     if (loading) {
         return (
             <AppShell>
@@ -1049,8 +1035,8 @@ export default function CollectionPage() {
                         ) : (
                             <Grid container spacing={3}>
                                 {pendingPurchases.map((purchase, index) => {
-                                    const timeLeft = formatTimeLeft(purchase.expires_at);
-                                    const isExpired = timeLeft === 'Expired';
+                                    const timeLeft = formatDuration(new Date(purchase.expires_at).getTime() - Date.now());
+                                    const isExpired = timeLeft === 'Ended';
 
                                     return (
                                         <Grid size={{ xs: 12, md: 6 }} key={index}>

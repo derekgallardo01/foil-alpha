@@ -58,6 +58,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { CardGridSkeleton } from '../../components/ui/Skeletons';
 import { getRarityColor } from '../../lib/rarity';
+import { formatDuration, formatDateTime } from '../../lib/format';
 
 interface Card {
     id: number;
@@ -204,22 +205,6 @@ export default function SellingDashboard() {
     const formatPrice = (price: number | null | undefined) => {
         if (price === null || price === undefined) return 'N/A';
         return `$${Number(price).toFixed(2)}`;
-    };
-
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
     };
 
     const getAuctionStatus = (sale: ActiveSale) => {
@@ -504,7 +489,7 @@ export default function SellingDashboard() {
                                                                                 </Typography>
                                                                             </Box>
                                                                             <Typography variant="body2" color="error.main">
-                                                                                {formatTimeLeft(sale.time_remaining)}
+                                                                                {formatDuration(sale.time_remaining)}
                                                                             </Typography>
                                                                         </Box>
                                                                     )}

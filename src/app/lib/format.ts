@@ -45,3 +45,25 @@ export function formatPct(value: number | string | null | undefined, decimals = 
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
   return `${sign}${Math.abs(n).toFixed(decimals)}%`;
 }
+
+/**
+ * Countdown from a milliseconds-remaining value (as opposed to `formatTimeLeft`,
+ * which takes an end timestamp). Returns "Ended" for null/<=0, else "1d 2h" /
+ * "3h 4m" / "5m". Drop-in for the local `formatTimeLeft(ms)` copies.
+ */
+export function formatDuration(msRemaining: number | null | undefined): string {
+  if (!msRemaining || msRemaining <= 0) return "Ended";
+  const days = Math.floor(msRemaining / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((msRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+/** Locale date+time string. Replaces the local `new Date(x).toLocaleString()` copies. */
+export function formatDateTime(value: string | number | Date | null | undefined): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+}

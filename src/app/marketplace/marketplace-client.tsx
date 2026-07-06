@@ -61,6 +61,7 @@ import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../componen
 import CurrencySelector from '../components/CurrencySelector';
 import { useCurrencyContext } from '../lib/currency-context';
 import { getRarityColor } from '../lib/rarity';
+import { formatDuration } from '../lib/format';
 import PurchaseConfirmationModal from '../components/PurchaseConfirmationModal';
 import PageHeader from '../components/ui/PageHeader';
 import ErrorState from '../components/ui/ErrorState';
@@ -765,16 +766,6 @@ export default function MarketplacePage() {
         }
     }, [status]);
 
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    };
-
     const handlePurchase = async (listing: Listing) => {
         if (!session?.user?.id) {
             toast.error('Please login to purchase cards');
@@ -1335,7 +1326,7 @@ export default function MarketplacePage() {
                                                                 </Typography>
                                                             </Box>
                                                             <Typography variant="body2" color="error.main">
-                                                                {formatTimeLeft(listing.time_remaining)}
+                                                                {formatDuration(listing.time_remaining)}
                                                             </Typography>
                                                         </Box>
                                                     ) : (

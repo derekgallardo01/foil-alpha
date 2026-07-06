@@ -31,6 +31,7 @@ import {
     Info as InfoIcon
 } from '@mui/icons-material';
 import { getRarityColor } from '../lib/rarity';
+import { formatDateTime, formatDuration } from '../lib/format';
 
 interface Card {
     id: number;
@@ -120,24 +121,6 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
     const formatPrice = (price: number | null) => {
         if (!price) return 'N/A';
         return `$${Number(price).toFixed(2)}`;
-    };
-
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Auction Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeLeftMs % (1000 * 60)) / 1000);
-
-        if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-        if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-        if (minutes > 0) return `${minutes}m ${seconds}s`;
-        return `${seconds}s`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
     };
 
     const getMinimumBid = () => {
@@ -325,7 +308,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                             }}>
                                 <ClockIcon />
                                 <Typography variant="body1" fontWeight="bold">
-                                    {isAuctionEnded ? 'Auction Ended' : `Time Left: ${formatTimeLeft(timeLeft)}`}
+                                    {isAuctionEnded ? 'Auction Ended' : `Time Left: ${formatDuration(timeLeft)}`}
                                 </Typography>
                             </Box>
 

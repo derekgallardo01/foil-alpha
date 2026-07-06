@@ -50,7 +50,7 @@ import StatCard from '../../components/StatCard';
 import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import { StatRowSkeleton } from '../../components/ui/Skeletons';
-import { formatPrice } from '../../lib/format';
+import { formatPrice, formatDateTime } from '../../lib/format';
 
 interface Transaction {
     id: number;
@@ -157,10 +157,6 @@ const AdminTransactionsPage = () => {
             fetchTransactions();
         }
     }, [status, session, statusFilter, typeFilter, searchTerm]);
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
-    };
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {

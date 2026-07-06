@@ -35,6 +35,7 @@ import AppShell from '../../../components/AppShell';
 import PageHeader from '../../../components/ui/PageHeader';
 import ErrorState from '../../../components/ui/ErrorState';
 import EmptyState from '../../../components/ui/EmptyState';
+import { formatDateTime } from '../../../lib/format';
 
 interface PendingTransaction {
     id: number;
@@ -116,10 +117,6 @@ export default function AdminPendingTransactionsPage() {
     const formatPrice = (price: number) => {
         const num = typeof price === 'number' ? price : Number(price) || 0;
         return `$${num.toFixed(2)}`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
     };
 
     const getTimeRemaining = (expiresAt: string) => {
