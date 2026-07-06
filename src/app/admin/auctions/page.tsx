@@ -38,7 +38,6 @@ import {
     AttachMoney as MoneyIcon,
     PlayArrow as StartIcon,
     Stop as EndIcon,
-    Menu as MenuIcon,
     Refresh as RefreshIcon,
     Settings as SettingsIcon,
     Warning as WarningIcon,
@@ -46,7 +45,7 @@ import {
     TrendingUp,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import AdminSidebar from '../../components/AdminSidebar';
+import AppShell from '../../components/AppShell';
 
 interface Card {
     id: number;
@@ -103,7 +102,6 @@ interface AuctionStats {
 export default function AdminAuctionManagement() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [auctions, setAuctions] = useState<AuctionData[]>([]);
     const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
@@ -116,8 +114,6 @@ export default function AdminAuctionManagement() {
     const [selectedAuction, setSelectedAuction] = useState<AuctionData | null>(null);
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Redirect if not admin
     useEffect(() => {
@@ -332,31 +328,11 @@ export default function AdminAuctionManagement() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                        <MenuIcon />
-                    </IconButton>
-                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
+                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
                         <GavelIcon />
                         Auction Management
                     </Typography>
@@ -1156,6 +1132,6 @@ export default function AdminAuctionManagement() {
                     )}
                 </DialogActions>
             </Dialog>
-        </Box>
+        </AppShell>
     );
 }

@@ -30,7 +30,6 @@ import {
     Tooltip,
 } from "@mui/material";
 import {
-    Menu as MenuIcon,
     Refresh as RefreshIcon,
     Login as LoginIcon,
     PersonAdd as RegisterIcon,
@@ -41,7 +40,7 @@ import {
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
-import AdminSidebar from "../../../components/AdminSidebar";
+import AppShell from "../../../components/AppShell";
 
 interface ActivityLog {
     id: number;
@@ -85,7 +84,6 @@ const actionColors: Record<string, "primary" | "secondary" | "error" | "warning"
 export default function UserActivityPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activities, setActivities] = useState<ActivityLog[]>([]);
     const [stats, setStats] = useState<ActivityStats>({
@@ -100,8 +98,6 @@ export default function UserActivityPage() {
         dateFrom: "",
         dateTo: "",
     });
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     useEffect(() => {
         if (status === "authenticated" && session?.user?.role !== "admin") {
@@ -164,23 +160,10 @@ export default function UserActivityPage() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                    <MenuIcon />
-                </IconButton>
-                <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold', ml: 2 }}>
+                <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                     User Activity
                 </Typography>
                 <Box sx={{ ml: 'auto' }}>
@@ -371,6 +354,6 @@ export default function UserActivityPage() {
                     </TableContainer>
                 </Paper>
             </Container>
-        </Box>
+        </AppShell>
     );
 }

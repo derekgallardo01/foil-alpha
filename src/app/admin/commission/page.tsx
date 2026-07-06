@@ -13,7 +13,6 @@ import {
     TextField,
     Button,
     Grid,
-    IconButton,
     CircularProgress,
     Table,
     TableBody,
@@ -28,7 +27,6 @@ import {
     Divider,
 } from "@mui/material";
 import {
-    Menu as MenuIcon,
     Save,
     Refresh,
     AccountBalance,
@@ -37,7 +35,7 @@ import {
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import AdminSidebar from "../../components/AdminSidebar";
+import AppShell from "../../components/AppShell";
 
 interface Rarity {
     id: number;
@@ -64,7 +62,6 @@ interface CommissionData {
 export default function CommissionManagement() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [data, setData] = useState<CommissionData>({
@@ -74,8 +71,6 @@ export default function CommissionManagement() {
     });
     const [globalCommission, setGlobalCommission] = useState<string>("5.00");
     const [rarityCommissions, setRarityCommissions] = useState<{ [key: string]: string }>({});
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Redirect if not admin
     useEffect(() => {
@@ -187,30 +182,10 @@ export default function CommissionManagement() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                    <MenuIcon />
-                </IconButton>
-                <Typography variant="h5" sx={{ ml: 2, color: '#9B5Cff', fontWeight: 'bold' }}>
+                <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                     Commission Management
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
@@ -494,6 +469,6 @@ export default function CommissionManagement() {
                     </Grid>
                 </motion.div>
             </Container>
-        </Box>
+        </AppShell>
     );
 }

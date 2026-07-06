@@ -31,7 +31,6 @@ import {
   ListItem,
   ListItemText,
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -39,14 +38,13 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import LockIcon from "@mui/icons-material/Lock";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
-import AdminSidebar from "../../components/AdminSidebar";
+import AppShell from "../../components/AppShell";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 // Animation variants
@@ -98,8 +96,6 @@ interface WalletOperationData {
 
 export default function AdminUsersClient() {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   const { data: session, status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
@@ -551,35 +547,11 @@ export default function AdminUsersClient() {
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        minHeight: "100vh",
-        bgcolor: "grey.900",
-        p: 3,
-        background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-        backgroundSize: "200% 200%",
-        animation: "gradientShift 20s ease infinite",
-        "@keyframes gradientShift": {
-          "0%": { backgroundPosition: "0% 0%" },
-          "50%": { backgroundPosition: "100% 100%" },
-          "100%": { backgroundPosition: "0% 0%" },
-        },
-      }}
-    >
+    <AppShell variant="admin">
       <ToastContainer position="top-right" />
       <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
         <CircularProgress color="inherit" />
       </Backdrop>
-
-      <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
-        <IconButton onClick={toggleSidebar}>
-          <MenuIcon />
-        </IconButton>
-      </Box>
 
       <GoogleAnalytics trackPageViews debugMode={true} />
 
@@ -596,11 +568,6 @@ export default function AdminUsersClient() {
               overflow: "visible",
             }}
           >
-            <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} />
-              </motion.div>
-            </Box>
             <Typography variant="h4" sx={{ mb: 3, textAlign: "center", color: "text.primary" }}>
               Admin - Users & Wallets
             </Typography>
@@ -992,6 +959,6 @@ export default function AdminUsersClient() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </AppShell>
   );
 }

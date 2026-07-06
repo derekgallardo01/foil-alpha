@@ -11,7 +11,6 @@ import {
     CardContent,
     Typography,
     Grid,
-    IconButton,
     CircularProgress,
     Table,
     TableBody,
@@ -29,7 +28,6 @@ import {
     TextField,
 } from "@mui/material";
 import {
-    Menu as MenuIcon,
     Assessment,
     TrendingUp,
     PieChart,
@@ -40,7 +38,7 @@ import {
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import AdminSidebar from "../../../components/AdminSidebar";
+import AppShell from "../../../components/AppShell";
 
 interface ReportData {
     commission_by_rarity: Array<{
@@ -74,13 +72,10 @@ interface ReportData {
 export default function CommissionReports() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [reportData, setReportData] = useState<ReportData | null>(null);
     const [dateRange, setDateRange] = useState("30"); // days
     const [reportType, setReportType] = useState("overview");
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Redirect if not admin
     useEffect(() => {
@@ -126,30 +121,10 @@ export default function CommissionReports() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                    <MenuIcon />
-                </IconButton>
-                <Typography variant="h5" sx={{ ml: 2, color: '#9B5Cff', fontWeight: 'bold' }}>
+                <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                     Commission Reports & Analytics
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -434,6 +409,6 @@ export default function CommissionReports() {
                     )}
                 </motion.div>
             </Container>
-        </Box>
+        </AppShell>
     );
 }

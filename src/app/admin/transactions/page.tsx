@@ -39,7 +39,6 @@ import {
 } from '@mui/material';
 import {
     Receipt as TransactionIcon,
-    Menu as MenuIcon,
     Refresh as RefreshIcon,
     Visibility as ViewIcon,
     CheckCircle as CompleteIcon,
@@ -48,7 +47,7 @@ import {
     Download as ExportIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import AdminSidebar from '../../components/AdminSidebar';
+import AppShell from '../../components/AppShell';
 
 interface Transaction {
     id: number;
@@ -90,7 +89,6 @@ interface TransactionStats {
 const AdminTransactionsPage = () => {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [stats, setStats] = useState<TransactionStats>({
@@ -110,8 +108,6 @@ const AdminTransactionsPage = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Redirect if not admin
     useEffect(() => {
@@ -305,31 +301,11 @@ const AdminTransactionsPage = () => {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                        <MenuIcon />
-                    </IconButton>
-                    <Typography variant="h4" sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
+                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
                         <TransactionIcon />
                         Transaction Management
                     </Typography>
@@ -702,7 +678,7 @@ const AdminTransactionsPage = () => {
                     </>
                 )}
             </Dialog>
-        </Box>
+        </AppShell>
     );
 };
 

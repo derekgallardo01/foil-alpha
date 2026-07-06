@@ -11,7 +11,6 @@ import {
     Card,
     CardContent,
     Typography,
-    IconButton,
     CircularProgress,
     Button,
     List,
@@ -22,7 +21,6 @@ import {
     Avatar,
 } from "@mui/material";
 import {
-    Menu as MenuIcon,
     TrendingUp,
     People,
     Store,
@@ -34,8 +32,7 @@ import {
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import Image from "next/image";
-import AdminSidebar from "../../components/AdminSidebar";
+import AppShell from "../../components/AppShell";
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -70,7 +67,6 @@ interface RecentActivity {
 export default function AdminDashboard() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<DashboardStats>({
         totalUsers: 0,
@@ -83,8 +79,6 @@ export default function AdminDashboard() {
         pendingTransactions: 0,
     });
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Redirect if not admin
     useEffect(() => {
@@ -355,35 +349,12 @@ export default function AdminDashboard() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                    <MenuIcon />
-                </IconButton>
-                <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={40} height={20} />
-                    <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
-                        Admin Dashboard
-                    </Typography>
-                </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", px: { xs: 2, md: 3 }, pt: 3, pb: 1 }}>
+                <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
+                    Admin Dashboard
+                </Typography>
                 <Box sx={{ ml: 'auto' }}>
                     <Button
                         variant="outlined"
@@ -673,6 +644,6 @@ export default function AdminDashboard() {
                     </Grid>
                 </motion.div>
             </Container>
-        </Box>
+        </AppShell>
     );
 }

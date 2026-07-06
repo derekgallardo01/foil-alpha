@@ -5,53 +5,24 @@ import {
     Box,
     Container,
     Typography,
-    IconButton,
     Button,
     Card,
     CardContent,
     Grid,
 } from "@mui/material";
-import { Menu as MenuIcon, ArrowBack, AccountBalanceWallet, Person, Settings } from "@mui/icons-material";
-import { useState } from "react";
-import AdminSidebar from "../../components/AdminSidebar";
-import Image from "next/image";
+import { ArrowBack, AccountBalanceWallet, Person, Settings } from "@mui/icons-material";
+import AppShell from "../../components/AppShell";
 
 export default function AdminWalletsPage() {
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: "1px solid rgba(155, 92, 255, 0.2)" }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                    <MenuIcon />
-                </IconButton>
-                <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha" width={40} height={20} />
-                    <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
-                        Wallet Management
-                    </Typography>
-                </Box>
+                <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
+                    Wallet Management
+                </Typography>
                 <Box sx={{ ml: 'auto' }}>
                     <Button
                         variant="outlined"
@@ -195,6 +166,6 @@ export default function AdminWalletsPage() {
                     </Button>
                 </Box>
             </Container>
-        </Box>
+        </AppShell>
     );
 }

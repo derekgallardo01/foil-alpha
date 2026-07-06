@@ -11,7 +11,6 @@ import {
     CardContent,
     Typography,
     Grid,
-    IconButton,
     CircularProgress,
     Table,
     TableBody,
@@ -31,7 +30,6 @@ import {
     DialogActions,
 } from "@mui/material";
 import {
-    Menu as MenuIcon,
     AccountBalance,
     TrendingUp,
     MonetizationOn,
@@ -43,7 +41,7 @@ import {
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import AdminSidebar from "../../../components/AdminSidebar";
+import AppShell from "../../../components/AppShell";
 
 interface AdminWallet {
     id: number;
@@ -81,15 +79,12 @@ interface WalletData {
 export default function AdminWalletManagement() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<WalletData | null>(null);
     const [adjustmentDialog, setAdjustmentDialog] = useState(false);
     const [adjustmentAmount, setAdjustmentAmount] = useState("");
     const [adjustmentDescription, setAdjustmentDescription] = useState("");
     const [adjustmentType, setAdjustmentType] = useState<"add" | "remove">("add");
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     // Redirect if not admin
     useEffect(() => {
@@ -199,30 +194,10 @@ export default function AdminWalletManagement() {
     }
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-                bgcolor: "grey.900",
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
-            }}
-        >
-            <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
+        <AppShell variant="admin">
             {/* Header */}
             <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <IconButton onClick={toggleSidebar} sx={{ color: '#9B5Cff' }}>
-                    <MenuIcon />
-                </IconButton>
-                <Typography variant="h5" sx={{ ml: 2, color: '#9B5Cff', fontWeight: 'bold' }}>
+                <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
                     Platform Wallet Management
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
@@ -555,6 +530,6 @@ export default function AdminWalletManagement() {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Box>
+        </AppShell>
     );
 }
