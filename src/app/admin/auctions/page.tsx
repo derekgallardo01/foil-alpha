@@ -330,28 +330,35 @@ export default function AdminAuctionManagement() {
     return (
         <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
-                        <GavelIcon />
+                    <Typography
+                        variant="h4"
+                        sx={(theme) => ({
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            background: theme.foil.gradient,
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                        })}
+                    >
+                        <GavelIcon sx={{ color: 'primary.main' }} />
                         Auction Management
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Button
                         variant="contained"
+                        color="primary"
                         startIcon={actionLoading === -1 ? <CircularProgress size={16} /> : <SettingsIcon />}
                         onClick={handleProcessAuctions}
                         disabled={actionLoading !== null}
-                        sx={{
-                            bgcolor: '#9B5Cff',
-                            color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                        }}
                     >
                         Process All Auctions
                     </Button>
-                    <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: '#9B5Cff' }}>
+                    <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: 'primary.main' }}>
                         <RefreshIcon />
                     </IconButton>
                 </Box>
@@ -368,9 +375,9 @@ export default function AdminAuctionManagement() {
                 {/* Statistics Cards */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
                                     {stats.activeAuctionsCount || activeAuctions.length}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -380,9 +387,9 @@ export default function AdminAuctionManagement() {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: 'warning.main' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'warning.main' }}>
                                     {pendingTransactions.length}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -392,9 +399,9 @@ export default function AdminAuctionManagement() {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: 'success.main' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
                                     {endedAuctions.filter(a => a.is_sold).length}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -404,9 +411,9 @@ export default function AdminAuctionManagement() {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'text.primary' }}>
                                     ${totalActiveValue.toFixed(2)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -418,14 +425,14 @@ export default function AdminAuctionManagement() {
                 </Grid>
 
                 {/* Tabs */}
-                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)', mb: 3 }}>
+                <Paper variant="outlined" sx={{ border: 1, borderColor: 'divider', mb: 3 }}>
                     <Tabs
                         value={activeTab}
                         onChange={(e, newValue) => setActiveTab(newValue)}
                         sx={{
                             '& .MuiTab-root': { color: 'text.secondary' },
-                            '& .Mui-selected': { color: '#9B5Cff' },
-                            '& .MuiTabs-indicator': { backgroundColor: '#9B5Cff' }
+                            '& .Mui-selected': { color: 'primary.main' },
+                            '& .MuiTabs-indicator': { backgroundColor: 'primary.main' }
                         }}
                     >
                         <Tab
@@ -449,7 +456,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {activeAuctions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
                                     <GavelIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No active auctions
@@ -466,8 +473,6 @@ export default function AdminAuctionManagement() {
                                         height: '100%',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        bgcolor: 'grey.800',
-                                        border: '1px solid rgba(155, 92, 255, 0.2)',
                                         position: 'relative',
                                         overflow: 'visible'
                                     }}>
@@ -490,13 +495,13 @@ export default function AdminAuctionManagement() {
                                             height="200"
                                             image={auction.card?.image_url || '/placeholder-card.png'}
                                             alt={auction.card?.name || 'Card'}
-                                            sx={{ objectFit: 'contain', bgcolor: 'grey.700', p: 1 }}
+                                            sx={{ objectFit: 'contain', bgcolor: 'background.default', p: 1 }}
                                             onError={(e: any) => {
                                                 e.target.src = '/placeholder-card.png';
                                             }}
                                         />
                                         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                            <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 1 }}>
+                                            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
                                                 {auction.card?.name || 'Unknown Card'}
                                             </Typography>
 
@@ -518,7 +523,7 @@ export default function AdminAuctionManagement() {
                                                     <Typography variant="caption" color="text.secondary">
                                                         Reserve
                                                     </Typography>
-                                                    <Typography variant="body2">
+                                                    <Typography variant="mono" sx={{ fontSize: 14 }}>
                                                         {formatPrice(auction.reserve_price)}
                                                     </Typography>
                                                 </Box>
@@ -527,7 +532,7 @@ export default function AdminAuctionManagement() {
                                                     <Typography variant="caption" color="text.secondary">
                                                         Current Bid
                                                     </Typography>
-                                                    <Typography variant="h6" color={auction.highest_bid ? 'primary.main' : 'text.secondary'}>
+                                                    <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
                                                         {formatPrice(auction.highest_bid)}
                                                     </Typography>
                                                 </Box>
@@ -567,9 +572,9 @@ export default function AdminAuctionManagement() {
                                                             mb: 2,
                                                             height: 6,
                                                             borderRadius: 3,
-                                                            bgcolor: 'grey.700',
+                                                            bgcolor: 'background.default',
                                                             '& .MuiLinearProgress-bar': {
-                                                                bgcolor: auction.time_remaining < 3600000 ? 'error.main' : '#9B5Cff',
+                                                                bgcolor: auction.time_remaining < 3600000 ? 'error.main' : 'primary.main',
                                                                 borderRadius: 3,
                                                             },
                                                         }}
@@ -583,11 +588,7 @@ export default function AdminAuctionManagement() {
                                                     size="small"
                                                     fullWidth
                                                     onClick={() => showAuctionDetails(auction)}
-                                                    sx={{
-                                                        borderColor: '#9B5Cff',
-                                                        color: '#9B5Cff',
-                                                        '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                                                    }}
+                                                    color="primary"
                                                 >
                                                     View Details
                                                 </Button>
@@ -619,7 +620,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {endedAuctions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
                                     <ClockIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No ended auctions
@@ -636,22 +637,22 @@ export default function AdminAuctionManagement() {
                                         height: '100%',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        bgcolor: 'grey.800',
-                                        border: `1px solid ${auction.is_sold ? 'rgba(76, 175, 80, 0.5)' : 'rgba(244, 67, 54, 0.5)'}`
+                                        border: 1,
+                                        borderColor: auction.is_sold ? 'success.main' : 'error.main'
                                     }}>
                                         <CardMedia
                                             component="img"
                                             height="200"
                                             image={auction.card?.image_url || '/placeholder-card.png'}
                                             alt={auction.card?.name || 'Card'}
-                                            sx={{ objectFit: 'contain', bgcolor: 'grey.700', p: 1 }}
+                                            sx={{ objectFit: 'contain', bgcolor: 'background.default', p: 1 }}
                                             onError={(e: any) => {
                                                 e.target.src = '/placeholder-card.png';
                                             }}
                                         />
                                         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                                <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                                <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                                     {auction.card?.name || 'Unknown Card'}
                                                 </Typography>
                                                 <Chip
@@ -679,7 +680,7 @@ export default function AdminAuctionManagement() {
                                                     <Typography variant="body2" color="text.secondary">
                                                         Reserve:
                                                     </Typography>
-                                                    <Typography variant="body2">
+                                                    <Typography variant="mono" sx={{ fontSize: 14 }}>
                                                         {formatPrice(auction.reserve_price)}
                                                     </Typography>
                                                 </Box>
@@ -688,7 +689,7 @@ export default function AdminAuctionManagement() {
                                                     <Typography variant="body2" color="text.secondary">
                                                         Final Bid:
                                                     </Typography>
-                                                    <Typography variant="h6" sx={{ color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
+                                                    <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
                                                         {formatPrice(auction.highest_bid)}
                                                     </Typography>
                                                 </Box>
@@ -697,7 +698,7 @@ export default function AdminAuctionManagement() {
                                                     <Typography variant="body2" color="text.secondary">
                                                         Total Bids:
                                                     </Typography>
-                                                    <Typography variant="body2">
+                                                    <Typography variant="mono" sx={{ fontSize: 14 }}>
                                                         {auction.bid_count}
                                                     </Typography>
                                                 </Box>
@@ -711,11 +712,7 @@ export default function AdminAuctionManagement() {
                                                     size="small"
                                                     fullWidth
                                                     onClick={() => showAuctionDetails(auction)}
-                                                    sx={{
-                                                        borderColor: '#9B5Cff',
-                                                        color: '#9B5Cff',
-                                                        '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                                                    }}
+                                                    color="primary"
                                                 >
                                                     View Details
                                                 </Button>
@@ -733,7 +730,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {pendingTransactions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
                                     <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                                     <Typography variant="h6" color="text.secondary">
                                         No pending confirmations
@@ -752,8 +749,8 @@ export default function AdminAuctionManagement() {
                                 return (
                                     <Grid item xs={12} md={6} key={transaction.id}>
                                         <Card sx={{
-                                            bgcolor: 'grey.800',
-                                            border: `1px solid ${isExpired ? 'rgba(244, 67, 54, 0.5)' : 'rgba(255, 152, 0, 0.5)'}`,
+                                            border: 1,
+                                            borderColor: isExpired ? 'error.main' : 'warning.main',
                                             position: 'relative'
                                         }}>
                                             {isExpired && (
@@ -771,7 +768,7 @@ export default function AdminAuctionManagement() {
                                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                         <WarningIcon sx={{ color: isExpired ? 'error.main' : 'warning.main' }} />
-                                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                                        <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                                             Transaction #{transaction.id}
                                                         </Typography>
                                                     </Box>
@@ -798,7 +795,7 @@ export default function AdminAuctionManagement() {
                                                         <Typography variant="body2" color="text.secondary">
                                                             {transaction.userCard?.card?.set_name || 'Unknown Set'}
                                                         </Typography>
-                                                        <Typography variant="h6" sx={{ color: 'primary.main', mt: 1 }}>
+                                                        <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: 'text.primary', mt: 1, display: 'block' }}>
                                                             {formatPrice(typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : transaction.amount)}
                                                         </Typography>
                                                     </Box>
@@ -846,7 +843,7 @@ export default function AdminAuctionManagement() {
                                                                     mt: 1,
                                                                     height: 6,
                                                                     borderRadius: 3,
-                                                                    bgcolor: 'grey.700',
+                                                                    bgcolor: 'background.default',
                                                                     '& .MuiLinearProgress-bar': {
                                                                         bgcolor: isExpired ? 'error.main' : 'warning.main',
                                                                         borderRadius: 3,
@@ -860,20 +857,14 @@ export default function AdminAuctionManagement() {
                                                 <Button
                                                     variant="contained"
                                                     fullWidth
+                                                    color={isExpired ? 'error' : 'primary'}
                                                     onClick={() => handleForceCompleteTransaction(transaction.id)}
                                                     disabled={actionLoading === transaction.id}
                                                     startIcon={actionLoading === transaction.id ?
                                                         <CircularProgress size={16} /> :
                                                         <CheckIcon />
                                                     }
-                                                    sx={{
-                                                        mt: 2,
-                                                        bgcolor: isExpired ? 'error.main' : '#9B5Cff',
-                                                        color: isExpired ? 'white' : 'grey.900',
-                                                        '&:hover': {
-                                                            bgcolor: isExpired ? 'error.dark' : 'rgba(155, 92, 255, 0.8)'
-                                                        }
-                                                    }}
+                                                    sx={{ mt: 2 }}
                                                 >
                                                     {actionLoading === transaction.id ?
                                                         'Processing...' :
@@ -898,12 +889,13 @@ export default function AdminAuctionManagement() {
                 fullWidth
                 PaperProps={{
                     sx: {
-                        bgcolor: 'grey.900',
-                        border: '1px solid rgba(155, 92, 255, 0.2)',
+                        bgcolor: 'background.paper',
+                        border: 1,
+                        borderColor: 'divider',
                     }
                 }}
             >
-                <DialogTitle sx={{ bgcolor: 'grey.800', color: '#9B5Cff' }}>
+                <DialogTitle sx={{ bgcolor: 'background.default', color: 'primary.main' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <GavelIcon />
                         <Typography variant="h6">
@@ -912,11 +904,11 @@ export default function AdminAuctionManagement() {
                     </Box>
                 </DialogTitle>
 
-                <DialogContent sx={{ bgcolor: 'grey.800' }}>
+                <DialogContent sx={{ bgcolor: 'background.paper' }}>
                     {selectedAuction && (
                         <Box sx={{ pt: 2 }}>
                             {/* Auction Summary */}
-                            <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.700' }}>
+                            <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
                                 <Grid container spacing={2}>
                                     <Grid item xs={4}>
                                         <img
@@ -931,7 +923,7 @@ export default function AdminAuctionManagement() {
                                     <Grid item xs={8}>
                                         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
                                             <Box>
-                                                <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                                <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                                     {selectedAuction.card?.name || 'Unknown Card'}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
@@ -958,7 +950,7 @@ export default function AdminAuctionManagement() {
                                                 <Typography variant="caption" color="text.secondary" display="block">
                                                     Reserve Price
                                                 </Typography>
-                                                <Typography variant="body2">
+                                                <Typography variant="mono" sx={{ fontSize: 14 }}>
                                                     {formatPrice(selectedAuction.reserve_price)}
                                                 </Typography>
                                             </Grid>
@@ -988,13 +980,13 @@ export default function AdminAuctionManagement() {
                                             </Grid>
                                         </Grid>
 
-                                        <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.800', borderRadius: 1 }}>
+                                        <Box sx={{ mt: 2, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
                                             <Grid container spacing={2}>
                                                 <Grid item xs={6}>
                                                     <Typography variant="caption" color="text.secondary">
                                                         Current Bid
                                                     </Typography>
-                                                    <Typography variant="h5" sx={{ color: 'primary.main' }}>
+                                                    <Typography variant="mono" sx={{ fontSize: 22, fontWeight: 700, color: selectedAuction.highest_bid ? 'success.main' : 'text.secondary', display: 'block' }}>
                                                         {formatPrice(selectedAuction.highest_bid)}
                                                     </Typography>
                                                 </Grid>
@@ -1002,7 +994,7 @@ export default function AdminAuctionManagement() {
                                                     <Typography variant="caption" color="text.secondary">
                                                         Total Bids
                                                     </Typography>
-                                                    <Typography variant="h5">
+                                                    <Typography variant="mono" sx={{ fontSize: 22, fontWeight: 700, color: 'text.primary', display: 'block' }}>
                                                         {selectedAuction.bid_count}
                                                     </Typography>
                                                 </Grid>
@@ -1014,19 +1006,19 @@ export default function AdminAuctionManagement() {
 
                             {/* Bids List */}
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="h6" gutterBottom sx={{ color: '#9B5Cff', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <TrendingUp />
                                     Bid History ({selectedAuction.bid_count} bids)
                                 </Typography>
 
                                 {selectedAuction.bids.length === 0 ? (
-                                    <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.700' }}>
+                                    <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
                                         <Typography variant="body1" color="text.secondary">
                                             No bids received yet
                                         </Typography>
                                     </Paper>
                                 ) : (
-                                    <List sx={{ bgcolor: 'grey.700', borderRadius: 1, maxHeight: 300, overflow: 'auto' }}>
+                                    <List sx={{ bgcolor: 'background.default', borderRadius: 1, maxHeight: 300, overflow: 'auto', border: 1, borderColor: 'divider' }}>
                                         {selectedAuction.bids
                                             .sort((a, b) => b.amount - a.amount)
                                             .map((bid, index) => (
@@ -1036,7 +1028,7 @@ export default function AdminAuctionManagement() {
                                                             primary={
                                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                        <Avatar sx={{ width: 32, height: 32, bgcolor: index === 0 ? 'primary.main' : 'grey.600' }}>
+                                                                        <Avatar sx={{ width: 32, height: 32, bgcolor: index === 0 ? 'primary.main' : 'action.selected' }}>
                                                                             {bid.bidder?.name?.charAt(0).toUpperCase() || '?'}
                                                                         </Avatar>
                                                                         <Box>
@@ -1052,7 +1044,7 @@ export default function AdminAuctionManagement() {
                                                                             )}
                                                                         </Box>
                                                                     </Box>
-                                                                    <Typography variant="h6" color={index === 0 ? 'primary.main' : 'text.primary'}>
+                                                                    <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: index === 0 ? 'primary.main' : 'text.primary' }}>
                                                                         {formatPrice(bid.amount)}
                                                                     </Typography>
                                                                 </Box>
@@ -1086,7 +1078,7 @@ export default function AdminAuctionManagement() {
                             </Box>
 
                             {/* Additional Info */}
-                            <Paper sx={{ p: 2, bgcolor: 'rgba(155, 92, 255, 0.05)', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
                                 <Typography variant="body2" color="text.secondary">
                                     <strong>Auction ID:</strong> #{selectedAuction.id}
                                 </Typography>
@@ -1109,8 +1101,8 @@ export default function AdminAuctionManagement() {
                     )}
                 </DialogContent>
 
-                <DialogActions sx={{ bgcolor: 'grey.800', borderTop: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <Button onClick={() => setDetailsModalOpen(false)} sx={{ color: '#9B5Cff' }}>
+                <DialogActions sx={{ bgcolor: 'background.default', borderTop: 1, borderColor: 'divider' }}>
+                    <Button onClick={() => setDetailsModalOpen(false)} color="primary">
                         Close
                     </Button>
                     {selectedAuction && getAuctionStatus(selectedAuction).label === 'Active' && (

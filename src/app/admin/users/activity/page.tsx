@@ -162,12 +162,12 @@ export default function UserActivityPage() {
     return (
         <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <Typography variant="h5" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
                     User Activity
                 </Typography>
                 <Box sx={{ ml: 'auto' }}>
-                    <IconButton onClick={fetchActivities} sx={{ color: '#9B5Cff' }}>
+                    <IconButton onClick={fetchActivities} sx={{ color: 'primary.main' }}>
                         <RefreshIcon />
                     </IconButton>
                 </Box>
@@ -177,48 +177,48 @@ export default function UserActivityPage() {
                 {/* Stats Cards */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
                                 <Typography color="text.secondary" gutterBottom>
                                     Total Activities
                                 </Typography>
-                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
                                     {stats.totalActivities.toLocaleString()}
                                 </Typography>
                             </CardContent>
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
                                 <Typography color="text.secondary" gutterBottom>
                                     Today's Activities
                                 </Typography>
-                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
                                     {stats.todayActivities.toLocaleString()}
                                 </Typography>
                             </CardContent>
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
                                 <Typography color="text.secondary" gutterBottom>
                                     Active Users
                                 </Typography>
-                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
                                     {stats.activeUsers.toLocaleString()}
                                 </Typography>
                             </CardContent>
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
                                 <Typography color="text.secondary" gutterBottom>
                                     Most Active User
                                 </Typography>
-                                <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                     {stats.mostActiveUser?.name || 'N/A'}
                                 </Typography>
                                 {stats.mostActiveUser && (
@@ -232,7 +232,7 @@ export default function UserActivityPage() {
                 </Grid>
 
                 {/* Filters */}
-                <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
                     <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12} md={2}>
                             <TextField
@@ -286,9 +286,9 @@ export default function UserActivityPage() {
                             <IconButton
                                 onClick={handleApplyFilters}
                                 sx={{
-                                    bgcolor: '#9B5Cff',
-                                    color: 'grey.900',
-                                    '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
+                                    bgcolor: 'primary.main',
+                                    color: 'primary.contrastText',
+                                    '&:hover': { bgcolor: 'primary.dark' }
                                 }}
                             >
                                 <FilterIcon />
@@ -298,15 +298,15 @@ export default function UserActivityPage() {
                 </Paper>
 
                 {/* Activity Table */}
-                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <TableContainer>
+                <Paper variant="outlined" sx={{ border: 1, borderColor: 'divider' }}>
+                    <TableContainer sx={{ bgcolor: 'background.default' }}>
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ color: '#9B5Cff' }}>User</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff' }}>Action</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff' }}>Timestamp</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff' }}>Details</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>User</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Action</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Timestamp</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Details</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -314,7 +314,7 @@ export default function UserActivityPage() {
                                     <TableRow key={activity.id}>
                                         <TableCell>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Avatar sx={{ width: 32, height: 32, bgcolor: '#9B5Cff', color: 'grey.900' }}>
+                                                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
                                                     {activity.user?.name?.charAt(0).toUpperCase() || '?'}
                                                 </Avatar>
                                                 <Box>
@@ -336,7 +336,9 @@ export default function UserActivityPage() {
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            {format(new Date(activity.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                                            <Typography variant="mono" color="text.secondary">
+                                                {format(new Date(activity.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                                            </Typography>
                                         </TableCell>
                                         <TableCell>
                                             {activity.details && (

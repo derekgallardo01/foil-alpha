@@ -17,6 +17,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
+import { alpha } from "@mui/material/styles";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
 import AppShell from "../../components/AppShell";
@@ -125,13 +126,10 @@ export default function WaitlistSignupsPage() {
     >
       <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
         <Paper
-          elevation={6}
+          variant="outlined"
           sx={{
             p: 4,
-            bgcolor: "grey.900",
-            backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
             borderRadius: 2,
-            boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
             position: "relative",
             width: "100%",
           }}
@@ -140,13 +138,12 @@ export default function WaitlistSignupsPage() {
             variant="h4"
             sx={{
               textAlign: "center",
-              color: "#9B5Cff",
               mb: 3,
-              fontWeight: "bold",
-              textShadow: "0 0 10px rgba(155, 92, 255, 0.5)",
-              "@media (prefers-reduced-motion: reduce)": {
-                textShadow: "none",
-              },
+              fontWeight: 800,
+              background: (theme) => theme.foil.gradient,
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
             }}
           >
             Waitlist Signups
@@ -161,13 +158,13 @@ export default function WaitlistSignupsPage() {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ color: "grey.400" }}>Name</TableCell>
-                    <TableCell sx={{ color: "grey.400" }}>Email</TableCell>
-                    <TableCell sx={{ color: "grey.400" }}>Status</TableCell>
-                    <TableCell sx={{ color: "grey.400" }}>Source</TableCell>
-                    <TableCell sx={{ color: "grey.400" }}>Created At</TableCell>
-                    <TableCell sx={{ color: "grey.400" }}>Metadata</TableCell>
-                    <TableCell sx={{ color: "grey.400" }}>Actions</TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>Name</TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>Email</TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>Status</TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>Source</TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>Created At</TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>Metadata</TableCell>
+                    <TableCell sx={{ color: "text.secondary" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -178,17 +175,22 @@ export default function WaitlistSignupsPage() {
                       <TableCell>
                         <Box
                           sx={{
+                            display: "inline-block",
                             px: 1,
                             py: 0.5,
                             borderRadius: 1,
-                            bgcolor:
-                              entry.status === "PENDING"
-                                ? "rgba(255, 193, 7, 0.1)"
-                                : "rgba(76, 175, 80, 0.1)",
+                            fontFamily: (theme) => theme.typography.mono?.fontFamily,
+                            bgcolor: (theme) =>
+                              alpha(
+                                entry.status === "PENDING"
+                                  ? theme.palette.warning.main
+                                  : theme.palette.success.main,
+                                0.14
+                              ),
                             color:
                               entry.status === "PENDING"
-                                ? "rgba(255, 193, 7, 1)"
-                                : "rgba(76, 175, 80, 1)",
+                                ? "warning.main"
+                                : "success.main",
                           }}
                         >
                           {entry.status}
@@ -212,8 +214,12 @@ export default function WaitlistSignupsPage() {
                             px: 1,
                             py: 0.5,
                             borderRadius: 1,
-                            bgcolor: "rgba(155, 92, 255, 0.1)",
-                            color: "rgba(155, 92, 255, 1)",
+                            border: 1,
+                            borderColor: "divider",
+                            bgcolor: "background.default",
+                            color: "text.secondary",
+                            fontFamily: (theme) => theme.typography.mono?.fontFamily,
+                            fontSize: "0.75rem",
                             whiteSpace: "pre-wrap",
                             maxHeight: "100px",
                             overflow: "auto",

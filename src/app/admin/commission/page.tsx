@@ -184,8 +184,17 @@ export default function CommissionManagement() {
     return (
         <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography
+                    variant="h4"
+                    sx={{
+                        fontWeight: 800,
+                        background: (theme) => theme.foil.gradient,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                    }}
+                >
                     Commission Management
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
@@ -194,11 +203,6 @@ export default function CommissionManagement() {
                         startIcon={<Refresh />}
                         onClick={fetchCommissionData}
                         disabled={loading}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: '#9B5Cff',
-                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                        }}
                     >
                         Refresh
                     </Button>
@@ -207,11 +211,6 @@ export default function CommissionManagement() {
                         startIcon={<Save />}
                         onClick={saveCommissionSettings}
                         disabled={saving}
-                        sx={{
-                            bgcolor: '#9B5Cff',
-                            color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                        }}
                     >
                         {saving ? 'Saving...' : 'Save Settings'}
                     </Button>
@@ -227,9 +226,9 @@ export default function CommissionManagement() {
                     <Grid container spacing={3}>
                         {/* Admin Wallet Info */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <AccountBalance />
                                         Platform Wallet
                                     </Typography>
@@ -237,7 +236,7 @@ export default function CommissionManagement() {
                                         <Grid container spacing={3}>
                                             <Grid item xs={12} md={4}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="h4" sx={{ color: 'success.main' }}>
+                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
                                                         ${data.admin_wallet.balance.toFixed(2)}
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
@@ -247,7 +246,7 @@ export default function CommissionManagement() {
                                             </Grid>
                                             <Grid item xs={12} md={4}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="h4" sx={{ color: 'info.main' }}>
+                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
                                                         ${data.admin_wallet.total_commissions.toFixed(2)}
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
@@ -257,7 +256,7 @@ export default function CommissionManagement() {
                                             </Grid>
                                             <Grid item xs={12} md={4}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="h4" sx={{ color: 'warning.main' }}>
+                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
                                                         ${data.admin_wallet.total_marketplace_sales.toFixed(2)}
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
@@ -277,9 +276,9 @@ export default function CommissionManagement() {
 
                         {/* Global Commission Setting */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Percent />
                                         Global Commission Rate
                                     </Typography>
@@ -293,15 +292,6 @@ export default function CommissionManagement() {
                                         InputProps={{
                                             endAdornment: <InputAdornment position="end">%</InputAdornment>,
                                         }}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                '& fieldset': { borderColor: 'rgba(155, 92, 255, 0.2)' },
-                                                '&:hover fieldset': { borderColor: '#9B5Cff' },
-                                                '&.Mui-focused fieldset': { borderColor: '#9B5Cff' },
-                                            },
-                                            '& .MuiInputLabel-root': { color: '#9B5Cff' },
-                                            '& .MuiInputBase-input': { color: 'text.primary' },
-                                        }}
                                     />
                                     <Alert severity="info" sx={{ mt: 2 }}>
                                         This rate applies to all cards unless a specific rarity rate is set below.
@@ -312,30 +302,30 @@ export default function CommissionManagement() {
 
                         {/* Commission Calculation Example */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <TrendingUp />
                                         Commission Calculation
                                     </Typography>
-                                    <Box sx={{ p: 2, bgcolor: 'grey.700', borderRadius: 1 }}>
+                                    <Box sx={{ p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1 }}>
                                         <Typography variant="body2" color="text.secondary" gutterBottom>
                                             Example: $100 card with {globalCommission}% commission
                                         </Typography>
-                                        <Divider sx={{ my: 1, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
+                                        <Divider sx={{ my: 1 }} />
                                         <Typography variant="body2" color="text.primary">
                                             • Card Price: $100.00
                                         </Typography>
-                                        <Typography variant="body2" color="info.main">
+                                        <Typography variant="body2" color="success.main">
                                             • Commission: ${(100 * parseFloat(globalCommission || "0") / 100).toFixed(2)}
                                         </Typography>
-                                        <Typography variant="body2" color="success.main">
+                                        <Typography variant="body2" color="text.primary">
                                             • Buyer Pays: ${(100 + (100 * parseFloat(globalCommission || "0") / 100)).toFixed(2)}
                                         </Typography>
-                                        <Typography variant="body2" color="warning.main">
+                                        <Typography variant="body2" color="text.primary">
                                             • Seller Receives: ${(100 - (100 * parseFloat(globalCommission || "0") / 100)).toFixed(2)}
                                         </Typography>
-                                        <Typography variant="body2" color="error.main">
+                                        <Typography variant="body2" color="success.main">
                                             • Platform Gets: ${(100 * parseFloat(globalCommission || "0") / 100).toFixed(2)}
                                         </Typography>
                                     </Box>
@@ -345,23 +335,23 @@ export default function CommissionManagement() {
 
                         {/* Rarity-Specific Commission Rates */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2 }}>
+                                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2 }}>
                                         Rarity-Specific Commission Rates
                                     </Typography>
                                     <Alert severity="info" sx={{ mb: 2 }}>
                                         Leave empty to use the global commission rate. Set a specific rate to override the global rate for that rarity.
                                     </Alert>
-                                    <TableContainer component={Paper} sx={{ bgcolor: 'grey.700' }}>
+                                    <TableContainer component={Paper} sx={{ bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
                                         <Table>
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Rarity</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Symbol</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Color</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Commission Rate (%)</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Status</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Rarity</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Symbol</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Color</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Commission Rate (%)</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Status</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -399,15 +389,7 @@ export default function CommissionManagement() {
                                                                 InputProps={{
                                                                     endAdornment: <InputAdornment position="end">%</InputAdornment>,
                                                                 }}
-                                                                sx={{
-                                                                    width: 120,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        '& fieldset': { borderColor: 'rgba(155, 92, 255, 0.2)' },
-                                                                        '&:hover fieldset': { borderColor: '#9B5Cff' },
-                                                                        '&.Mui-focused fieldset': { borderColor: '#9B5Cff' },
-                                                                    },
-                                                                    '& .MuiInputBase-input': { color: 'text.primary' },
-                                                                }}
+                                                                sx={{ width: 120 }}
                                                             />
                                                         </TableCell>
                                                         <TableCell>
@@ -441,11 +423,6 @@ export default function CommissionManagement() {
                                     variant="outlined"
                                     onClick={fetchCommissionData}
                                     disabled={loading}
-                                    sx={{
-                                        borderColor: '#9B5Cff',
-                                        color: '#9B5Cff',
-                                        '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                                    }}
                                 >
                                     Reset Changes
                                 </Button>
@@ -455,12 +432,7 @@ export default function CommissionManagement() {
                                     onClick={saveCommissionSettings}
                                     disabled={saving}
                                     size="large"
-                                    sx={{
-                                        bgcolor: '#9B5Cff',
-                                        color: 'grey.900',
-                                        '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' },
-                                        px: 4
-                                    }}
+                                    sx={{ px: 4 }}
                                 >
                                     {saving ? 'Saving...' : 'Save All Commission Settings'}
                                 </Button>

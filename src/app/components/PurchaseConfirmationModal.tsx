@@ -280,8 +280,9 @@ export default function PurchaseConfirmationModal({
             fullWidth
             PaperProps={{
                 sx: {
-                    bgcolor: 'grey.900',
-                    border: '1px solid rgba(155, 92, 255, 0.3)'
+                    bgcolor: 'background.paper',
+                    border: 1,
+                    borderColor: 'divider'
                 }
             }}
         >
@@ -289,8 +290,9 @@ export default function PurchaseConfirmationModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                color: '#9B5Cff',
-                borderBottom: '1px solid rgba(155, 92, 255, 0.2)',
+                color: 'primary.main',
+                borderBottom: 1,
+                borderColor: 'divider',
                 pb: 2
             }}>
                 <CartIcon />
@@ -331,8 +333,9 @@ export default function PurchaseConfirmationModal({
                         {/* Card Display */}
                         <Grid item xs={12} md={5}>
                             <Card sx={{
-                                border: '1px solid rgba(155, 92, 255, 0.3)',
-                                bgcolor: 'grey.800'
+                                border: 1,
+                                borderColor: 'divider',
+                                bgcolor: 'background.default'
                             }}>
                                 <CardMedia
                                     component="img"
@@ -397,7 +400,7 @@ export default function PurchaseConfirmationModal({
                                 </Typography>
                                 {listingData.card.market_price && (
                                     <Typography variant="body2" color="text.secondary">
-                                        <strong>Market Price:</strong> {formatPrice(listingData.card.market_price)}
+                                        <strong>Market Price:</strong> <Typography component="span" variant="mono" color="text.primary">{formatPrice(listingData.card.market_price)}</Typography>
                                     </Typography>
                                 )}
                                 {listingData.notes && (
@@ -409,10 +412,10 @@ export default function PurchaseConfirmationModal({
 
                             {/* Commission Information */}
                             {loadingCommission ? (
-                                <Paper sx={{ p: 2, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                        <PercentIcon sx={{ color: '#9B5Cff' }} />
-                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                        <PercentIcon sx={{ color: 'primary.main' }} />
+                                        <Typography variant="h6" sx={{ color: 'primary.main' }}>
                                             Calculating Fees...
                                         </Typography>
                                     </Box>
@@ -421,10 +424,10 @@ export default function PurchaseConfirmationModal({
                                     <Skeleton variant="text" width="40%" />
                                 </Paper>
                             ) : commissionInfo ? (
-                                <Paper sx={{ p: 2, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                        <MoneyIcon sx={{ color: '#9B5Cff' }} />
-                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                        <MoneyIcon sx={{ color: 'primary.main' }} />
+                                        <Typography variant="h6" sx={{ color: 'primary.main' }}>
                                             Purchase Summary
                                         </Typography>
                                     </Box>
@@ -433,7 +436,7 @@ export default function PurchaseConfirmationModal({
                                         <Typography variant="body2" color="text.secondary">
                                             Card Price:
                                         </Typography>
-                                        <Typography variant="body2" color="text.primary">
+                                        <Typography variant="mono" color="text.primary">
                                             {formatPrice(cardPrice)}
                                         </Typography>
                                     </Box>
@@ -443,28 +446,28 @@ export default function PurchaseConfirmationModal({
                                             <Typography variant="body2" color="text.secondary">
                                                 Marketplace Fee ({commissionInfo.commission_rate}%):
                                             </Typography>
-                                            <Typography variant="body2" color="text.primary">
+                                            <Typography variant="mono" color="text.secondary">
                                                 {formatPrice(commissionInfo.commission_amount)}
                                             </Typography>
                                         </Box>
                                     )}
 
-                                    <Divider sx={{ my: 1, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
+                                    <Divider sx={{ my: 1, borderColor: 'divider' }} />
 
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                                        <Typography variant="h6" sx={{ color: 'text.primary' }}>
                                             Total You Pay:
                                         </Typography>
-                                        <Typography variant="h6" sx={{ color: '#9B5Cff' }}>
+                                        <Typography variant="mono" sx={{ color: 'success.main', fontSize: 20, fontWeight: 700 }}>
                                             {formatPrice(commissionInfo.buyer_pays)}
                                         </Typography>
                                     </Box>
 
                                     {/* Breakdown for user sales */}
                                     {listingData.type === 'USER_CARD' && commissionInfo.seller_receives > 0 && (
-                                        <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(155, 92, 255, 0.1)', borderRadius: 1 }}>
+                                        <Box sx={{ mt: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                                             <Typography variant="caption" color="text.secondary">
-                                                Seller receives: {formatPrice(commissionInfo.seller_receives)}
+                                                Seller receives: <Typography component="span" variant="mono" sx={{ color: 'success.main' }}>{formatPrice(commissionInfo.seller_receives)}</Typography>
                                             </Typography>
                                         </Box>
                                     )}
@@ -472,7 +475,7 @@ export default function PurchaseConfirmationModal({
                             ) : null}
 
                             {/* Purchase Type Info */}
-                            <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(155, 92, 255, 0.1)', borderRadius: 1 }}>
+                            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                                 <Typography variant="body2" sx={{ color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <CheckIcon sx={{ fontSize: 16, color: 'success.main' }} />
                                     {listingData.type === 'CATALOG'
@@ -488,7 +491,8 @@ export default function PurchaseConfirmationModal({
 
             <DialogActions sx={{
                 p: 3,
-                borderTop: '1px solid rgba(155, 92, 255, 0.2)',
+                borderTop: 1,
+                borderColor: 'divider',
                 gap: 2
             }}>
                 {!success && (
@@ -497,8 +501,9 @@ export default function PurchaseConfirmationModal({
                             onClick={handleClose}
                             disabled={loading}
                             variant="outlined"
+                            color="inherit"
                             sx={{
-                                borderColor: 'text.secondary',
+                                borderColor: 'divider',
                                 color: 'text.secondary'
                             }}
                         >
@@ -506,21 +511,11 @@ export default function PurchaseConfirmationModal({
                         </Button>
                         <Button
                             variant="contained"
+                            color="primary"
                             onClick={handlePurchase}
                             disabled={loading || loadingCommission}
                             startIcon={loading ? <CircularProgress size={20} /> : <CartIcon />}
-                            sx={{
-                                bgcolor: '#9B5Cff',
-                                color: 'grey.900',
-                                minWidth: 160,
-                                '&:hover': {
-                                    bgcolor: 'rgba(155, 92, 255, 0.8)'
-                                },
-                                '&:disabled': {
-                                    bgcolor: 'rgba(155, 92, 255, 0.3)',
-                                    color: 'grey.700'
-                                }
-                            }}
+                            sx={{ minWidth: 160 }}
                         >
                             {loading
                                 ? 'Processing...'
@@ -534,14 +529,8 @@ export default function PurchaseConfirmationModal({
                 {success && (
                     <Button
                         variant="contained"
+                        color="primary"
                         onClick={handleClose}
-                        sx={{
-                            bgcolor: '#9B5Cff',
-                            color: 'grey.900',
-                            '&:hover': {
-                                bgcolor: 'rgba(155, 92, 255, 0.8)'
-                            }
-                        }}
                     >
                         Close
                     </Button>

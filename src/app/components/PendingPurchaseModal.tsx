@@ -16,6 +16,7 @@ import {
     Chip,
     Paper
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
     CheckCircle,
     Warning,
@@ -48,6 +49,7 @@ export default function PendingPurchaseModal({
     purchaseData,
     onConfirmationComplete
 }: PendingPurchaseModalProps) {
+    const theme = useTheme();
     const [confirming, setConfirming] = useState(false);
     const [declining, setDeclining] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -229,8 +231,9 @@ export default function PendingPurchaseModal({
             fullWidth
             PaperProps={{
                 sx: {
-                    bgcolor: 'grey.900',
-                    border: '1px solid rgba(155, 92, 255, 0.3)'
+                    bgcolor: 'background.paper',
+                    border: 1,
+                    borderColor: 'divider'
                 }
             }}
         >
@@ -238,8 +241,9 @@ export default function PendingPurchaseModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                color: '#9B5Cff',
-                borderBottom: '1px solid rgba(155, 92, 255, 0.2)',
+                color: 'primary.main',
+                borderBottom: 1,
+                borderColor: 'divider',
                 pb: 2
             }}>
                 <CheckCircle />
@@ -277,7 +281,7 @@ export default function PendingPurchaseModal({
                                 height: 140,
                                 objectFit: 'contain',
                                 borderRadius: 8,
-                                border: '1px solid rgba(155, 92, 255, 0.3)'
+                                border: `1px solid ${theme.palette.divider}`
                             }}
                             onError={(e) => {
                                 (e.target as HTMLImageElement).src = '/placeholder-card.png';
@@ -294,17 +298,17 @@ export default function PendingPurchaseModal({
                             Seller: {purchaseData.seller_name}
                         </Typography>
 
-                        <Typography variant="h5" sx={{ color: '#9B5Cff', mt: 2 }}>
+                        <Typography variant="mono" sx={{ color: 'text.primary', fontSize: 24, fontWeight: 700, mt: 2, display: 'block' }}>
                             ${purchaseData.amount.toFixed(2)}
                         </Typography>
                     </Box>
                 </Box>
 
-                <Divider sx={{ my: 2, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
+                <Divider sx={{ my: 2, borderColor: 'divider' }} />
 
                 {/* Purchase Summary */}
-                <Paper sx={{ p: 2, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <Typography variant="subtitle2" sx={{ color: '#9B5Cff', mb: 2 }}>
+                <Paper sx={{ p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
+                    <Typography variant="subtitle2" sx={{ color: 'primary.main', mb: 2 }}>
                         Purchase Summary
                     </Typography>
 
@@ -312,7 +316,7 @@ export default function PendingPurchaseModal({
                         <Typography variant="body2" color="text.secondary">
                             Winning Bid:
                         </Typography>
-                        <Typography variant="body2" color="text.primary">
+                        <Typography variant="mono" color="text.primary">
                             ${purchaseData.amount.toFixed(2)}
                         </Typography>
                     </Box>
@@ -321,18 +325,18 @@ export default function PendingPurchaseModal({
                         <Typography variant="body2" color="text.secondary">
                             Marketplace Fee (0%):
                         </Typography>
-                        <Typography variant="body2" color="text.primary">
+                        <Typography variant="mono" color="text.secondary">
                             $0.00
                         </Typography>
                     </Box>
 
-                    <Divider sx={{ my: 1, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
+                    <Divider sx={{ my: 1, borderColor: 'divider' }} />
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="subtitle2" sx={{ color: '#9B5Cff' }}>
+                        <Typography variant="subtitle2" sx={{ color: 'text.primary' }}>
                             Total:
                         </Typography>
-                        <Typography variant="subtitle2" sx={{ color: '#9B5Cff' }}>
+                        <Typography variant="mono" sx={{ color: 'success.main', fontWeight: 700 }}>
                             ${purchaseData.amount.toFixed(2)}
                         </Typography>
                     </Box>
@@ -342,7 +346,7 @@ export default function PendingPurchaseModal({
                 <Alert
                     severity="info"
                     icon={<Warning />}
-                    sx={{ mt: 2, bgcolor: 'rgba(155, 92, 255, 0.1)', border: '1px solid rgba(155, 92, 255, 0.3)' }}
+                    sx={{ mt: 2 }}
                 >
                     <Typography variant="body2">
                         You won this auction! Please confirm the purchase within 24 hours to complete the transaction.
@@ -353,42 +357,26 @@ export default function PendingPurchaseModal({
 
             <DialogActions sx={{
                 p: 3,
-                borderTop: '1px solid rgba(155, 92, 255, 0.2)',
+                borderTop: 1,
+                borderColor: 'divider',
                 gap: 2
             }}>
                 <Button
                     variant="outlined"
+                    color="error"
                     onClick={handleDeclinePurchase}
                     disabled={confirming || declining || isExpired}
                     startIcon={declining ? <CircularProgress size={20} /> : <Cancel />}
-                    sx={{
-                        borderColor: 'error.main',
-                        color: 'error.main',
-                        '&:hover': {
-                            borderColor: 'error.dark',
-                            bgcolor: 'rgba(244, 67, 54, 0.1)'
-                        }
-                    }}
                 >
                     {declining ? 'Declining...' : 'Decline'}
                 </Button>
                 <Button
                     variant="contained"
+                    color="primary"
                     onClick={handleConfirmPurchase}
                     disabled={confirming || declining || isExpired}
                     startIcon={confirming ? <CircularProgress size={20} /> : <AttachMoney />}
-                    sx={{
-                        bgcolor: '#9B5Cff',
-                        color: 'grey.900',
-                        minWidth: 140,
-                        '&:hover': {
-                            bgcolor: 'rgba(155, 92, 255, 0.8)'
-                        },
-                        '&:disabled': {
-                            bgcolor: 'rgba(155, 92, 255, 0.3)',
-                            color: 'grey.700'
-                        }
-                    }}
+                    sx={{ minWidth: 140 }}
                 >
                     {confirming ? 'Processing...' : 'Confirm Purchase'}
                 </Button>

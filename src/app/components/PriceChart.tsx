@@ -17,6 +17,7 @@ import {
     Tooltip,
     IconButton
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
     TrendingUp,
     TrendingDown,
@@ -67,6 +68,7 @@ export default function PriceChart({
     showUserPrice = true,
     autoRefresh = false
 }: PriceChartProps) {
+    const theme = useTheme();
     const [chartData, setChartData] = useState<ChartData[]>([]);
     const [analytics, setAnalytics] = useState<PriceAnalytics | null>(null);
     const [cardInfo, setCardInfo] = useState<CardInfo | null>(null);
@@ -261,7 +263,7 @@ export default function PriceChart({
                                     <Typography variant="body2" color="text.secondary">
                                         Current Price
                                     </Typography>
-                                    <Typography variant="h6" sx={{ color: 'primary.main' }}>
+                                    <Typography variant="mono" sx={{ color: 'text.primary', fontSize: 18, fontWeight: 700, display: 'block' }}>
                                         {formatPrice(analytics.current)}
                                     </Typography>
                                 </CardContent>
@@ -277,8 +279,8 @@ export default function PriceChart({
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         {getTrendIcon(analytics.trend)}
                                         <Typography
-                                            variant="h6"
-                                            sx={{ color: getTrendColor(analytics.trend) }}
+                                            variant="mono"
+                                            sx={{ color: getTrendColor(analytics.trend), fontSize: 18, fontWeight: 700 }}
                                         >
                                             {analytics.change_percentage > 0 ? '+' : ''}{analytics.change_percentage.toFixed(1)}%
                                         </Typography>
@@ -293,7 +295,7 @@ export default function PriceChart({
                                     <Typography variant="body2" color="text.secondary">
                                         Range
                                     </Typography>
-                                    <Typography variant="body1">
+                                    <Typography variant="mono" sx={{ color: 'text.primary', display: 'block' }}>
                                         {formatPrice(analytics.lowest)} - {formatPrice(analytics.highest)}
                                     </Typography>
                                 </CardContent>
@@ -306,7 +308,7 @@ export default function PriceChart({
                                     <Typography variant="body2" color="text.secondary">
                                         Average
                                     </Typography>
-                                    <Typography variant="h6">
+                                    <Typography variant="mono" sx={{ color: 'text.primary', fontSize: 18, fontWeight: 700, display: 'block' }}>
                                         {formatPrice(analytics.average)}
                                     </Typography>
                                 </CardContent>
@@ -321,14 +323,14 @@ export default function PriceChart({
                 <Box sx={{ height: height - 200 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                             <XAxis
                                 dataKey="formatted_date"
-                                stroke="#666"
+                                stroke={theme.palette.text.secondary}
                                 fontSize={12}
                             />
                             <YAxis
-                                stroke="#666"
+                                stroke={theme.palette.text.secondary}
                                 fontSize={12}
                                 tickFormatter={(value) => `$${value}`}
                             />
@@ -339,10 +341,10 @@ export default function PriceChart({
                                 ]}
                                 labelFormatter={(label) => `Date: ${label}`}
                                 contentStyle={{
-                                    backgroundColor: '#1e1e1e',
-                                    border: '1px solid #333',
+                                    backgroundColor: theme.palette.background.paper,
+                                    border: `1px solid ${theme.palette.divider}`,
                                     borderRadius: '8px',
-                                    color: '#fff'
+                                    color: theme.palette.text.primary
                                 }}
                             />
                             <Legend />
@@ -351,11 +353,11 @@ export default function PriceChart({
                             <Line
                                 type="monotone"
                                 dataKey="market_price"
-                                stroke="#2196f3"
+                                stroke={theme.palette.primary.main}
                                 strokeWidth={2}
                                 name="Market Price"
-                                dot={{ fill: '#2196f3', strokeWidth: 2, r: 4 }}
-                                activeDot={{ r: 6, stroke: '#2196f3', strokeWidth: 2 }}
+                                dot={{ fill: theme.palette.primary.main, strokeWidth: 2, r: 4 }}
+                                activeDot={{ r: 6, stroke: theme.palette.primary.main, strokeWidth: 2 }}
                             />
 
                             {/* User Price Line (if available and enabled) */}
@@ -363,12 +365,12 @@ export default function PriceChart({
                                 <Line
                                     type="monotone"
                                     dataKey="user_price"
-                                    stroke="#ff9800"
+                                    stroke={theme.palette.secondary.main}
                                     strokeWidth={2}
                                     strokeDasharray="5 5"
                                     name="Your Price"
-                                    dot={{ fill: '#ff9800', strokeWidth: 2, r: 4 }}
-                                    activeDot={{ r: 6, stroke: '#ff9800', strokeWidth: 2 }}
+                                    dot={{ fill: theme.palette.secondary.main, strokeWidth: 2, r: 4 }}
+                                    activeDot={{ r: 6, stroke: theme.palette.secondary.main, strokeWidth: 2 }}
                                     connectNulls={false}
                                 />
                             )}
@@ -398,18 +400,18 @@ export default function PriceChart({
 
             {/* User Price Info */}
             {showUserPrice && cardInfo?.user_resell_price && (
-                <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255, 152, 0, 0.1)', borderRadius: 1 }}>
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                     <Typography variant="body2" color="text.secondary">
-                        Your current listing price: <strong>{formatPrice(cardInfo.user_resell_price)}</strong>
+                        Your current listing price: <Typography component="strong" variant="mono" sx={{ color: 'secondary.main', fontWeight: 700 }}>{formatPrice(cardInfo.user_resell_price)}</Typography>
                         {analytics && cardInfo.current_price && (
                             <>
                                 {' • '}
                                 {cardInfo.user_resell_price > cardInfo.current_price ? (
-                                    <span style={{ color: '#f44336' }}>
+                                    <span style={{ color: theme.palette.error.main }}>
                                         {(((cardInfo.user_resell_price - cardInfo.current_price) / cardInfo.current_price) * 100).toFixed(1)}% above market
                                     </span>
                                 ) : (
-                                    <span style={{ color: '#4caf50' }}>
+                                    <span style={{ color: theme.palette.success.main }}>
                                         {(((cardInfo.current_price - cardInfo.user_resell_price) / cardInfo.current_price) * 100).toFixed(1)}% below market
                                     </span>
                                 )}

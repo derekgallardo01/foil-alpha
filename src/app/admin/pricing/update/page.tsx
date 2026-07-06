@@ -207,7 +207,7 @@ export default function AdminPricingUpdatePage() {
                                 <Grid container spacing={2}>
                                     <Grid item xs={12} sm={6} md={3}>
                                         <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="h4" color="primary">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="text.primary">
                                                 {cronStatus.total_cards_with_api}
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
@@ -217,7 +217,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
                                         <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="h4" color="success.main">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="success.main">
                                                 {cronStatus.recent_updates_24h}
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
@@ -227,7 +227,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
                                         <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="h4" color="warning.main">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="warning.main">
                                                 {cronStatus.stale_cards}
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
@@ -379,7 +379,7 @@ export default function AdminPricingUpdatePage() {
                                 <Grid container spacing={2} sx={{ mb: 3 }}>
                                     <Grid item xs={6} sm={3}>
                                         <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="h4" color="primary">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="text.primary">
                                                 {syncResult.total_cards}
                                             </Typography>
                                             <Typography variant="body2">Total Cards</Typography>
@@ -387,7 +387,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                     <Grid item xs={6} sm={3}>
                                         <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="h4" color="success.main">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="success.main">
                                                 {syncResult.successful_updates}
                                             </Typography>
                                             <Typography variant="body2">Updated</Typography>
@@ -395,7 +395,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                     <Grid item xs={6} sm={3}>
                                         <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="h4" color="error.main">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="error.main">
                                                 {syncResult.failed_updates}
                                             </Typography>
                                             <Typography variant="body2">Failed</Typography>
@@ -403,7 +403,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                     <Grid item xs={6} sm={3}>
                                         <Box sx={{ textAlign: 'center' }}>
-                                            <Typography variant="h4" color="text.secondary">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="text.secondary">
                                                 {syncResult.skipped_cards}
                                             </Typography>
                                             <Typography variant="body2">Skipped</Typography>
@@ -422,7 +422,7 @@ export default function AdminPricingUpdatePage() {
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <TrendingUp color="success" />
                                             <Box>
-                                                <Typography variant="h6" color="success.main">
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="success.main">
                                                     {syncResult.pricing_summary.cards_with_increases}
                                                 </Typography>
                                                 <Typography variant="body2">Price Increases</Typography>
@@ -433,7 +433,7 @@ export default function AdminPricingUpdatePage() {
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <TrendingDown color="error" />
                                             <Box>
-                                                <Typography variant="h6" color="error.main">
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="error.main">
                                                     {syncResult.pricing_summary.cards_with_decreases}
                                                 </Typography>
                                                 <Typography variant="body2">Price Decreases</Typography>
@@ -442,7 +442,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
                                         <Box>
-                                            <Typography variant="h6">
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="success.main">
                                                 {formatCurrency(syncResult.pricing_summary.total_market_value)}
                                             </Typography>
                                             <Typography variant="body2">Total Market Value</Typography>
@@ -450,7 +450,7 @@ export default function AdminPricingUpdatePage() {
                                     </Grid>
                                     <Grid item xs={12} sm={6} md={3}>
                                         <Box>
-                                            <Typography variant="h6" color={
+                                            <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color={
                                                 syncResult.pricing_summary.avg_price_change > 0 ? 'success.main' :
                                                     syncResult.pricing_summary.avg_price_change < 0 ? 'error.main' : 'text.primary'
                                             }>
@@ -464,7 +464,7 @@ export default function AdminPricingUpdatePage() {
 
                                 {/* Highest Value Card */}
                                 {syncResult.pricing_summary.highest_value_card && (
-                                    <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                                    <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1 }}>
                                         <Typography variant="body1">
                                             <strong>Highest Value Card:</strong> {syncResult.pricing_summary.highest_value_card.name}
                                             {' - '}{formatCurrency(syncResult.pricing_summary.highest_value_card.price)}

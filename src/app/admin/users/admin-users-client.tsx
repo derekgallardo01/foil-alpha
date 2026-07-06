@@ -423,7 +423,7 @@ export default function AdminUsersClient() {
       renderCell: (params: GridRenderCellParams<User>) => (
         <Chip
           label={`$${params.row.available_balance?.toFixed(2) || '0.00'}`}
-          color={Number(params.row.available_balance) > 0 ? "primary" : "default"}
+          color={Number(params.row.available_balance) > 0 ? "success" : "default"}
           size="small"
         />
       ),
@@ -436,7 +436,7 @@ export default function AdminUsersClient() {
           width: 180,
           sortable: true,
           renderCell: (params: GridRenderCellParams<User>) => (
-            <Typography>
+            <Typography variant="mono">
               {params.row.registeredAt ? new Date(params.row.registeredAt).toLocaleString() : "Never"}
             </Typography>
           ),
@@ -451,7 +451,7 @@ export default function AdminUsersClient() {
           width: 180,
           sortable: true,
           renderCell: (params: GridRenderCellParams<User>) => (
-            <Typography>
+            <Typography variant="mono">
               {params.row.lastLoginAt ? new Date(params.row.lastLoginAt).toLocaleString() : "Never"}
             </Typography>
           ),
@@ -480,14 +480,7 @@ export default function AdminUsersClient() {
             onClick={() => handleOpenWalletDialog(params.row)}
             disabled={rowLoading[Number(params.id)] || actionLoading}
             startIcon={<AccountBalanceWalletIcon />}
-            sx={{
-              borderColor: "#9B5Cff",
-              color: "#9B5Cff",
-              "&:hover": {
-                borderColor: "#9B5Cff",
-                backgroundColor: "rgba(155, 92, 255, 0.1)"
-              }
-            }}
+            color="primary"
           >
             Wallet
           </Button>
@@ -558,17 +551,26 @@ export default function AdminUsersClient() {
       <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
           <Paper
-            elevation={6}
+            variant="outlined"
             sx={{
               p: 4,
-              bgcolor: "grey.900",
-              backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+              border: 1,
+              borderColor: "divider",
               borderRadius: 2,
-              boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
               overflow: "visible",
             }}
           >
-            <Typography variant="h4" sx={{ mb: 3, textAlign: "center", color: "text.primary" }}>
+            <Typography
+              variant="h4"
+              sx={{
+                mb: 3,
+                textAlign: "center",
+                background: (theme) => theme.foil.gradient,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
               Admin - Users & Wallets
             </Typography>
 
@@ -576,26 +578,26 @@ export default function AdminUsersClient() {
             <motion.div variants={itemVariants}>
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} md={4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(155, 92, 255, 0.2)" }}>
+                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#9B5Cff" }}>Total Users</Typography>
-                      <Typography variant="h4" color="text.primary">{stats.total}</Typography>
+                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Total Users</Typography>
+                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "text.primary" }}>{stats.total}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(155, 92, 255, 0.2)" }}>
+                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#9B5Cff" }}>Active</Typography>
-                      <Typography variant="h4" color="text.primary">{stats.active}</Typography>
+                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Active</Typography>
+                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "success.main" }}>{stats.active}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Card sx={{ bgcolor: "grey.800", border: "1px solid rgba(155, 92, 255, 0.2)" }}>
+                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: "#9B5Cff" }}>Frozen Funds</Typography>
-                      <Typography variant="h4" color="text.primary">${stats.totalFrozen.toFixed(2)}</Typography>
+                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Frozen Funds</Typography>
+                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "warning.main" }}>${stats.totalFrozen.toFixed(2)}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -606,13 +608,13 @@ export default function AdminUsersClient() {
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
               <motion.div variants={itemVariants}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 2 }}>
-                  <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={handleAddUser} disabled={actionLoading}>
+                  <Button variant="contained" color="primary" onClick={handleAddUser} disabled={actionLoading}>
                     Add User
                   </Button>
-                  <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={fetchUsers} disabled={loading || actionLoading}>
+                  <Button variant="contained" color="primary" onClick={fetchUsers} disabled={loading || actionLoading}>
                     Refresh
                   </Button>
-                  <Button variant="contained" sx={{ bgcolor: "#9B5Cff", color: "grey.900" }} onClick={exportToCSV} disabled={actionLoading}>
+                  <Button variant="contained" color="primary" onClick={exportToCSV} disabled={actionLoading}>
                     Export to CSV
                   </Button>
                 </Box>
@@ -658,12 +660,13 @@ export default function AdminUsersClient() {
                     disableRowSelectionOnClick
                     sx={{
                       color: "text.secondary",
-                      "& .MuiDataGrid-columnHeaders": { bgcolor: "grey.800" },
-                      "& .MuiDataGrid-virtualScroller": { bgcolor: "grey.900" },
-                      "& .MuiDataGrid-footerContainer": { bgcolor: "grey.900" },
-                      "& .MuiDataGrid-row": { "&:hover": { bgcolor: "grey.800" } },
-                      "& .MuiDataGrid-cell": { borderColor: "grey.800" },
-                      backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                      border: 1,
+                      borderColor: "divider",
+                      "& .MuiDataGrid-columnHeaders": { bgcolor: "background.paper", color: "text.primary" },
+                      "& .MuiDataGrid-virtualScroller": { bgcolor: "background.default" },
+                      "& .MuiDataGrid-footerContainer": { bgcolor: "background.paper", borderColor: "divider" },
+                      "& .MuiDataGrid-row": { "&:hover": { bgcolor: "action.hover" } },
+                      "& .MuiDataGrid-cell": { borderColor: "divider" },
                     }}
                   />
                 </Box>
@@ -680,17 +683,17 @@ export default function AdminUsersClient() {
         maxWidth="md"
         fullWidth
         PaperProps={{
+          variant: "outlined",
           sx: {
-            bgcolor: "grey.900",
-            backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+            border: 1,
+            borderColor: "divider",
             borderRadius: 2,
-            boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
           }
         }}
       >
         <DialogTitle>
           Wallet Management - {selectedUserForWallet?.name}
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="mono" component="div" sx={{ fontSize: "0.875rem", color: "text.secondary" }}>
             Balance: ${selectedUserForWallet?.balance?.toFixed(2) || '0.00'} |
             Available: ${selectedUserForWallet?.available_balance?.toFixed(2) || '0.00'} |
             Frozen: ${selectedUserForWallet?.frozen_balance?.toFixed(2) || '0.00'}
@@ -762,14 +765,10 @@ export default function AdminUsersClient() {
 
                 <Button
                   variant="contained"
+                  color="primary"
                   onClick={handleWalletOperation}
                   disabled={walletLoading || walletOperation.amount <= 0}
                   startIcon={walletLoading ? <CircularProgress size={20} /> : <AccountBalanceWalletIcon />}
-                  sx={{
-                    bgcolor: "#9B5Cff",
-                    color: "grey.900",
-                    "&:hover": { bgcolor: "rgba(155, 92, 255, 0.8)" }
-                  }}
                 >
                   {walletLoading ? 'Processing...' : walletOperation.operation.replace('_', ' ')}
                 </Button>
@@ -783,7 +782,7 @@ export default function AdminUsersClient() {
                 {walletTransactions.length > 0 ? (
                   <List>
                     {walletTransactions.map((transaction) => (
-                      <ListItem key={transaction.id} sx={{ bgcolor: 'grey.800', mb: 1, borderRadius: 1 }}>
+                      <ListItem key={transaction.id} sx={{ bgcolor: 'background.default', border: 1, borderColor: 'divider', mb: 1, borderRadius: 1 }}>
                         <ListItemText
                           primary={
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -794,7 +793,7 @@ export default function AdminUsersClient() {
                                 )}
                               </Typography>
                               <Typography
-                                variant="body2"
+                                variant="mono"
                                 color={transaction.amount >= 0 ? 'success.main' : 'error.main'}
                                 fontWeight="bold"
                               >
@@ -807,10 +806,10 @@ export default function AdminUsersClient() {
                               <Typography variant="caption" display="block">
                                 {transaction.description}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="mono" sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
                                 Balance: ${transaction.balance_before.toFixed(2)} → ${transaction.balance_after.toFixed(2)}
                               </Typography>
-                              <Typography variant="caption" display="block" color="text.secondary">
+                              <Typography variant="mono" display="block" sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
                                 {new Date(transaction.created_at).toLocaleString()}
                               </Typography>
                             </Box>
@@ -906,7 +905,7 @@ export default function AdminUsersClient() {
           </Button>
           <Button
             variant="contained"
-            sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
+            color="primary"
             onClick={handleSaveUser}
             disabled={actionLoading}
           >
@@ -923,7 +922,7 @@ export default function AdminUsersClient() {
             <CircularProgress />
           ) : activityLog.length > 0 ? (
             activityLog.map((entry) => (
-              <Typography key={entry.id} sx={{ color: "text.secondary", mb: 1 }}>
+              <Typography key={entry.id} variant="mono" sx={{ display: "block", color: "text.secondary", mb: 1 }}>
                 {entry.action} - {new Date(entry.timestamp).toLocaleString()}
               </Typography>
             ))
@@ -948,7 +947,7 @@ export default function AdminUsersClient() {
           </Button>
           <Button
             variant="contained"
-            sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
+            color="primary"
             onClick={() => {
               confirmAction?.callback();
               setConfirmAction(null);

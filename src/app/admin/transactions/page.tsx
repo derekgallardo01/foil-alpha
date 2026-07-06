@@ -303,9 +303,9 @@ const AdminTransactionsPage = () => {
     return (
         <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B5Cff' }}>
+                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
                         <TransactionIcon />
                         Transaction Management
                     </Typography>
@@ -313,17 +313,13 @@ const AdminTransactionsPage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Button
                         variant="outlined"
+                        color="primary"
                         startIcon={<ExportIcon />}
                         onClick={exportTransactions}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: '#9B5Cff',
-                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                        }}
                     >
                         Export CSV
                     </Button>
-                    <IconButton onClick={fetchTransactions} title="Refresh" sx={{ color: '#9B5Cff' }}>
+                    <IconButton onClick={fetchTransactions} title="Refresh" sx={{ color: 'primary.main' }}>
                         <RefreshIcon />
                     </IconButton>
                 </Box>
@@ -340,9 +336,9 @@ const AdminTransactionsPage = () => {
                 {/* Statistics Cards - Using actual data from API */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
                                     {stats.totalSales.toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -352,9 +348,9 @@ const AdminTransactionsPage = () => {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: 'warning.main' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'warning.main' }}>
                                     {stats.pendingTransactions.toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -364,9 +360,9 @@ const AdminTransactionsPage = () => {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: 'success.main' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
                                     {transactions.length.toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -376,9 +372,9 @@ const AdminTransactionsPage = () => {
                         </Card>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                        <Card>
                             <CardContent>
-                                <Typography variant="h4" sx={{ color: '#9B5Cff' }}>
+                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'success.main' }}>
                                     {formatPrice(stats.monthlyRevenue)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -390,7 +386,7 @@ const AdminTransactionsPage = () => {
                 </Grid>
 
                 {/* Filters */}
-                <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                <Paper variant="outlined" sx={{ p: 2, mb: 3, border: 1, borderColor: 'divider' }}>
                     <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12} md={3}>
                             <TextField
@@ -452,9 +448,9 @@ const AdminTransactionsPage = () => {
                         mb: 3,
                         '& .MuiTab-root': {
                             color: 'text.secondary',
-                            '&.Mui-selected': { color: '#9B5Cff' }
+                            '&.Mui-selected': { color: 'primary.main' }
                         },
-                        '& .MuiTabs-indicator': { backgroundColor: '#9B5Cff' }
+                        '& .MuiTabs-indicator': { backgroundColor: 'primary.main' }
                     }}
                 >
                     <Tab label={`All (${transactions.length})`} />
@@ -464,20 +460,20 @@ const AdminTransactionsPage = () => {
                 </Tabs>
 
                 {/* Transactions Table */}
-                <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <TableContainer>
+                <Paper variant="outlined" sx={{ border: 1, borderColor: 'divider' }}>
+                    <TableContainer sx={{ bgcolor: 'background.default' }}>
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>ID</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Card</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Buyer</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Seller</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Amount</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Type</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Status</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Date</TableCell>
-                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>Actions</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>ID</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Card</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Buyer</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Seller</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Amount</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Type</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Status</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Date</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -493,7 +489,7 @@ const AdminTransactionsPage = () => {
                                     paginatedTransactions.map((transaction) => (
                                         <TableRow key={transaction.id} hover>
                                             <TableCell sx={{ color: 'text.primary' }}>
-                                                #{transaction.id}
+                                                <Typography variant="mono">#{transaction.id}</Typography>
                                             </TableCell>
                                             <TableCell sx={{ color: 'text.primary' }}>
                                                 {transaction.userCard?.card ? (
@@ -528,8 +524,10 @@ const AdminTransactionsPage = () => {
                                                     {transaction.seller?.email || ''}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                                                {formatPrice(transaction.amount)}
+                                            <TableCell>
+                                                <Typography variant="mono" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                                                    {formatPrice(transaction.amount)}
+                                                </Typography>
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
@@ -546,7 +544,7 @@ const AdminTransactionsPage = () => {
                                                 />
                                             </TableCell>
                                             <TableCell sx={{ color: 'text.secondary' }}>
-                                                <Typography variant="caption">
+                                                <Typography variant="mono" sx={{ fontSize: 12 }} color="text.secondary">
                                                     {formatDateTime(transaction.created_at)}
                                                 </Typography>
                                             </TableCell>
@@ -554,7 +552,7 @@ const AdminTransactionsPage = () => {
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => showTransactionDetails(transaction)}
-                                                    sx={{ color: '#9B5Cff' }}
+                                                    sx={{ color: 'primary.main' }}
                                                 >
                                                     <ViewIcon />
                                                 </IconButton>
@@ -577,7 +575,8 @@ const AdminTransactionsPage = () => {
                         }}
                         rowsPerPageOptions={[10, 25, 50, 100]}
                         sx={{
-                            borderTop: '1px solid rgba(155, 92, 255, 0.2)',
+                            borderTop: 1,
+                            borderColor: 'divider',
                             '.MuiTablePagination-toolbar': { color: 'text.secondary' },
                             '.MuiTablePagination-selectLabel': { color: 'text.secondary' },
                             '.MuiTablePagination-displayedRows': { color: 'text.secondary' },
@@ -594,14 +593,15 @@ const AdminTransactionsPage = () => {
                 fullWidth
                 PaperProps={{
                     sx: {
-                        bgcolor: 'grey.900',
-                        border: '1px solid rgba(155, 92, 255, 0.2)',
+                        bgcolor: 'background.paper',
+                        border: 1,
+                        borderColor: 'divider',
                     }
                 }}
             >
                 {selectedTransaction && (
                     <>
-                        <DialogTitle sx={{ color: '#9B5Cff' }}>
+                        <DialogTitle sx={{ color: 'primary.main' }}>
                             Transaction #{selectedTransaction.id}
                         </DialogTitle>
                         <DialogContent>
@@ -625,7 +625,7 @@ const AdminTransactionsPage = () => {
                                     </Grid>
                                     <Grid item xs={12}>
                                         <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
-                                        <Typography variant="h5" sx={{ color: 'primary.main' }}>
+                                        <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700, color: 'text.primary' }}>
                                             {formatPrice(selectedTransaction.amount)}
                                         </Typography>
                                     </Grid>
@@ -645,7 +645,7 @@ const AdminTransactionsPage = () => {
                                     </Grid>
                                     <Grid item xs={12}>
                                         <Typography variant="subtitle2" color="text.secondary">Created</Typography>
-                                        <Typography>{formatDateTime(selectedTransaction.created_at)}</Typography>
+                                        <Typography variant="mono" sx={{ fontSize: 13 }}>{formatDateTime(selectedTransaction.created_at)}</Typography>
                                     </Grid>
                                     {selectedTransaction.notes && (
                                         <Grid item xs={12}>

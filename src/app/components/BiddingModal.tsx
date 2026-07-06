@@ -286,16 +286,16 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                     <Typography variant="body2" color="text.secondary">
                                         Reserve Price:
                                     </Typography>
-                                    <Typography variant="body1">
+                                    <Typography variant="mono" color="text.primary">
                                         {formatPrice(userCard.reserve_price)}
                                     </Typography>
                                 </Box>
 
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
                                     <Typography variant="body2" color="text.secondary">
                                         Current Highest Bid:
                                     </Typography>
-                                    <Typography variant="h6" color="primary.main">
+                                    <Typography variant="mono" sx={{ color: 'success.main', fontSize: 18, fontWeight: 700 }}>
                                         {formatPrice(userCard.current_highest_bid || userCard.reserve_price)}
                                     </Typography>
                                 </Box>
@@ -304,7 +304,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                     <Typography variant="body2" color="text.secondary">
                                         Total Bids:
                                     </Typography>
-                                    <Typography variant="body1">
+                                    <Typography variant="mono" color="text.primary">
                                         {userCard.bid_count}
                                     </Typography>
                                 </Box>
@@ -417,7 +417,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                                                     <Chip label="Highest" color="primary" size="small" />
                                                                 )}
                                                             </Box>
-                                                            <Typography variant="h6" color="primary.main">
+                                                            <Typography variant="mono" sx={{ color: 'text.primary', fontSize: 16, fontWeight: 700 }}>
                                                                 {formatPrice(bid.amount)}
                                                             </Typography>
                                                         </Box>

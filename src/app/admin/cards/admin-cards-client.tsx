@@ -264,11 +264,11 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
 
     return (
         <Paper
-            elevation={3}
+            variant="outlined"
             sx={{
                 p: 3,
                 mb: 3,
-                bgcolor: 'grey.800',
+                bgcolor: 'background.paper',
                 borderRadius: 2,
                 border: '1px solid',
                 borderColor: progress.status === 'error' ? 'error.main' :
@@ -280,7 +280,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                     <Typography variant="h6" sx={{ color: 'text.primary' }}>
                         {progress.currentOperation}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="mono" sx={{ color: 'text.secondary' }}>
                         {progress.current} / {progress.total} ({progress.percentage}%)
                     </Typography>
                 </Box>
@@ -291,7 +291,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                     sx={{
                         height: 8,
                         borderRadius: 4,
-                        bgcolor: 'grey.700',
+                        bgcolor: 'background.default',
                         '& .MuiLinearProgress-bar': {
                             bgcolor: progress.status === 'error' ? 'error.main' :
                                 progress.status === 'completed' ? 'success.main' : 'primary.main',
@@ -309,7 +309,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                             <Typography variant="caption" color="text.secondary">
                                 Elapsed Time
                             </Typography>
-                            <Typography variant="body2" color="text.primary">
+                            <Typography variant="mono" color="text.primary">
                                 {formatTime(progress.elapsedTime)}
                             </Typography>
                         </Box>
@@ -324,7 +324,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                                 <Typography variant="caption" color="text.secondary">
                                     Estimated Remaining
                                 </Typography>
-                                <Typography variant="body2" color="text.primary">
+                                <Typography variant="mono" color="text.primary">
                                     {formatTime(progress.estimatedTimeRemaining)}
                                 </Typography>
                             </Box>
@@ -339,7 +339,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                             <Typography variant="caption" color="text.secondary">
                                 Completed
                             </Typography>
-                            <Typography variant="body2" color="success.main">
+                            <Typography variant="mono" color="success.main">
                                 {progress.completed}
                             </Typography>
                         </Box>
@@ -354,7 +354,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                                 <Typography variant="caption" color="text.secondary">
                                     Issues
                                 </Typography>
-                                <Typography variant="body2" color="error.main">
+                                <Typography variant="mono" color="error.main">
                                     {progress.failed + progress.skipped}
                                 </Typography>
                             </Box>
@@ -457,21 +457,20 @@ function StatsCard({ icon, title, value, subtitle, color = "primary" }: {
 }) {
     return (
         <Paper
-            elevation={3}
+            variant="outlined"
             sx={{
                 p: 2.5,
                 borderRadius: 2,
-                bgcolor: 'grey.900',
+                bgcolor: 'background.paper',
                 border: '1px solid',
-                borderColor: 'grey.800',
+                borderColor: 'divider',
                 transition: 'all 0.3s ease',
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
                 '&:hover': {
                     transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(155, 92, 255, 0.15)',
-                    borderColor: '#9B5Cff'
+                    borderColor: 'primary.main'
                 }
             }}
         >
@@ -491,7 +490,7 @@ function StatsCard({ icon, title, value, subtitle, color = "primary" }: {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                         {title}
                     </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'text.primary', typography: 'mono' }}>
                         {value}
                     </Typography>
                     {subtitle && (
@@ -1119,11 +1118,12 @@ Please try:
                                                 height: '100%',
                                                 position: 'relative',
                                                 transition: 'all 0.3s ease',
-                                                border: selectedCards.has(card.id) ? '2px solid #9B5Cff' : '1px solid transparent',
+                                                border: '2px solid',
+                                                borderColor: selectedCards.has(card.id) ? 'primary.main' : 'transparent',
                                                 opacity: importing ? 0.6 : 1,
                                                 '&:hover': {
                                                     transform: importing ? 'none' : 'translateY(-4px)',
-                                                    boxShadow: importing ? 'none' : '0 8px 24px rgba(0,0,0,0.2)'
+                                                    borderColor: importing ? undefined : (selectedCards.has(card.id) ? 'primary.main' : 'divider')
                                                 }
                                             }}>
                                                 <Checkbox
@@ -1156,7 +1156,7 @@ Please try:
                                                     />
                                                     {/* FIXED: Show market price from V2 API */}
                                                     {card.prices?.market && (
-                                                        <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                                                        <Typography variant="mono" sx={{ mt: 1, fontWeight: 'bold', color: 'success.main' }}>
                                                             ${card.prices.market.toFixed(2)}
                                                         </Typography>
                                                     )}
@@ -1212,7 +1212,8 @@ Please try:
                                     variant="contained"
                                     onClick={importEntireSet}
                                     disabled={importing || !selectedSet}
-                                    sx={{ height: '56px', bgcolor: '#9B5Cff', color: 'grey.900' }}
+                                    color="primary"
+                                    sx={{ height: '56px' }}
                                     startIcon={importing ? <CircularProgress size={20} /> : <DownloadIcon />}
                                 >
                                     {importing ? 'Importing...' : 'Import Entire Set'}
@@ -1239,7 +1240,7 @@ Please try:
                         variant="contained"
                         onClick={importSelectedCards}
                         disabled={importing || selectedCards.size === 0}
-                        sx={{ bgcolor: '#9B5Cff', color: 'grey.900' }}
+                        color="primary"
                         startIcon={importing ? <CircularProgress size={20} /> : <DownloadIcon />}
                     >
                         {importing ? 'Importing...' : `Import ${selectedCards.size} Card${selectedCards.size !== 1 ? 's' : ''}`}
@@ -1539,7 +1540,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                                 <Typography variant="h6" color="error" sx={{ mb: 2 }}>
                                     Errors ({formatNumber(syncResults.errors.length)})
                                 </Typography>
-                                <Box sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'grey.900', p: 2, borderRadius: 1 }}>
+                                <Box sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'background.default', p: 2, borderRadius: 1, border: 1, borderColor: 'divider' }}>
                                     {syncResults.errors.slice(0, 10).map((error: any, index: number) => (
                                         <Alert severity="error" key={index} sx={{ mb: 1 }}>
                                             <Typography variant="body2">
@@ -1579,7 +1580,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                             variant="contained"
                             onClick={handleStartSync}
                             disabled={loading}
-                            sx={{ bgcolor: '#9B5Cff', color: 'grey.900' }}
+                            color="primary"
                             startIcon={loading ? <CircularProgress size={20} /> : <Sync />}
                         >
                             {loading ? 'Syncing...' : 'Start Sync'}
@@ -1830,7 +1831,7 @@ export default function AdminCardsClient() {
         sortable: true,
         renderCell: (params: GridRenderCellParams<Card>) => (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                <Typography variant="mono" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                     {formatPrice(params.row.market_price)}
                 </Typography>
                 {params.row.price_trend && (
@@ -1862,7 +1863,7 @@ export default function AdminCardsClient() {
             width: 80,
             sortable: true,
             renderCell: (params: GridRenderCellParams<Card>) => (
-                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                <Typography variant="mono" sx={{ fontWeight: 'medium' }}>
                     {params.row.id}
                 </Typography>
             )
@@ -2275,13 +2276,13 @@ export default function AdminCardsClient() {
             <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1 }}>
                 <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
                     <Paper
-                        elevation={6}
+                        variant="outlined"
                         sx={{
                             p: 4,
-                            bgcolor: "grey.900",
-                            backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                            bgcolor: "background.paper",
                             borderRadius: 3,
-                            boxShadow: "0 0 20px rgba(155, 92, 255, 0.15)",
+                            border: 1,
+                            borderColor: "divider",
                             overflow: "visible",
                         }}
                     >
@@ -2291,7 +2292,18 @@ export default function AdminCardsClient() {
                             </motion.div>
                         </Box>
 
-                        <Typography variant="h4" sx={{ mb: 4, textAlign: "center", color: "text.primary", fontWeight: 'bold' }}>
+                        <Typography
+                            variant="h4"
+                            sx={{
+                                mb: 4,
+                                textAlign: "center",
+                                fontWeight: 'bold',
+                                background: (theme) => theme.foil.gradient,
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                            }}
+                        >
                             Admin - Card Management
                         </Typography>
 
@@ -2374,7 +2386,7 @@ export default function AdminCardsClient() {
                                         <Tooltip title="Import cards directly from Pokémon TCG API with progress tracking">
                                             <Button
                                                 variant="contained"
-                                                sx={{ bgcolor: "#ff9696", color: "grey.900", '&:hover': { bgcolor: '#ff7a7a' } }}
+                                                color="primary"
                                                 onClick={() => setPokemonImportOpen(true)}
                                                 disabled={actionLoading}
                                                 startIcon={<DownloadIcon />}
@@ -2387,7 +2399,7 @@ export default function AdminCardsClient() {
                                         <Tooltip title="Sync market prices for all cards with progress tracking">
                                             <Button
                                                 variant="contained"
-                                                sx={{ bgcolor: "#ff9696", color: "grey.900", '&:hover': { bgcolor: '#ff7a7a' } }}
+                                                color="secondary"
                                                 onClick={() => setPriceSyncOpen(true)}
                                                 disabled={actionLoading}
                                                 startIcon={<Sync />}
@@ -2397,8 +2409,7 @@ export default function AdminCardsClient() {
                                         </Tooltip>
                                         <Tooltip title="Refresh the card list">
                                             <Button
-                                                variant="contained"
-                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                                                variant="outlined"
                                                 onClick={fetchCards}
                                                 disabled={loading || actionLoading}
                                                 startIcon={<RefreshIcon />}
@@ -2412,7 +2423,7 @@ export default function AdminCardsClient() {
 
                             {/* Column Visibility Toggle */}
                             <motion.div variants={itemVariants}>
-                                <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.800', borderRadius: 2 }}>
+                                <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'background.paper', borderRadius: 2, border: 1, borderColor: 'divider' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                                         <VisibilityIcon sx={{ color: 'text.secondary' }} />
                                         <Typography variant="subtitle1" sx={{ color: "text.primary", fontWeight: 'medium' }}>
@@ -2458,7 +2469,7 @@ export default function AdminCardsClient() {
 
                             {/* Filters */}
                             <motion.div variants={itemVariants}>
-                                <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.800', borderRadius: 2 }}>
+                                <Paper variant="outlined" sx={{ p: 3, mb: 3, bgcolor: 'background.paper', borderRadius: 2, border: 1, borderColor: 'divider' }}>
                                     <Typography variant="subtitle1" sx={{ color: "text.primary", fontWeight: 'medium', mb: 2 }}>
                                         Filters
                                     </Typography>
@@ -2539,14 +2550,15 @@ export default function AdminCardsClient() {
                                 <motion.div variants={itemVariants}>
                                     <Toolbar
                                         sx={{
-                                            bgcolor: "grey.800",
+                                            bgcolor: "background.paper",
                                             mb: 3,
                                             borderRadius: 2,
-                                            border: "2px solid #9B5Cff",
+                                            border: 1,
+                                            borderColor: "divider",
                                         }}
                                     >
                                         <Typography sx={{ flex: "1 1 100%", color: "text.primary", fontWeight: 'medium' }}>
-                                            {formatNumber(selected.length)} {selected.length === 1 ? 'card' : 'cards'} selected
+                                            <Typography component="span" variant="mono" sx={{ fontWeight: 'medium' }}>{formatNumber(selected.length)}</Typography> {selected.length === 1 ? 'card' : 'cards'} selected
                                         </Typography>
                                         <Stack direction="row" spacing={1}>
                                             <Tooltip title="Update prices for selected cards with progress tracking">
@@ -2581,12 +2593,13 @@ export default function AdminCardsClient() {
                             {/* Cards DataGrid */}
                             <motion.div variants={itemVariants}>
                                 <Paper
+                                    variant="outlined"
                                     sx={{
-                                        bgcolor: 'grey.800',
+                                        bgcolor: 'background.paper',
                                         borderRadius: 2,
                                         overflow: 'hidden',
                                         border: '1px solid',
-                                        borderColor: 'grey.700'
+                                        borderColor: 'divider'
                                     }}
                                 >
                                     <Box sx={{
@@ -2621,9 +2634,9 @@ export default function AdminCardsClient() {
                                                     fontSize: '0.875rem'
                                                 },
                                                 "& .MuiDataGrid-columnHeaders": {
-                                                    bgcolor: "grey.900",
+                                                    bgcolor: "background.paper",
                                                     borderBottom: '2px solid',
-                                                    borderColor: 'grey.700',
+                                                    borderColor: 'divider',
                                                     minHeight: '56px !important',
                                                     '& .MuiDataGrid-columnHeader': {
                                                         py: 2,
@@ -2635,26 +2648,26 @@ export default function AdminCardsClient() {
                                                     }
                                                 },
                                                 "& .MuiDataGrid-virtualScroller": {
-                                                    bgcolor: "grey.800",
+                                                    bgcolor: "background.default",
                                                     '&::-webkit-scrollbar': {
                                                         width: '8px',
                                                         height: '8px',
                                                     },
                                                     '&::-webkit-scrollbar-track': {
-                                                        bgcolor: 'grey.900',
+                                                        bgcolor: 'background.default',
                                                     },
                                                     '&::-webkit-scrollbar-thumb': {
-                                                        bgcolor: 'grey.600',
+                                                        bgcolor: 'divider',
                                                         borderRadius: '4px',
                                                         '&:hover': {
-                                                            bgcolor: 'grey.500',
+                                                            bgcolor: 'text.disabled',
                                                         }
                                                     }
                                                 },
                                                 "& .MuiDataGrid-footerContainer": {
-                                                    bgcolor: "grey.900",
+                                                    bgcolor: "background.paper",
                                                     borderTop: '2px solid',
-                                                    borderColor: 'grey.700',
+                                                    borderColor: 'divider',
                                                     minHeight: '56px',
                                                     '& .MuiTablePagination-toolbar': {
                                                         minHeight: '56px',
@@ -2662,18 +2675,18 @@ export default function AdminCardsClient() {
                                                 },
                                                 "& .MuiDataGrid-row": {
                                                     "&:hover": {
-                                                        bgcolor: "rgba(155, 92, 255, 0.04)",
+                                                        bgcolor: "action.hover",
                                                         cursor: 'pointer'
                                                     },
                                                     "&.Mui-selected": {
-                                                        bgcolor: "rgba(155, 92, 255, 0.08)",
+                                                        bgcolor: "action.selected",
                                                         "&:hover": {
-                                                            bgcolor: "rgba(155, 92, 255, 0.12)"
+                                                            bgcolor: "action.selected"
                                                         }
                                                     }
                                                 },
                                                 "& .MuiDataGrid-cell": {
-                                                    borderColor: "grey.700",
+                                                    borderColor: "divider",
                                                     py: 2,
                                                     px: 2,
                                                     display: 'flex',
@@ -2689,20 +2702,20 @@ export default function AdminCardsClient() {
                                                 "& .MuiCheckbox-root": {
                                                     color: "text.secondary",
                                                     "&.Mui-checked": {
-                                                        color: "#9B5Cff"
+                                                        color: "primary.main"
                                                     }
                                                 },
                                                 "& .MuiDataGrid-columnSeparator": {
-                                                    color: "grey.700",
+                                                    color: "divider",
                                                     '&:hover': {
-                                                        color: 'grey.500'
+                                                        color: 'text.disabled'
                                                     }
                                                 },
                                                 "& .MuiTablePagination-root": {
                                                     color: "text.primary"
                                                 },
                                                 "& .MuiDataGrid-overlay": {
-                                                    bgcolor: 'grey.800'
+                                                    bgcolor: 'background.paper'
                                                 },
                                                 "& .MuiDataGrid-row .MuiDataGrid-cell": {
                                                     '&[data-field="name"]': {
@@ -2865,7 +2878,7 @@ export default function AdminCardsClient() {
                             </Grid>
                             {editCard.image_url && (
                                 <Grid item xs={12}>
-                                    <Paper sx={{ p: 2, bgcolor: 'grey.800', borderRadius: 2 }}>
+                                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2, border: 1, borderColor: 'divider' }}>
                                         <Typography variant="subtitle2" sx={{ mb: 2, color: 'text.secondary' }}>
                                             Card Preview
                                         </Typography>
@@ -2899,7 +2912,7 @@ export default function AdminCardsClient() {
                     </Button>
                     <Button
                         variant="contained"
-                        sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                        color="primary"
                         onClick={handleSaveCard}
                         disabled={actionLoading}
                         startIcon={actionLoading ? <CircularProgress size={20} /> : null}
@@ -2934,8 +2947,10 @@ export default function AdminCardsClient() {
                             sx={{
                                 mt: 1,
                                 p: 1,
-                                bgcolor: 'grey.800',
+                                bgcolor: 'background.default',
                                 borderRadius: 1,
+                                border: 1,
+                                borderColor: 'divider',
                                 fontFamily: 'monospace',
                                 fontSize: '0.85rem'
                             }}
@@ -2970,7 +2985,7 @@ export default function AdminCardsClient() {
                     </Button>
                     <Button
                         variant="contained"
-                        sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
+                        color="primary"
                         onClick={handleBulkCreate}
                         disabled={actionLoading || !bulkCardsText.trim()}
                         startIcon={actionLoading ? <CircularProgress size={20} /> : <UploadIcon />}

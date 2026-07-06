@@ -196,8 +196,17 @@ export default function AdminWalletManagement() {
     return (
         <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
+            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography
+                    variant="h4"
+                    sx={{
+                        fontWeight: 800,
+                        background: (theme) => theme.foil.gradient,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                    }}
+                >
                     Platform Wallet Management
                 </Typography>
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
@@ -205,11 +214,6 @@ export default function AdminWalletManagement() {
                         variant="outlined"
                         startIcon={<Refresh />}
                         onClick={fetchWalletData}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: '#9B5Cff',
-                            '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                        }}
                     >
                         Refresh
                     </Button>
@@ -217,11 +221,6 @@ export default function AdminWalletManagement() {
                         variant="contained"
                         startIcon={<MonetizationOn />}
                         onClick={() => setAdjustmentDialog(true)}
-                        sx={{
-                            bgcolor: '#9B5Cff',
-                            color: 'grey.900',
-                            '&:hover': { bgcolor: 'rgba(155, 92, 255, 0.8)' }
-                        }}
                     >
                         Manual Adjustment
                     </Button>
@@ -237,16 +236,16 @@ export default function AdminWalletManagement() {
                     <Grid container spacing={3}>
                         {/* Wallet Overview */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <AccountBalance />
                                         Platform Wallet Overview
                                     </Typography>
                                     <Grid container spacing={3}>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'rgba(76, 175, 80, 0.1)', borderRadius: 2 }}>
-                                                <Typography variant="h3" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 38, color: 'success.main', fontWeight: 700 }}>
                                                     {formatCurrency(data.admin_wallet.balance)}
                                                 </Typography>
                                                 <Typography variant="body1" color="text.primary" fontWeight="bold">
@@ -258,8 +257,8 @@ export default function AdminWalletManagement() {
                                             </Box>
                                         </Grid>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'rgba(33, 150, 243, 0.1)', borderRadius: 2 }}>
-                                                <Typography variant="h4" sx={{ color: 'info.main', fontWeight: 'bold' }}>
+                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 30, color: 'success.main', fontWeight: 700 }}>
                                                     {formatCurrency(data.admin_wallet.total_commissions)}
                                                 </Typography>
                                                 <Typography variant="body1" color="text.primary" fontWeight="bold">
@@ -271,8 +270,8 @@ export default function AdminWalletManagement() {
                                             </Box>
                                         </Grid>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'rgba(255, 152, 0, 0.1)', borderRadius: 2 }}>
-                                                <Typography variant="h4" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
+                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 30, color: 'success.main', fontWeight: 700 }}>
                                                     {formatCurrency(data.admin_wallet.total_marketplace_sales)}
                                                 </Typography>
                                                 <Typography variant="body1" color="text.primary" fontWeight="bold">
@@ -284,8 +283,8 @@ export default function AdminWalletManagement() {
                                             </Box>
                                         </Grid>
                                         <Grid item xs={12} md={3}>
-                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'rgba(156, 39, 176, 0.1)', borderRadius: 2 }}>
-                                                <Typography variant="h4" sx={{ color: 'secondary.main', fontWeight: 'bold' }}>
+                                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 2 }}>
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 30, color: 'success.main', fontWeight: 700 }}>
                                                     {formatCurrency(data.admin_wallet.total_commissions + data.admin_wallet.total_marketplace_sales)}
                                                 </Typography>
                                                 <Typography variant="body1" color="text.primary" fontWeight="bold">
@@ -303,16 +302,16 @@ export default function AdminWalletManagement() {
 
                         {/* Monthly Stats */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <TrendingUp />
                                         Monthly Performance
                                     </Typography>
                                     <Grid container spacing={2}>
                                         <Grid item xs={6}>
                                             <Box sx={{ textAlign: 'center' }}>
-                                                <Typography variant="h5" color="success.main">
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700 }} color="success.main">
                                                     {formatCurrency(data.stats.monthly_commissions)}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
@@ -322,7 +321,7 @@ export default function AdminWalletManagement() {
                                         </Grid>
                                         <Grid item xs={6}>
                                             <Box sx={{ textAlign: 'center' }}>
-                                                <Typography variant="h5" color="info.main">
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700 }} color="info.main">
                                                     {formatCurrency(data.stats.monthly_marketplace_sales)}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
@@ -331,9 +330,9 @@ export default function AdminWalletManagement() {
                                             </Box>
                                         </Grid>
                                     </Grid>
-                                    <Divider sx={{ my: 2, borderColor: 'rgba(155, 92, 255, 0.2)' }} />
+                                    <Divider sx={{ my: 2 }} />
                                     <Box sx={{ textAlign: 'center' }}>
-                                        <Typography variant="h6" color="text.primary">
+                                        <Typography variant="mono" component="div" sx={{ fontSize: 20, fontWeight: 700 }} color="text.primary">
                                             {formatCurrency(data.stats.daily_average)}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
@@ -346,14 +345,14 @@ export default function AdminWalletManagement() {
 
                         {/* Transaction Summary */}
                         <Grid item xs={12} md={6}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
-                                    <Typography variant="h6" sx={{ color: '#9B5Cff', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Receipt />
                                         Transaction Summary
                                     </Typography>
                                     <Box sx={{ textAlign: 'center', mb: 2 }}>
-                                        <Typography variant="h4" color="text.primary">
+                                        <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700 }} color="text.primary">
                                             {data.stats.total_transactions}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
@@ -380,10 +379,10 @@ export default function AdminWalletManagement() {
 
                         {/* Recent Transactions */}
                         <Grid item xs={12}>
-                            <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                            <Card>
                                 <CardContent>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                        <Typography variant="h6" sx={{ color: '#9B5Cff', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="h6" sx={{ color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Receipt />
                                             Recent Transactions
                                         </Typography>
@@ -391,32 +390,27 @@ export default function AdminWalletManagement() {
                                             variant="outlined"
                                             startIcon={<Download />}
                                             size="small"
-                                            sx={{
-                                                borderColor: '#9B5Cff',
-                                                color: '#9B5Cff',
-                                                '&:hover': { borderColor: '#9B5Cff', backgroundColor: 'rgba(155, 92, 255, 0.1)' }
-                                            }}
                                         >
                                             Export
                                         </Button>
                                     </Box>
-                                    <TableContainer component={Paper} sx={{ bgcolor: 'grey.700', maxHeight: 400 }}>
+                                    <TableContainer component={Paper} sx={{ bgcolor: 'background.default', border: 1, borderColor: 'divider', maxHeight: 400 }}>
                                         <Table stickyHeader>
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Date</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Type</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Amount</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Balance After</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Description</TableCell>
-                                                    <TableCell sx={{ color: '#9B5Cff', fontWeight: 'bold', bgcolor: 'grey.800' }}>Rate</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Date</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Type</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Amount</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Balance After</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Description</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Rate</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
                                                 {data.recent_transactions.map((transaction) => (
                                                     <TableRow key={transaction.id}>
                                                         <TableCell sx={{ color: 'text.secondary' }}>
-                                                            {new Date(transaction.created_at).toLocaleDateString()}
+                                                            <Typography variant="mono" component="span">{new Date(transaction.created_at).toLocaleDateString()}</Typography>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Chip
@@ -429,16 +423,16 @@ export default function AdminWalletManagement() {
                                                             color: transaction.amount >= 0 ? 'success.main' : 'error.main',
                                                             fontWeight: 'bold'
                                                         }}>
-                                                            {transaction.amount >= 0 ? '+' : ''}{formatCurrency(transaction.amount)}
+                                                            <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{transaction.amount >= 0 ? '+' : ''}{formatCurrency(transaction.amount)}</Typography>
                                                         </TableCell>
                                                         <TableCell sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                                                            {formatCurrency(transaction.balance_after)}
+                                                            <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{formatCurrency(transaction.balance_after)}</Typography>
                                                         </TableCell>
                                                         <TableCell sx={{ color: 'text.primary', maxWidth: 300 }}>
                                                             {transaction.description}
                                                         </TableCell>
                                                         <TableCell sx={{ color: 'text.secondary' }}>
-                                                            {transaction.commission_rate ? `${transaction.commission_rate}%` : '-'}
+                                                            <Typography variant="mono" component="span">{transaction.commission_rate ? `${transaction.commission_rate}%` : '-'}</Typography>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -459,7 +453,7 @@ export default function AdminWalletManagement() {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle sx={{ color: '#9B5Cff' }}>
+                <DialogTitle sx={{ color: 'primary.main' }}>
                     Manual Wallet Adjustment
                 </DialogTitle>
                 <DialogContent>

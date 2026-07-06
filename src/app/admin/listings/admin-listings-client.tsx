@@ -338,7 +338,7 @@ export default function AdminListingsClient() {
             renderCell: (params: GridRenderCellParams<Listing>) => (
                 <Box>
                     {params.row.sale_type === 'FIXED' ? (
-                        <Typography variant="body2" fontWeight="bold" color="primary.main">
+                        <Typography variant="mono" fontWeight="bold" color="success.main">
                             {formatPrice(params.row.fixed_price)}
                         </Typography>
                     ) : (
@@ -347,7 +347,7 @@ export default function AdminListingsClient() {
                                 Reserve: {formatPrice(params.row.reserve_price)}
                             </Typography>
                             {params.row.current_highest_bid && (
-                                <Typography variant="body2" fontWeight="bold" color="primary.main">
+                                <Typography variant="mono" fontWeight="bold" color="success.main">
                                     Current: {formatPrice(params.row.current_highest_bid)}
                                 </Typography>
                             )}
@@ -376,7 +376,7 @@ export default function AdminListingsClient() {
             sortable: true,
             renderCell: (params: GridRenderCellParams<Listing>) => (
                 <Box>
-                    <Typography variant="body2">{params.row.bid_count}</Typography>
+                    <Typography variant="mono" color="text.primary">{params.row.bid_count}</Typography>
                     {params.row.sale_type === 'AUCTION' && params.row.time_left_ms && (
                         <Typography variant="caption" color="text.secondary">
                             {formatTimeLeft(params.row.time_left_ms)}
@@ -391,7 +391,7 @@ export default function AdminListingsClient() {
             width: 120,
             sortable: true,
             renderCell: (params: GridRenderCellParams<Listing>) => (
-                <Typography variant="body2">
+                <Typography variant="mono" color="text.secondary">
                     {new Date(params.row.created_at).toLocaleDateString()}
                 </Typography>
             )
@@ -527,13 +527,13 @@ export default function AdminListingsClient() {
             <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
                 <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
                     <Paper
-                        elevation={6}
+                        variant="outlined"
                         sx={{
                             p: 4,
-                            bgcolor: "grey.900",
-                            backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))",
+                            bgcolor: "background.paper",
                             borderRadius: 2,
-                            boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)",
+                            border: 1,
+                            borderColor: "divider",
                             overflow: "visible",
                         }}
                     >
@@ -542,17 +542,27 @@ export default function AdminListingsClient() {
                                 <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} />
                             </motion.div>
                         </Box>
-                        <Typography variant="h4" sx={{ mb: 3, textAlign: "center", color: "text.primary" }}>
+                        <Typography
+                            variant="h4"
+                            sx={{
+                                mb: 3,
+                                textAlign: "center",
+                                background: (theme) => theme.foil.gradient,
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                backgroundClip: "text",
+                            }}
+                        >
                             Admin - Marketplace Listings
                         </Typography>
 
                         {/* Listing Stats Dashboard */}
                         <motion.div variants={itemVariants}>
                             <Box sx={{ mb: 2, display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 2 }}>
-                                <Typography sx={{ color: "text.secondary" }}>Total Listings: {stats.total}</Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Active: {stats.active}</Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Sold: {stats.sold}</Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Total Bids: {stats.totalBids}</Typography>
+                                <Typography sx={{ color: "text.secondary" }}>Total Listings: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.total}</Typography></Typography>
+                                <Typography sx={{ color: "text.secondary" }}>Active: <Typography component="span" variant="mono" sx={{ color: "success.main" }}>{stats.active}</Typography></Typography>
+                                <Typography sx={{ color: "text.secondary" }}>Sold: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.sold}</Typography></Typography>
+                                <Typography sx={{ color: "text.secondary" }}>Total Bids: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.totalBids}</Typography></Typography>
                             </Box>
                         </motion.div>
 
@@ -561,7 +571,7 @@ export default function AdminListingsClient() {
                                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 2 }}>
                                     <Button
                                         variant="contained"
-                                        sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
+                                        color="primary"
                                         onClick={handleCreateListing}
                                         disabled={actionLoading}
                                         startIcon={<AddIcon />}
@@ -570,7 +580,7 @@ export default function AdminListingsClient() {
                                     </Button>
                                     <Button
                                         variant="contained"
-                                        sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
+                                        color="primary"
                                         onClick={fetchListings}
                                         disabled={loading || actionLoading}
                                     >
@@ -656,13 +666,15 @@ export default function AdminListingsClient() {
                                 <motion.div variants={itemVariants}>
                                     <Toolbar
                                         sx={{
-                                            bgcolor: "grey.800",
+                                            bgcolor: "background.paper",
                                             mb: 2,
-                                            borderBottom: "2px solid #9B5Cff",
+                                            border: 1,
+                                            borderColor: "divider",
+                                            borderRadius: 1,
                                         }}
                                     >
                                         <Typography sx={{ flex: "1 1 100%", color: "text.primary" }}>
-                                            {selected.length} selected
+                                            <Typography component="span" variant="mono" sx={{ color: "primary.main" }}>{selected.length}</Typography> selected
                                         </Typography>
                                         <IconButton
                                             color="error"
@@ -698,11 +710,13 @@ export default function AdminListingsClient() {
                                         disableRowSelectionOnClick
                                         sx={{
                                             color: "text.secondary",
-                                            "& .MuiDataGrid-columnHeaders": { bgcolor: "grey.800" },
-                                            "& .MuiDataGrid-virtualScroller": { bgcolor: "grey.900" },
-                                            "& .MuiDataGrid-footerContainer": { bgcolor: "grey.900" },
-                                            "& .MuiDataGrid-row": { "&:hover": { bgcolor: "grey.800" } },
-                                            "& .MuiDataGrid-cell": { borderColor: "grey.800" },
+                                            border: 1,
+                                            borderColor: "divider",
+                                            "& .MuiDataGrid-columnHeaders": { bgcolor: "background.paper", color: "text.primary" },
+                                            "& .MuiDataGrid-virtualScroller": { bgcolor: "background.default" },
+                                            "& .MuiDataGrid-footerContainer": { bgcolor: "background.paper", borderColor: "divider" },
+                                            "& .MuiDataGrid-row": { "&:hover": { bgcolor: "action.hover" } },
+                                            "& .MuiDataGrid-cell": { borderColor: "divider" },
                                         }}
                                     />
                                 </Box>
@@ -899,7 +913,7 @@ export default function AdminListingsClient() {
                     </Button>
                     <Button
                         variant="contained"
-                        sx={{ bgcolor: "#9B5Cff", color: "grey.900" }}
+                        color="primary"
                         onClick={handleSaveListing}
                         disabled={actionLoading}
                     >
