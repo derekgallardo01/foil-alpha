@@ -68,6 +68,13 @@ model Card {
   created_at            DateTime   @default(now()) @db.DateTime(0)
   updated_at            DateTime   @updatedAt @db.DateTime(0)
 
+  // Multi-TCG + sealed support (added for external collection imports, e.g. Collectr)
+  product_type          String     @default("CARD") @db.VarChar(20) // CARD | SEALED
+  tcg                   String?    @db.VarChar(50)
+  external_source       String?    @db.VarChar(30)
+  external_id           String?    @db.VarChar(100)
+
+  @@unique([external_source, external_id], map: "uniq_cards_external")
   @@index([price_tracker_id])
   @@index([tcg_player_id])
   @@index([name])
@@ -144,6 +151,13 @@ model UserCard {
   notes         String?   @db.VarChar(255)
   acquired_date DateTime? @map("acquired_date") @db.DateTime(0)
   created_at    DateTime  @default(now()) @db.DateTime(0)
+
+  // Quantity + grading + external-import idempotency (e.g. Collectr)
+  quantity              Int      @default(1)
+  is_graded             Boolean  @default(false)
+  grade_label           String?  @db.VarChar(50)
+  acquired_market_price Decimal? @db.Decimal(10, 2)
+  external_owned_id     String?  @unique(map: "uniq_uc_external_owned") @db.VarChar(100)
 
   @@index([owner_id])
   @@index([card_id])

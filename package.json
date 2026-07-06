@@ -20,6 +20,7 @@
     "sync:manual": "node -e \"fetch('http://localhost:3000/api/cards/sync-prices', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force:true})}).then(r=>r.json()).then(console.log)\"",
     "seed:dashboard": "tsx seed-dashboard.ts",
     "seed:cleanup": "tsx seed-dashboard.ts --cleanup",
+    "import:collectr": "node scripts/import-collectr.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
