@@ -26,7 +26,10 @@ import {
     Chip,
     InputLabel,
     FormControl,
-    Autocomplete
+    Autocomplete,
+    Tooltip,
+    Switch,
+    FormLabel
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -107,6 +110,17 @@ export default function AdminListingsClient() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [createListingOpen, setCreateListingOpen] = useState<boolean>(false);
+    const [editListingOpen, setEditListingOpen] = useState<boolean>(false);
+    const [editData, setEditData] = useState<{
+        id: number;
+        cardName: string;
+        sale_type: 'FIXED' | 'AUCTION';
+        fixed_price: string;
+        reserve_price: string;
+        auction_duration_hours: string;
+        notes: string;
+        is_for_sale: boolean;
+    } | null>(null);
     const [actionLoading, setActionLoading] = useState<boolean>(false);
     const [rowLoading, setRowLoading] = useState<{ [key: number]: boolean }>({});
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
@@ -251,8 +265,18 @@ export default function AdminListingsClient() {
     }, []);
 
     // Moved handleEditListing and handleDeleteListing before columns
-    const handleEditListing = useCallback(() => {
-        toast.info("Edit listing functionality to be implemented");
+    const handleEditListing = useCallback((listing: Listing) => {
+        setEditData({
+            id: listing.id,
+            cardName: listing.card.name,
+            sale_type: listing.sale_type,
+            fixed_price: listing.fixed_price != null ? String(listing.fixed_price) : '',
+            reserve_price: listing.reserve_price != null ? String(listing.reserve_price) : '',
+            auction_duration_hours: '168',
+            notes: listing.notes ?? '',
+            is_for_sale: listing.is_for_sale,
+        });
+        setEditListingOpen(true);
     }, []);
 
     const handleDeleteListing = useCallback(async (listingId: number) => {
@@ -399,7 +423,7 @@ export default function AdminListingsClient() {
                 <Box>
                     <IconButton
                         size="small"
-                        onClick={() => handleEditListing()}
+                        onClick={() => handleEditListing(params.row)}
                         disabled={rowLoading[Number(params.id)] || actionLoading}
                         sx={{ mr: 1 }}
                         aria-label="Edit listing"
@@ -499,6 +523,86 @@ export default function AdminListingsClient() {
             setActionLoading(false);
         }
     }, [session, newListing]);
+
+    const handleUpdateListing = useCallback(async () => {
+        if (!session || !editData) return;
+
+        if (editData.sale_type === 'FIXED' && (!editData.fixed_price || parseFloat(editData.fixed_price) <= 0)) {
+            toast.error("Fixed price is required and must be greater than 0");
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            const body: Record<string, unknown> = {
+                is_for_sale: editData.is_for_sale,
+                sale_type: editData.sale_type,
+                notes: editData.notes,
+            };
+            if (editData.sale_type === 'FIXED') {
+                body.fixed_price = parseFloat(editData.fixed_price) || 0;
+            } else {
+                body.reserve_price = editData.reserve_price ? parseFloat(editData.reserve_price) : null;
+                body.auction_duration_hours = parseInt(editData.auction_duration_hours) || 168;
+            }
+
+            const response = await fetch(`/api/admin/listings/${editData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.accessToken}`,
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to update listing');
+            }
+
+            setEditListingOpen(false);
+            setEditData(null);
+            toast.success('Listing updated successfully!');
+            await fetchListings(); // Re-sync canonical state (e.g. new auction end).
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : 'Error updating listing');
+        } finally {
+            setActionLoading(false);
+        }
+    }, [session, editData, fetchListings]);
+
+    const handleBulkDelete = useCallback(async () => {
+        if (!session || selected.length === 0) return;
+        if (!confirm(`Delete ${selected.length} selected listing(s)? This cannot be undone.`)) return;
+
+        setActionLoading(true);
+        const ids = [...selected];
+        try {
+            const results = await Promise.allSettled(
+                ids.map((id) =>
+                    fetch(`/api/admin/listings/${id}`, { method: 'DELETE' }).then((r) => {
+                        if (!r.ok) throw new Error(String(id));
+                        return id;
+                    })
+                )
+            );
+            const deleted = results
+                .filter((r): r is PromiseFulfilledResult<number> => r.status === 'fulfilled')
+                .map((r) => r.value);
+            const failed = ids.length - deleted.length;
+
+            if (deleted.length > 0) {
+                setListings((prev) => prev.filter((l) => !deleted.includes(l.id)));
+                setSelected((prev) => prev.filter((id) => !deleted.includes(id)));
+                toast.success(`Deleted ${deleted.length} listing(s)`);
+            }
+            if (failed > 0) {
+                toast.error(`${failed} listing(s) could not be deleted`);
+            }
+        } finally {
+            setActionLoading(false);
+        }
+    }, [session, selected]);
 
     return (
         <AppShell variant="admin">
@@ -662,16 +766,18 @@ export default function AdminListingsClient() {
                                         <Typography sx={{ flex: "1 1 100%", color: "text.primary" }}>
                                             <Typography component="span" variant="mono" sx={{ color: "primary.main" }}>{selected.length}</Typography> selected
                                         </Typography>
-                                        <IconButton
-                                            color="error"
-                                            onClick={() => {
-                                                toast.info("Bulk operations to be implemented");
-                                            }}
-                                            disabled={actionLoading}
-                                            aria-label="Delete selected listings"
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
+                                        <Tooltip title="Delete selected">
+                                            <span>
+                                                <IconButton
+                                                    color="error"
+                                                    onClick={handleBulkDelete}
+                                                    disabled={actionLoading}
+                                                    aria-label="Delete selected listings"
+                                                >
+                                                    {actionLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
                                     </Toolbar>
                                 </motion.div>
                             )}
@@ -919,6 +1025,114 @@ export default function AdminListingsClient() {
                         disabled={actionLoading}
                     >
                         {actionLoading ? <CircularProgress size={24} /> : `Create ${newListing.quantity > 1 ? `${newListing.quantity} Listings` : 'Listing'}`}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Edit Listing Dialog */}
+            <Dialog
+                open={editListingOpen}
+                onClose={() => setEditListingOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Edit Listing{editData ? ` — ${editData.cardName}` : ''}</DialogTitle>
+                <DialogContent>
+                    {editData && (
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid size={{ xs: 12 }}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={editData.is_for_sale}
+                                            onChange={(e) => setEditData({ ...editData, is_for_sale: e.target.checked })}
+                                        />
+                                    }
+                                    label={editData.is_for_sale ? "Active (listed for sale)" : "Inactive (hidden)"}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Sale Type</InputLabel>
+                                    <Select
+                                        value={editData.sale_type}
+                                        label="Sale Type"
+                                        onChange={(e) => setEditData({ ...editData, sale_type: e.target.value as 'FIXED' | 'AUCTION' })}
+                                    >
+                                        <MenuItem value="FIXED">Fixed Price</MenuItem>
+                                        <MenuItem value="AUCTION">Auction</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {editData.sale_type === 'FIXED' ? (
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <TextField
+                                        label="Fixed Price ($)"
+                                        type="number"
+                                        fullWidth
+                                        value={editData.fixed_price}
+                                        onChange={(e) => setEditData({ ...editData, fixed_price: e.target.value })}
+                                        inputProps={{ min: 0, step: 0.01 }}
+                                    />
+                                </Grid>
+                            ) : (
+                                <>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <TextField
+                                            label="Reserve Price ($)"
+                                            type="number"
+                                            fullWidth
+                                            value={editData.reserve_price}
+                                            onChange={(e) => setEditData({ ...editData, reserve_price: e.target.value })}
+                                            helperText="Optional minimum price"
+                                            inputProps={{ min: 0, step: 0.01 }}
+                                        />
+                                    </Grid>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Auction Duration</InputLabel>
+                                            <Select
+                                                value={editData.auction_duration_hours}
+                                                label="Auction Duration"
+                                                onChange={(e) => setEditData({ ...editData, auction_duration_hours: e.target.value })}
+                                            >
+                                                <MenuItem value="24">1 Day</MenuItem>
+                                                <MenuItem value="72">3 Days</MenuItem>
+                                                <MenuItem value="168">7 Days</MenuItem>
+                                                <MenuItem value="336">14 Days</MenuItem>
+                                            </Select>
+                                            <FormLabel sx={{ mt: 0.5, fontSize: 12 }}>Resets the auction end time</FormLabel>
+                                        </FormControl>
+                                    </Grid>
+                                </>
+                            )}
+
+                            <Grid size={{ xs: 12 }}>
+                                <TextField
+                                    label="Notes"
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    value={editData.notes}
+                                    onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setEditListingOpen(false)} disabled={actionLoading}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleUpdateListing}
+                        disabled={actionLoading}
+                    >
+                        {actionLoading ? <CircularProgress size={24} /> : 'Save Changes'}
                     </Button>
                 </DialogActions>
             </Dialog>
