@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { requireUser } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { Prisma } from '@prisma/client';
 
@@ -8,13 +7,11 @@ import { Prisma } from '@prisma/client';
 export async function GET(request: NextRequest) {
   console.log('🔍 User-cards API called');
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
     const { searchParams } = new URL(request.url);
 
     // Check if this is for "my auctions" page
@@ -245,13 +242,11 @@ async function getMyAuctions(userId: number) {
 // POST /api/user-cards - Add card to user's collection (purchase)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
     const body = await request.json();
     const { card_id, condition = 'NM', notes, purchase_price } = body;
 

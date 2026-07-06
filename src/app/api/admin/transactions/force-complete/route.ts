@@ -1,16 +1,14 @@
 // src/app/api/admin/transactions/force-complete/route.ts - Force complete transaction
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '../../../../lib/prisma';
+import { requireAdmin } from '../../../../lib/auth';
 import { createPurchaseConfirmedNotifications } from '../../../../lib/notification';
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
         const body = await request.json();
         const { transaction_id } = body;
@@ -89,7 +87,7 @@ export async function POST(request: NextRequest) {
                 data: {
                     status: 'COMPLETED',
                     transaction_type: 'ADMIN_FORCE_COMPLETED',
-                    notes: `Force completed by admin ${session.user.name} - Buyer failed to confirm within 24 hours`
+                    notes: `Force completed by admin ${user.name} - Buyer failed to confirm within 24 hours`
                 }
             });
 
@@ -100,7 +98,7 @@ export async function POST(request: NextRequest) {
                     is_sold: true,
                     is_for_sale: false,
                     owner_id: transaction.buyer_id,
-                    notes: `Force completed by admin ${session.user.name}`
+                    notes: `Force completed by admin ${user.name}`
                 }
             });
 
@@ -141,10 +139,10 @@ export async function POST(request: NextRequest) {
                         amount: -purchaseAmount,
                         balance_before: Number(currentBuyerWallet.balance),
                         balance_after: Number(updatedBuyerWallet.balance),
-                        description: `Force completed purchase: ${card.name} (Admin: ${session.user.name})`,
+                        description: `Force completed purchase: ${card.name} (Admin: ${user.name})`,
                         reference_id: transaction_id,
                         reference_type: 'TRANSACTION',
-                        admin_id: parseInt(session.user.id)
+                        admin_id: user.id
                     }
                 }),
                 // Seller transaction
@@ -156,10 +154,10 @@ export async function POST(request: NextRequest) {
                         amount: purchaseAmount,
                         balance_before: Number(currentSellerWallet.balance),
                         balance_after: Number(updatedSellerWallet.balance),
-                        description: `Force completed sale: ${card.name} (Admin: ${session.user.name})`,
+                        description: `Force completed sale: ${card.name} (Admin: ${user.name})`,
                         reference_id: transaction_id,
                         reference_type: 'TRANSACTION',
-                        admin_id: parseInt(session.user.id)
+                        admin_id: user.id
                     }
                 })
             ]);
@@ -180,7 +178,7 @@ export async function POST(request: NextRequest) {
                     fromUserId: transaction.seller_id,
                     toUserId: transaction.buyer_id,
                     action: 'ADMIN_FORCE_COMPLETED', // Use action instead of transaction_type
-                    notes: `Force completed by admin ${session.user.name} - Original buyer failed to confirm`
+                    notes: `Force completed by admin ${user.name} - Original buyer failed to confirm`
                 }
             });
 

@@ -1,16 +1,13 @@
 // src/app/api/admin/commission/wallet/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../auth/[...nextauth]/route';
+import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
+import { requireAdmin } from '../../../../lib/auth';
 
 // GET /api/admin/commission/wallet - Get admin wallet data and transactions
 export async function GET() {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
 
         // Get admin wallet
         const adminWallet = await prisma.$queryRaw`

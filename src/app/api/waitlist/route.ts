@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
 import { prisma } from "../../lib/prisma";
+import { requireAdmin } from "../../lib/auth";
 
 interface WaitlistEntry {
   id: number;
@@ -17,10 +16,9 @@ interface WaitlistEntry {
 // GET /api/admin/waitlist - Get all waitlist entries
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
@@ -74,10 +72,9 @@ export async function GET(request: Request) {
 // DELETE /api/admin/waitlist - Delete a waitlist entry
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const body = await request.json();
     const { id } = body;
@@ -114,10 +111,9 @@ export async function DELETE(request: Request) {
 // POST /api/admin/waitlist - Update waitlist entry status
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const body = await request.json();
     const { id, status } = body;

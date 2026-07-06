@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
 import { getDbConnection } from '../../lib/db';
+import { requireAdmin } from '../../lib/auth';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     // Use your existing DB connection
     const dbConnection = await getDbConnection();

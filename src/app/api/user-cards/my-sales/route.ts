@@ -1,17 +1,15 @@
 // src/app/api/user-cards/my-sales/route.ts - FIXED for updated schema
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const userId = parseInt(session.user.id);
+        const userId = user.id;
 
         console.log(`Fetching sales data for user ${userId}`);
 

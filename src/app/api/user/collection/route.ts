@@ -1,21 +1,19 @@
 // src/app/api/user/collection/route.ts - Fixed to use real session
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
 // GET /api/user/collection - Get user's card collection
 export async function GET(request: NextRequest) {
   try {
     // Always use real session for collection (ignore dev mode)
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
-    const userId = parseInt(session.user.id);
-    const userName = session.user.name || 'Unknown User';
-    const userEmail = session.user.email || 'unknown';
+    const userId = user.id;
+    const userName = user.name || 'Unknown User';
+    const userEmail = user.email || 'unknown';
 
     console.log(`📦 Fetching collection for: ${userName} (${userEmail}) - ID: ${userId}`);
 

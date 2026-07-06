@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 
 // Define valid wallet operations for type safety
 type WalletOperation = 'ADD_MONEY' | 'DEDUCT_MONEY' | 'FREEZE_FUNDS' | 'UNFREEZE_FUNDS';
@@ -9,10 +8,9 @@ type WalletOperation = 'ADD_MONEY' | 'DEDUCT_MONEY' | 'FREEZE_FUNDS' | 'UNFREEZE
 // POST /api/admin/wallet - Admin wallet operations (NO ADMIN WALLET REQUIRED)
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
         const body = await request.json();
         const { user_id, operation, amount, description } = body;
@@ -25,7 +23,7 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        const adminId = parseInt(session.user.id);
+        const adminId = user.id;
         const targetUserId = parseInt(user_id);
         const operationAmount = Number(amount);
 
@@ -181,10 +179,9 @@ export async function POST(request: NextRequest) {
 // GET /api/admin/wallet?user_id=123 - Get wallet details for admin
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
+        const admin = auth.user;
 
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('user_id');
@@ -236,7 +233,7 @@ export async function GET(request: NextRequest) {
                     balance_after: 0.00,
                     description: 'Wallet created by admin',
                     reference_type: 'ADMIN_SETUP',
-                    admin_id: parseInt(session.user.id)
+                    admin_id: admin.id
                 }
             });
         }

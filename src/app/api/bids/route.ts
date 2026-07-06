@@ -1,17 +1,15 @@
 // src/app/api/bids/route.ts - Updated with new bidding flow (no fund freezing)
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { requireUser } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { createBidNotifications, createBidOutbidNotification } from '../../lib/notification';
 
 // GET /api/bids - Get bids for a card or user's bids
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
         const { searchParams } = new URL(request.url);
         const userCardId = searchParams.get('user_card_id');
@@ -24,7 +22,7 @@ export async function GET(request: NextRequest) {
         } else if (userId) {
             where.bidderId = parseInt(userId);
         } else {
-            where.bidderId = parseInt(session.user.id);
+            where.bidderId = user.id;
         }
 
         const bids = await prisma.bid.findMany({
@@ -87,12 +85,11 @@ export async function GET(request: NextRequest) {
 // POST /api/bids - Place a new bid (NO fund freezing)
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const bidderId = parseInt(session.user.id);
+        const bidderId = user.id;
         const body = await request.json();
         const { user_card_id, amount } = body;
 
@@ -299,12 +296,11 @@ export async function POST(request: NextRequest) {
 // DELETE /api/bids - Cancel a bid (no fund unfreezing needed)
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const userId = parseInt(session.user.id);
+        const userId = user.id;
         const { searchParams } = new URL(request.url);
         const bidId = searchParams.get('bid_id');
 

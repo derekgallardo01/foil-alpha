@@ -1,16 +1,13 @@
 // src/app/api/admin/commission/reports/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '../../../../lib/prisma';
+import { requireAdmin } from '../../../../lib/auth';
 
 // GET /api/admin/commission/reports - Get commission reports and analytics
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
 
         const { searchParams } = new URL(request.url);
         const days = parseInt(searchParams.get('days') || '30');

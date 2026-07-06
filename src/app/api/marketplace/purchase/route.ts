@@ -2,8 +2,7 @@
 // Replace the problematic whereClause building section with this:
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { calculateCommission, recordCommissionTransaction } from '../../../lib/commission-utils';
 import type { Prisma } from '@prisma/client';
@@ -11,16 +10,12 @@ import type { Prisma } from '@prisma/client';
 export async function POST(request: NextRequest) {
   try {
     // Get session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required. Please log in.' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
-    const userId = parseInt(session.user.id);
-    const userName = session.user.name || 'Unknown User';
+    const userId = user.id;
+    const userName = user.name || 'Unknown User';
 
     // Parse request body
     let body;

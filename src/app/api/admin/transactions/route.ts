@@ -1,15 +1,12 @@
 // src/app/api/admin/transactions/route.ts - Updated version
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');

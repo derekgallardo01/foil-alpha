@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/route";
 import { prisma } from "../../../lib/prisma";
+import { requireAdmin } from "../../../lib/auth";
 import bcrypt from "bcryptjs";
-import type { Session } from "next-auth";
 
 // Interface for response user data
 interface UserResponse {
@@ -35,14 +33,9 @@ interface CreateUserBody {
 // GET /api/admin/users - List all users with wallet information
 export async function GET() {
   try {
-    const session = (await getServerSession(authOptions)) as Session | null;
-
-    console.log("Admin users API - Session check:", session ? 'Authenticated' : 'Not authenticated');
-
-    if (!session || session.user.role !== "admin") {
-      console.log("Unauthorized access attempt to admin users API");
-      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     console.log("Fetching users from database...");
 
@@ -149,10 +142,9 @@ export async function GET() {
 // POST /api/admin/users - Create new user with wallet
 export async function POST(req: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as Session | null;
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const body = (await req.json()) as CreateUserBody;
     const { name, email, role, subscriptionStatus, password, initialBalance = 0 } = body;
@@ -217,9 +209,9 @@ export async function POST(req: Request) {
             amount: initialBalanceNum,
             balance_before: 0,
             balance_after: initialBalanceNum,
-            description: `Initial deposit by admin: ${session.user.name}`,
+            description: `Initial deposit by admin: ${user.name}`,
             reference_type: 'ADMIN_DEPOSIT',
-            admin_id: parseInt(String(session.user.id)),
+            admin_id: user.id,
           },
         });
       } else {
