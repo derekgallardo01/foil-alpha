@@ -140,8 +140,8 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
 
     const buyerBalance = Number(buyerWallet.balance);
 
-    if (buyerBalance < commission.buyer_pays) {
-      throw new Error(`Insufficient funds. Required: $${commission.buyer_pays.toFixed(2)}, Available: $${buyerBalance.toFixed(2)}`);
+    if (buyerBalance < cardPrice) {
+      throw new Error(`Insufficient funds. Required: $${cardPrice.toFixed(2)}, Available: $${buyerBalance.toFixed(2)}`);
     }
 
     // Get seller's wallet
@@ -165,7 +165,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
     await Promise.all([
       tx.userWallet.update({
         where: { user_id: buyerId },
-        data: { balance: { decrement: commission.buyer_pays } }
+        data: { balance: { decrement: cardPrice } }
       }),
       tx.userWallet.update({
         where: { user_id: userCard.owner_id },
@@ -199,7 +199,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
     // Record commission transaction
     await recordCommissionTransaction({
       transaction_type: 'COMMISSION',
-      amount: commission.commission_amount * 2,
+      amount: commission.commission_amount,
       description: `Commission from ${card.name} user-to-user sale`,
       reference_type: 'USER_CARD',
       reference_id: userCardId,
@@ -217,9 +217,9 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
           user_id: buyerId,
           wallet_id: buyerWallet.id,
           transaction_type: 'PURCHASE',
-          amount: -commission.buyer_pays,
+          amount: -cardPrice,
           balance_before: buyerBalance,
-          balance_after: buyerBalance - commission.buyer_pays,
+          balance_after: buyerBalance - cardPrice,
           description: `Purchased ${card.name} from ${owner.name}`,
           reference_type: 'USER_CARD',
           reference_id: userCardId
@@ -261,7 +261,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
           message: `You successfully purchased ${card.name} for $${cardPrice.toFixed(2)}. The card is now in your collection.`,
           data: {
             card_name: card.name,
-            amount_paid: commission.buyer_pays,
+            amount_paid: cardPrice,
             seller_name: owner.name,
             card_id: card.id,
             user_card_id: userCardId,
@@ -296,12 +296,12 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       purchase_details: {
         card_name: card.name,
         card_price: cardPrice.toFixed(2),
-        total_paid: commission.buyer_pays.toFixed(2),
+        total_paid: cardPrice.toFixed(2),
         seller_receives: commission.seller_receives.toFixed(2),
         commission_rate: commission.commission_rate.toFixed(2),
         ownership_transferred: true,
         removed_from_marketplace: !updatedCard.is_for_sale, // Should be true
-        buyer_new_balance: (buyerBalance - commission.buyer_pays).toFixed(2),
+        buyer_new_balance: (buyerBalance - cardPrice).toFixed(2),
         transaction_id: userCardId,
         marketplace_status: {
           was_for_sale: userCard.is_for_sale,
@@ -339,7 +339,8 @@ async function purchaseCatalogCard(buyerId: number, catalogCardId: number, quant
 
     const unitPrice = Number(catalogCard.market_price);
     const commission = await calculateCommission(unitPrice, catalogCard.rarity);
-    const totalCostPerCard = commission.buyer_pays;
+    // Seller-funded model: buyer pays exactly the listed price.
+    const totalCostPerCard = unitPrice;
     const totalCost = totalCostPerCard * quantity;
     const totalCommission = commission.admin_receives * quantity;
 
