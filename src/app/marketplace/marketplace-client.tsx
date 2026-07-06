@@ -174,9 +174,9 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
         ((userPrice - marketPrice) / marketPrice) * 100 : 0;
 
     const getPriceStatus = () => {
-        if (Math.abs(priceDiff) < 5) return { color: 'success.main', label: 'Market Price' };
+        if (Math.abs(priceDiff) < 5) return { color: 'text.secondary', label: 'Market Price' };
         if (priceDiff > 0) return { color: 'error.main', label: `${priceDiff.toFixed(1)}% Above Market` };
-        return { color: 'warning.main', label: `${Math.abs(priceDiff).toFixed(1)}% Below Market` };
+        return { color: 'success.main', label: `${Math.abs(priceDiff).toFixed(1)}% Below Market` };
     };
 
     const priceStatus = getPriceStatus();
@@ -184,9 +184,10 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
     return (
         <Box sx={{
             p: 1.5,
-            bgcolor: 'rgba(255, 255, 255, 0.05)',
+            bgcolor: 'background.default',
             borderRadius: 1,
-            border: `1px solid ${priceStatus.color}`,
+            border: 1,
+            borderColor: 'divider',
             mb: 1
         }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -199,8 +200,8 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
                     {listing.card.price_trend === 'stable' && <TrendingFlat sx={{ fontSize: 16, color: 'text.secondary' }} />}
                     <PriceDisplay
                         usdAmount={marketPrice}
-                        variant="body2"
-                        sx={{ fontWeight: 'bold' }}
+                        variant="mono"
+                        sx={{ fontWeight: 700, fontSize: '0.875rem' }}
                     />
                 </Box>
             </Box>
@@ -211,9 +212,9 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
                 </Typography>
                 <PriceDisplay
                     usdAmount={userPrice}
-                    variant="body2"
+                    variant="mono"
                     color="primary.main"
-                    sx={{ fontWeight: 'bold' }}
+                    sx={{ fontWeight: 700, fontSize: '0.875rem' }}
                 />
             </Box>
 
@@ -222,11 +223,12 @@ function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
                     label={priceStatus.label}
                     size="small"
                     sx={{
-                        color: 'white',
-                        bgcolor: priceStatus.color,
-                        fontWeight: 'bold',
+                        color: priceStatus.color,
+                        borderColor: priceStatus.color,
+                        fontWeight: 700,
                         fontSize: '0.7rem'
                     }}
+                    variant="outlined"
                 />
             </Box>
 
@@ -305,9 +307,9 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
     }, [cards]);
 
     return (
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
             <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Timeline />
+                <Timeline sx={{ color: 'primary.main' }} />
                 Market Summary
                 {!isAdmin && selectedCurrency !== 'USD' && (
                     <Chip
@@ -322,7 +324,7 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
             <Grid container spacing={2}>
                 <Grid item xs={6} md={3}>
                     <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" color="primary">
+                        <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'primary.main' }}>
                             {marketStats.totalCards}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -335,8 +337,9 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
                     <Box sx={{ textAlign: 'center' }}>
                         <PriceDisplay
                             usdAmount={marketStats.avgPrice}
-                            variant="h4"
-                            color="success.main"
+                            variant="mono"
+                            color="text.primary"
+                            sx={{ fontSize: 30, fontWeight: 700 }}
                         />
                         <Typography variant="body2" color="text.secondary">
                             Avg. Price
@@ -348,8 +351,9 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
                     <Box sx={{ textAlign: 'center' }}>
                         <PriceDisplay
                             usdAmount={marketStats.totalValue}
-                            variant="h4"
-                            color="warning.main"
+                            variant="mono"
+                            color="text.primary"
+                            sx={{ fontSize: 30, fontWeight: 700 }}
                         />
                         <Typography variant="body2" color="text.secondary">
                             Total Value
@@ -421,9 +425,9 @@ function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
     if (deals.length === 0) return null;
 
     return (
-        <Paper sx={{ p: 3, mb: 3, bgcolor: 'rgba(76, 175, 80, 0.1)', border: '1px solid rgba(76, 175, 80, 0.3)' }}>
+        <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
             <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LocalOfferIcon />
+                <LocalOfferIcon sx={{ color: 'success.main' }} />
                 Daily Deals - Cards Below Market Price
             </Typography>
 
@@ -437,9 +441,10 @@ function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
                         <Grid item xs={12} sm={6} md={4} key={deal.id}>
                             <Box sx={{
                                 p: 2,
-                                border: '1px solid rgba(76, 175, 80, 0.5)',
+                                border: 1,
+                                borderColor: 'divider',
                                 borderRadius: 1,
-                                bgcolor: 'background.paper'
+                                bgcolor: 'background.default'
                             }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                     <img
@@ -461,8 +466,9 @@ function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
                                     <Box>
                                         <PriceDisplay
                                             usdAmount={userPrice}
-                                            variant="h6"
+                                            variant="mono"
                                             color="success.main"
+                                            sx={{ fontSize: '1.15rem', fontWeight: 700 }}
                                         />
                                         <Box sx={{ textDecoration: 'line-through' }}>
                                             <PriceDisplay
@@ -494,10 +500,10 @@ function PriceAlertsSection() {
     const [newAlertOpen, setNewAlertOpen] = useState(false);
 
     return (
-        <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(33, 150, 243, 0.1)', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+        <Paper variant="outlined" sx={{ p: 2, mb: 3, border: 1, borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <PriceCheck />
+                    <PriceCheck sx={{ color: 'primary.main' }} />
                     <Typography variant="h6">Price Alerts</Typography>
                     <Chip label={alerts.length} size="small" />
                 </Box>
@@ -1033,7 +1039,17 @@ export default function MarketplacePage() {
             </Box>
 
             <Box sx={{ my: 3 }}>
-                <Typography variant="h4" gutterBottom>
+                <Typography
+                    variant="h4"
+                    gutterBottom
+                    sx={{
+                        display: 'inline-block',
+                        background: (t) => t.foil.gradient,
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                    }}
+                >
                     Card Marketplace
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
@@ -1076,10 +1092,10 @@ export default function MarketplacePage() {
             <DailyDealsSection cards={cards as EnhancedListing[]} />
 
             {/* FIXED: Enhanced Search & Filters Section */}
-            <Paper sx={{ p: 3, mb: 3 }}>
+            <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <FilterIcon sx={{ mr: 1 }} />
+                        <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
                         <Typography variant="h6">Search & Filters</Typography>
                         <Chip
                             label={`${cards.length} results`}
@@ -1215,6 +1231,7 @@ export default function MarketplacePage() {
                             min={priceRangeInfo.min}
                             max={priceRangeInfo.max}
                             step={1}
+                            color="primary"
                             marks={[
                                 { value: priceRangeInfo.min, label: `${priceRangeInfo.min}` },
                                 { value: priceRangeInfo.avg, label: `${priceRangeInfo.avg}` },
@@ -1222,7 +1239,7 @@ export default function MarketplacePage() {
                             ]}
                             sx={{ mt: 1 }}
                         />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="mono" component="div" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                             ${priceRange[0]} - ${priceRange[1]}
                         </Typography>
                     </Box>
@@ -1242,7 +1259,7 @@ export default function MarketplacePage() {
                     <CircularProgress />
                 </Box>
             ) : cards.length === 0 ? (
-                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
                     <Typography variant="h6" color="text.secondary">
                         No cards found matching your criteria
                     </Typography>
@@ -1281,7 +1298,7 @@ export default function MarketplacePage() {
                                             height="200"
                                             image={listing.card.small_image_url || listing.card.image_url || '/placeholder-card.png'}
                                             alt={listing.card.name}
-                                            sx={{ objectFit: 'contain', bgcolor: 'grey.100' }}
+                                            sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = '/placeholder-card.png';
                                             }}
@@ -1314,9 +1331,11 @@ export default function MarketplacePage() {
                                                 size="small"
                                                 onClick={() => showPriceHistory(listing)}
                                                 sx={{
-                                                    bgcolor: 'rgba(0, 0, 0, 0.7)',
-                                                    color: 'white',
-                                                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.9)' }
+                                                    bgcolor: 'background.paper',
+                                                    color: 'text.primary',
+                                                    border: 1,
+                                                    borderColor: 'divider',
+                                                    '&:hover': { bgcolor: 'background.default' }
                                                 }}
                                             >
                                                 <History sx={{ fontSize: 16 }} />
@@ -1373,8 +1392,9 @@ export default function MarketplacePage() {
                                                     <Box>
                                                         <PriceDisplay
                                                             usdAmount={listing.fixed_price || 0}
-                                                            variant="h6"
+                                                            variant="mono"
                                                             color="primary.main"
+                                                            sx={{ fontSize: '1.25rem', fontWeight: 700 }}
                                                         />
                                                         {enhancedListing.card.market_price && (
                                                             <Box>
@@ -1412,8 +1432,9 @@ export default function MarketplacePage() {
                                                         </Typography>
                                                         <PriceDisplay
                                                             usdAmount={listing.highest_bid || listing.reserve_price || 0}
-                                                            variant="subtitle1"
+                                                            variant="mono"
                                                             color="primary.main"
+                                                            sx={{ fontSize: '1rem', fontWeight: 700 }}
                                                         />
                                                     </Box>
 
