@@ -42,6 +42,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
+import Wordmark from "../../components/Wordmark";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 // Animation variants
@@ -539,7 +540,7 @@ export default function AdminListingsClient() {
                     >
                         <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} />
+                                <Wordmark size={40} />
                             </motion.div>
                         </Box>
                         <Typography

@@ -30,8 +30,8 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import Image from "next/image";
 import { motion } from "framer-motion";
+import Wordmark from "../../components/Wordmark";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
@@ -410,7 +410,7 @@ export default function AdminUsersClient() {
             <Paper elevation={6} sx={{ p: 4, bgcolor: "grey.900", backgroundImage: "linear-gradient(#000000, rgba(0, 0, 0, 0))", borderRadius: 2, boxShadow: "0 0 10px rgba(155, 92, 255, 0.21)" }}>
               <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                  <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} />
+                  <Wordmark size={40} />
                 </motion.div>
               </Box>
               <Box sx={{ width: "100%" }}>

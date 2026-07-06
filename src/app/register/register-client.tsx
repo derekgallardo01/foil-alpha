@@ -17,7 +17,6 @@ import {
   Alert,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -193,21 +192,6 @@ export default function RegisterClient() {
                 boxShadow: 3,
               }}
             >
-              <Box sx={{ mb: 1, display: "flex", justifyContent: "center" }}>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                >
-                  <Image
-                    src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                    alt="Foil Alpha Logo"
-                    width={200}
-                    height={100}
-                    priority
-                  />
-                </motion.div>
-              </Box>
               <Typography
                 variant="h5"
                 component="p"

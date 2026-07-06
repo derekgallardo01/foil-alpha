@@ -75,6 +75,7 @@ import { GoogleAnalytics } from "nextjs-google-analytics";
 import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
+import Wordmark from "../../components/Wordmark";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from "../../lib/pokemon-price-tracker-api";
 
@@ -2288,7 +2289,7 @@ export default function AdminCardsClient() {
                     >
                         <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                                <Image src="https://i.ibb.co/ZBphxdZ/TCG-Market.png" alt="Foil Alpha Logo" width={200} height={100} />
+                                <Wordmark size={40} />
                             </motion.div>
                         </Box>
 

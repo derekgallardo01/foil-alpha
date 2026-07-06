@@ -13,8 +13,8 @@ import {
   Link,
   Chip,
 } from '@mui/material';
-import Image from 'next/image';
 import { motion, useInView } from 'framer-motion';
+import Wordmark from '../components/Wordmark';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -190,14 +190,7 @@ export default function StockChecker() {
                     animate={{ scale: 1 }}
                     transition={{ type: 'spring', stiffness: 260, damping: 20 }}
                   >
-                    <Image
-                      src="https://i.ibb.co/ZBphxdZ/TCG-Market.png"
-                      alt="Foil Alpha Logo"
-                      width={200}
-                      height={100}
-                      priority
-                      onError={() => console.error('Failed to load logo image')}
-                    />
+                    <Wordmark size={40} />
                   </motion.div>
                 </Box>
                 <Typography
