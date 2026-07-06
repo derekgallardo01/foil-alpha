@@ -29,7 +29,10 @@ const COLOR = {
   line2: "#2A3547",
   ink: "#E7EEF6",
   inkDim: "#8FA0B4",
-  inkFaint: "#5E6E82",
+  // Raised from #5E6E82 (~3.4:1) so it clears WCAG AA on the dark ground —
+  // it's used for real labels (StatCard, nav section headers), not just
+  // disabled controls.
+  inkFaint: "#8090A4",
   holoViolet: "#9B5Cff",
   signal: "#FFC24B",
   up: "#3DDC84",
@@ -137,6 +140,10 @@ theme = createTheme(theme, {
         "html, body": { backgroundColor: COLOR.ground },
         body: { WebkitFontSmoothing: "antialiased", textRendering: "optimizeLegibility" },
         "::selection": { background: "rgba(155,92,255,0.32)" },
+        "@keyframes pulse": {
+          "0%, 100%": { opacity: 1 },
+          "50%": { opacity: 0.45 },
+        },
         "*::-webkit-scrollbar": { width: 10, height: 10 },
         "*::-webkit-scrollbar-thumb": {
           background: COLOR.line2,
