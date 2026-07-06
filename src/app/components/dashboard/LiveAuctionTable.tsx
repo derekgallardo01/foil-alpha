@@ -28,6 +28,8 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CountdownTimer from '../CountdownTimer';
+import ErrorState from '../ui/ErrorState';
+import { TableRowsSkeleton } from '../ui/Skeletons';
 
 interface LiveAuction {
     id: number;
@@ -63,18 +65,20 @@ export default function LiveAuctionTable({
     const router = useRouter();
     const [auctions, setAuctions] = useState<LiveAuction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [sortBy, setSortBy] = useState<'ending_soon' | 'most_bids' | 'highest_price'>('ending_soon');
 
     const fetchAuctions = async () => {
+        setError(false);
         try {
             const response = await fetch(`/api/dashboard/live-auctions?limit=${limit}&sortBy=${sortBy}`);
             const data = await response.json();
 
-            if (data.success) {
-                setAuctions(data.data);
-            }
+            if (!response.ok || !data.success) throw new Error(data.error || 'Failed to load auctions');
+            setAuctions(data.data);
         } catch (error) {
             console.error('Error fetching live auctions:', error);
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -197,9 +201,11 @@ export default function LiveAuctionTable({
                     </TableHead>
                     <TableBody>
                         {loading ? (
+                            <TableRowsSkeleton rows={4} cols={8} />
+                        ) : error ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
-                                    <LinearProgress sx={{ my: 2 }} />
+                                <TableCell colSpan={8}>
+                                    <ErrorState variant="inline" message="Couldn't load live auctions." onRetry={fetchAuctions} />
                                 </TableCell>
                             </TableRow>
                         ) : auctions.length === 0 ? (

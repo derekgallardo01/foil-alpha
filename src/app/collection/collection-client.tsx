@@ -47,11 +47,15 @@ import {
     TrendingFlat,
     Timeline,
     Assessment,
-    PriceCheck
+    PriceCheck,
+    Collections as CollectionsIcon
 } from "@mui/icons-material";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AppShell from "../components/AppShell";
+import ErrorState from "../components/ui/ErrorState";
+import EmptyState from "../components/ui/EmptyState";
+import { CardGridSkeleton } from "../components/ui/Skeletons";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
 import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
@@ -671,6 +675,7 @@ export default function CollectionPage() {
     const [userCards, setUserCards] = useState<UserCard[]>([]);
     const [pendingPurchases, setPendingPurchases] = useState<PendingPurchase[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [currentTab, setCurrentTab] = useState(0);
     const [sellDialogOpen, setSellDialogOpen] = useState(false);
     const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
@@ -711,6 +716,7 @@ export default function CollectionPage() {
     const fetchUserCards = async () => {
         try {
             setLoading(true);
+            setError(false);
             const response = await fetch("/api/user/collection", {
                 headers: { "Content-Type": "application/json" },
             });
@@ -731,8 +737,7 @@ export default function CollectionPage() {
             }
         } catch (error) {
             console.error("Error fetching collection:", error);
-            toast.error(error instanceof Error ? error.message : "Failed to load collection");
-            setUserCards([]);
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -960,10 +965,11 @@ export default function CollectionPage() {
 
     if (loading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <CircularProgress />
-                <Typography sx={{ ml: 2 }}>Loading your collection...</Typography>
-            </Box>
+            <AppShell>
+                <Container sx={{ marginTop: 4, marginBottom: 4 }}>
+                    <CardGridSkeleton count={8} />
+                </Container>
+            </AppShell>
         );
     }
 
@@ -1064,18 +1070,19 @@ export default function CollectionPage() {
 
                 {currentTab === 0 && (
                     <>
-                        {userCards.length === 0 ? (
-                            <Box sx={{ textAlign: 'center', mt: 10 }}>
-                                <Typography variant="h6" sx={{ color: 'text.secondary', mb: 3 }}>
-                                    Your collection is empty
-                                </Typography>
-                                <Button
-                                    variant="contained"
-                                    onClick={() => router.push('/marketplace')}
-                                >
-                                    Browse Marketplace
-                                </Button>
-                            </Box>
+                        {error ? (
+                            <ErrorState message="Couldn't load your collection." onRetry={fetchUserCards} />
+                        ) : userCards.length === 0 ? (
+                            <EmptyState
+                                icon={<CollectionsIcon />}
+                                title="Your collection is empty"
+                                description="Buy cards from the marketplace to start building your collection."
+                                action={
+                                    <Button variant="contained" onClick={() => router.push('/marketplace')}>
+                                        Browse Marketplace
+                                    </Button>
+                                }
+                            />
                         ) : (
                             <>
                                 <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

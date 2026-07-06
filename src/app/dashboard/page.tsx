@@ -29,6 +29,9 @@ import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import StatCard from '../components/StatCard';
 import ForecastPanel from '../components/ForecastPanel';
+import ErrorState from '../components/ui/ErrorState';
+import { StatRowSkeleton } from '../components/ui/Skeletons';
+import { formatPrice } from '../lib/format';
 import TrendingCardsTable from '../components/dashboard/TrendingCardsTable';
 import LiveAuctionTable from '../components/dashboard/LiveAuctionTable';
 import NewReleasesCarousel from '../components/dashboard/NewReleasesCarousel';
@@ -64,28 +67,37 @@ export default function Dashboard() {
     recentSales: 0
   });
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(false);
 
   // Fetch user stats
   const fetchUserStats = async () => {
     if (!session?.user?.id) return;
 
+    setStatsError(false);
     try {
-      // Fetch user collection stats
-      const collectionRes = await fetch('/api/user/collection');
-      const collectionData = await collectionRes.json();
+      const [collectionRes, auctionsRes] = await Promise.all([
+        fetch('/api/user/collection'),
+        fetch('/api/bids?user_id=' + session.user.id),
+      ]);
+      if (!collectionRes.ok || !auctionsRes.ok) throw new Error('Failed to load stats');
 
-      // Fetch active auctions
-      const auctionsRes = await fetch('/api/bids?user_id=' + session.user.id);
+      const collectionData = await collectionRes.json();
       const auctionsData = await auctionsRes.json();
 
       setStats({
         totalValue: collectionData.totalValue || 0,
         totalCards: collectionData.totalCards || 0,
-        activeAuctions: auctionsData.filter((bid: any) => bid.is_active).length,
+        activeAuctions: Array.isArray(auctionsData)
+          ? auctionsData.filter((bid: any) => bid.is_active).length
+          : 0,
         recentSales: collectionData.recentSales || 0
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
+      setStatsError(true);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -127,20 +139,32 @@ export default function Dashboard() {
           {/* User Stats Cards */}
           {session && (
             <motion.div variants={itemVariants}>
-              <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <StatCard accent label="Collection Value" value={`$${stats.totalValue.toFixed(2)}`} icon={<WalletIcon fontSize="small" />} />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <StatCard label="Total Cards" value={stats.totalCards} icon={<CollectionsIcon fontSize="small" />} />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <StatCard label="Active Bids" value={stats.activeAuctions} icon={<Gavel fontSize="small" />} />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <StatCard label="Recent Sales" value={stats.recentSales} icon={<SellIcon fontSize="small" />} />
-                </Grid>
-              </Grid>
+              <Box sx={{ mb: 3 }}>
+                {statsLoading ? (
+                  <StatRowSkeleton count={4} />
+                ) : statsError ? (
+                  <ErrorState
+                    variant="inline"
+                    message="Couldn't load your stats."
+                    onRetry={fetchUserStats}
+                  />
+                ) : (
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard accent label="Collection Value" value={formatPrice(stats.totalValue)} icon={<WalletIcon fontSize="small" />} />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard label="Total Cards" value={stats.totalCards} icon={<CollectionsIcon fontSize="small" />} />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard label="Active Bids" value={stats.activeAuctions} icon={<Gavel fontSize="small" />} />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard label="Recent Sales" value={stats.recentSales} icon={<SellIcon fontSize="small" />} />
+                    </Grid>
+                  </Grid>
+                )}
+              </Box>
             </motion.div>
           )}
 
