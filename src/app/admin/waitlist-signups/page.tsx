@@ -19,6 +19,7 @@ import {
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
+import AppShell from "../../components/AppShell";
 
 // Define the WaitlistEntry interface
 interface WaitlistEntry {
@@ -86,6 +87,7 @@ export default function WaitlistSignupsPage() {
   }, []);
 
   return (
+    <AppShell variant="admin">
     <Box
       sx={{
         display: "flex",
@@ -93,17 +95,8 @@ export default function WaitlistSignupsPage() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        bgcolor: "grey.900",
         p: 3,
         position: "relative",
-        background: "linear-gradient(181deg, #000000bd, #031e04, #0000002b, #000000d4)",
-        backgroundSize: "200% 200%",
-        animation: "gradientShift 15s ease infinite",
-        "@keyframes gradientShift": {
-          "0%": { backgroundPosition: "0% 0%" },
-          "50%": { backgroundPosition: "100% 100%" },
-          "100%": { backgroundPosition: "0% 0%" },
-        },
         "&:before": {
           content: '""',
           position: "absolute",
@@ -250,5 +243,6 @@ export default function WaitlistSignupsPage() {
       </Container>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
     </Box>
+    </AppShell>
   );
 }

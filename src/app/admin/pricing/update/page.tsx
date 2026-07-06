@@ -44,6 +44,7 @@ import {
     PlayArrow,
     Stop
 } from '@mui/icons-material';
+import AppShell from "../../../components/AppShell";
 
 interface PricingSyncResult {
     total_cards: number;
@@ -185,6 +186,7 @@ export default function AdminPricingUpdatePage() {
     };
 
     return (
+        <AppShell variant="admin">
         <Box sx={{ p: 3 }}>
             <Typography variant="h4" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <AttachMoney />
@@ -546,5 +548,6 @@ export default function AdminPricingUpdatePage() {
                 </CardContent>
             </Card>
         </Box>
+        </AppShell>
     );
 }

@@ -43,7 +43,6 @@ import {
     ListItemIcon,
     List
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -75,7 +74,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
-import Sidebar from "../../components/Sidebar";
+import AppShell from "../../components/AppShell";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from "../../lib/pokemon-price-tracker-api";
 
@@ -1594,8 +1593,6 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
 
 export default function AdminCardsClient() {
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     const { data: session, status } = useSession();
     const [cards, setCards] = useState<Card[]>([]);
@@ -2258,37 +2255,20 @@ export default function AdminCardsClient() {
     };
 
     return (
+        <AppShell variant="admin">
         <Box
             sx={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 minHeight: "100vh",
-                bgcolor: "grey.900",
                 p: 3,
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
             }}
         >
             <ToastContainer position="top-right" />
             <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
                 <CircularProgress color="inherit" />
             </Backdrop>
-
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, width: '100%', maxWidth: 'xl' }}>
-                <Tooltip title="Toggle Sidebar">
-                    <IconButton onClick={toggleSidebar} sx={{ color: 'text.primary' }}>
-                        <MenuIcon />
-                    </IconButton>
-                </Tooltip>
-            </Box>
 
             <GoogleAnalytics trackPageViews debugMode={true} />
 
@@ -3000,5 +2980,6 @@ export default function AdminCardsClient() {
                 </DialogActions>
             </Dialog>
         </Box>
+        </AppShell>
     );
 }

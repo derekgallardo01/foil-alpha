@@ -29,7 +29,6 @@ import {
     FormControl,
     Autocomplete
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -42,7 +41,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import { debounce } from "lodash";
-import Sidebar from "../../components/Sidebar";
+import AppShell from "../../components/AppShell";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 // Animation variants
@@ -96,8 +95,6 @@ interface ListingsResponse {
 
 export default function AdminListingsClient() {
     const router = useRouter();
-    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-    const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
 
     const { data: session, status } = useSession();
     const [listings, setListings] = useState<Listing[]>([]);
@@ -510,35 +507,20 @@ export default function AdminListingsClient() {
     }, [session, newListing]);
 
     return (
+        <AppShell variant="admin">
         <Box
             sx={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 minHeight: "100vh",
-                bgcolor: "grey.900",
                 p: 3,
-                background: "linear-gradient(181deg,rgba(0, 0, 0, 0.74), #031e04,rgba(0, 0, 0, 0.17), #000000d4)",
-                backgroundSize: "200% 200%",
-                animation: "gradientShift 20s ease infinite",
-                "@keyframes gradientShift": {
-                    "0%": { backgroundPosition: "0% 0%" },
-                    "50%": { backgroundPosition: "100% 100%" },
-                    "100%": { backgroundPosition: "0% 0%" },
-                },
             }}
         >
             <ToastContainer position="top-right" />
             <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
                 <CircularProgress color="inherit" />
             </Backdrop>
-
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 3 }}>
-                <IconButton onClick={toggleSidebar} aria-label="Toggle sidebar">
-                    <MenuIcon />
-                </IconButton>
-            </Box>
 
             <GoogleAnalytics trackPageViews debugMode={true} />
 
@@ -926,5 +908,6 @@ export default function AdminListingsClient() {
                 </DialogActions>
             </Dialog>
         </Box>
+        </AppShell>
     );
 }
