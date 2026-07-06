@@ -2,8 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import {
     Box,
     Container,
@@ -39,6 +37,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/StatCard";
 import { StatRowSkeleton } from "../../components/ui/Skeletons";
 import { formatPrice } from "../../lib/format";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 
 interface Rarity {
     id: number;
@@ -63,8 +62,7 @@ interface CommissionData {
 }
 
 export default function CommissionManagement() {
-    const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [data, setData] = useState<CommissionData>({
@@ -74,13 +72,6 @@ export default function CommissionManagement() {
     });
     const [globalCommission, setGlobalCommission] = useState<string>("5.00");
     const [rarityCommissions, setRarityCommissions] = useState<{ [key: string]: string }>({});
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
 
     // Fetch commission data
     const fetchCommissionData = async () => {

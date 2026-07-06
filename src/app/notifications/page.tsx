@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Container,
@@ -39,6 +38,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import AppShell from '../components/AppShell';
 import PendingPurchaseModal from '../components/PendingPurchaseModal';
+import { useRequireAuth } from '../lib/useRequireAuth';
 
 interface Notification {
     id: number;
@@ -62,7 +62,7 @@ interface PendingPurchase {
 }
 
 export default function NotificationsPage() {
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth();
     const router = useRouter();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
@@ -324,12 +324,10 @@ export default function NotificationsPage() {
     };
 
     useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        } else if (status === 'authenticated') {
+        if (status === 'authenticated') {
             fetchNotifications();
         }
-    }, [status, router]);
+    }, [status]);
 
     // Auto-refresh notifications every 30 seconds
     useEffect(() => {

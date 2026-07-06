@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRequireAuth } from "../../../lib/useRequireAuth";
 import {
     Box,
     Container,
@@ -81,21 +80,13 @@ interface WalletData {
 }
 
 export default function AdminWalletManagement() {
-    const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<WalletData | null>(null);
     const [adjustmentDialog, setAdjustmentDialog] = useState(false);
     const [adjustmentAmount, setAdjustmentAmount] = useState("");
     const [adjustmentDescription, setAdjustmentDescription] = useState("");
     const [adjustmentType, setAdjustmentType] = useState<"add" | "remove">("add");
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
 
     // Fetch wallet data
     const fetchWalletData = async () => {

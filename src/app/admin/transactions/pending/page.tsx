@@ -1,7 +1,6 @@
 // src/app/admin/transactions/pending/page.tsx - Admin pending transactions
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Container,
@@ -36,6 +35,7 @@ import PageHeader from '../../../components/ui/PageHeader';
 import ErrorState from '../../../components/ui/ErrorState';
 import EmptyState from '../../../components/ui/EmptyState';
 import { formatDateTime } from '../../../lib/format';
+import { useRequireAuth } from '../../../lib/useRequireAuth';
 
 interface PendingTransaction {
     id: number;
@@ -66,19 +66,12 @@ interface PendingTransaction {
 }
 
 export default function AdminPendingTransactionsPage() {
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const router = useRouter();
     const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === 'authenticated' && session?.user?.role !== 'admin') {
-            router.push('/unauthorized');
-        }
-    }, [status, session, router]);
 
     const fetchPendingTransactions = async () => {
         try {

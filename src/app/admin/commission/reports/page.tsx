@@ -2,8 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import {
     Box,
     Container,
@@ -44,6 +42,7 @@ import { StatRowSkeleton } from "../../../components/ui/Skeletons";
 import ErrorState from "../../../components/ui/ErrorState";
 import { formatPrice } from "../../../lib/format";
 import { toCsv, downloadCsv } from "../../../lib/csv";
+import { useRequireAuth } from "../../../lib/useRequireAuth";
 
 interface ReportData {
     commission_by_rarity: Array<{
@@ -75,19 +74,11 @@ interface ReportData {
 }
 
 export default function CommissionReports() {
-    const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [loading, setLoading] = useState(true);
     const [reportData, setReportData] = useState<ReportData | null>(null);
     const [dateRange, setDateRange] = useState("30"); // days
     const [reportType, setReportType] = useState("overview");
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
 
     // Fetch report data
     const fetchReportData = async () => {

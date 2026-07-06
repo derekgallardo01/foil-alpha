@@ -2,8 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import {
     Container,
     Typography,
@@ -51,6 +49,7 @@ import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import { StatRowSkeleton } from '../../components/ui/Skeletons';
 import { formatPrice, formatDateTime } from '../../lib/format';
+import { useRequireAuth } from '../../lib/useRequireAuth';
 
 interface Transaction {
     id: number;
@@ -90,8 +89,7 @@ interface TransactionStats {
 }
 
 const AdminTransactionsPage = () => {
-    const { data: session, status } = useSession();
-    const router = useRouter();
+    const { session, status } = useRequireAuth({ admin: true });
     const [activeTab, setActiveTab] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [stats, setStats] = useState<TransactionStats>({
@@ -111,13 +109,6 @@ const AdminTransactionsPage = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === 'authenticated' && session?.user?.role !== 'admin') {
-            router.push('/unauthorized');
-        }
-    }, [status, session, router]);
 
     const fetchTransactions = async () => {
         try {

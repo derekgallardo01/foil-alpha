@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 import {
   Box,
   Typography,
@@ -95,9 +94,7 @@ interface WalletOperationData {
 }
 
 export default function AdminUsersClient() {
-  const router = useRouter();
-
-  const { data: session, status } = useSession();
+  const { session, status } = useRequireAuth({ admin: true });
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,13 +143,6 @@ export default function AdminUsersClient() {
   // Removed admin identifier
   const editDialogRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
-
-  // Role-Based Access Control (RBAC)
-  useEffect(() => {
-    if (status === "authenticated" && session?.user?.role !== "admin") {
-      router.push("/unauthorized");
-    }
-  }, [status, session, router]);
 
   // Fetch users with wallet info
   const maxAttempts = 5;

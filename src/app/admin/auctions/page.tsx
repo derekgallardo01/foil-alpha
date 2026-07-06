@@ -1,8 +1,6 @@
 // src/app/admin/auctions/page.tsx - Updated to show actual data correctly
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import {
     Container,
     Typography,
@@ -50,6 +48,7 @@ import StatCard from '../../components/StatCard';
 import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { formatPrice, formatDuration, formatDateTime } from '../../lib/format';
+import { useRequireAuth } from '../../lib/useRequireAuth';
 
 interface Card {
     id: number;
@@ -104,8 +103,7 @@ interface AuctionStats {
 }
 
 export default function AdminAuctionManagement() {
-    const { data: session, status } = useSession();
-    const router = useRouter();
+    const { session, status } = useRequireAuth({ admin: true });
     const [activeTab, setActiveTab] = useState(0);
     const [auctions, setAuctions] = useState<AuctionData[]>([]);
     const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
@@ -118,13 +116,6 @@ export default function AdminAuctionManagement() {
     const [selectedAuction, setSelectedAuction] = useState<AuctionData | null>(null);
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === 'authenticated' && session?.user?.role !== 'admin') {
-            router.push('/unauthorized');
-        }
-    }, [status, session, router]);
 
     const fetchAuctions = async () => {
         try {

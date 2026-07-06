@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useRequireAuth } from "../lib/useRequireAuth";
 import {
     Box,
     Container,
@@ -20,7 +20,7 @@ import { toast } from "react-toastify";
 export default function WalletPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { status } = useSession();
+    const { status } = useRequireAuth();
 
     useEffect(() => {
         const deposit = searchParams.get("deposit");
@@ -32,13 +32,6 @@ export default function WalletPage() {
             router.replace("/wallet");
         }
     }, [searchParams, router]);
-
-    // Redirect in an effect, never during render.
-    useEffect(() => {
-        if (status === "unauthenticated") {
-            router.push("/login");
-        }
-    }, [status, router]);
 
     if (status === "loading") {
         return (

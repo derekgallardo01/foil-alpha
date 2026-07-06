@@ -67,6 +67,7 @@ import PageHeader from '../components/ui/PageHeader';
 import ErrorState from '../components/ui/ErrorState';
 import EmptyState from '../components/ui/EmptyState';
 import { CardGridSkeleton } from '../components/ui/Skeletons';
+import { useRequireAuth } from '../lib/useRequireAuth';
 
 interface Card {
     id: number;
@@ -466,7 +467,7 @@ function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
 }
 
 export default function MarketplacePage() {
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth();
     const router = useRouter();
     const { selectedCurrency, isUSDFallback } = useCurrencyContext();
     const [cards, setCards] = useState<Listing[]>([]);
@@ -742,12 +743,6 @@ export default function MarketplacePage() {
                 toast.error('Failed to update price data');
             });
     };
-
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        }
-    }, [status, router]);
 
     // FIXED: Use debounced search term and callback in effect
     useEffect(() => {

@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRequireAuth } from "../../../lib/useRequireAuth";
 import {
     Box,
     Container,
@@ -85,8 +84,7 @@ const actionColors: Record<string, "primary" | "secondary" | "error" | "warning"
 };
 
 export default function UserActivityPage() {
-    const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [activities, setActivities] = useState<ActivityLog[]>([]);
@@ -104,12 +102,10 @@ export default function UserActivityPage() {
     });
 
     useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        } else if (status === "authenticated") {
+        if (status === "authenticated" && session?.user?.role === "admin") {
             fetchActivities();
         }
-    }, [status, session, router]);
+    }, [status, session]);
 
     const fetchActivities = async () => {
         try {

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 import {
     Box,
     Typography,
@@ -1436,9 +1435,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
 }
 
 export default function AdminCardsClient() {
-    const router = useRouter();
-
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -1474,13 +1471,6 @@ export default function AdminCardsClient() {
 
     // Progress tracking for main operations
     const { progress: mainProgress, startProgress: startMainProgress, updateProgress: updateMainProgress, completeProgress: completeMainProgress, resetProgress: resetMainProgress } = useProgressTracker();
-
-    // Role-Based Access Control (RBAC)
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
 
     // Enhanced fetch cards with progress tracking
     const fetchCards = useCallback(async () => {

@@ -1,7 +1,6 @@
 // src/app/selling/dashboard/page.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Container,
@@ -59,6 +58,7 @@ import ErrorState from '../../components/ui/ErrorState';
 import { CardGridSkeleton } from '../../components/ui/Skeletons';
 import { getRarityColor } from '../../lib/rarity';
 import { formatDuration, formatDateTime } from '../../lib/format';
+import { useRequireAuth } from '../../lib/useRequireAuth';
 
 interface Card {
     id: number;
@@ -119,7 +119,7 @@ interface SalesStats {
 }
 
 export default function SellingDashboard() {
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth();
     const router = useRouter();
     const [salesData, setSalesData] = useState<SalesData>({ activeSales: [], soldItems: [] });
     const [loading, setLoading] = useState(true);
@@ -180,12 +180,6 @@ export default function SellingDashboard() {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        }
-    }, [status, router]);
 
     useEffect(() => {
         if (status === 'authenticated') {

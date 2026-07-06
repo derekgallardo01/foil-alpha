@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
     Box,
@@ -68,6 +67,7 @@ import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
 import PriceHistoryModal from "../components/PriceHistoryModal";
 import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
+import { useRequireAuth } from "../lib/useRequireAuth";
 
 interface UserCard {
     id: number;
@@ -551,7 +551,7 @@ function BulkPriceUpdateModal({
 
 export default function CollectionPage() {
     const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth();
     const [userCards, setUserCards] = useState<UserCard[]>([]);
     const [pendingPurchases, setPendingPurchases] = useState<PendingPurchase[]>([]);
     const [loading, setLoading] = useState(true);
@@ -581,10 +581,8 @@ export default function CollectionPage() {
         if (status === "authenticated") {
             fetchUserCards();
             fetchPendingPurchases();
-        } else if (status === "unauthenticated") {
-            router.push("/login");
         }
-    }, [status, router]);
+    }, [status]);
 
     useEffect(() => {
         if (status === 'authenticated') {

@@ -2,8 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRequireAuth } from '../../../lib/useRequireAuth';
 import {
     Box,
     Paper,
@@ -83,8 +82,7 @@ interface CronStatus {
 }
 
 export default function AdminPricingUpdatePage() {
-    const { data: session, status } = useSession();
-    const router = useRouter();
+    const { session, status } = useRequireAuth({ admin: true });
     const [syncResult, setSyncResult] = useState<PricingSyncResult | null>(null);
     const [cronStatus, setCronStatus] = useState<CronStatus | null>(null);
     const [loading, setLoading] = useState(false);
@@ -94,13 +92,6 @@ export default function AdminPricingUpdatePage() {
     const [maxAgeHours, setMaxAgeHours] = useState(24);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === 'authenticated' && session?.user?.role !== 'admin') {
-            router.push('/unauthorized');
-        }
-    }, [status, session, router]);
 
     // Fetch cron status on component mount (admins only)
     useEffect(() => {

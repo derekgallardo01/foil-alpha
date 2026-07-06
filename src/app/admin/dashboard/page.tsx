@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
     Box,
@@ -32,6 +31,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/StatCard";
 import { StatRowSkeleton } from "../../components/ui/Skeletons";
 import ErrorState from "../../components/ui/ErrorState";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -65,7 +65,7 @@ interface RecentActivity {
 
 export default function AdminDashboard() {
     const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [stats, setStats] = useState<DashboardStats>({
@@ -79,13 +79,6 @@ export default function AdminDashboard() {
         pendingTransactions: 0,
     });
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
 
     // Fetch dashboard data
     const fetchDashboardData = async () => {

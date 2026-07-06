@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 import {
     Box,
     Typography,
@@ -112,9 +111,7 @@ interface ListingsResponse {
 }
 
 export default function AdminListingsClient() {
-    const router = useRouter();
-
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [listings, setListings] = useState<Listing[]>([]);
     const [allCards, setAllCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -163,13 +160,6 @@ export default function AdminListingsClient() {
     });
     const createDialogRef = useRef<HTMLDivElement>(null);
     const hasFetchedRef = useRef(false);
-
-    // Role-Based Access Control (RBAC)
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
 
     // Fetch listings
     const fetchListings = useCallback(async () => {

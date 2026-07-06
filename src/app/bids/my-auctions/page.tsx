@@ -1,7 +1,6 @@
 // src/app/bids/my-auctions/page.tsx - My Auctions management page
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Container,
@@ -40,6 +39,7 @@ import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
 import { getRarityColor } from '../../lib/rarity';
 import { formatDateTime, formatDuration } from '../../lib/format';
+import { useRequireAuth } from '../../lib/useRequireAuth';
 
 interface Card {
     id: number;
@@ -74,7 +74,7 @@ interface MyAuction {
 }
 
 export default function MyAuctionsPage() {
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth();
     const router = useRouter();
     const [auctions, setAuctions] = useState<MyAuction[]>([]);
     const [loading, setLoading] = useState(true);
@@ -113,12 +113,6 @@ export default function MyAuctionsPage() {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        }
-    }, [status, router]);
 
     useEffect(() => {
         if (status === 'authenticated') {
