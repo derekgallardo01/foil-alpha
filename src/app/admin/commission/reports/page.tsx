@@ -43,6 +43,7 @@ import StatCard from "../../../components/StatCard";
 import { StatRowSkeleton } from "../../../components/ui/Skeletons";
 import ErrorState from "../../../components/ui/ErrorState";
 import { formatPrice } from "../../../lib/format";
+import { toCsv, downloadCsv } from "../../../lib/csv";
 
 interface ReportData {
     commission_by_rarity: Array<{
@@ -114,6 +115,49 @@ export default function CommissionReports() {
         }
     }, [status, session, dateRange, reportType]);
 
+    // Export the full report (summary + all three tables) as a single CSV.
+    const handleExport = () => {
+        if (!reportData) return;
+        const { summary, monthly_breakdown, commission_by_rarity, top_cards } = reportData;
+        const sections = [
+            "Summary",
+            toCsv([summary], [
+                { key: "total_revenue", header: "Total Revenue" },
+                { key: "total_commissions", header: "Commissions" },
+                { key: "total_marketplace_sales", header: "Marketplace Sales" },
+                { key: "avg_commission_rate", header: "Avg Commission Rate (%)" },
+                { key: "total_transactions", header: "Transactions" },
+            ]),
+            "",
+            "Monthly Breakdown",
+            toCsv(monthly_breakdown, [
+                { key: "month", header: "Month" },
+                { key: "commissions", header: "Commissions" },
+                { key: "marketplace_sales", header: "Marketplace Sales" },
+                { key: "total_revenue", header: "Total Revenue" },
+                { key: "transaction_count", header: "Transactions" },
+            ]),
+            "",
+            "Commission by Rarity",
+            toCsv(commission_by_rarity, [
+                { key: "rarity", header: "Rarity" },
+                { key: "total_commission", header: "Commission" },
+                { key: "transaction_count", header: "Transactions" },
+                { key: "avg_commission_rate", header: "Avg Rate (%)" },
+            ]),
+            "",
+            "Top Cards",
+            toCsv(top_cards, [
+                { key: "card_name", header: "Card" },
+                { key: "total_commission", header: "Commission" },
+                { key: "transaction_count", header: "Sales" },
+                { key: "avg_price", header: "Avg Price" },
+            ]),
+        ];
+        downloadCsv(`commission-report-${dateRange}d.csv`, sections.join("\n"));
+        toast.success("Report exported");
+    };
+
     return (
         <AppShell variant="admin">
             <PageHeader
@@ -144,8 +188,8 @@ export default function CommissionReports() {
                         <Button
                             variant="contained"
                             startIcon={<Download />}
-                            disabled
-                            title="Export coming soon"
+                            onClick={handleExport}
+                            disabled={!reportData}
                         >
                             Export
                         </Button>

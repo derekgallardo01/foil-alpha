@@ -45,6 +45,7 @@ import StatCard from "../../../components/StatCard";
 import { StatRowSkeleton } from "../../../components/ui/Skeletons";
 import ErrorState from "../../../components/ui/ErrorState";
 import { formatPrice } from "../../../lib/format";
+import { toCsv, downloadCsv } from "../../../lib/csv";
 
 interface AdminWallet {
     id: number;
@@ -164,6 +165,21 @@ export default function AdminWalletManagement() {
             fetchWalletData();
         }
     }, [status, session]);
+
+    // Export the recent transactions table as CSV (raw values).
+    const handleExport = () => {
+        if (!data?.recent_transactions?.length) return;
+        const csv = toCsv(data.recent_transactions, [
+            { key: "created_at", header: "Date" },
+            { key: "transaction_type", header: "Type" },
+            { key: "amount", header: "Amount" },
+            { key: "balance_after", header: "Balance After" },
+            { key: "description", header: "Description" },
+            { key: "commission_rate", header: "Commission Rate (%)" },
+        ]);
+        downloadCsv("platform-wallet-transactions.csv", csv);
+        toast.success("Transactions exported");
+    };
 
     const getTransactionTypeColor = (type: string) => {
         switch (type) {
@@ -328,8 +344,8 @@ export default function AdminWalletManagement() {
                                             variant="outlined"
                                             startIcon={<Download />}
                                             size="small"
-                                            disabled
-                                            title="Export coming soon"
+                                            onClick={handleExport}
+                                            disabled={!data.recent_transactions?.length}
                                         >
                                             Export
                                         </Button>
