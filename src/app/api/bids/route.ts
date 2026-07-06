@@ -179,7 +179,8 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Check if bidder has sufficient balance (but don't freeze it)
+        // Bidder must have the funds; the bid amount is held in escrow (frozen)
+        // until the auction resolves.
         const bidderWallet = await prisma.userWallet.findUnique({
             where: { user_id: bidderId }
         });
@@ -188,14 +189,22 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
         }
 
-        const availableBalance = Number(bidderWallet.balance) - Number(bidderWallet.frozen_balance);
+        // Funds already held for this bidder's existing active bid on this card are
+        // released when the new bid replaces it, so they count toward availability.
+        const existingOwnBid = await prisma.bid.findFirst({
+            where: { userCardId: user_card_id, bidderId, is_active: true },
+        });
+        const alreadyHeldForThisAuction = existingOwnBid ? Number(existingOwnBid.amount) : 0;
+
+        const availableBalance =
+            Number(bidderWallet.balance) - Number(bidderWallet.frozen_balance) + alreadyHeldForThisAuction;
         if (availableBalance < bidAmount) {
             return NextResponse.json({
                 error: `Insufficient balance. Available: $${availableBalance.toFixed(2)}, Required: $${bidAmount.toFixed(2)}`
             }, { status: 400 });
         }
 
-        // Execute the bidding transaction (NO fund freezing)
+        // Execute the bidding transaction, holding the bid amount in escrow.
         const result = await prisma.$transaction(async (tx) => {
             // 1. If there's a previous bid from this user, deactivate it
             const previousBidFromUser = await tx.bid.findFirst({
@@ -213,7 +222,7 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            // 2. Create the new bid (NO fund freezing)
+            // 2. Create the new bid
             const newBid = await tx.bid.create({
                 data: {
                     userCardId: user_card_id,
@@ -221,6 +230,14 @@ export async function POST(request: NextRequest) {
                     amount: bidAmount,
                     is_active: true
                 }
+            });
+
+            // 3. Hold the new bid in escrow, releasing any prior hold this bidder
+            //    had on this auction (net change to frozen_balance).
+            const prevHeld = previousBidFromUser ? Number(previousBidFromUser.amount) : 0;
+            await tx.userWallet.update({
+                where: { user_id: bidderId },
+                data: { frozen_balance: { increment: bidAmount - prevHeld } },
             });
 
             return {
@@ -325,10 +342,16 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Cannot cancel bid after auction has ended' }, { status: 400 });
         }
 
-        // Simply deactivate the bid (no fund unfreezing needed)
-        await prisma.bid.update({
-            where: { id: parseInt(bidId) },
-            data: { is_active: false }
+        // Deactivate the bid and release its escrow hold.
+        await prisma.$transaction(async (tx) => {
+            await tx.bid.update({
+                where: { id: parseInt(bidId) },
+                data: { is_active: false }
+            });
+            await tx.userWallet.update({
+                where: { user_id: userId },
+                data: { frozen_balance: { decrement: Number(bid.amount) } }
+            });
         });
 
         return NextResponse.json({
