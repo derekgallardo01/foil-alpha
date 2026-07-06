@@ -28,6 +28,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import StatCard from '../components/StatCard';
+import ForecastPanel from '../components/ForecastPanel';
 import TrendingCardsTable from '../components/dashboard/TrendingCardsTable';
 import LiveAuctionTable from '../components/dashboard/LiveAuctionTable';
 import NewReleasesCarousel from '../components/dashboard/NewReleasesCarousel';
@@ -199,6 +200,10 @@ export default function Dashboard() {
               <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <TrendingCardsTable limit={20} height={600} />
+                </Grid>
+                {/* Price forecast (Phase 2) */}
+                <Grid item xs={12}>
+                  <ForecastPanel cardId={1} title="Charizard — Price Forecast" />
                 </Grid>
                 {/* Price Chart for Top Trending Card */}
                 <Grid item xs={12}>
