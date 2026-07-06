@@ -273,6 +273,13 @@ export default function AdminListingsClient() {
 
         setRowLoading((prev) => ({ ...prev, [listingId]: true }));
         try {
+            // Persist the delete server-side before updating local state, otherwise
+            // the row reappears on the next refresh.
+            const res = await fetch(`/api/admin/listings/${listingId}`, { method: "DELETE" });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to remove listing");
+            }
             setListings((prev) => prev.filter((listing) => listing.id !== listingId));
             setSelected((prev) => prev.filter((id) => id !== listingId));
             toast.success("Listing removed successfully!");
