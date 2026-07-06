@@ -20,6 +20,7 @@ import {
     ListItemSecondaryAction,
     CircularProgress
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
     Whatshot,
     TrendingUp,
@@ -49,6 +50,7 @@ interface PopularityMetricsProps {
 
 export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps) {
     const router = useRouter();
+    const theme = useTheme();
     const [popularCards, setPopularCards] = useState<PopularCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -93,10 +95,10 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
     };
 
     const getPopularityColor = (score: number) => {
-        if (score > 1000) return '#9B5Cff';
-        if (score > 500) return '#FFD54F';
-        if (score > 100) return '#FF7043';
-        return '#66BB6A';
+        if (score > 1000) return theme.palette.primary.main;
+        if (score > 500) return theme.palette.signal.main;
+        if (score > 100) return theme.palette.warning.main;
+        return theme.palette.success.main;
     };
 
     const getRarityColor = (rarity: string) => {
@@ -118,15 +120,28 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
 
     const topCard = popularCards[0];
 
+    // Neutral, themed toggle group — Holo violet reserved for the active state only.
+    const toggleSx = {
+        '& .MuiToggleButton-root': {
+            color: 'text.secondary',
+            borderColor: 'divider',
+            '&.Mui-selected': {
+                color: 'primary.contrastText',
+                bgcolor: 'primary.main',
+                borderColor: 'primary.main',
+                '&:hover': { bgcolor: 'primary.main' }
+            },
+            '&:hover': {
+                bgcolor: 'action.hover'
+            }
+        }
+    } as const;
+
     if (loading) {
         return (
-            <Paper sx={{
-                p: 3,
-                bgcolor: 'grey.800',
-                border: '1px solid rgba(155, 92, 255, 0.2)'
-            }}>
+            <Paper variant="outlined" sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress sx={{ color: '#9B5Cff' }} />
+                    <CircularProgress color="primary" />
                 </Box>
             </Paper>
         );
@@ -134,13 +149,9 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
 
     if (error) {
         return (
-            <Paper sx={{
-                p: 3,
-                bgcolor: 'grey.800',
-                border: '1px solid rgba(155, 92, 255, 0.2)'
-            }}>
+            <Paper variant="outlined" sx={{ p: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <Whatshot sx={{ color: '#9B5Cff' }} />
+                    <Whatshot sx={{ color: 'primary.main' }} />
                     Most Popular Cards
                 </Typography>
                 <Typography color="error" align="center" sx={{ py: 2 }}>
@@ -151,14 +162,10 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
     }
 
     return (
-        <Paper sx={{
-            p: 3,
-            bgcolor: 'grey.800',
-            border: '1px solid rgba(155, 92, 255, 0.2)'
-        }}>
+        <Paper variant="outlined" sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Whatshot sx={{ color: '#9B5Cff' }} />
+                    <Whatshot sx={{ color: 'primary.main' }} />
                     Most Popular Cards
                 </Typography>
 
@@ -167,20 +174,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                     exclusive
                     onChange={(e, value) => value && setPeriod(value)}
                     size="small"
-                    sx={{
-                        '& .MuiToggleButton-root': {
-                            color: 'text.secondary',
-                            borderColor: 'rgba(155, 92, 255, 0.3)',
-                            '&.Mui-selected': {
-                                color: '#000',
-                                bgcolor: '#9B5Cff',
-                                borderColor: '#9B5Cff'
-                            },
-                            '&:hover': {
-                                bgcolor: 'rgba(155, 92, 255, 0.1)'
-                            }
-                        }
-                    }}
+                    sx={toggleSx}
                 >
                     <ToggleButton value="24h">24H</ToggleButton>
                     <ToggleButton value="7d">7D</ToggleButton>
@@ -194,18 +188,26 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                 </Typography>
             ) : (
                 <>
-                    {/* Featured Most Popular Card */}
+                    {/* Featured Most Popular Card — neutral surface with a Holo accent hairline */}
                     {topCard && (
                         <Card
                             sx={{
                                 mb: 3,
-                                background: 'linear-gradient(135deg, rgba(155, 92, 255, 0.15) 0%, rgba(155, 92, 255, 0.05) 100%)',
-                                border: '1px solid rgba(155, 92, 255, 0.3)',
+                                position: 'relative',
+                                overflow: 'hidden',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease',
+                                transition: 'border-color 0.2s ease',
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 3,
+                                    background: theme.foil.gradient
+                                },
                                 '&:hover': {
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: '0 8px 24px rgba(155, 92, 255, 0.2)'
+                                    borderColor: 'primary.main'
                                 }
                             }}
                             onClick={() => router.push(`/marketplace?card=${topCard.id}`)}
@@ -246,19 +248,16 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             <Chip
                                                 icon={<Star />}
                                                 label="#1 Most Popular"
-                                                sx={{
-                                                    bgcolor: '#9B5Cff',
-                                                    color: '#000',
-                                                    fontWeight: 600
-                                                }}
+                                                color="primary"
+                                                sx={{ fontWeight: 600 }}
                                             />
                                         </Box>
 
                                         <Grid container spacing={2} sx={{ mt: 2 }}>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <Visibility sx={{ color: '#9B5Cff', mb: 0.5 }} />
-                                                    <Typography variant="h6" sx={{ color: 'text.primary' }}>
+                                                    <Visibility sx={{ color: 'text.disabled', mb: 0.5 }} />
+                                                    <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                                         {topCard.view_count.toLocaleString()}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">Views</Typography>
@@ -266,8 +265,8 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             </Grid>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <LocalOffer sx={{ color: '#9B5Cff', mb: 0.5 }} />
-                                                    <Typography variant="h6" sx={{ color: 'text.primary' }}>
+                                                    <LocalOffer sx={{ color: 'text.disabled', mb: 0.5 }} />
+                                                    <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                                         {topCard.active_listings}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">Listings</Typography>
@@ -275,8 +274,8 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             </Grid>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <TrendingUp sx={{ color: '#9B5Cff', mb: 0.5 }} />
-                                                    <Typography variant="h6" sx={{ color: 'text.primary' }}>
+                                                    <TrendingUp sx={{ color: 'text.disabled', mb: 0.5 }} />
+                                                    <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                                         {topCard.recent_sales}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">Recent Sales</Typography>
@@ -284,7 +283,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             </Grid>
                                             <Grid item xs={6} sm={3}>
                                                 <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="h6" sx={{ color: '#9B5Cff', fontWeight: 600 }}>
+                                                    <Typography variant="mono" component="div" sx={{ color: 'text.primary', fontWeight: 700 }}>
                                                         {formatPrice(topCard.market_price)}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">Market Price</Typography>
@@ -298,26 +297,27 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                     )}
 
                     {/* Rest of Popular Cards List */}
-                    <List sx={{ bgcolor: 'grey.900', borderRadius: 1 }}>
+                    <List sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
                         {popularCards.slice(1).map((card, index) => (
                             <ListItem
                                 key={card.id}
                                 component="div"
                                 sx={{
                                     cursor: 'pointer',
-                                    borderBottom: index < popularCards.length - 2 ? '1px solid rgba(155, 92, 255, 0.1)' : 'none',
+                                    borderBottom: index < popularCards.length - 2 ? '1px solid' : 'none',
+                                    borderColor: 'divider',
                                     px: 2,
                                     py: 1.5,
                                     transition: 'background-color 0.2s ease',
                                     '&:hover': {
-                                        bgcolor: 'rgba(155, 92, 255, 0.05)'
+                                        bgcolor: 'action.hover'
                                     }
                                 }}
                                 onClick={() => router.push(`/marketplace?card=${card.id}`)}
                             >
                                 <ListItemAvatar>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Typography variant="h6" sx={{ color: '#9B5Cff', fontWeight: 600, minWidth: 24 }}>
+                                        <Typography variant="mono" sx={{ color: 'text.secondary', fontWeight: 700, minWidth: 24 }}>
                                             #{index + 2}
                                         </Typography>
                                         <Avatar
@@ -354,8 +354,8 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                 {card.set_name}
                                             </Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Visibility sx={{ fontSize: 14, color: '#9B5Cff' }} />
-                                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                                <Visibility sx={{ fontSize: 14, color: 'text.disabled' }} />
+                                                <Typography variant="mono" sx={{ fontSize: 12, color: 'text.secondary' }}>
                                                     {card.view_count.toLocaleString()}
                                                 </Typography>
                                             </Box>
@@ -364,7 +364,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                 />
                                 <ListItemSecondaryAction>
                                     <Box sx={{ textAlign: 'right' }}>
-                                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#9B5Cff' }}>
+                                        <Typography variant="mono" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                             {formatPrice(card.market_price)}
                                         </Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
@@ -374,7 +374,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                 sx={{
                                                     width: 60,
                                                     height: 4,
-                                                    bgcolor: 'rgba(155, 92, 255, 0.1)',
+                                                    bgcolor: 'action.hover',
                                                     borderRadius: 2,
                                                     '& .MuiLinearProgress-bar': {
                                                         bgcolor: getPopularityColor(card.popularity_score),

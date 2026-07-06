@@ -40,6 +40,7 @@ import {
     Legend,
 } from 'chart.js';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@mui/material/styles';
 
 // Register ChartJS components
 ChartJS.register(
@@ -77,6 +78,7 @@ export default function TrendingCardsTable({
     height = 600
 }: TrendingCardsTableProps) {
     const router = useRouter();
+    const theme = useTheme();
     const [cards, setCards] = useState<TrendingCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -148,7 +150,7 @@ export default function TrendingCardsTable({
                 labels: ['', '', '', '', ''],
                 datasets: [{
                     data: [0, 0, 0, 0, 0],
-                    borderColor: '#757575',
+                    borderColor: theme.palette.text.disabled,
                     borderWidth: 1,
                     fill: false,
                     pointRadius: 0,
@@ -163,7 +165,7 @@ export default function TrendingCardsTable({
             labels: sparkline.map(() => ''),
             datasets: [{
                 data: sparkline.map(s => s.price),
-                borderColor: isIncreasing ? '#9B5Cff' : '#ff6b6b',
+                borderColor: isIncreasing ? theme.palette.success.main : theme.palette.error.main,
                 borderWidth: 2,
                 fill: false,
                 tension: 0.4,
@@ -191,15 +193,15 @@ export default function TrendingCardsTable({
     const getPlaceholderImage = () => "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='56' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' fill='%23333' rx='4'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='%23666' font-size='10'%3E?%3C/text%3E%3C/svg%3E";
 
     return (
-        <Paper sx={{
+        <Paper variant="outlined" sx={{
             p: 3,
             height,
-            bgcolor: 'grey.800',
-            border: '1px solid rgba(155, 92, 255, 0.2)'
+            border: 1,
+            borderColor: 'divider'
         }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TrendingUp sx={{ color: '#9B5Cff' }} />
+                    <TrendingUp sx={{ color: 'primary.main' }} />
                     Trending Cards
                 </Typography>
 
@@ -212,14 +214,17 @@ export default function TrendingCardsTable({
                         sx={{
                             '& .MuiToggleButton-root': {
                                 color: 'text.secondary',
-                                borderColor: 'rgba(155, 92, 255, 0.3)',
+                                borderColor: 'divider',
                                 '&.Mui-selected': {
-                                    color: '#000',
-                                    bgcolor: '#9B5Cff',
-                                    borderColor: '#9B5Cff'
+                                    color: 'primary.contrastText',
+                                    bgcolor: 'primary.main',
+                                    borderColor: 'primary.main',
+                                    '&:hover': {
+                                        bgcolor: 'primary.main'
+                                    }
                                 },
                                 '&:hover': {
-                                    bgcolor: 'rgba(155, 92, 255, 0.1)'
+                                    bgcolor: 'action.hover'
                                 }
                             }
                         }}
@@ -249,14 +254,17 @@ export default function TrendingCardsTable({
                         sx={{
                             '& .MuiToggleButton-root': {
                                 color: 'text.secondary',
-                                borderColor: 'rgba(155, 92, 255, 0.3)',
+                                borderColor: 'divider',
                                 '&.Mui-selected': {
-                                    color: '#000',
-                                    bgcolor: '#9B5Cff',
-                                    borderColor: '#9B5Cff'
+                                    color: 'primary.contrastText',
+                                    bgcolor: 'primary.main',
+                                    borderColor: 'primary.main',
+                                    '&:hover': {
+                                        bgcolor: 'primary.main'
+                                    }
                                 },
                                 '&:hover': {
-                                    bgcolor: 'rgba(155, 92, 255, 0.1)'
+                                    bgcolor: 'action.hover'
                                 }
                             }
                         }}
@@ -269,7 +277,7 @@ export default function TrendingCardsTable({
                     <IconButton
                         size="small"
                         onClick={fetchTrendingCards}
-                        sx={{ color: '#9B5Cff' }}
+                        sx={{ color: 'primary.main' }}
                     >
                         <Refresh />
                     </IconButton>
@@ -278,21 +286,22 @@ export default function TrendingCardsTable({
 
             <TableContainer sx={{
                 maxHeight: height - 120,
-                bgcolor: 'grey.900',
+                bgcolor: 'background.default',
                 borderRadius: 1,
-                border: '1px solid rgba(155, 92, 255, 0.1)'
+                border: 1,
+                borderColor: 'divider'
             }}>
                 <Table stickyHeader size="small">
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{ bgcolor: 'grey.800', color: 'text.primary', width: 50 }}>#</TableCell>
-                            <TableCell sx={{ bgcolor: 'grey.800', color: 'text.primary' }}>Card</TableCell>
-                            <TableCell sx={{ bgcolor: 'grey.800', color: 'text.primary' }}>Set</TableCell>
-                            <TableCell sx={{ bgcolor: 'grey.800', color: 'text.primary' }}>Rarity</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: 'grey.800', color: 'text.primary' }}>Price</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: 'grey.800', color: 'text.primary' }}>Change</TableCell>
-                            <TableCell align="center" sx={{ bgcolor: 'grey.800', color: 'text.primary', width: 100 }}>Trend</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: 'grey.800', color: 'text.primary' }}>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 50 }}>#</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Card</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Set</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Rarity</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Price</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Change</TableCell>
+                            <TableCell align="center" sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 100 }}>Trend</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
                                 {trendType === 'volume' ? 'Volume' : trendType === 'popularity' ? 'Views' : 'Vol 24h'}
                             </TableCell>
                         </TableRow>
@@ -318,7 +327,7 @@ export default function TrendingCardsTable({
                                         <Typography color="error" gutterBottom>
                                             {error}
                                         </Typography>
-                                        <IconButton onClick={fetchTrendingCards} sx={{ color: '#9B5Cff' }}>
+                                        <IconButton onClick={fetchTrendingCards} sx={{ color: 'primary.main' }}>
                                             <Refresh />
                                         </IconButton>
                                     </Box>
@@ -339,9 +348,9 @@ export default function TrendingCardsTable({
                                     hover
                                     sx={{
                                         cursor: 'pointer',
-                                        bgcolor: 'grey.900',
+                                        bgcolor: 'background.default',
                                         '&:hover': {
-                                            bgcolor: 'rgba(155, 92, 255, 0.05)'
+                                            bgcolor: 'action.hover'
                                         }
                                     }}
                                     onClick={() => router.push(`/marketplace?card=${card.id}`)}
@@ -379,22 +388,22 @@ export default function TrendingCardsTable({
                                         />
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                                        <Typography variant="mono" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                             {formatPrice(card.market_price)}
                                         </Typography>
                                     </TableCell>
                                     <TableCell align="right">
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                                             {card.price_change_7d && card.price_change_7d > 0 ? (
-                                                <TrendingUp sx={{ fontSize: 16, color: '#9B5Cff' }} />
+                                                <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
                                             ) : (
-                                                <TrendingDown sx={{ fontSize: 16, color: '#ff6b6b' }} />
+                                                <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
                                             )}
                                             <Typography
-                                                variant="body2"
+                                                variant="mono"
                                                 sx={{
-                                                    color: card.price_change_7d && card.price_change_7d > 0 ? '#9B5Cff' : '#ff6b6b',
-                                                    fontWeight: 500
+                                                    color: card.price_change_7d && card.price_change_7d > 0 ? 'success.main' : 'error.main',
+                                                    fontWeight: 600
                                                 }}
                                             >
                                                 {formatPercentage(card.price_change_7d)}
@@ -407,7 +416,7 @@ export default function TrendingCardsTable({
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Typography variant="body2" color="text.primary">
+                                        <Typography variant="mono" color="text.primary">
                                             {trendType === 'volume' || trendType === 'price'
                                                 ? (card.volume_24h?.toLocaleString() || '0')
                                                 : card.view_count.toLocaleString()

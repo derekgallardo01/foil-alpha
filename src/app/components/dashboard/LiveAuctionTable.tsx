@@ -135,17 +135,16 @@ export default function LiveAuctionTable({
     }
 
     return (
-        <Paper sx={{ p: 3, height }}>
+        <Paper variant="outlined" sx={{ p: 3, height, border: 1, borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Gavel sx={{ color: '#9B5Cff' }} />
+                    <Gavel sx={{ color: 'primary.main' }} />
                     Live Auctions
                     <Chip
                         label="LIVE"
                         size="small"
+                        color="error"
                         sx={{
-                            bgcolor: '#F44336',
-                            color: 'white',
                             animation: 'pulse 2s infinite'
                         }}
                     />
@@ -154,41 +153,29 @@ export default function LiveAuctionTable({
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
                         size="small"
+                        color="primary"
                         variant={sortBy === 'ending_soon' ? 'contained' : 'outlined'}
                         onClick={() => setSortBy('ending_soon')}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: sortBy === 'ending_soon' ? '#000' : '#9B5Cff',
-                            bgcolor: sortBy === 'ending_soon' ? '#9B5Cff' : 'transparent'
-                        }}
                     >
                         Ending Soon
                     </Button>
                     <Button
                         size="small"
+                        color="primary"
                         variant={sortBy === 'most_bids' ? 'contained' : 'outlined'}
                         onClick={() => setSortBy('most_bids')}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: sortBy === 'most_bids' ? '#000' : '#9B5Cff',
-                            bgcolor: sortBy === 'most_bids' ? '#9B5Cff' : 'transparent'
-                        }}
                     >
                         Most Bids
                     </Button>
                     <Button
                         size="small"
+                        color="primary"
                         variant={sortBy === 'highest_price' ? 'contained' : 'outlined'}
                         onClick={() => setSortBy('highest_price')}
-                        sx={{
-                            borderColor: '#9B5Cff',
-                            color: sortBy === 'highest_price' ? '#000' : '#9B5Cff',
-                            bgcolor: sortBy === 'highest_price' ? '#9B5Cff' : 'transparent'
-                        }}
                     >
                         Highest Price
                     </Button>
-                    <IconButton size="small" onClick={fetchAuctions}>
+                    <IconButton size="small" onClick={fetchAuctions} sx={{ color: 'primary.main' }}>
                         <Refresh />
                     </IconButton>
                 </Box>
@@ -259,11 +246,11 @@ export default function LiveAuctionTable({
                                     </TableCell>
                                     <TableCell align="right">
                                         <Box>
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            <Typography variant="mono" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                                 {formatPrice(auction.current_bid || auction.reserve_price)}
                                             </Typography>
                                             {auction.card.market_price && (
-                                                <Typography variant="caption" color="text.secondary">
+                                                <Typography variant="mono" component="div" sx={{ fontSize: 11, color: 'text.secondary' }}>
                                                     Market: {formatPrice(auction.card.market_price)}
                                                 </Typography>
                                             )}
@@ -292,13 +279,9 @@ export default function LiveAuctionTable({
                                     <TableCell align="center">
                                         <Button
                                             size="small"
+                                            color="primary"
                                             variant="contained"
                                             onClick={() => router.push(`/marketplace?auction=${auction.id}`)}
-                                            sx={{
-                                                bgcolor: '#9B5Cff',
-                                                color: '#000',
-                                                '&:hover': { bgcolor: '#7ee683' }
-                                            }}
                                         >
                                             Bid Now
                                         </Button>

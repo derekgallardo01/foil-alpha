@@ -126,29 +126,38 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
         return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120'%3E%3Crect width='200' height='120' fill='%23333' rx='8'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='%23666' font-size='14'%3E" + encodeURIComponent(set.name) + "%3C/text%3E%3C/svg%3E";
     };
 
+    // Neutral, themed toggle group — Holo violet reserved for the active state only.
+    const toggleSx = {
+        '& .MuiToggleButton-root': {
+            color: 'text.secondary',
+            borderColor: 'divider',
+            '&.Mui-selected': {
+                color: 'primary.contrastText',
+                bgcolor: 'primary.main',
+                borderColor: 'primary.main',
+                '&:hover': { bgcolor: 'primary.main' }
+            },
+            '&:hover': {
+                bgcolor: 'action.hover'
+            }
+        }
+    } as const;
+
     if (loading) {
         return (
-            <Paper sx={{
-                p: 3,
-                bgcolor: 'grey.800',
-                border: '1px solid rgba(155, 92, 255, 0.2)'
-            }}>
+            <Paper variant="outlined" sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress sx={{ color: '#9B5Cff' }} />
+                    <CircularProgress color="primary" />
                 </Box>
             </Paper>
         );
     }
 
     return (
-        <Paper sx={{
-            p: 3,
-            bgcolor: 'grey.800',
-            border: '1px solid rgba(155, 92, 255, 0.2)'
-        }}>
+        <Paper variant="outlined" sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <NewReleases sx={{ color: '#9B5Cff' }} />
+                    <NewReleases sx={{ color: 'primary.main' }} />
                     New Releases & Pre-orders
                 </Typography>
 
@@ -158,20 +167,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                         exclusive
                         onChange={(e, value) => value && setReleaseType(value)}
                         size="small"
-                        sx={{
-                            '& .MuiToggleButton-root': {
-                                color: 'text.secondary',
-                                borderColor: 'rgba(155, 92, 255, 0.3)',
-                                '&.Mui-selected': {
-                                    color: '#000',
-                                    bgcolor: '#9B5Cff',
-                                    borderColor: '#9B5Cff'
-                                },
-                                '&:hover': {
-                                    bgcolor: 'rgba(155, 92, 255, 0.1)'
-                                }
-                            }
-                        }}
+                        sx={toggleSx}
                     >
                         <ToggleButton value="recent">Recent</ToggleButton>
                         <ToggleButton value="upcoming">Upcoming</ToggleButton>
@@ -181,7 +177,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                     <IconButton
                         size="small"
                         onClick={fetchReleases}
-                        sx={{ color: '#9B5Cff' }}
+                        sx={{ color: 'primary.main' }}
                     >
                         <Refresh />
                     </IconButton>
@@ -206,13 +202,10 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                         height: '100%',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        transition: 'all 0.2s ease',
-                                        bgcolor: 'grey.900',
-                                        border: '1px solid rgba(155, 92, 255, 0.1)',
+                                        transition: 'border-color 0.2s ease, transform 0.2s ease',
                                         '&:hover': {
                                             transform: 'translateY(-4px)',
-                                            boxShadow: '0 8px 24px rgba(155, 92, 255, 0.2)',
-                                            border: '1px solid rgba(155, 92, 255, 0.3)'
+                                            borderColor: 'primary.main'
                                         }
                                     }}
                                 >
@@ -223,7 +216,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                         alt={set.name}
                                         sx={{
                                             objectFit: 'contain',
-                                            bgcolor: 'grey.800',
+                                            bgcolor: 'background.default',
                                             p: 2,
                                             borderRadius: '8px 8px 0 0'
                                         }}
@@ -240,9 +233,8 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                 <Chip
                                                     label="NEW"
                                                     size="small"
+                                                    color="primary"
                                                     sx={{
-                                                        bgcolor: '#9B5Cff',
-                                                        color: '#000',
                                                         fontWeight: 600,
                                                         fontSize: '0.7rem'
                                                     }}
@@ -255,19 +247,17 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                         </Typography>
 
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
-                                            <CalendarToday fontSize="small" sx={{ color: '#9B5Cff' }} />
-                                            <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                                            <CalendarToday fontSize="small" sx={{ color: 'text.disabled' }} />
+                                            <Typography variant="mono" sx={{ fontSize: 13, color: 'text.primary' }}>
                                                 {formatDate(set.release_date)}
                                             </Typography>
                                             {set.days_since_added !== null && set.days_since_added <= 30 && (
                                                 <Chip
                                                     label={`${set.days_since_added}d ago`}
                                                     size="small"
-                                                    sx={{
-                                                        bgcolor: 'rgba(155, 92, 255, 0.2)',
-                                                        color: '#9B5Cff',
-                                                        fontSize: '0.7rem'
-                                                    }}
+                                                    variant="outlined"
+                                                    color="primary"
+                                                    sx={{ fontSize: '0.7rem' }}
                                                 />
                                             )}
                                         </Box>
@@ -278,12 +268,12 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                     {set.card_count} cards available
                                                 </Typography>
                                                 {set.min_price && set.max_price && (
-                                                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                                                    <Typography variant="mono" component="div" sx={{ fontSize: 13, color: 'text.primary' }}>
                                                         Price range: {formatPrice(set.min_price)} - {formatPrice(set.max_price)}
                                                     </Typography>
                                                 )}
                                                 {set.avg_price && (
-                                                    <Typography variant="body2" sx={{ color: '#9B5Cff', fontWeight: 500 }}>
+                                                    <Typography variant="mono" component="div" sx={{ fontSize: 13, color: 'text.secondary', fontWeight: 600 }}>
                                                         Avg: {formatPrice(set.avg_price)}
                                                     </Typography>
                                                 )}
@@ -302,8 +292,8 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                             key={index}
                                                             label={card.name}
                                                             size="small"
+                                                            variant="outlined"
                                                             sx={{
-                                                                bgcolor: 'rgba(155, 92, 255, 0.1)',
                                                                 color: 'text.secondary',
                                                                 fontSize: '0.7rem'
                                                             }}
@@ -317,17 +307,10 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                             <Button
                                                 size="small"
                                                 variant="outlined"
+                                                color="primary"
                                                 startIcon={<LocalOffer />}
                                                 onClick={() => router.push(`/marketplace?set=${encodeURIComponent(set.name)}`)}
-                                                sx={{
-                                                    borderColor: '#9B5Cff',
-                                                    color: '#9B5Cff',
-                                                    flex: 1,
-                                                    '&:hover': {
-                                                        borderColor: '#9B5Cff',
-                                                        bgcolor: 'rgba(155, 92, 255, 0.1)'
-                                                    }
-                                                }}
+                                                sx={{ flex: 1 }}
                                             >
                                                 View Set
                                             </Button>
@@ -335,15 +318,9 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                                 <Button
                                                     size="small"
                                                     variant="contained"
+                                                    color="primary"
                                                     startIcon={<ShoppingCart />}
-                                                    sx={{
-                                                        bgcolor: '#9B5Cff',
-                                                        color: '#000',
-                                                        flex: 1,
-                                                        '&:hover': {
-                                                            bgcolor: '#7ee683'
-                                                        }
-                                                    }}
+                                                    sx={{ flex: 1 }}
                                                 >
                                                     Shop
                                                 </Button>
@@ -363,12 +340,13 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                     left: -20,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    bgcolor: 'rgba(155, 92, 255, 0.1)',
-                                    border: '1px solid rgba(155, 92, 255, 0.3)',
-                                    color: '#9B5Cff',
+                                    bgcolor: 'background.paper',
+                                    border: 1,
+                                    borderColor: 'divider',
+                                    color: 'primary.main',
                                     '&:hover': {
-                                        bgcolor: 'rgba(155, 92, 255, 0.2)',
-                                        border: '1px solid rgba(155, 92, 255, 0.5)'
+                                        bgcolor: 'action.hover',
+                                        borderColor: 'primary.main'
                                     }
                                 }}
                                 onClick={handlePrevious}
@@ -382,12 +360,13 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                                     right: -20,
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    bgcolor: 'rgba(155, 92, 255, 0.1)',
-                                    border: '1px solid rgba(155, 92, 255, 0.3)',
-                                    color: '#9B5Cff',
+                                    bgcolor: 'background.paper',
+                                    border: 1,
+                                    borderColor: 'divider',
+                                    color: 'primary.main',
                                     '&:hover': {
-                                        bgcolor: 'rgba(155, 92, 255, 0.2)',
-                                        border: '1px solid rgba(155, 92, 255, 0.5)'
+                                        bgcolor: 'action.hover',
+                                        borderColor: 'primary.main'
                                     }
                                 }}
                                 onClick={handleNext}
