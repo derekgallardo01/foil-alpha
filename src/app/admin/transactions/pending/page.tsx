@@ -32,6 +32,9 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../../components/AppShell';
+import PageHeader from '../../../components/ui/PageHeader';
+import ErrorState from '../../../components/ui/ErrorState';
+import EmptyState from '../../../components/ui/EmptyState';
 
 interface PendingTransaction {
     id: number;
@@ -174,7 +177,7 @@ export default function AdminPendingTransactionsPage() {
         }
     };
 
-    if (status === 'loading' || loading) {
+    if (status === 'loading' || (loading && pendingTransactions.length === 0)) {
         return (
             <Container>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -191,33 +194,35 @@ export default function AdminPendingTransactionsPage() {
     return (
         <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                        <PaymentIcon />
-                        Pending Purchase Confirmations
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton onClick={fetchPendingTransactions} title="Refresh" sx={{ color: 'primary.main' }}>
-                        <RefreshIcon />
-                    </IconButton>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => router.push('/admin/transactions')}
-                    >
-                        All Transactions
-                    </Button>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Pending Transactions"
+                icon={<PaymentIcon />}
+                actions={
+                    <>
+                        <IconButton onClick={fetchPendingTransactions} title="Refresh" sx={{ color: 'primary.main' }}>
+                            <RefreshIcon />
+                        </IconButton>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => router.push('/admin/transactions')}
+                        >
+                            All Transactions
+                        </Button>
+                    </>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 {/* Error State */}
                 {error && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
-                        Error: {error}
-                    </Alert>
+                    <Box sx={{ mb: 3 }}>
+                        <ErrorState
+                            variant="inline"
+                            message="Couldn't load pending transactions."
+                            onRetry={fetchPendingTransactions}
+                        />
+                    </Box>
                 )}
 
                 {/* Overview Card */}
@@ -248,15 +253,11 @@ export default function AdminPendingTransactionsPage() {
 
                 {/* Pending Transactions */}
                 {pendingTransactions.length === 0 ? (
-                    <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                        <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-                        <Typography variant="h6" color="text.secondary">
-                            No pending confirmations
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            All transactions are up to date!
-                        </Typography>
-                    </Paper>
+                    <EmptyState
+                        icon={<CheckIcon />}
+                        title="No pending transactions"
+                        description="All transactions are up to date."
+                    />
                 ) : (
                     <Grid container spacing={3}>
                         {pendingTransactions.map((transaction) => {

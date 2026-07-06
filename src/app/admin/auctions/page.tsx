@@ -13,7 +13,6 @@ import {
     CardMedia,
     Button,
     Chip,
-    Alert,
     CircularProgress,
     Paper,
     Dialog,
@@ -46,6 +45,11 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
+import PageHeader from '../../components/ui/PageHeader';
+import StatCard from '../../components/StatCard';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import { formatPrice } from '../../lib/format';
 
 interface Card {
     id: number;
@@ -153,12 +157,6 @@ export default function AdminAuctionManagement() {
                 activeAuctionsCount: auctionsData.activeAuctions || 0
             });
 
-            console.log('Fetched auction data:', {
-                auctions: auctionsData.auctions?.length || 0,
-                active: auctionsData.activeAuctions || 0,
-                pendingTransactions: auctionPendingTransactions.length
-            });
-
         } catch (err) {
             console.error('Error fetching auction data:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
@@ -181,11 +179,6 @@ export default function AdminAuctionManagement() {
             return () => clearInterval(interval);
         }
     }, [status, session]);
-
-    const formatPrice = (price: number | null) => {
-        if (price === null || price === undefined) return 'No bids';
-        return `$${Number(price).toFixed(2)}`;
-    };
 
     const formatTimeLeft = (timeLeftMs: number | null) => {
         if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
@@ -248,7 +241,7 @@ export default function AdminAuctionManagement() {
             const response = await fetch('/api/process-auctions', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'admin-secret'}`,
+                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? ''}`,
                 },
             });
 
@@ -313,7 +306,10 @@ export default function AdminAuctionManagement() {
         sum + (auction.highest_bid || auction.reserve_price || 0), 0
     );
 
-    if (status === 'loading' || loading) {
+    // First-load-only guard: show a spinner only when there is no data yet, so
+    // the 30s auto-refresh (which flips `loading`) never blanks the page.
+    const hasData = auctions.length > 0 || pendingTransactions.length > 0;
+    if ((status === 'loading' || loading) && !hasData && !error) {
         return (
             <Container>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -329,98 +325,65 @@ export default function AdminAuctionManagement() {
 
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography
-                        variant="h4"
-                        sx={(theme) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            background: theme.foil.gradient,
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                        })}
-                    >
-                        <GavelIcon sx={{ color: 'primary.main' }} />
-                        Auction Management
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={actionLoading === -1 ? <CircularProgress size={16} /> : <SettingsIcon />}
-                        onClick={handleProcessAuctions}
-                        disabled={actionLoading !== null}
-                    >
-                        Process All Auctions
-                    </Button>
-                    <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: 'primary.main' }}>
-                        <RefreshIcon />
-                    </IconButton>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Auctions"
+                icon={<GavelIcon />}
+                actions={
+                    <>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={actionLoading === -1 ? <CircularProgress size={16} /> : <SettingsIcon />}
+                            onClick={handleProcessAuctions}
+                            disabled={actionLoading !== null}
+                        >
+                            Process All Auctions
+                        </Button>
+                        <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: 'primary.main' }}>
+                            <RefreshIcon />
+                        </IconButton>
+                    </>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 {/* Error State */}
                 {error && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
-                        Error: {error}
-                    </Alert>
+                    <Box sx={{ mb: 3 }}>
+                        <ErrorState variant="inline" message="Couldn't load auctions." onRetry={fetchAuctions} />
+                    </Box>
                 )}
 
                 {/* Statistics Cards */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
-                                    {stats.activeAuctionsCount || activeAuctions.length}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Active Auctions
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Active Auctions"
+                            value={stats.activeAuctionsCount || activeAuctions.length}
+                            icon={<GavelIcon />}
+                            accent
+                        />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'warning.main' }}>
-                                    {pendingTransactions.length}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Pending Confirmations
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Pending Confirmations"
+                            value={pendingTransactions.length}
+                            icon={<WarningIcon />}
+                        />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
-                                    {endedAuctions.filter(a => a.is_sold).length}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Sold Auctions
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Sold Auctions"
+                            value={endedAuctions.filter(a => a.is_sold).length}
+                            icon={<CheckIcon />}
+                        />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'text.primary' }}>
-                                    ${totalActiveValue.toFixed(2)}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Active Auction Value
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Active Auction Value"
+                            value={formatPrice(totalActiveValue)}
+                            icon={<MoneyIcon />}
+                        />
                     </Grid>
                 </Grid>
 
@@ -456,15 +419,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {activeAuctions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                                    <GavelIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No active auctions
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        There are currently no auctions running
-                                    </Typography>
-                                </Paper>
+                                <EmptyState icon={<GavelIcon />} title="No active auctions" />
                             </Grid>
                         ) : (
                             activeAuctions.map((auction) => (
@@ -533,7 +488,7 @@ export default function AdminAuctionManagement() {
                                                         Current Bid
                                                     </Typography>
                                                     <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
-                                                        {formatPrice(auction.highest_bid)}
+                                                        {auction.highest_bid == null ? 'No bids' : formatPrice(auction.highest_bid)}
                                                     </Typography>
                                                 </Box>
 
@@ -620,15 +575,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {endedAuctions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                                    <ClockIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No ended auctions
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        No auctions have ended yet
-                                    </Typography>
-                                </Paper>
+                                <EmptyState icon={<ClockIcon />} title="No ended auctions" />
                             </Grid>
                         ) : (
                             endedAuctions.map((auction) => (
@@ -690,7 +637,7 @@ export default function AdminAuctionManagement() {
                                                         Final Bid:
                                                     </Typography>
                                                     <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
-                                                        {formatPrice(auction.highest_bid)}
+                                                        {auction.highest_bid == null ? 'No bids' : formatPrice(auction.highest_bid)}
                                                     </Typography>
                                                 </Box>
 
@@ -730,15 +677,7 @@ export default function AdminAuctionManagement() {
                     <Grid container spacing={3}>
                         {pendingTransactions.length === 0 ? (
                             <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                                    <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No pending confirmations
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        All auction transactions are up to date
-                                    </Typography>
-                                </Paper>
+                                <EmptyState icon={<CheckIcon />} title="No pending confirmations" />
                             </Grid>
                         ) : (
                             pendingTransactions.map((transaction) => {
@@ -987,7 +926,7 @@ export default function AdminAuctionManagement() {
                                                         Current Bid
                                                     </Typography>
                                                     <Typography variant="mono" sx={{ fontSize: 22, fontWeight: 700, color: selectedAuction.highest_bid ? 'success.main' : 'text.secondary', display: 'block' }}>
-                                                        {formatPrice(selectedAuction.highest_bid)}
+                                                        {selectedAuction.highest_bid == null ? 'No bids' : formatPrice(selectedAuction.highest_bid)}
                                                     </Typography>
                                                 </Grid>
                                                 <Grid item xs={6}>

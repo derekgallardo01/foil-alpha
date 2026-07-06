@@ -9,11 +9,8 @@ import {
     Typography,
     Box,
     Grid,
-    Card,
-    CardContent,
     Button,
     Chip,
-    Alert,
     CircularProgress,
     Paper,
     Dialog,
@@ -48,6 +45,12 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
+import PageHeader from '../../components/ui/PageHeader';
+import StatCard from '../../components/StatCard';
+import ErrorState from '../../components/ui/ErrorState';
+import EmptyState from '../../components/ui/EmptyState';
+import { StatRowSkeleton } from '../../components/ui/Skeletons';
+import { formatPrice } from '../../lib/format';
 
 interface Transaction {
     id: number;
@@ -140,8 +143,6 @@ const AdminTransactionsPage = () => {
                 monthlyRevenue: data.monthlyRevenue || 0
             });
 
-            console.log('Fetched data:', data);
-
         } catch (err) {
             console.error('Error fetching transactions:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
@@ -156,11 +157,6 @@ const AdminTransactionsPage = () => {
             fetchTransactions();
         }
     }, [status, session, statusFilter, typeFilter, searchTerm]);
-
-    const formatPrice = (price: number | string) => {
-        const num = typeof price === 'string' ? parseFloat(price) : price;
-        return `$${(num || 0).toFixed(2)}`;
-    };
 
     const formatDateTime = (dateString: string) => {
         return new Date(dateString).toLocaleString();
@@ -288,10 +284,8 @@ const AdminTransactionsPage = () => {
 
     if (status === 'loading' || loading) {
         return (
-            <Container>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                    <CircularProgress />
-                </Box>
+            <Container maxWidth="xl" sx={{ py: 3 }}>
+                <StatRowSkeleton count={4} />
             </Container>
         );
     }
@@ -302,86 +296,51 @@ const AdminTransactionsPage = () => {
 
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                        <TransactionIcon />
-                        Transaction Management
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<ExportIcon />}
-                        onClick={exportTransactions}
-                    >
-                        Export CSV
-                    </Button>
-                    <IconButton onClick={fetchTransactions} title="Refresh" sx={{ color: 'primary.main' }}>
-                        <RefreshIcon />
-                    </IconButton>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Transactions"
+                icon={<TransactionIcon />}
+                actions={
+                    <>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<ExportIcon />}
+                            onClick={exportTransactions}
+                        >
+                            Export CSV
+                        </Button>
+                        <IconButton onClick={fetchTransactions} title="Refresh" sx={{ color: 'primary.main' }}>
+                            <RefreshIcon />
+                        </IconButton>
+                    </>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 {/* Error State */}
                 {error && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
-                        Error: {error}
-                    </Alert>
+                    <Box sx={{ mb: 3 }}>
+                        <ErrorState
+                            variant="inline"
+                            message="Couldn't load transactions."
+                            onRetry={fetchTransactions}
+                        />
+                    </Box>
                 )}
 
                 {/* Statistics Cards - Using actual data from API */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
-                                    {stats.totalSales.toLocaleString()}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Total Sales
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard label="Total Sales" value={stats.totalSales.toLocaleString()} />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'warning.main' }}>
-                                    {stats.pendingTransactions.toLocaleString()}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Pending Transactions
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard label="Pending Transactions" value={stats.pendingTransactions.toLocaleString()} />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
-                                    {transactions.length.toLocaleString()}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Recent Transactions
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard label="Recent Transactions" value={transactions.length.toLocaleString()} />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'success.main' }}>
-                                    {formatPrice(stats.monthlyRevenue)}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Monthly Revenue
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        <StatCard label="Monthly Revenue" value={formatPrice(stats.monthlyRevenue)} accent />
                     </Grid>
                 </Grid>
 
@@ -479,10 +438,12 @@ const AdminTransactionsPage = () => {
                             <TableBody>
                                 {paginatedTransactions.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                No transactions found
-                                            </Typography>
+                                        <TableCell colSpan={9} sx={{ border: 0 }}>
+                                            <EmptyState
+                                                icon={<TransactionIcon />}
+                                                title="No transactions"
+                                                minHeight={200}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
