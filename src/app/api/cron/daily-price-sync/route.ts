@@ -1,6 +1,7 @@
 // src/app/api/cron/daily-price-sync/route.ts - FIXED FOR YOUR SCHEMA & API
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI, type PokemonPriceTrackerCardV2 } from '../../../lib/pokemon-price-tracker-api';
 import { Prisma } from '@prisma/client';
 
@@ -27,15 +28,14 @@ export async function POST(request: NextRequest) {
     try {
         console.log('🚀 Starting daily price sync...');
 
-        // Optional: Verify this is a legitimate cron request
+        // Authorize either as the cron (shared secret) or a signed-in admin.
+        // The admin UI "Test Cron" button calls this with its session cookie.
         const authHeader = request.headers.get('authorization');
         const cronSecret = process.env.CRON_SECRET;
-
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-            return NextResponse.json({
-                success: false,
-                error: 'Unauthorized - Invalid cron secret'
-            }, { status: 401 });
+        const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+        if (!isCron) {
+            const auth = await requireAdmin();
+            if ("response" in auth) return auth.response;
         }
 
         const startTime = new Date();

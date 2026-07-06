@@ -161,10 +161,10 @@ export default function AdminPricingUpdatePage() {
         setError(null);
 
         try {
+            // Authorized by the admin session cookie (server checks requireAdmin).
             const response = await fetch('/api/cron/daily-price-sync', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? ''}`,
                     'Content-Type': 'application/json',
                 },
             });

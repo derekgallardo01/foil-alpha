@@ -238,11 +238,10 @@ export default function AdminAuctionManagement() {
     const handleProcessAuctions = async () => {
         setActionLoading(-1); // Special loading state for process all
         try {
+            // Authorized by the admin session cookie (server checks requireAdmin);
+            // no secret is sent from the client.
             const response = await fetch('/api/process-auctions', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? ''}`,
-                },
             });
 
             const data = await response.json();

@@ -1,6 +1,7 @@
 // src/app/api/process-auctions/route.ts - Updated with new confirmation flow
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
+import { requireAdmin } from '../../lib/auth';
 import {
     createAuctionWonNotifications,
     createAuctionLostNotifications,
@@ -9,10 +10,14 @@ import {
 
 export async function POST(request: NextRequest) {
     try {
-        // This endpoint should be called by a cron job or admin
+        // Authorize either as the in-app cron (shared secret) or a signed-in admin.
+        // The admin UI calls this with its session cookie — no secret in the client.
         const authHeader = request.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const cronSecret = process.env.CRON_SECRET;
+        const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+        if (!isCron) {
+            const auth = await requireAdmin();
+            if ("response" in auth) return auth.response;
         }
 
         console.log('Processing ended auctions...');
