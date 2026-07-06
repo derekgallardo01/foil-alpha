@@ -7,8 +7,6 @@ import {
   Grid,
   Typography,
   Paper,
-  Card,
-  CardContent,
   Tabs,
   Tab,
   Chip,
@@ -21,11 +19,15 @@ import {
   Whatshot,
   Assessment,
   Refresh,
-  Dashboard as DashboardIcon
+  Dashboard as DashboardIcon,
+  AccountBalanceWallet as WalletIcon,
+  Collections as CollectionsIcon,
+  Sell as SellIcon,
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
+import StatCard from '../components/StatCard';
 import TrendingCardsTable from '../components/dashboard/TrendingCardsTable';
 import LiveAuctionTable from '../components/dashboard/LiveAuctionTable';
 import NewReleasesCarousel from '../components/dashboard/NewReleasesCarousel';
@@ -126,52 +128,16 @@ export default function Dashboard() {
             <motion.div variants={itemVariants}>
               <Grid container spacing={3} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <CardContent>
-                      <Typography variant="body2" color="text.secondary">
-                        Collection Value
-                      </Typography>
-                      <Typography variant="h4" sx={{ color: '#9B5Cff', fontWeight: 'bold' }}>
-                        ${stats.totalValue.toFixed(2)}
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <StatCard accent label="Collection Value" value={`$${stats.totalValue.toFixed(2)}`} icon={<WalletIcon fontSize="small" />} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <CardContent>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Cards
-                      </Typography>
-                      <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                        {stats.totalCards}
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <StatCard label="Total Cards" value={stats.totalCards} icon={<CollectionsIcon fontSize="small" />} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <CardContent>
-                      <Typography variant="body2" color="text.secondary">
-                        Active Bids
-                      </Typography>
-                      <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                        {stats.activeAuctions}
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <StatCard label="Active Bids" value={stats.activeAuctions} icon={<Gavel fontSize="small" />} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
-                    <CardContent>
-                      <Typography variant="body2" color="text.secondary">
-                        Recent Sales
-                      </Typography>
-                      <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                        {stats.recentSales}
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <StatCard label="Recent Sales" value={stats.recentSales} icon={<SellIcon fontSize="small" />} />
                 </Grid>
               </Grid>
             </motion.div>
@@ -179,23 +145,17 @@ export default function Dashboard() {
 
           {/* Main Dashboard Tabs */}
           <motion.div variants={itemVariants}>
-            <Paper sx={{ bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)', mb: 3 }}>
+            <Paper variant="outlined" sx={{ mb: 3 }}>
               <Tabs
                 value={activeTab}
                 onChange={handleTabChange}
                 variant="scrollable"
                 scrollButtons="auto"
                 sx={{
-                  borderBottom: '1px solid rgba(155, 92, 255, 0.2)',
-                  '& .MuiTab-root': {
-                    color: 'text.secondary',
-                    '&.Mui-selected': {
-                      color: '#9B5Cff'
-                    }
-                  },
-                  '& .MuiTabs-indicator': {
-                    backgroundColor: '#9B5Cff'
-                  }
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  '& .MuiTab-root': { color: 'text.secondary', '&.Mui-selected': { color: 'primary.main' } },
+                  '& .MuiTabs-indicator': { backgroundColor: 'primary.main' },
                 }}
               >
                 <Tab icon={<Assessment />} label="Overview" />
@@ -242,7 +202,7 @@ export default function Dashboard() {
                 </Grid>
                 {/* Price Chart for Top Trending Card */}
                 <Grid item xs={12}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                  <Paper variant="outlined" sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom>
                       Price Trend Analysis
                     </Typography>
@@ -260,7 +220,7 @@ export default function Dashboard() {
                   <LiveAuctionTable limit={20} height={700} autoRefresh={true} />
                 </Grid>
                 <Grid item xs={12}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                  <Paper variant="outlined" sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="h6">
                         Auction Activity
@@ -287,7 +247,7 @@ export default function Dashboard() {
                   <NewReleasesCarousel limit={12} />
                 </Grid>
                 <Grid item xs={12}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                  <Paper variant="outlined" sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom>
                       Release Calendar
                     </Typography>
@@ -307,7 +267,7 @@ export default function Dashboard() {
                   <PopularityMetrics limit={10} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                  <Paper variant="outlined" sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom>
                       Popularity Trends
                     </Typography>
@@ -317,7 +277,7 @@ export default function Dashboard() {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, bgcolor: 'grey.800', border: '1px solid rgba(155, 92, 255, 0.2)' }}>
+                  <Paper variant="outlined" sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom>
                       Market Insights
                     </Typography>
