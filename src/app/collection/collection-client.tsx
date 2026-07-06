@@ -30,7 +30,10 @@ import {
     Tab,
     Badge,
     CircularProgress,
-    Divider
+    Divider,
+    ToggleButton,
+    ToggleButtonGroup,
+    Tooltip
 } from "@mui/material";
 import {
     Sell,
@@ -48,12 +51,17 @@ import {
     Timeline,
     Assessment,
     PriceCheck,
-    Collections as CollectionsIcon
+    Collections as CollectionsIcon,
+    Inventory2,
+    WorkspacePremium
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import AppShell from "../components/AppShell";
 import ErrorState from "../components/ui/ErrorState";
 import EmptyState from "../components/ui/EmptyState";
+import PageHeader from "../components/ui/PageHeader";
+import StatCard from "../components/StatCard";
+import { formatPrice } from "../lib/format";
 import { CardGridSkeleton } from "../components/ui/Skeletons";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
 import PriceChart from "../components/PriceChart";
@@ -62,6 +70,9 @@ import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
 interface UserCard {
     id: number;
     condition: string;
+    quantity: number;
+    is_graded: boolean;
+    grade_label: string | null;
     is_for_sale: boolean;
     sale_type: string | null;
     fixed_price: number | null;
@@ -75,6 +86,8 @@ interface UserCard {
         name: string;
         set_name: string;
         rarity: string;
+        product_type?: string;
+        tcg?: string | null;
         image_url: string | null;
         market_price?: number;
         price_trend?: 'up' | 'down' | 'stable';
@@ -82,6 +95,17 @@ interface UserCard {
         last_price_update?: string;
     };
 }
+
+interface CollectionSummary {
+    totalLines: number;
+    totalUnits: number;
+    totalValue: number;
+    cardCount: number;
+    sealedCount: number;
+    gradedCount: number;
+}
+
+type ItemTypeFilter = 'all' | 'cards' | 'sealed' | 'graded';
 
 interface EnhancedUserCard extends UserCard {
     profit_loss?: number;
@@ -107,175 +131,32 @@ interface PendingPurchase {
     notification_id?: number;
 }
 
-// Collection Analytics Component
-function CollectionAnalytics({ userCards }: { userCards: EnhancedUserCard[] }) {
-    const analytics = useMemo(() => {
-        const cardsWithPrices = userCards.filter(card => card.card.market_price && card.card.market_price > 0);
-        const totalMarketValue = cardsWithPrices.reduce((sum, card) => sum + (card.card.market_price || 0), 0);
-        const totalInvestment = userCards.reduce((sum, card) => sum + (card.original_purchase_price || 0), 0);
+// Collection Analytics — real holdings breakdown on the shared StatCard tiles.
+function CollectionAnalytics({ summary }: { summary: CollectionSummary | null }) {
+    if (!summary) return null;
 
-        const profitLoss = totalMarketValue - totalInvestment;
-        const profitLossPercentage = totalInvestment > 0 ? (profitLoss / totalInvestment) * 100 : 0;
-
-        const trending = {
-            up: cardsWithPrices.filter(c => c.card.price_trend === 'up').length,
-            down: cardsWithPrices.filter(c => c.card.price_trend === 'down').length,
-            stable: cardsWithPrices.filter(c => c.card.price_trend === 'stable').length,
-        };
-
-        const topPerformers = cardsWithPrices
-            .filter(card => card.profit_loss && card.profit_loss > 0)
-            .sort((a, b) => (b.profit_loss || 0) - (a.profit_loss || 0))
-            .slice(0, 3);
-
-        const worstPerformers = cardsWithPrices
-            .filter(card => card.profit_loss && card.profit_loss < 0)
-            .sort((a, b) => (a.profit_loss || 0) - (b.profit_loss || 0))
-            .slice(0, 3);
-
-        return {
-            totalCards: userCards.length,
-            cardsWithPrices: cardsWithPrices.length,
-            totalMarketValue,
-            totalInvestment,
-            profitLoss,
-            profitLossPercentage,
-            trending,
-            topPerformers,
-            worstPerformers,
-            avgCardValue: cardsWithPrices.length > 0 ? totalMarketValue / cardsWithPrices.length : 0,
-        };
-    }, [userCards]);
+    const tiles = [
+        { label: 'Collection Value', value: formatPrice(summary.totalValue), accent: true, icon: <AttachMoney fontSize="small" /> },
+        { label: 'Total Items', value: summary.totalUnits.toLocaleString(), icon: <Inventory2 fontSize="small" /> },
+        { label: 'Unique Cards', value: summary.cardCount.toLocaleString(), icon: <CollectionsIcon fontSize="small" /> },
+        { label: 'Sealed Products', value: summary.sealedCount.toLocaleString(), icon: <Inventory2 fontSize="small" /> },
+    ];
 
     return (
-        <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
-            <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Assessment />
-                Collection Analytics
-            </Typography>
-
-            <Grid container spacing={3}>
-                {/* Summary Cards */}
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
-                        <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'primary.main' }}>
-                            {analytics.totalCards}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Total Cards
-                        </Typography>
-                    </Card>
-                </Grid>
-
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
-                        <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
-                            ${analytics.totalMarketValue.toFixed(0)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Market Value
-                        </Typography>
-                    </Card>
-                </Grid>
-
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
-                        <Typography
-                            variant="mono"
-                            component="div"
-                            sx={{ fontSize: 30, fontWeight: 700, color: analytics.profitLoss >= 0 ? 'success.main' : 'error.main' }}
-                        >
-                            {analytics.profitLoss >= 0 ? '+' : ''}${analytics.profitLoss.toFixed(0)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            P&L
-                        </Typography>
-                    </Card>
-                </Grid>
-
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.default', textAlign: 'center', p: 2 }}>
-                        <Typography
-                            variant="mono"
-                            component="div"
-                            sx={{ fontSize: 30, fontWeight: 700, color: analytics.profitLossPercentage >= 0 ? 'success.main' : 'error.main' }}
-                        >
-                            {analytics.profitLossPercentage >= 0 ? '+' : ''}{analytics.profitLossPercentage.toFixed(1)}%
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Return
-                        </Typography>
-                    </Card>
-                </Grid>
-
-                {/* Price Trends */}
-                <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                        <Chip
-                            icon={<TrendingUp />}
-                            label={`${analytics.trending.up} Trending Up`}
-                            color="success"
-                            variant="outlined"
-                        />
-                        <Chip
-                            icon={<TrendingDown />}
-                            label={`${analytics.trending.down} Trending Down`}
-                            color="error"
-                            variant="outlined"
-                        />
-                        <Chip
-                            icon={<TrendingFlat />}
-                            label={`${analytics.trending.stable} Stable`}
-                            color="default"
-                            variant="outlined"
-                        />
-                    </Box>
-                </Grid>
-
-                {/* Top/Worst Performers */}
-                {(analytics.topPerformers.length > 0 || analytics.worstPerformers.length > 0) && (
-                    <Grid item xs={12}>
-                        <Grid container spacing={2}>
-                            {analytics.topPerformers.length > 0 && (
-                                <Grid item xs={12} md={6}>
-                                    <Typography variant="subtitle2" sx={{ color: 'success.main', mb: 1 }}>
-                                        Top Performers
-                                    </Typography>
-                                    {analytics.topPerformers.map((card, index) => (
-                                        <Box key={card.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                            <Typography variant="body2" noWrap sx={{ flex: 1, mr: 1 }}>
-                                                {card.card.name}
-                                            </Typography>
-                                            <Typography variant="mono" color="success.main">
-                                                +${card.profit_loss?.toFixed(2)}
-                                            </Typography>
-                                        </Box>
-                                    ))}
-                                </Grid>
-                            )}
-
-                            {analytics.worstPerformers.length > 0 && (
-                                <Grid item xs={12} md={6}>
-                                    <Typography variant="subtitle2" sx={{ color: 'error.main', mb: 1 }}>
-                                        Worst Performers
-                                    </Typography>
-                                    {analytics.worstPerformers.map((card, index) => (
-                                        <Box key={card.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                            <Typography variant="body2" noWrap sx={{ flex: 1, mr: 1 }}>
-                                                {card.card.name}
-                                            </Typography>
-                                            <Typography variant="mono" color="error.main">
-                                                ${card.profit_loss?.toFixed(2)}
-                                            </Typography>
-                                        </Box>
-                                    ))}
-                                </Grid>
-                            )}
-                        </Grid>
+        <Box sx={{ mb: 3 }}>
+            <Grid container spacing={2}>
+                {tiles.map((t) => (
+                    <Grid item xs={6} md={3} key={t.label}>
+                        <StatCard label={t.label} value={t.value} accent={t.accent} icon={t.icon} />
                     </Grid>
-                )}
+                ))}
             </Grid>
-        </Paper>
+            <Box sx={{ display: 'flex', gap: 1.5, mt: 2, flexWrap: 'wrap' }}>
+                <Chip icon={<WorkspacePremium />} label={`${summary.gradedCount} Graded`} color="secondary" variant="outlined" />
+                <Chip label={`${summary.cardCount} Cards`} variant="outlined" />
+                <Chip label={`${summary.sealedCount} Sealed`} variant="outlined" />
+            </Box>
+        </Box>
     );
 }
 
@@ -297,6 +178,15 @@ function EnhancedCardDisplay({
     const purchasePrice = userCard.original_purchase_price || 0;
     const currentListingPrice = userCard.fixed_price || userCard.reserve_price || 0;
     const displayPrice = purchasePrice > 0 ? purchasePrice : marketPrice;
+
+    const isSealed = userCard.card.product_type === 'SEALED';
+    // Grade codes are stored raw (e.g. "Collectr#12") until decoded to real labels
+    // (PSA 10, etc.); show a clean "Graded" pill for un-decoded codes, the real
+    // label once available. Full value is always in the tooltip.
+    const gradeDisplay =
+        userCard.grade_label && !userCard.grade_label.startsWith('Collectr#')
+            ? userCard.grade_label
+            : 'Graded';
 
     const profitLoss = marketPrice > 0 && purchasePrice > 0 ? marketPrice - purchasePrice : 0;
     const profitLossPercentage = purchasePrice > 0 ? (profitLoss / purchasePrice) * 100 : 0;
@@ -353,9 +243,27 @@ function EnhancedCardDisplay({
                 <Timeline sx={{ fontSize: 16 }} />
             </IconButton>
 
+            {userCard.quantity > 1 && (
+                <Chip
+                    label={`×${userCard.quantity}`}
+                    size="small"
+                    sx={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                        zIndex: 1,
+                        fontWeight: 700,
+                        bgcolor: 'background.default',
+                        border: 1,
+                        borderColor: 'divider',
+                    }}
+                />
+            )}
+
             <CardMedia
                 component="img"
                 height="200"
+                loading="lazy"
                 image={userCard.card.image_url || '/placeholder-card.png'}
                 alt={userCard.card.name}
                 sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
@@ -371,16 +279,33 @@ function EnhancedCardDisplay({
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                    <Chip
-                        label={userCard.card.rarity}
-                        size="small"
-                        color={getRarityColor(userCard.card.rarity) as any}
-                    />
-                    <Chip
-                        label={userCard.condition}
-                        size="small"
-                        variant="outlined"
-                    />
+                    {isSealed ? (
+                        <Chip label="Sealed" size="small" color="info" icon={<Inventory2 sx={{ fontSize: 14 }} />} />
+                    ) : (
+                        userCard.card.rarity && (
+                            <Chip
+                                label={userCard.card.rarity}
+                                size="small"
+                                color={getRarityColor(userCard.card.rarity) as any}
+                            />
+                        )
+                    )}
+                    {userCard.is_graded && (
+                        <Tooltip title={userCard.grade_label || 'Graded'} arrow>
+                            <Chip
+                                label={gradeDisplay}
+                                size="small"
+                                color="secondary"
+                                icon={<WorkspacePremium sx={{ fontSize: 14 }} />}
+                            />
+                        </Tooltip>
+                    )}
+                    {!isSealed && !userCard.is_graded && (
+                        <Chip label={userCard.condition} size="small" variant="outlined" />
+                    )}
+                    {userCard.card.tcg && userCard.card.tcg !== 'Pokemon' && (
+                        <Chip label={userCard.card.tcg} size="small" variant="outlined" />
+                    )}
                 </Box>
 
                 <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.default', borderRadius: 1, border: 1, borderColor: 'divider' }}>
@@ -391,7 +316,7 @@ function EnhancedCardDisplay({
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             {purchasePrice === 0 && getTrendIcon()}
                             <Typography variant="mono" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                                ${displayPrice.toFixed(2)}
+                                {formatPrice(displayPrice)}
                             </Typography>
                         </Box>
                     </Box>
@@ -404,7 +329,7 @@ function EnhancedCardDisplay({
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 {getTrendIcon()}
                                 <Typography variant="mono" sx={{ color: 'text.primary' }}>
-                                    ${marketPrice.toFixed(2)}
+                                    {formatPrice(marketPrice)}
                                 </Typography>
                             </Box>
                         </Box>
@@ -684,6 +609,8 @@ export default function CollectionPage() {
     const [bulkPriceUpdateOpen, setBulkPriceUpdateOpen] = useState(false);
     const [selectedCardsForUpdate, setSelectedCardsForUpdate] = useState<number[]>([]);
     const [collectionSortBy, setCollectionSortBy] = useState('newest');
+    const [typeFilter, setTypeFilter] = useState<ItemTypeFilter>('all');
+    const [summary, setSummary] = useState<CollectionSummary | null>(null);
     const [sellData, setSellData] = useState<SellDialogData>({
         userCardId: 0,
         cardName: '',
@@ -716,7 +643,7 @@ export default function CollectionPage() {
         try {
             setLoading(true);
             setError(false);
-            const response = await fetch("/api/user/collection", {
+            const response = await fetch("/api/user/collection?limit=1000", {
                 headers: { "Content-Type": "application/json" },
             });
 
@@ -730,6 +657,7 @@ export default function CollectionPage() {
 
             if (Array.isArray(cards)) {
                 setUserCards(cards);
+                setSummary(data.summary ?? null);
             } else {
                 console.error('Invalid response format:', data);
                 setUserCards([]);
@@ -944,9 +872,19 @@ export default function CollectionPage() {
         }
     }, [enhancedUserCards, collectionSortBy]);
 
-    const formatPrice = (price: number) => {
-        return `${price.toFixed(2)}`;
-    };
+    const visibleCards = useMemo(() => {
+        switch (typeFilter) {
+            case 'cards':
+                return sortedUserCards.filter((c) => c.card.product_type !== 'SEALED' && !c.is_graded);
+            case 'sealed':
+                return sortedUserCards.filter((c) => c.card.product_type === 'SEALED');
+            case 'graded':
+                return sortedUserCards.filter((c) => c.is_graded);
+            case 'all':
+            default:
+                return sortedUserCards;
+        }
+    }, [sortedUserCards, typeFilter]);
 
     const formatTimeLeft = (expiresAt: string) => {
         const now = new Date();
@@ -974,35 +912,29 @@ export default function CollectionPage() {
 
     return (
         <AppShell>
-        <Container sx={{ marginTop: 4, marginBottom: 4, paddingLeft: 0, paddingRight: 0 }}>
-
-            {/* Header actions */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", my: 3 }}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => router.push('/wallet')}
-                    >
-                        My Wallet
+        <PageHeader
+            title={`${session?.user?.name ?? 'My'}'s Collection`}
+            icon={<CollectionsIcon />}
+            actions={
+                <>
+                    <Button variant="outlined" color="primary" onClick={() => router.push('/wallet')}>
+                        Wallet
                     </Button>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => router.push('/marketplace')}
-                    >
+                    <Button variant="outlined" color="primary" onClick={() => router.push('/marketplace')}>
                         Marketplace
                     </Button>
-                </Box>
-            </Box>
+                </>
+            }
+        />
+        <Container maxWidth="xl" sx={{ pb: 4 }}>
 
             <Paper
                 component="section"
                 variant="outlined"
                 sx={{
                     width: "100%",
-                    p: "20px",
-                    mt: "20px",
+                    p: { xs: 2, md: 3 },
+                    mt: 2,
                     bgcolor: 'background.paper',
                     color: 'text.primary',
                     border: 1,
@@ -1010,10 +942,6 @@ export default function CollectionPage() {
                     borderRadius: 2,
                 }}
             >
-                <Typography variant="h4" sx={{ color: 'primary.main', mb: 3, textAlign: 'center' }}>
-                    {session?.user?.name}'s Card Collection
-                </Typography>
-
                 {pendingPurchases.length > 0 && (
                     <Alert
                         severity="warning"
@@ -1039,7 +967,7 @@ export default function CollectionPage() {
                     }}
                 />
 
-                <CollectionAnalytics userCards={enhancedUserCards} />
+                <CollectionAnalytics summary={summary} />
 
                 <Paper variant="outlined" sx={{ mb: 3, border: 1, borderColor: 'divider' }}>
                     <Tabs
@@ -1083,8 +1011,21 @@ export default function CollectionPage() {
                             />
                         ) : (
                             <>
-                                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <FormControl sx={{ minWidth: 200 }}>
+                                <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <ToggleButtonGroup
+                                        value={typeFilter}
+                                        exclusive
+                                        size="small"
+                                        onChange={(_e, v) => v && setTypeFilter(v as ItemTypeFilter)}
+                                        aria-label="Filter by item type"
+                                    >
+                                        <ToggleButton value="all">All ({summary?.totalLines ?? userCards.length})</ToggleButton>
+                                        <ToggleButton value="cards">Cards ({summary ? summary.cardCount - summary.gradedCount : 0})</ToggleButton>
+                                        <ToggleButton value="graded">Graded ({summary?.gradedCount ?? 0})</ToggleButton>
+                                        <ToggleButton value="sealed">Sealed ({summary?.sealedCount ?? 0})</ToggleButton>
+                                    </ToggleButtonGroup>
+
+                                    <FormControl size="small" sx={{ minWidth: 180, ml: { sm: 'auto' } }}>
                                         <InputLabel sx={{ color: 'text.secondary' }}>Sort By</InputLabel>
                                         <Select
                                             value={collectionSortBy}
@@ -1112,19 +1053,33 @@ export default function CollectionPage() {
                                     )}
                                 </Box>
 
-                                <Grid container spacing={3}>
-                                    {sortedUserCards.map((userCard) => (
-                                        <Grid item xs={12} sm={6} md={4} lg={3} key={userCard.id}>
-                                            <EnhancedCardDisplay
-                                                userCard={userCard}
-                                                onSellCard={handleSellCard}
-                                                onRemoveFromSale={handleRemoveFromSale}
-                                                onShowPriceHistory={handleShowPriceHistory}
-                                                onUpdatePrice={handleUpdateCardPrice}
-                                            />
-                                        </Grid>
-                                    ))}
-                                </Grid>
+                                {visibleCards.length === 0 ? (
+                                    <EmptyState
+                                        icon={<CollectionsIcon />}
+                                        title={
+                                            typeFilter === 'cards' ? 'No raw cards'
+                                                : typeFilter === 'sealed' ? 'No sealed products'
+                                                : typeFilter === 'graded' ? 'No graded cards'
+                                                : 'No items'
+                                        }
+                                        description="Try a different filter to see the rest of your collection."
+                                        action={<Button variant="outlined" onClick={() => setTypeFilter('all')}>Show all</Button>}
+                                    />
+                                ) : (
+                                    <Grid container spacing={3}>
+                                        {visibleCards.map((userCard) => (
+                                            <Grid item xs={12} sm={6} md={4} lg={3} key={userCard.id}>
+                                                <EnhancedCardDisplay
+                                                    userCard={userCard}
+                                                    onSellCard={handleSellCard}
+                                                    onRemoveFromSale={handleRemoveFromSale}
+                                                    onShowPriceHistory={handleShowPriceHistory}
+                                                    onUpdatePrice={handleUpdateCardPrice}
+                                                />
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                )}
                             </>
                         )}
                     </>
@@ -1133,15 +1088,11 @@ export default function CollectionPage() {
                 {currentTab === 1 && (
                     <>
                         {pendingPurchases.length === 0 ? (
-                            <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                                <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-                                <Typography variant="h6" color="text.secondary">
-                                    No pending purchases
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                    All your auction wins and accepted bids are up to date
-                                </Typography>
-                            </Paper>
+                            <EmptyState
+                                icon={<CheckCircle />}
+                                title="No pending purchases"
+                                description="All your auction wins and accepted bids are up to date."
+                            />
                         ) : (
                             <Grid container spacing={3}>
                                 {pendingPurchases.map((purchase, index) => {
@@ -1185,7 +1136,7 @@ export default function CollectionPage() {
                                                                 Seller: {purchase.seller_name}
                                                             </Typography>
                                                             <Typography variant="mono" sx={{ fontSize: 20, fontWeight: 700, color: 'text.primary' }}>
-                                                                ${formatPrice(purchase.amount)}
+                                                                {formatPrice(purchase.amount)}
                                                             </Typography>
                                                         </Box>
                                                     </Box>
