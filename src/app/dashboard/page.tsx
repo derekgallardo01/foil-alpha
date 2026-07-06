@@ -271,51 +271,13 @@ export default function Dashboard() {
 
           {activeTab === 3 && (
             <motion.div variants={itemVariants}>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <NewReleasesCarousel limit={12} />
-                </Grid>
-                <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Release Calendar
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Stay updated with the latest Pokemon TCG releases and pre-order opportunities.
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
+              <NewReleasesCarousel limit={12} />
             </motion.div>
           )}
 
           {activeTab === 4 && (
             <motion.div variants={itemVariants}>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <PopularityMetrics limit={10} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Paper variant="outlined" sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Popularity Trends
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Cards are ranked by views, active listings, and recent sales activity.
-                    </Typography>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Paper variant="outlined" sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Market Insights
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Popular cards often indicate market trends and potential investment opportunities.
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
+              <PopularityMetrics limit={10} />
             </motion.div>
           )}
         </motion.div>

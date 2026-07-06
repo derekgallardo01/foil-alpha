@@ -494,53 +494,6 @@ function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
     );
 }
 
-// Price Alerts Component
-function PriceAlertsSection() {
-    const [alerts, setAlerts] = useState<any[]>([]);
-    const [newAlertOpen, setNewAlertOpen] = useState(false);
-
-    return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 3, border: 1, borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <PriceCheck sx={{ color: 'primary.main' }} />
-                    <Typography variant="h6">Price Alerts</Typography>
-                    <Chip label={alerts.length} size="small" />
-                </Box>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setNewAlertOpen(true)}
-                    startIcon={<AddIcon />}
-                >
-                    Set Alert
-                </Button>
-            </Box>
-
-            {alerts.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                    Set price alerts to be notified when cards reach your target price
-                </Typography>
-            ) : (
-                <Grid container spacing={1}>
-                    {alerts.map((alert, index) => (
-                        <Grid item xs={12} sm={6} md={4} key={index}>
-                            <Chip
-                                label={`${alert.card_name}: $${alert.target_price}`}
-                                onDelete={() => {
-                                    // Remove alert logic
-                                }}
-                                color="primary"
-                                variant="outlined"
-                            />
-                        </Grid>
-                    ))}
-                </Grid>
-            )}
-        </Paper>
-    );
-}
-
 export default function MarketplacePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -1085,8 +1038,6 @@ export default function MarketplacePage() {
             {/* Market Summary */}
             <MarketSummarySection cards={cards as EnhancedListing[]} />
 
-            {/* Price Alerts */}
-            <PriceAlertsSection />
 
             {/* Daily Deals */}
             <DailyDealsSection cards={cards as EnhancedListing[]} />
