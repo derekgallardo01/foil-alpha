@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 
 // Interface for the where clause in GET request
 interface WhereClause {
@@ -37,12 +38,9 @@ interface CreateListingBody {
 // GET /api/admin/listings - Get all admin marketplace listings
 export async function GET(request: NextRequest) {
   try {
-    // TODO: replace with real auth
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -254,12 +252,9 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/listings - Create new marketplace listing
 export async function POST(request: NextRequest) {
   try {
-    // TODO: replace with real auth
-    const user = { id: 1, email: 'admin@test.com', name: 'Admin User', role: 'admin' };
-
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const body = (await request.json()) as CreateListingBody;
     const {

@@ -5,7 +5,17 @@ const botToken = process.env.DISCORD_BOT_TOKEN;
 
 export async function GET(req: NextRequest) {
   if (!botToken) {
-    return new Response("Bot token not configured", { status: 500 });
+    // Degrade gracefully: emit an empty message list once, then close.
+    const encoder = new TextEncoder();
+    const idle = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify([])}\n\n`));
+        controller.close();
+      },
+    });
+    return new Response(idle, {
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
+    });
   }
 
   const headers = {

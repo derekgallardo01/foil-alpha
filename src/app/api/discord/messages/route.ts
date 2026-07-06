@@ -5,8 +5,9 @@ const botToken = process.env.DISCORD_BOT_TOKEN;
 
 export async function GET() {
   if (!botToken) {
-    console.error("Bot token not configured");
-    return NextResponse.json({ error: "Bot token not configured" }, { status: 500 });
+    // Chat is an optional integration; when unconfigured, degrade to an empty
+    // message list so the UI shows "No messages yet" instead of an error.
+    return NextResponse.json([], { status: 200 });
   }
   try {
     console.log("Fetching Discord messages for channel:", channelId);
@@ -30,8 +31,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   if (!botToken) {
-    console.error("Bot token not configured");
-    return NextResponse.json({ error: "Bot token not configured" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Chat is not available — the Discord integration isn't configured." },
+      { status: 503 }
+    );
   }
   try {
     const { content } = await req.json();
