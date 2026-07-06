@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     Box,
     Container,
@@ -9,13 +10,26 @@ import {
     Button,
 } from "@mui/material";
 import UserWallet from "../components/UserWallet";
+import AddFundsCard from "../components/AddFundsCard";
 import AppShell from "../components/AppShell";
-import { ToastContainer } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function WalletPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { data: session, status } = useSession();
+
+    useEffect(() => {
+        const deposit = searchParams.get("deposit");
+        if (deposit === "success") {
+            toast.success("Deposit received — your balance updates once payment settles.");
+            router.replace("/wallet");
+        } else if (deposit === "cancelled") {
+            toast.info("Deposit cancelled.");
+            router.replace("/wallet");
+        }
+    }, [searchParams, router]);
 
     if (status === "loading") {
         return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>Loading...</Box>;
@@ -64,6 +78,8 @@ export default function WalletPage() {
                 </Typography>
 
                 <UserWallet />
+
+                <AddFundsCard />
 
                 <Box sx={{ textAlign: 'center', mt: 3 }}>
                     <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
