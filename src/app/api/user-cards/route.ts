@@ -132,22 +132,53 @@ async function getMyAuctions(userId: number) {
 
     console.log(`Found ${auctionCards.length} auction cards`);
 
+    // Batch-load card details + active bids + bidders (avoids the per-auction N+1).
+    const cardIds = [...new Set(auctionCards.map((uc) => uc.card_id))];
+    const cards = cardIds.length
+      ? await prisma.card.findMany({
+          where: { id: { in: cardIds } },
+          select: {
+            id: true,
+            name: true,
+            set_name: true,
+            card_number: true, // FIXED: Use card_number
+            rarity: true,
+            image_url: true
+          }
+        })
+      : [];
+    const cardById = new Map(cards.map((c) => [c.id, c]));
+
+    const auctionCardIds = auctionCards.map((uc) => uc.id);
+    const activeBids = auctionCardIds.length
+      ? await prisma.bid.findMany({
+          where: {
+            userCardId: { in: auctionCardIds },
+            is_active: true
+          },
+          orderBy: { amount: 'desc' }
+        })
+      : [];
+    const bidsByUserCard = new Map<number, typeof activeBids>();
+    for (const bid of activeBids) {
+      const list = bidsByUserCard.get(bid.userCardId) ?? [];
+      list.push(bid);
+      bidsByUserCard.set(bid.userCardId, list);
+    }
+    const bidderIds = [...new Set(activeBids.map((b) => b.bidderId))];
+    const bidders = bidderIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: bidderIds } },
+          select: { id: true, name: true, email: true }
+        })
+      : [];
+    const bidderById = new Map(bidders.map((u) => [u.id, u]));
+
     // Process each auction with related data
-    const auctionsWithDetails = await Promise.all(
-      auctionCards.map(async (userCard) => {
+    const auctionsWithDetails = auctionCards.map((userCard) => {
         try {
           // Get card details
-          const card = await prisma.card.findUnique({
-            where: { id: userCard.card_id },
-            select: {
-              id: true,
-              name: true,
-              set_name: true,
-              card_number: true, // FIXED: Use card_number
-              rarity: true,
-              image_url: true
-            }
-          });
+          const card = cardById.get(userCard.card_id) ?? null;
 
           if (!card) {
             console.warn(`Card not found for userCard ${userCard.id}`);
@@ -155,21 +186,11 @@ async function getMyAuctions(userId: number) {
           }
 
           // Get all bids for this auction
-          const bids = await prisma.bid.findMany({
-            where: {
-              userCardId: userCard.id,
-              is_active: true
-            },
-            orderBy: { amount: 'desc' }
-          });
+          const bids = bidsByUserCard.get(userCard.id) ?? [];
 
           // Get bidder details for each bid
-          const bidsWithBidders = await Promise.all(
-            bids.map(async (bid) => {
-              const bidder = await prisma.user.findUnique({
-                where: { id: bid.bidderId },
-                select: { id: true, name: true, email: true }
-              });
+          const bidsWithBidders = bids.map((bid) => {
+              const bidder = bidderById.get(bid.bidderId) ?? null;
 
               return {
                 id: bid.id,
@@ -178,8 +199,7 @@ async function getMyAuctions(userId: number) {
                 created_at: bid.createdAt.toISOString(),
                 is_active: bid.is_active
               };
-            })
-          );
+          });
 
           // Calculate time remaining
           const now = new Date();
@@ -212,8 +232,7 @@ async function getMyAuctions(userId: number) {
           console.error(`Error processing auction ${userCard.id}:`, error);
           return null;
         }
-      })
-    );
+    });
 
     // Filter out null results
     const validAuctions = auctionsWithDetails.filter(auction => auction !== null);
