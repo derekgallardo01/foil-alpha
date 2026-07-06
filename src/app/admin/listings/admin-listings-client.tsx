@@ -29,7 +29,8 @@ import {
     Autocomplete,
     Tooltip,
     Switch,
-    FormLabel
+    FormLabel,
+    Divider
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -48,8 +49,18 @@ import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/StatCard";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
-import { formatPrice, formatTimeLeft } from "../../lib/format";
+import { formatPrice, formatTimeLeft, formatDuration, formatDateTime } from "../../lib/format";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+
+// Small label/value row for the details dialog.
+function DetailRow({ label, value }: { label: string; value: string }) {
+    return (
+        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, py: 0.25 }}>
+            <Typography variant="body2" color="text.secondary">{label}</Typography>
+            <Typography variant="body2" sx={{ textAlign: "right" }}>{value}</Typography>
+        </Box>
+    );
+}
 
 // Animation variants
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
@@ -121,6 +132,8 @@ export default function AdminListingsClient() {
         notes: string;
         is_for_sale: boolean;
     } | null>(null);
+    const [viewOpen, setViewOpen] = useState<boolean>(false);
+    const [viewListing, setViewListing] = useState<Listing | null>(null);
     const [actionLoading, setActionLoading] = useState<boolean>(false);
     const [rowLoading, setRowLoading] = useState<{ [key: number]: boolean }>({});
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
@@ -431,7 +444,8 @@ export default function AdminListingsClient() {
                     <IconButton
                         size="small"
                         onClick={() => {
-                            toast.info("View listing details functionality to be implemented");
+                            setViewListing(params.row);
+                            setViewOpen(true);
                         }}
                         disabled={rowLoading[Number(params.id)] || actionLoading}
                         sx={{ mr: 1 }}
@@ -1130,6 +1144,78 @@ export default function AdminListingsClient() {
                     >
                         {actionLoading ? <CircularProgress size={24} /> : 'Save Changes'}
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* View Listing Details Dialog */}
+            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Listing Details{viewListing ? ` — ${viewListing.card.name}` : ''}</DialogTitle>
+                <DialogContent dividers>
+                    {viewListing && (
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 4 }}>
+                                {(viewListing.card.small_image_url || viewListing.card.image_url) && (
+                                    <Image
+                                        src={viewListing.card.small_image_url || viewListing.card.image_url || ''}
+                                        alt={viewListing.card.name}
+                                        width={180}
+                                        height={252}
+                                        style={{ width: '100%', height: 'auto', borderRadius: 8 }}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                )}
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 8 }}>
+                                <Typography variant="h6">{viewListing.card.name}</Typography>
+                                <Typography variant="body2" color="text.secondary" gutterBottom>
+                                    {viewListing.card.set_name} • {viewListing.card.set_number} • {viewListing.card.rarity}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 1 }}>
+                                    <Chip size="small" label={getStatusText(viewListing)} color={getStatusColor(viewListing)} />
+                                    <Chip
+                                        size="small"
+                                        variant="outlined"
+                                        icon={viewListing.sale_type === 'AUCTION' ? <GavelIcon /> : <AttachMoneyIcon />}
+                                        label={viewListing.sale_type}
+                                        color={viewListing.sale_type === 'AUCTION' ? 'secondary' : 'primary'}
+                                    />
+                                    <Chip size="small" variant="outlined" label={`Condition: ${viewListing.condition}`} />
+                                </Box>
+                                <Divider sx={{ my: 1 }} />
+                                <DetailRow label="Owner" value={`${viewListing.owner.name} (${viewListing.owner.role})`} />
+                                {viewListing.sale_type === 'FIXED' ? (
+                                    <DetailRow label="Price" value={formatPrice(viewListing.fixed_price)} />
+                                ) : (
+                                    <>
+                                        <DetailRow label="Reserve" value={formatPrice(viewListing.reserve_price)} />
+                                        <DetailRow label="Highest Bid" value={viewListing.current_highest_bid != null ? formatPrice(viewListing.current_highest_bid) : '—'} />
+                                        <DetailRow label="Bids" value={String(viewListing.bid_count)} />
+                                        <DetailRow label="Time Left" value={viewListing.is_auction_active ? formatDuration(viewListing.time_left_ms) : 'Ended'} />
+                                        <DetailRow label="Auction End" value={viewListing.auction_end ? formatDateTime(viewListing.auction_end) : '—'} />
+                                    </>
+                                )}
+                                <DetailRow label="Created" value={formatDateTime(viewListing.created_at)} />
+                                {viewListing.notes && <DetailRow label="Notes" value={viewListing.notes} />}
+                            </Grid>
+                            {viewListing.sale_type === 'AUCTION' && viewListing.bids.length > 0 && (
+                                <Grid size={{ xs: 12 }}>
+                                    <Typography variant="subtitle2" sx={{ mt: 1, mb: 0.5 }}>Bids</Typography>
+                                    {[...viewListing.bids].sort((a, b) => b.amount - a.amount).map((bid) => (
+                                        <Box key={bid.id} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+                                            <Typography variant="body2">{bid.bidder.name}</Typography>
+                                            <Typography variant="mono" sx={{ fontWeight: 700 }}>{formatPrice(bid.amount)}</Typography>
+                                        </Box>
+                                    ))}
+                                </Grid>
+                            )}
+                        </Grid>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button variant="outlined" onClick={() => { setViewOpen(false); if (viewListing) handleEditListing(viewListing); }}>
+                        Edit
+                    </Button>
+                    <Button onClick={() => setViewOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
         </Box>
