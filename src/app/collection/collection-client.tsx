@@ -8,7 +8,6 @@ import {
     Box,
     Container,
     Typography,
-    Grid,
     Card,
     CardContent,
     CardMedia,
@@ -35,6 +34,7 @@ import {
     ToggleButtonGroup,
     Tooltip
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     Sell,
     Gavel,
@@ -146,7 +146,7 @@ function CollectionAnalytics({ summary }: { summary: CollectionSummary | null })
         <Box sx={{ mb: 3 }}>
             <Grid container spacing={2}>
                 {tiles.map((t) => (
-                    <Grid item xs={6} md={3} key={t.label}>
+                    <Grid size={{ xs: 6, md: 3 }} key={t.label}>
                         <StatCard label={t.label} value={t.value} accent={t.accent} icon={t.icon} />
                     </Grid>
                 ))}
@@ -553,19 +553,19 @@ function BulkPriceUpdateModal({
                             Price update completed!
                         </Alert>
                         <Grid container spacing={2}>
-                            <Grid item xs={4}>
+                            <Grid size={{ xs: 4 }}>
                                 <Typography variant="mono" component="div" align="center" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
                                     {results.successful_updates}
                                 </Typography>
                                 <Typography variant="body2" align="center">Updated</Typography>
                             </Grid>
-                            <Grid item xs={4}>
+                            <Grid size={{ xs: 4 }}>
                                 <Typography variant="mono" component="div" align="center" sx={{ fontSize: 30, fontWeight: 700, color: 'warning.main' }}>
                                     {results.skipped_cards}
                                 </Typography>
                                 <Typography variant="body2" align="center">Skipped</Typography>
                             </Grid>
-                            <Grid item xs={4}>
+                            <Grid size={{ xs: 4 }}>
                                 <Typography variant="mono" component="div" align="center" sx={{ fontSize: 30, fontWeight: 700, color: 'error.main' }}>
                                     {results.failed_updates}
                                 </Typography>
@@ -1068,7 +1068,7 @@ export default function CollectionPage() {
                                 ) : (
                                     <Grid container spacing={3}>
                                         {visibleCards.map((userCard) => (
-                                            <Grid item xs={12} sm={6} md={4} lg={3} key={userCard.id}>
+                                            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={userCard.id}>
                                                 <EnhancedCardDisplay
                                                     userCard={userCard}
                                                     onSellCard={handleSellCard}
@@ -1100,7 +1100,7 @@ export default function CollectionPage() {
                                     const isExpired = timeLeft === 'Expired';
 
                                     return (
-                                        <Grid item xs={12} md={6} key={index}>
+                                        <Grid size={{ xs: 12, md: 6 }} key={index}>
                                             <Card sx={{
                                                 border: 1,
                                                 borderColor: isExpired ? 'error.main' : 'warning.main'

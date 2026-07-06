@@ -22,10 +22,10 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    Grid,
     Avatar,
     Tooltip,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     Refresh as RefreshIcon,
     Login as LoginIcon,
@@ -194,26 +194,26 @@ export default function UserActivityPage() {
 
                 {/* Stats Cards */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             label="Total Activities"
                             value={stats.totalActivities.toLocaleString()}
                             accent
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             label="Today's Activities"
                             value={stats.todayActivities.toLocaleString()}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             label="Active Users"
                             value={stats.activeUsers.toLocaleString()}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard
                             label="Most Active User"
                             value={
@@ -228,7 +228,7 @@ export default function UserActivityPage() {
                 {/* Filters */}
                 <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
                     <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} md={2}>
+                        <Grid size={{ xs: 12, md: 2 }}>
                             <TextField
                                 fullWidth
                                 label="User ID"
@@ -237,7 +237,7 @@ export default function UserActivityPage() {
                                 size="small"
                             />
                         </Grid>
-                        <Grid item xs={12} md={2}>
+                        <Grid size={{ xs: 12, md: 2 }}>
                             <FormControl fullWidth size="small">
                                 <InputLabel>Action Type</InputLabel>
                                 <Select
@@ -254,7 +254,7 @@ export default function UserActivityPage() {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                             <TextField
                                 fullWidth
                                 label="Date From"
@@ -265,7 +265,7 @@ export default function UserActivityPage() {
                                 InputLabelProps={{ shrink: true }}
                             />
                         </Grid>
-                        <Grid item xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                             <TextField
                                 fullWidth
                                 label="Date To"
@@ -276,7 +276,7 @@ export default function UserActivityPage() {
                                 InputLabelProps={{ shrink: true }}
                             />
                         </Grid>
-                        <Grid item xs={12} md={2}>
+                        <Grid size={{ xs: 12, md: 2 }}>
                             <IconButton
                                 onClick={handleApplyFilters}
                                 sx={{

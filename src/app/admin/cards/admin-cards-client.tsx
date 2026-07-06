@@ -22,7 +22,6 @@ import {
     IconButton,
     FormControlLabel,
     Checkbox,
-    Grid,
     Card,
     Chip,
     InputLabel,
@@ -43,6 +42,7 @@ import {
     ListItemIcon,
     List
 } from "@mui/material";
+import Grid from "@mui/material/Grid2";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -305,7 +305,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
             </Box>
 
             <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AccessTimeIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
                         <Box>
@@ -320,7 +320,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                 </Grid>
 
                 {progress.estimatedTimeRemaining > 0 && progress.status !== 'completed' && (
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Timeline sx={{ color: 'text.secondary', fontSize: 20 }} />
                             <Box>
@@ -335,7 +335,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                     </Grid>
                 )}
 
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <CheckCircleIcon sx={{ color: 'success.main', fontSize: 20 }} />
                         <Box>
@@ -350,7 +350,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                 </Grid>
 
                 {(progress.failed > 0 || progress.skipped > 0) && (
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <ErrorIcon sx={{ color: 'error.main', fontSize: 20 }} />
                             <Box>
@@ -880,7 +880,7 @@ Please try:
                     <Box>
                         {/* Search Filters */}
                         <Grid container spacing={2} sx={{ mb: 3 }}>
-                            <Grid item xs={12} md={3}>
+                            <Grid size={{ xs: 12, md: 3 }}>
                                 <TextField
                                     fullWidth
                                     label="Search by Name"
@@ -890,7 +890,7 @@ Please try:
                                     disabled={importing}
                                 />
                             </Grid>
-                            <Grid item xs={12} md={3}>
+                            <Grid size={{ xs: 12, md: 3 }}>
                                 <FormControl fullWidth>
                                     <InputLabel>Set</InputLabel>
                                     <Select
@@ -908,7 +908,7 @@ Please try:
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={2}>
+                            <Grid size={{ xs: 12, md: 2 }}>
                                 <FormControl fullWidth>
                                     <InputLabel>Type</InputLabel>
                                     <Select
@@ -924,7 +924,7 @@ Please try:
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={2}>
+                            <Grid size={{ xs: 12, md: 2 }}>
                                 <FormControl fullWidth>
                                     <InputLabel>Rarity</InputLabel>
                                     <Select
@@ -940,7 +940,7 @@ Please try:
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={2}>
+                            <Grid size={{ xs: 12, md: 2 }}>
                                 <Button
                                     fullWidth
                                     variant="contained"
@@ -970,7 +970,7 @@ Please try:
 
                                 <Grid container spacing={2} sx={{ mb: 3 }}>
                                     {searchResults.map((card) => (
-                                        <Grid item xs={12} sm={6} md={4} lg={3} key={card.id}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={card.id}>
                                             <Card sx={{
                                                 height: '100%',
                                                 position: 'relative',
@@ -1046,7 +1046,7 @@ Please try:
                         </Typography>
 
                         <Grid container spacing={2}>
-                            <Grid item xs={12} md={8}>
+                            <Grid size={{ xs: 12, md: 8 }}>
                                 <FormControl fullWidth>
                                     <InputLabel>Select Set to Import</InputLabel>
                                     <Select
@@ -1063,7 +1063,7 @@ Please try:
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={4}>
+                            <Grid size={{ xs: 12, md: 4 }}>
                                 <Button
                                     fullWidth
                                     variant="contained"
@@ -1279,7 +1279,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                         </Typography>
 
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <FormControl fullWidth>
                                     <InputLabel>Sync Strategy</InputLabel>
                                     <Select
@@ -1294,7 +1294,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Batch Size"
                                     type="number"
@@ -1306,7 +1306,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                                     disabled={loading}
                                 />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <TextField
                                     label="Update Cards Older Than (Hours)"
                                     type="number"
@@ -1334,28 +1334,28 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                         </Alert>
 
                         <Grid container spacing={2}>
-                            <Grid item xs={6} md={3}>
+                            <Grid size={{ xs: 6, md: 3 }}>
                                 <StatCard
                                     icon={<PriceCheck />}
                                     label="Cards Updated"
                                     value={formatNumber(syncResults.successful_updates)}
                                 />
                             </Grid>
-                            <Grid item xs={6} md={3}>
+                            <Grid size={{ xs: 6, md: 3 }}>
                                 <StatCard
                                     icon={<Warning />}
                                     label="Skipped"
                                     value={formatNumber(syncResults.skipped_cards)}
                                 />
                             </Grid>
-                            <Grid item xs={6} md={3}>
+                            <Grid size={{ xs: 6, md: 3 }}>
                                 <StatCard
                                     icon={<DeleteIcon />}
                                     label="Failed"
                                     value={formatNumber(syncResults.failed_updates)}
                                 />
                             </Grid>
-                            <Grid item xs={6} md={3}>
+                            <Grid size={{ xs: 6, md: 3 }}>
                                 <StatCard
                                     icon={<AttachMoney />}
                                     label="Avg. Price"
@@ -1369,7 +1369,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                             <Box sx={{ mt: 3 }}>
                                 <Typography variant="h6" sx={{ mb: 2 }}>Pricing Summary</Typography>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={12} md={6}>
+                                    <Grid size={{ xs: 12, md: 6 }}>
                                         <Typography variant="body2" color="text.secondary">
                                             API Pricing Success: {formatNumber(syncResults.pricing_summary.api_pricing_success || 0)}
                                         </Typography>
@@ -1377,7 +1377,7 @@ function PriceSyncModal({ open, onClose, onSyncComplete }: {
                                             Fallback Pricing Used: {formatNumber(syncResults.pricing_summary.fallback_pricing_used || 0)}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={12} md={6}>
+                                    <Grid size={{ xs: 12, md: 6 }}>
                                         <Typography variant="body2" color="text.secondary">
                                             Price Range: {formatPrice(syncResults.pricing_summary.price_range?.min)} - {formatPrice(syncResults.pricing_summary.price_range?.max)}
                                         </Typography>
@@ -2179,7 +2179,7 @@ export default function AdminCardsClient() {
                         {/* Enhanced Card Stats Dashboard */}
                         <motion.div variants={itemVariants}>
                             <Grid container spacing={2} sx={{ mb: 4 }}>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
                                     <StatCard
                                         icon={<Inventory />}
                                         label="Total Cards"
@@ -2187,21 +2187,21 @@ export default function AdminCardsClient() {
                                         accent
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
                                     <StatCard
                                         icon={<Category />}
                                         label="Total Owned"
                                         value={formatNumber(stats.totalOwned)}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
                                     <StatCard
                                         icon={<Store />}
                                         label="For Sale"
                                         value={formatNumber(stats.forSale)}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
                                     <StatCard
                                         icon={<AttachMoney />}
                                         label="Market Value"
@@ -2564,7 +2564,7 @@ export default function AdminCardsClient() {
                 <DialogContent>
                     {editCard && (
                         <Grid container spacing={3} sx={{ mt: 1 }}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Card Name"
                                     fullWidth
@@ -2575,7 +2575,7 @@ export default function AdminCardsClient() {
                                     required
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Set Name"
                                     fullWidth
@@ -2586,7 +2586,7 @@ export default function AdminCardsClient() {
                                     required
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Set Number"
                                     fullWidth
@@ -2597,7 +2597,7 @@ export default function AdminCardsClient() {
                                     required
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <FormControl fullWidth error={!!validationErrors.rarity} required>
                                     <InputLabel>Rarity</InputLabel>
                                     <Select
@@ -2613,7 +2613,7 @@ export default function AdminCardsClient() {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <FormControl fullWidth error={!!validationErrors.card_type} required>
                                     <InputLabel>Card Type</InputLabel>
                                     <Select
@@ -2627,7 +2627,7 @@ export default function AdminCardsClient() {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Subtype"
                                     fullWidth
@@ -2636,7 +2636,7 @@ export default function AdminCardsClient() {
                                     placeholder="e.g., Basic, Stage 1, Item"
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="HP"
                                     type="number"
@@ -2646,7 +2646,7 @@ export default function AdminCardsClient() {
                                     placeholder="Hit Points (if applicable)"
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="TCG ID"
                                     fullWidth
@@ -2655,7 +2655,7 @@ export default function AdminCardsClient() {
                                     placeholder="Trading Card Game ID"
                                 />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <TextField
                                     label="Image URL"
                                     fullWidth
@@ -2665,7 +2665,7 @@ export default function AdminCardsClient() {
                                 />
                             </Grid>
                             {editCard.image_url && (
-                                <Grid item xs={12}>
+                                <Grid size={{ xs: 12 }}>
                                     <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2, border: 1, borderColor: 'divider' }}>
                                         <Typography variant="subtitle2" sx={{ mb: 2, color: 'text.secondary' }}>
                                             Card Preview

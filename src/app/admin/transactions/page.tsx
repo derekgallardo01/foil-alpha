@@ -8,7 +8,6 @@ import {
     Container,
     Typography,
     Box,
-    Grid,
     Button,
     Chip,
     CircularProgress,
@@ -34,6 +33,7 @@ import {
     TextField,
     InputAdornment
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Receipt as TransactionIcon,
     Refresh as RefreshIcon,
@@ -330,16 +330,16 @@ const AdminTransactionsPage = () => {
 
                 {/* Statistics Cards - Using actual data from API */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard label="Total Sales" value={stats.totalSales.toLocaleString()} />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard label="Pending Transactions" value={stats.pendingTransactions.toLocaleString()} />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard label="Recent Transactions" value={transactions.length.toLocaleString()} />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard label="Monthly Revenue" value={formatPrice(stats.monthlyRevenue)} accent />
                     </Grid>
                 </Grid>
@@ -347,7 +347,7 @@ const AdminTransactionsPage = () => {
                 {/* Filters */}
                 <Paper variant="outlined" sx={{ p: 2, mb: 3, border: 1, borderColor: 'divider' }}>
                     <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                             <TextField
                                 fullWidth
                                 label="Search"
@@ -363,7 +363,7 @@ const AdminTransactionsPage = () => {
                                 }}
                             />
                         </Grid>
-                        <Grid item xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                             <FormControl fullWidth size="small">
                                 <InputLabel>Status</InputLabel>
                                 <Select
@@ -380,7 +380,7 @@ const AdminTransactionsPage = () => {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                             <FormControl fullWidth size="small">
                                 <InputLabel>Type</InputLabel>
                                 <Select
@@ -568,7 +568,7 @@ const AdminTransactionsPage = () => {
                         <DialogContent>
                             <Box sx={{ pt: 2 }}>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={6}>
+                                    <Grid size={{ xs: 6 }}>
                                         <Typography variant="subtitle2" color="text.secondary">Status</Typography>
                                         <Chip
                                             label={selectedTransaction.status}
@@ -576,7 +576,7 @@ const AdminTransactionsPage = () => {
                                             size="small"
                                         />
                                     </Grid>
-                                    <Grid item xs={6}>
+                                    <Grid size={{ xs: 6 }}>
                                         <Typography variant="subtitle2" color="text.secondary">Type</Typography>
                                         <Chip
                                             label={selectedTransaction.transaction_type}
@@ -584,32 +584,32 @@ const AdminTransactionsPage = () => {
                                             size="small"
                                         />
                                     </Grid>
-                                    <Grid item xs={12}>
+                                    <Grid size={{ xs: 12 }}>
                                         <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
                                         <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700, color: 'text.primary' }}>
                                             {formatPrice(selectedTransaction.amount)}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6}>
+                                    <Grid size={{ xs: 6 }}>
                                         <Typography variant="subtitle2" color="text.secondary">Buyer</Typography>
                                         <Typography>{selectedTransaction.buyer?.name || 'Unknown'}</Typography>
                                         <Typography variant="caption" color="text.secondary">
                                             {selectedTransaction.buyer?.email || ''}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6}>
+                                    <Grid size={{ xs: 6 }}>
                                         <Typography variant="subtitle2" color="text.secondary">Seller</Typography>
                                         <Typography>{selectedTransaction.seller?.name || 'Unknown'}</Typography>
                                         <Typography variant="caption" color="text.secondary">
                                             {selectedTransaction.seller?.email || ''}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={12}>
+                                    <Grid size={{ xs: 12 }}>
                                         <Typography variant="subtitle2" color="text.secondary">Created</Typography>
                                         <Typography variant="mono" sx={{ fontSize: 13 }}>{formatDateTime(selectedTransaction.created_at)}</Typography>
                                     </Grid>
                                     {selectedTransaction.notes && (
-                                        <Grid item xs={12}>
+                                        <Grid size={{ xs: 12 }}>
                                             <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
                                             <Typography>{selectedTransaction.notes}</Typography>
                                         </Grid>

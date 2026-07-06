@@ -7,7 +7,6 @@ import {
     Container,
     Typography,
     Box,
-    Grid,
     Card,
     CardContent,
     Button,
@@ -19,6 +18,7 @@ import {
     Divider,
     LinearProgress
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Payment as PaymentIcon,
     Refresh as RefreshIcon,
@@ -265,7 +265,7 @@ export default function AdminPendingTransactionsPage() {
                             const isExpired = timeRemaining ? timeRemaining.percentage === 0 : false;
 
                             return (
-                                <Grid item xs={12} md={6} lg={4} key={transaction.id}>
+                                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={transaction.id}>
                                     <Card sx={{
                                         height: '100%',
                                         border: 1,

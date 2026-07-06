@@ -8,8 +8,8 @@ import {
     Button,
     Card,
     CardContent,
-    Grid,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import { ArrowBack, AccountBalanceWallet, Person, Settings } from "@mui/icons-material";
 import AppShell from "../../components/AppShell";
 import PageHeader from "../../components/ui/PageHeader";
@@ -48,7 +48,7 @@ export default function AdminWalletsPage() {
                 </Box>
 
                 <Grid container spacing={4} sx={{ mb: 6 }}>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             height: '100%',
                             transition: 'transform 0.2s',
@@ -73,7 +73,7 @@ export default function AdminWalletsPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             height: '100%',
                             transition: 'transform 0.2s',
@@ -96,7 +96,7 @@ export default function AdminWalletsPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             height: '100%',
                             transition: 'transform 0.2s',

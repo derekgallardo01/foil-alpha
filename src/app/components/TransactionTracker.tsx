@@ -4,7 +4,6 @@ import {
   Container,
   Typography,
   Box,
-  Grid,
   Card,
   CardContent,
   Paper,
@@ -24,6 +23,7 @@ import {
   Collapse,
   IconButton
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
@@ -246,7 +246,7 @@ export default function TransactionTracker({ userId }: TransactionTrackerProps) 
 
       {stats && (
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -266,7 +266,7 @@ export default function TransactionTracker({ userId }: TransactionTrackerProps) 
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -286,7 +286,7 @@ export default function TransactionTracker({ userId }: TransactionTrackerProps) 
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -309,7 +309,7 @@ export default function TransactionTracker({ userId }: TransactionTrackerProps) 
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -339,7 +339,7 @@ export default function TransactionTracker({ userId }: TransactionTrackerProps) 
           </Box>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>Transaction Type</InputLabel>
                 <Select
@@ -355,7 +355,7 @@ export default function TransactionTracker({ userId }: TransactionTrackerProps) 
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>Sort By</InputLabel>
                 <Select
@@ -371,7 +371,7 @@ export default function TransactionTracker({ userId }: TransactionTrackerProps) 
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>Date Range</InputLabel>
                 <Select

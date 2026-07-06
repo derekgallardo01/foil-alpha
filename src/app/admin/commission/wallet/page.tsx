@@ -10,7 +10,6 @@ import {
     Card,
     CardContent,
     Typography,
-    Grid,
     Table,
     TableBody,
     TableCell,
@@ -27,6 +26,7 @@ import {
     DialogContent,
     DialogActions,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     AccountBalance,
     TrendingUp,
@@ -213,7 +213,7 @@ export default function AdminWalletManagement() {
                     ) : (
                     <Grid container spacing={3}>
                         {/* Wallet Overview */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -221,16 +221,16 @@ export default function AdminWalletManagement() {
                                         Platform Wallet Overview
                                     </Typography>
                                     <Grid container spacing={3}>
-                                        <Grid item xs={12} md={3}>
+                                        <Grid size={{ xs: 12, md: 3 }}>
                                             <StatCard label="Current Balance" value={formatPrice(data.admin_wallet.balance)} accent />
                                         </Grid>
-                                        <Grid item xs={12} md={3}>
+                                        <Grid size={{ xs: 12, md: 3 }}>
                                             <StatCard label="Total Commissions" value={formatPrice(data.admin_wallet.total_commissions)} />
                                         </Grid>
-                                        <Grid item xs={12} md={3}>
+                                        <Grid size={{ xs: 12, md: 3 }}>
                                             <StatCard label="Marketplace Sales" value={formatPrice(data.admin_wallet.total_marketplace_sales)} />
                                         </Grid>
-                                        <Grid item xs={12} md={3}>
+                                        <Grid size={{ xs: 12, md: 3 }}>
                                             <StatCard label="Total Revenue" value={formatPrice(data.admin_wallet.total_commissions + data.admin_wallet.total_marketplace_sales)} />
                                         </Grid>
                                     </Grid>
@@ -239,7 +239,7 @@ export default function AdminWalletManagement() {
                         </Grid>
 
                         {/* Monthly Stats */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -247,7 +247,7 @@ export default function AdminWalletManagement() {
                                         Monthly Performance
                                     </Typography>
                                     <Grid container spacing={2}>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700 }} color="success.main">
                                                     {formatPrice(data.stats.monthly_commissions)}
@@ -257,7 +257,7 @@ export default function AdminWalletManagement() {
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="mono" component="div" sx={{ fontSize: 24, fontWeight: 700 }} color="info.main">
                                                     {formatPrice(data.stats.monthly_marketplace_sales)}
@@ -282,7 +282,7 @@ export default function AdminWalletManagement() {
                         </Grid>
 
                         {/* Transaction Summary */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -316,7 +316,7 @@ export default function AdminWalletManagement() {
                         </Grid>
 
                         {/* Recent Transactions */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Card>
                                 <CardContent>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -400,7 +400,7 @@ export default function AdminWalletManagement() {
                 <DialogContent>
                     <Box sx={{ pt: 2 }}>
                         <Grid container spacing={2}>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                                     <Button
                                         variant={adjustmentType === 'add' ? 'contained' : 'outlined'}
@@ -428,7 +428,7 @@ export default function AdminWalletManagement() {
                                     </Button>
                                 </Box>
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <TextField
                                     fullWidth
                                     label="Amount"
@@ -438,7 +438,7 @@ export default function AdminWalletManagement() {
                                     inputProps={{ min: 0, step: 0.01 }}
                                 />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <TextField
                                     fullWidth
                                     label="Description"

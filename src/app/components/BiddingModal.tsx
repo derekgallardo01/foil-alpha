@@ -19,9 +19,9 @@ import {
     Alert,
     CircularProgress,
     Paper,
-    Grid,
     InputAdornment
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     AccessTime as ClockIcon,
     Gavel as GavelIcon,
@@ -239,7 +239,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
             <DialogContent>
                 <Grid container spacing={3}>
                     {/* Card Information */}
-                    <Grid item xs={12} md={5}>
+                    <Grid size={{ xs: 12, md: 5 }}>
                         <Card>
                             <CardMedia
                                 component="img"
@@ -275,7 +275,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                     </Grid>
 
                     {/* Auction Information */}
-                    <Grid item xs={12} md={7}>
+                    <Grid size={{ xs: 12, md: 7 }}>
                         <Paper sx={{ p: 3, mb: 2 }}>
                             <Typography variant="h6" gutterBottom>
                                 Auction Details

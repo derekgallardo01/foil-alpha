@@ -12,7 +12,6 @@ import {
     Typography,
     TextField,
     Button,
-    Grid,
     Table,
     TableBody,
     TableCell,
@@ -25,6 +24,7 @@ import {
     InputAdornment,
     Divider,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     Save,
     Refresh,
@@ -214,7 +214,7 @@ export default function CommissionManagement() {
                     ) : (
                     <Grid container spacing={3}>
                         {/* Admin Wallet Info */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -223,13 +223,13 @@ export default function CommissionManagement() {
                                     </Typography>
                                     {data.admin_wallet ? (
                                         <Grid container spacing={3}>
-                                            <Grid item xs={12} md={4}>
+                                            <Grid size={{ xs: 12, md: 4 }}>
                                                 <StatCard label="Current Balance" value={formatPrice(data.admin_wallet.balance)} accent />
                                             </Grid>
-                                            <Grid item xs={12} md={4}>
+                                            <Grid size={{ xs: 12, md: 4 }}>
                                                 <StatCard label="Total Commissions" value={formatPrice(data.admin_wallet.total_commissions)} />
                                             </Grid>
-                                            <Grid item xs={12} md={4}>
+                                            <Grid size={{ xs: 12, md: 4 }}>
                                                 <StatCard label="Marketplace Sales" value={formatPrice(data.admin_wallet.total_marketplace_sales)} />
                                             </Grid>
                                         </Grid>
@@ -243,7 +243,7 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Global Commission Setting */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -269,7 +269,7 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Commission Calculation Example */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -302,7 +302,7 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Rarity-Specific Commission Rates */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2 }}>
@@ -385,7 +385,7 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Save Actions */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
                                 <Button
                                     variant="outlined"

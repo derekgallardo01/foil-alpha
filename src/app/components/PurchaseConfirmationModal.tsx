@@ -15,10 +15,10 @@ import {
     Alert,
     CircularProgress,
     Paper,
-    Grid,
     Divider,
     Skeleton
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     ShoppingCart as CartIcon,
     AttachMoney as MoneyIcon,
@@ -331,7 +331,7 @@ export default function PurchaseConfirmationModal({
                     // Purchase Confirmation
                     <Grid container spacing={3}>
                         {/* Card Display */}
-                        <Grid item xs={12} md={5}>
+                        <Grid size={{ xs: 12, md: 5 }}>
                             <Card sx={{
                                 border: 1,
                                 borderColor: 'divider',
@@ -351,7 +351,7 @@ export default function PurchaseConfirmationModal({
                         </Grid>
 
                         {/* Card Details */}
-                        <Grid item xs={12} md={7}>
+                        <Grid size={{ xs: 12, md: 7 }}>
                             <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
                                 {listingData.card.name}
                             </Typography>

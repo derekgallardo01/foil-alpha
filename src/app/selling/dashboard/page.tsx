@@ -7,7 +7,6 @@ import {
     Container,
     Typography,
     Box,
-    Grid,
     Card,
     CardContent,
     CardMedia,
@@ -37,6 +36,7 @@ import {
     ListItemIcon,
     ListItemText
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Gavel as GavelIcon,
     AccessTime as ClockIcon,
@@ -343,16 +343,16 @@ export default function SellingDashboard() {
         <Container maxWidth="xl" sx={{ pb: 4 }}>
             {/* Quick Stats Cards */}
             <Grid container spacing={3} sx={{ mb: 3, mt: 0 }}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard label="Active Sales" value={stats.totalActiveSales} icon={<SellIcon fontSize="small" />} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard label="Total Sold" value={stats.totalSoldItems} icon={<HistoryIcon fontSize="small" />} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard accent label="Total Revenue" value={formatPrice(stats.totalRevenue)} icon={<MoneyIcon fontSize="small" />} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard label="Total Bids" value={stats.totalBidsReceived} icon={<GavelIcon fontSize="small" />} />
                 </Grid>
             </Grid>
@@ -421,7 +421,7 @@ export default function SellingDashboard() {
                                         const hasActiveBids = sale.bid_count > 0;
 
                                         return (
-                                            <Grid item xs={12} sm={6} md={4} key={sale.id}>
+                                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={sale.id}>
                                                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                                     {/* Card Image */}
                                                     <Box sx={{ position: 'relative' }}>
@@ -671,7 +671,7 @@ export default function SellingDashboard() {
                             {/* Card Summary */}
                             <Paper sx={{ p: 2, mb: 3 }}>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={4}>
+                                    <Grid size={{ xs: 4 }}>
                                         <img
                                             src={selectedSale.card.small_image_url || selectedSale.card.image_url || '/placeholder-card.png'}
                                             alt={selectedSale.card.name}
@@ -681,7 +681,7 @@ export default function SellingDashboard() {
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={8}>
+                                    <Grid size={{ xs: 8 }}>
                                         <Typography variant="h6">{selectedSale.card.name}</Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             {selectedSale.card.set_name}

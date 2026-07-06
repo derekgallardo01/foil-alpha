@@ -16,11 +16,11 @@ import {
   Backdrop,
   IconButton,
   InputAdornment,
-  Grid,
   Card,
   CardContent,
   Alert,
 } from "@mui/material";
+import Grid from "@mui/material/Grid2";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "react-toastify";
@@ -235,7 +235,7 @@ export default function LoginClient() {
 
                     <Grid container spacing={2}>
                       {DEV_USERS.map((user) => (
-                        <Grid item xs={12} sm={6} md={4} key={user.email}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={user.email}>
                           <Card sx={{
                             bgcolor: user.role === 'admin' ? 'error.dark' : 'primary.dark',
                             '&:hover': { bgcolor: user.role === 'admin' ? 'error.main' : 'primary.main' }

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
-  Grid,
   Typography,
   Paper,
   Tabs,
@@ -12,6 +11,7 @@ import {
   Chip,
   Button
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
   TrendingUp,
   Gavel,
@@ -164,16 +164,16 @@ export default function Dashboard() {
                   />
                 ) : (
                   <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                       <StatCard accent label="Collection Value" value={formatPrice(stats.totalValue)} icon={<WalletIcon fontSize="small" />} />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                       <StatCard label="Total Cards" value={stats.totalCards} icon={<CollectionsIcon fontSize="small" />} />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                       <StatCard label="Active Bids" value={stats.activeAuctions} icon={<Gavel fontSize="small" />} />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                       <StatCard label="Recent Sales" value={stats.recentSales} icon={<SellIcon fontSize="small" />} />
                     </Grid>
                   </Grid>
@@ -211,22 +211,22 @@ export default function Dashboard() {
             <motion.div variants={itemVariants}>
               <Grid container spacing={3}>
                 {/* Trending Cards - Half Width */}
-                <Grid item xs={12} lg={6}>
+                <Grid size={{ xs: 12, lg: 6 }}>
                   <TrendingCardsTable limit={5} height={400} />
                 </Grid>
 
                 {/* Popular Cards - Half Width */}
-                <Grid item xs={12} lg={6}>
+                <Grid size={{ xs: 12, lg: 6 }}>
                   <PopularityMetrics limit={5} />
                 </Grid>
 
                 {/* Live Auctions - Full Width */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <LiveAuctionTable limit={5} height={400} />
                 </Grid>
 
                 {/* New Releases - Full Width */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <NewReleasesCarousel limit={6} />
                 </Grid>
               </Grid>
@@ -236,16 +236,16 @@ export default function Dashboard() {
           {activeTab === 1 && (
             <motion.div variants={itemVariants}>
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TrendingCardsTable limit={20} height={600} />
                 </Grid>
                 {/* Price forecast + trend for the actual top-trending card (Phase 2) */}
                 {topCard && (
                   <>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <ForecastPanel cardId={topCard.id} title={`${topCard.name} — Price Forecast`} />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Paper variant="outlined" sx={{ p: 3 }}>
                         <Typography variant="h6" gutterBottom>
                           {topCard.name} — Price Trend
@@ -262,10 +262,10 @@ export default function Dashboard() {
           {activeTab === 2 && (
             <motion.div variants={itemVariants}>
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <LiveAuctionTable limit={20} height={700} autoRefresh={true} />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Paper variant="outlined" sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="h6">

@@ -22,13 +22,13 @@ import {
     IconButton,
     FormControlLabel,
     Checkbox,
-    Grid,
     Card,
     Chip,
     InputLabel,
     FormControl,
     Autocomplete
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -559,16 +559,16 @@ export default function AdminListingsClient() {
                         {/* Listing Stats Dashboard */}
                         <motion.div variants={itemVariants}>
                             <Grid container spacing={2} sx={{ mb: 3 }}>
-                                <Grid item xs={6} md={3}>
+                                <Grid size={{ xs: 6, md: 3 }}>
                                     <StatCard label="Total Listings" value={stats.total} accent />
                                 </Grid>
-                                <Grid item xs={6} md={3}>
+                                <Grid size={{ xs: 6, md: 3 }}>
                                     <StatCard label="Active" value={stats.active} />
                                 </Grid>
-                                <Grid item xs={6} md={3}>
+                                <Grid size={{ xs: 6, md: 3 }}>
                                     <StatCard label="Sold" value={stats.sold} />
                                 </Grid>
-                                <Grid item xs={6} md={3}>
+                                <Grid size={{ xs: 6, md: 3 }}>
                                     <StatCard label="Total Bids" value={stats.totalBids} />
                                 </Grid>
                             </Grid>
@@ -744,7 +744,7 @@ export default function AdminListingsClient() {
                 <DialogTitle>Create Marketplace Listing</DialogTitle>
                 <DialogContent>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Autocomplete
                                 options={allCards}
                                 getOptionLabel={(option) => `${option.name} - ${option.set_name} (${option.set_number})`}
@@ -785,7 +785,7 @@ export default function AdminListingsClient() {
                             />
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <FormControl fullWidth error={!!validationErrors.condition}>
                                 <InputLabel>Condition</InputLabel>
                                 <Select
@@ -802,7 +802,7 @@ export default function AdminListingsClient() {
                             </FormControl>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <FormControl fullWidth>
                                 <InputLabel>Sale Type</InputLabel>
                                 <Select
@@ -817,7 +817,7 @@ export default function AdminListingsClient() {
                         </Grid>
 
                         {newListing.sale_type === 'FIXED' && (
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Fixed Price ($)"
                                     type="number"
@@ -832,7 +832,7 @@ export default function AdminListingsClient() {
 
                         {newListing.sale_type === 'AUCTION' && (
                             <>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <TextField
                                         label="Reserve Price ($)"
                                         type="number"
@@ -842,7 +842,7 @@ export default function AdminListingsClient() {
                                         helperText="Optional minimum price"
                                     />
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <FormControl fullWidth error={!!validationErrors.auction_duration_hours}>
                                         <InputLabel>Auction Duration</InputLabel>
                                         <Select
@@ -860,7 +860,7 @@ export default function AdminListingsClient() {
                             </>
                         )}
 
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 label="Quantity"
                                 type="number"
@@ -872,7 +872,7 @@ export default function AdminListingsClient() {
                             />
                         </Grid>
 
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 label="Notes"
                                 fullWidth
@@ -886,7 +886,7 @@ export default function AdminListingsClient() {
 
                         {/* Preview selected card */}
                         {newListing.card_id && (
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                                     {(() => {
                                         const selectedCard = allCards.find(card => card.id.toString() === newListing.card_id);

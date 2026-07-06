@@ -10,7 +10,6 @@ import {
     Card,
     CardContent,
     Typography,
-    Grid,
     Table,
     TableBody,
     TableCell,
@@ -26,6 +25,7 @@ import {
     MenuItem,
     TextField,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     Assessment,
     TrendingUp,
@@ -164,28 +164,28 @@ export default function CommissionReports() {
                     ) : reportData ? (
                         <Grid container spacing={3}>
                             {/* Summary Cards */}
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={12} md={2.4}>
+                                    <Grid size={{ xs: 12, md: 2.4 }}>
                                         <StatCard label="Total Revenue" value={formatPrice(reportData.summary.total_revenue)} accent />
                                     </Grid>
-                                    <Grid item xs={12} md={2.4}>
+                                    <Grid size={{ xs: 12, md: 2.4 }}>
                                         <StatCard label="Commissions" value={formatPrice(reportData.summary.total_commissions)} />
                                     </Grid>
-                                    <Grid item xs={12} md={2.4}>
+                                    <Grid size={{ xs: 12, md: 2.4 }}>
                                         <StatCard label="Marketplace Sales" value={formatPrice(reportData.summary.total_marketplace_sales)} />
                                     </Grid>
-                                    <Grid item xs={12} md={2.4}>
+                                    <Grid size={{ xs: 12, md: 2.4 }}>
                                         <StatCard label="Avg Commission Rate" value={`${reportData.summary.avg_commission_rate.toFixed(1)}%`} />
                                     </Grid>
-                                    <Grid item xs={12} md={2.4}>
+                                    <Grid size={{ xs: 12, md: 2.4 }}>
                                         <StatCard label="Transactions" value={reportData.summary.total_transactions} />
                                     </Grid>
                                 </Grid>
                             </Grid>
 
                             {/* Commission by Rarity */}
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Card>
                                     <CardContent>
                                         <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -227,7 +227,7 @@ export default function CommissionReports() {
                             </Grid>
 
                             {/* Top Performing Cards */}
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Card>
                                     <CardContent>
                                         <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -269,7 +269,7 @@ export default function CommissionReports() {
                             </Grid>
 
                             {/* Monthly Breakdown */}
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Card>
                                     <CardContent>
                                         <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>

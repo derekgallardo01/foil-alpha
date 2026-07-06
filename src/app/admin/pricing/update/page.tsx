@@ -9,7 +9,6 @@ import {
     Paper,
     Typography,
     Button,
-    Grid,
     Card,
     CardContent,
     CircularProgress,
@@ -32,6 +31,7 @@ import {
     IconButton,
     Tooltip
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Refresh,
     Schedule,
@@ -220,7 +220,7 @@ export default function AdminPricingUpdatePage() {
         <Box sx={{ p: 3 }}>
             {/* Cron Status Section */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -230,16 +230,16 @@ export default function AdminPricingUpdatePage() {
 
                             {cronStatus ? (
                                 <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <StatCard label="Total Cards with API" value={cronStatus.total_cards_with_api.toLocaleString()} />
                                     </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <StatCard label="Updated (24h)" value={cronStatus.recent_updates_24h.toLocaleString()} />
                                     </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <StatCard label="Stale Cards" value={cronStatus.stale_cards.toLocaleString()} />
                                     </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <Box sx={{ textAlign: 'center' }}>
                                             <Chip
                                                 label={cronStatus.last_sync_status}
@@ -262,7 +262,7 @@ export default function AdminPricingUpdatePage() {
 
             {/* Manual Sync Controls */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -324,7 +324,7 @@ export default function AdminPricingUpdatePage() {
                     </Card>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -375,7 +375,7 @@ export default function AdminPricingUpdatePage() {
             {/* Sync Results */}
             {syncResult && (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Card>
                             <CardContent>
                                 <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -385,16 +385,16 @@ export default function AdminPricingUpdatePage() {
 
                                 {/* Summary Stats */}
                                 <Grid container spacing={2} sx={{ mb: 3 }}>
-                                    <Grid item xs={6} sm={3}>
+                                    <Grid size={{ xs: 6, sm: 3 }}>
                                         <StatCard label="Total Cards" value={syncResult.total_cards.toLocaleString()} />
                                     </Grid>
-                                    <Grid item xs={6} sm={3}>
+                                    <Grid size={{ xs: 6, sm: 3 }}>
                                         <StatCard label="Updated" value={syncResult.successful_updates.toLocaleString()} />
                                     </Grid>
-                                    <Grid item xs={6} sm={3}>
+                                    <Grid size={{ xs: 6, sm: 3 }}>
                                         <StatCard label="Failed" value={syncResult.failed_updates.toLocaleString()} />
                                     </Grid>
-                                    <Grid item xs={6} sm={3}>
+                                    <Grid size={{ xs: 6, sm: 3 }}>
                                         <StatCard label="Skipped" value={syncResult.skipped_cards.toLocaleString()} />
                                     </Grid>
                                 </Grid>
@@ -406,28 +406,28 @@ export default function AdminPricingUpdatePage() {
                                     Market Analysis
                                 </Typography>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <StatCard
                                             label="Price Increases"
                                             value={syncResult.pricing_summary.cards_with_increases.toLocaleString()}
                                             icon={<TrendingUp color="success" />}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <StatCard
                                             label="Price Decreases"
                                             value={syncResult.pricing_summary.cards_with_decreases.toLocaleString()}
                                             icon={<TrendingDown color="error" />}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <StatCard
                                             label="Total Market Value"
                                             value={formatPrice(syncResult.pricing_summary.total_market_value)}
                                             accent
                                         />
                                     </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <StatCard
                                             label="Avg Price Change"
                                             value={`${syncResult.pricing_summary.avg_price_change > 0 ? '+' : ''}${syncResult.pricing_summary.avg_price_change.toFixed(2)}%`}

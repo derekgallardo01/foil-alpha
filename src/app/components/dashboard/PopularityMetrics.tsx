@@ -5,7 +5,6 @@ import {
     Box,
     Paper,
     Typography,
-    Grid,
     Card,
     CardContent,
     Avatar,
@@ -20,6 +19,7 @@ import {
     ListItemSecondaryAction,
     CircularProgress
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { useTheme } from '@mui/material/styles';
 import {
     Whatshot,
@@ -214,7 +214,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                         >
                             <CardContent>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={12} md={3}>
+                                    <Grid size={{ xs: 12, md: 3 }}>
                                         <Avatar
                                             src={topCard.image_url || getPlaceholderImage()}
                                             variant="rounded"
@@ -224,7 +224,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={9}>
+                                    <Grid size={{ xs: 12, md: 9 }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                             <Box>
                                                 <Typography variant="h5" gutterBottom sx={{ color: 'text.primary' }}>
@@ -254,7 +254,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                         </Box>
 
                                         <Grid container spacing={2} sx={{ mt: 2 }}>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <Visibility sx={{ color: 'text.disabled', mb: 0.5 }} />
                                                     <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -263,7 +263,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                     <Typography variant="caption" color="text.secondary">Views</Typography>
                                                 </Box>
                                             </Grid>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <LocalOffer sx={{ color: 'text.disabled', mb: 0.5 }} />
                                                     <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -272,7 +272,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                     <Typography variant="caption" color="text.secondary">Listings</Typography>
                                                 </Box>
                                             </Grid>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <TrendingUp sx={{ color: 'text.disabled', mb: 0.5 }} />
                                                     <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -281,7 +281,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                     <Typography variant="caption" color="text.secondary">Recent Sales</Typography>
                                                 </Box>
                                             </Grid>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <Typography variant="mono" component="div" sx={{ color: 'text.primary', fontWeight: 700 }}>
                                                         {formatPrice(topCard.market_price)}

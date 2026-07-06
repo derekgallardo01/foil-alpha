@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import {
     Box,
     Container,
-    Grid,
     Typography,
     Button,
     List,
@@ -17,6 +16,7 @@ import {
     Paper,
     Avatar,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     TrendingUp,
     People,
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
                             ) : (
                                 <Grid container spacing={3}>
                                     {statCards.map((stat, index) => (
-                                        <Grid item xs={12} sm={6} md={4} lg={2} key={index}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} key={index}>
                                             <Box
                                                 onClick={() => router.push(stat.link)}
                                                 sx={{
@@ -385,7 +385,7 @@ export default function AdminDashboard() {
                     {/* Main Content Grid */}
                     <Grid container spacing={3}>
                         {/* Recent Activity */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <motion.div variants={itemVariants}>
                                 <Paper
                                     variant="outlined"
@@ -442,7 +442,7 @@ export default function AdminDashboard() {
                         </Grid>
 
                         {/* Quick Actions */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <motion.div variants={itemVariants}>
                                 <Paper
                                     variant="outlined"
@@ -457,7 +457,7 @@ export default function AdminDashboard() {
                                         Quick Actions
                                     </Typography>
                                     <Grid container spacing={2}>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -468,7 +468,7 @@ export default function AdminDashboard() {
                                                 Manage Users
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
                                                 Manage Cards
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -490,7 +490,7 @@ export default function AdminDashboard() {
                                                 Manage Auctions
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -501,7 +501,7 @@ export default function AdminDashboard() {
                                                 View Transactions
                                             </Button>
                                         </Grid>
-                                        {/* <Grid item xs={12}>
+                                        {/* <Grid size={{ xs: 12 }}>
                                             <Button
                                                 fullWidth
                                                 variant="contained"
@@ -522,7 +522,7 @@ export default function AdminDashboard() {
                         </Grid>
 
                         {/* System Status
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <motion.div variants={itemVariants}>
                                 <Paper
                                     sx={{
@@ -535,7 +535,7 @@ export default function AdminDashboard() {
                                         System Status
                                     </Typography>
                                     <Grid container spacing={3}>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                                     ●
@@ -548,7 +548,7 @@ export default function AdminDashboard() {
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                                     ●
@@ -561,7 +561,7 @@ export default function AdminDashboard() {
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                                     ●
@@ -574,7 +574,7 @@ export default function AdminDashboard() {
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'warning.main' }}>
                                                     ●

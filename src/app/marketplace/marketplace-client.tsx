@@ -7,7 +7,6 @@ import {
     Typography,
     Box,
     IconButton,
-    Grid,
     Card,
     CardContent,
     CardMedia,
@@ -32,6 +31,7 @@ import {
     FormLabel,
     LinearProgress,
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Search as SearchIcon,
     AccessTime as ClockIcon,
@@ -328,7 +328,7 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
             </Typography>
 
             <Grid container spacing={2}>
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                     <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'primary.main' }}>
                             {marketStats.totalCards}
@@ -339,7 +339,7 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
                     </Box>
                 </Grid>
 
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                     <Box sx={{ textAlign: 'center' }}>
                         <PriceDisplay
                             usdAmount={marketStats.avgPrice}
@@ -353,7 +353,7 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
                     </Box>
                 </Grid>
 
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                     <Box sx={{ textAlign: 'center' }}>
                         <PriceDisplay
                             usdAmount={marketStats.totalValue}
@@ -367,7 +367,7 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
                     </Box>
                 </Grid>
 
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                     <Box sx={{ textAlign: 'center' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 1 }}>
                             <Chip
@@ -394,16 +394,16 @@ function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
 
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Price Distribution</Typography>
             <Grid container spacing={1}>
-                <Grid item xs={3}>
+                <Grid size={{ xs: 3 }}>
                     <Chip label={`Under $5: ${marketStats.priceRanges.under_5}`} size="small" variant="outlined" />
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={{ xs: 3 }}>
                     <Chip label={`$5-$25: ${marketStats.priceRanges._5_to_25}`} size="small" variant="outlined" />
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={{ xs: 3 }}>
                     <Chip label={`$25-$100: ${marketStats.priceRanges._25_to_100}`} size="small" variant="outlined" />
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={{ xs: 3 }}>
                     <Chip label={`$100+: ${marketStats.priceRanges.over_100}`} size="small" variant="outlined" />
                 </Grid>
             </Grid>
@@ -444,7 +444,7 @@ function DailyDealsSection({ cards }: { cards: EnhancedListing[] }) {
                     const discount = ((marketPrice - userPrice) / marketPrice) * 100;
 
                     return (
-                        <Grid item xs={12} sm={6} md={4} key={deal.id}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={deal.id}>
                             <Box sx={{
                                 p: 2,
                                 border: 1,
@@ -1030,7 +1030,7 @@ export default function MarketplacePage() {
                 </Box>
 
                 <Grid container spacing={2}>
-                    <Grid item xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                         <TextField
                             fullWidth
                             label="Search cards"
@@ -1047,7 +1047,7 @@ export default function MarketplacePage() {
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid size={{ xs: 12, md: 2 }}>
                         <FormControl fullWidth>
                             <InputLabel>Set</InputLabel>
                             <Select
@@ -1065,7 +1065,7 @@ export default function MarketplacePage() {
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid size={{ xs: 12, md: 2 }}>
                         <FormControl fullWidth>
                             <InputLabel>Rarity</InputLabel>
                             <Select
@@ -1083,7 +1083,7 @@ export default function MarketplacePage() {
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={1.5}>
+                    <Grid size={{ xs: 12, md: 1.5 }}>
                         <FormControl fullWidth>
                             <InputLabel>Sale Type</InputLabel>
                             <Select
@@ -1098,7 +1098,7 @@ export default function MarketplacePage() {
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={1.5}>
+                    <Grid size={{ xs: 12, md: 1.5 }}>
                         <FormControl fullWidth>
                             <InputLabel>Price Status</InputLabel>
                             <Select
@@ -1115,7 +1115,7 @@ export default function MarketplacePage() {
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid size={{ xs: 12, md: 2 }}>
                         <FormControl fullWidth>
                             <InputLabel>Sort By</InputLabel>
                             <Select
@@ -1217,7 +1217,7 @@ export default function MarketplacePage() {
                         const enhancedListing = listing as EnhancedListing;
 
                         return (
-                            <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
+                            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={listing.id}>
                                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                                     <Box sx={{ position: 'relative' }}>
                                         <CardMedia

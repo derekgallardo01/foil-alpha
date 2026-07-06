@@ -23,11 +23,11 @@ import {
   Checkbox,
   Chip,
   Divider,
-  Grid,
   List,
   ListItem,
   ListItemText,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -569,13 +569,13 @@ export default function AdminUsersClient() {
                 </Box>
               ) : (
                 <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <StatCard label="Total Users" value={stats.total} accent />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <StatCard label="Active" value={stats.active} />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <StatCard label="Frozen Funds" value={`$${stats.totalFrozen.toFixed(2)}`} />
                   </Grid>
                 </Grid>
@@ -680,7 +680,7 @@ export default function AdminUsersClient() {
         <DialogContent>
           <Grid container spacing={3}>
             {/* Wallet Operations */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="h6" gutterBottom>Wallet Operations</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Select
@@ -754,7 +754,7 @@ export default function AdminUsersClient() {
             </Grid>
 
             {/* Transaction History */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="h6" gutterBottom>Recent Transactions</Typography>
               <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {walletTransactions.length > 0 ? (

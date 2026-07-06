@@ -13,9 +13,9 @@ import {
     Button,
     ToggleButton,
     ToggleButtonGroup,
-    CircularProgress,
-    Grid
+    CircularProgress
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     NewReleases,
     ChevronLeft,
@@ -196,7 +196,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
                 <Box sx={{ position: 'relative' }}>
                     <Grid container spacing={2}>
                         {releases.slice(currentIndex, currentIndex + 3).map((set) => (
-                            <Grid item xs={12} md={4} key={set.id}>
+                            <Grid size={{ xs: 12, md: 4 }} key={set.id}>
                                 <Card
                                     sx={{
                                         height: '100%',

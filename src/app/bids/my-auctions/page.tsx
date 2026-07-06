@@ -7,7 +7,6 @@ import {
     Container,
     Typography,
     Box,
-    Grid,
     Card,
     CardContent,
     CardMedia,
@@ -28,6 +27,7 @@ import {
     ListItemIcon,
     ListItemText
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Gavel as GavelIcon,
     AccessTime as ClockIcon,
@@ -311,7 +311,7 @@ export default function MyAuctionsPage() {
                                 const isActive = status.label === 'Active';
 
                                 return (
-                                    <Grid item xs={12} sm={6} md={4} key={auction.id}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={auction.id}>
                                         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                             {/* Card Image */}
                                             <Box sx={{ position: 'relative' }}>
@@ -464,7 +464,7 @@ export default function MyAuctionsPage() {
                             {/* Auction Summary */}
                             <Paper sx={{ p: 2, mb: 3 }}>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={4}>
+                                    <Grid size={{ xs: 4 }}>
                                         <img
                                             src={selectedAuction.card.small_image_url || selectedAuction.card.image_url || '/placeholder-card.png'}
                                             alt={selectedAuction.card.name}
@@ -474,7 +474,7 @@ export default function MyAuctionsPage() {
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={8}>
+                                    <Grid size={{ xs: 8 }}>
                                         <Typography variant="h6">{selectedAuction.card.name}</Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             {selectedAuction.card.set_name}

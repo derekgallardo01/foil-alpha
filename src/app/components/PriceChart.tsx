@@ -11,12 +11,12 @@ import {
     CircularProgress,
     Alert,
     Chip,
-    Grid,
     Card,
     CardContent,
     Tooltip,
     IconButton
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { useTheme } from '@mui/material/styles';
 import {
     TrendingUp,
@@ -257,7 +257,7 @@ export default function PriceChart({
                 {/* Price Analytics Cards */}
                 {analytics && (
                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">
@@ -270,7 +270,7 @@ export default function PriceChart({
                             </Card>
                         </Grid>
 
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">
@@ -289,7 +289,7 @@ export default function PriceChart({
                             </Card>
                         </Grid>
 
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">
@@ -302,7 +302,7 @@ export default function PriceChart({
                             </Card>
                         </Grid>
 
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">
