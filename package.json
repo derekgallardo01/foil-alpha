@@ -33,7 +33,6 @@
     "@fontsource/raleway": "^5.1.1",
     "@fontsource/ubuntu": "^5.1.1",
     "@google-cloud/local-auth": "^3.0.1",
-    "@mailchimp/mailchimp_marketing": "^3.0.80",
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.12",
     "@mui/x-data-grid": "^7.27.3",
@@ -79,7 +78,6 @@
     "recharts": "^2.12.7",
     "sanitize-html": "^2.14.0",
     "selenium-webdriver": "^4.33.0",
-    "twilio": "^5.7.0",
     "ua-parser-js": "^2.0.3",
     "uuid": "^11.1.0"
   },
@@ -88,7 +86,6 @@
     "@types/he": "^1.2.3",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/lodash": "^4.17.17",
-    "@types/mailchimp__mailchimp_marketing": "^3.0.21",
     "@types/next-auth": "^3.15.0",
     "@types/node": "^20.17.57",
     "@types/node-cron": "^3.0.11",

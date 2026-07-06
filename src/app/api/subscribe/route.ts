@@ -1,20 +1,9 @@
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { sendEmail } from "../../lib/email";
-import mailchimp from "@mailchimp/mailchimp_marketing";
 import { GoogleSheets } from "../../lib/google-sheets";
-import twilio from "twilio";
 
 const prisma = new PrismaClient();
-
-const mailchimpApiKey = process.env.MAILCHIMP_API_KEY || "";
-mailchimp.setConfig({
-  apiKey: mailchimpApiKey,
-  server: mailchimpApiKey.split("-")[1] || "us1",
-});
-
-// Initialize Twilio client
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 let googleSheetsInstance: GoogleSheets | null = null;
 function getGoogleSheets(): GoogleSheets {
@@ -103,13 +92,8 @@ export async function POST(request: Request) {
   try {
     // Validate environment variables
     const requiredEnvVars = [
-      "MAILCHIMP_API_KEY",
-      "MAILCHIMP_LIST_ID",
       "GOOGLE_SERVICE_ACCOUNT_EMAIL",
       "DATABASE_URL",
-      "TWILIO_ACCOUNT_SID",
-      "TWILIO_AUTH_TOKEN",
-      "TWILIO_PHONE_NUMBER",
     ];
     const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
     if (missingEnvVars.length > 0) {
@@ -238,48 +222,6 @@ export async function POST(request: Request) {
           console.log(`[${timestamp}] No email data provided for ${signupEmail}`);
         }
 
-        // Send Twilio SMS if phone_number is provided
-        if (phone_number) {
-          try {
-            console.log(`[${timestamp}] Sending SMS to ${phone_number}`);
-            await twilioClient.messages.create({
-              body: `Hi ${name}, thanks for joining the Foil Alpha waitlist! Stay tuned for updates on our June 2026 launch. - Foil Alpha Team`,
-              from: process.env.TWILIO_PHONE_NUMBER!,
-              to: phone_number,
-            });
-            console.log(`[${timestamp}] SMS sent successfully to ${phone_number}`);
-          } catch (twilioError) {
-            console.error(`[${timestamp}] Failed to send SMS:`, {
-              message: isErrorWithResponse(twilioError) ? twilioError.message : String(twilioError),
-              stack: isErrorWithResponse(twilioError) ? twilioError.stack : undefined,
-              code: isErrorWithResponse(twilioError) ? twilioError.code : undefined,
-            });
-          }
-        }
-
-        // Update Mailchimp contact if phone_number is provided
-        if (phone_number) {
-          try {
-            console.log(`[${timestamp}] Updating Mailchimp contact for email=${signupEmail}`);
-            await mailchimp.lists.updateListMember(
-              process.env.MAILCHIMP_LIST_ID!,
-              signupEmail.toLowerCase(), // Mailchimp uses lowercase email as member ID
-              {
-                merge_fields: {
-                  PHONE: phone_number,
-                },
-              },
-            );
-            console.log(`[${timestamp}] Successfully updated Mailchimp contact for email=${signupEmail}`);
-          } catch (mailchimpError) {
-            console.error(`[${timestamp}] Failed to update Mailchimp contact:`, {
-              message: isErrorWithResponse(mailchimpError) ? mailchimpError.message : String(mailchimpError),
-              stack: isErrorWithResponse(mailchimpError) ? mailchimpError.stack : undefined,
-              response: isErrorWithResponse(mailchimpError) ? mailchimpError.response?.data : undefined,
-            });
-          }
-        }
-
         console.log(`[${timestamp}] Signup completed successfully: id=${existingWaitlist.id}`);
       } else {
         console.log(`[${timestamp}] Creating new waitlist entry for email=${signupEmail}`);
@@ -312,51 +254,6 @@ export async function POST(request: Request) {
           console.log(`[${timestamp}] No email data provided for ${signupEmail}`);
         }
 
-        // Send Twilio SMS if phone_number is provided
-        if (phone_number) {
-          try {
-            console.log(`[${timestamp}] Sending SMS to ${phone_number}`);
-            await twilioClient.messages.create({
-              body: `Hi ${name}, thanks for joining the Foil Alpha waitlist! Stay tuned for updates on our June 2026 launch. - Foil Alpha Team`,
-              from: process.env.TWILIO_PHONE_NUMBER!,
-              to: phone_number,
-            });
-            console.log(`[${timestamp}] SMS sent successfully to ${phone_number}`);
-          } catch (twilioError) {
-            console.error(`[${timestamp}] Failed to send SMS:`, {
-              message: isErrorWithResponse(twilioError) ? twilioError.message : String(twilioError),
-              stack: isErrorWithResponse(twilioError) ? twilioError.stack : undefined,
-              code: isErrorWithResponse(twilioError) ? twilioError.code : undefined,
-            });
-          }
-        }
-
-        let mailchimpStatus = "Failed";
-        try {
-          await mailchimp.lists.addListMember(process.env.MAILCHIMP_LIST_ID!, {
-            email_address: signupEmail,
-            status: "subscribed",
-            merge_fields: {
-              FNAME: name,
-              IP: ip,
-              SOURCE: "website",
-              TIMEZONE: timezone,
-              DEVICE: `${browserDetails.device} ${browserDetails.deviceModel}`,
-              BROWSER: `${browserDetails.name} ${browserDetails.version}`,
-              OS: `${browserDetails.os} ${browserDetails.osVersion}`,
-              PHONE: phone_number || "", // Add phone_number to merge_fields
-            },
-          });
-          mailchimpStatus = "Success";
-          console.log(`[${timestamp}] Successfully added ${signupEmail} to Mailchimp list`);
-        } catch (mailchimpError) {
-          console.error(`[${timestamp}] Failed to add to Mailchimp list:`, {
-            message: isErrorWithResponse(mailchimpError) ? mailchimpError.message : String(mailchimpError),
-            stack: isErrorWithResponse(mailchimpError) ? mailchimpError.stack : undefined,
-            response: isErrorWithResponse(mailchimpError) ? mailchimpError.response?.data : undefined,
-          });
-        }
-
         try {
           const emailContent = `
             <h2>New Waitlist Signup</h2>
@@ -370,7 +267,6 @@ export async function POST(request: Request) {
             <p><strong>Browser:</strong> ${browserDetails.name} ${browserDetails.version}</p>
             <p><strong>OS:</strong> ${browserDetails.os} ${browserDetails.osVersion}</p>
             <p><strong>Device:</strong> ${browserDetails.device} ${browserDetails.deviceModel}</p>
-            <p><strong>Mailchimp Status:</strong> ${mailchimpStatus}</p>
             <p><strong>Status:</strong> New Signup</p>
           `;
           console.log(`[${timestamp}] Sending email to derekgallardo01@gmail.com`);
