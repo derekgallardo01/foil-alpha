@@ -12,11 +12,11 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   IconButton,
   Divider,
   Typography,
   useMediaQuery,
-  Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -33,12 +33,26 @@ import {
   Notifications as NotificationsIcon,
   Sell as SellIcon,
   AdminPanelSettings as AdminIcon,
+  People as PeopleIcon,
+  History as HistoryIcon,
+  HowToReg as WaitlistIcon,
+  Percent as CommissionIcon,
+  AccountBalance as PlatformIcon,
+  Assessment as ReportIcon,
+  Style as CardsIcon,
+  ListAlt as ListingsIcon,
+  PriceChange as PricingIcon,
+  ReceiptLong as TxnIcon,
+  PendingActions as PendingIcon,
+  ArrowBack as BackIcon,
 } from "@mui/icons-material";
 import CurrencySelector from "./CurrencySelector";
+import AuctionNotifications from "./AuctionNotifications";
 
 const DRAWER_WIDTH = 248;
 
 type NavItem = { label: string; path: string; icon: React.ReactNode };
+type NavSection = { heading?: string; items: NavItem[] };
 
 const USER_NAV: NavItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
@@ -53,11 +67,48 @@ const USER_NAV: NavItem[] = [
   { label: "Chat", path: "/chat", icon: <ChatIcon /> },
 ];
 
+const ADMIN_SECTIONS: NavSection[] = [
+  { items: [{ label: "Dashboard", path: "/admin/dashboard", icon: <DashboardIcon /> }] },
+  {
+    heading: "Users",
+    items: [
+      { label: "All Users", path: "/admin/users", icon: <PeopleIcon /> },
+      { label: "User Activity", path: "/admin/users/activity", icon: <HistoryIcon /> },
+      { label: "Waitlist", path: "/admin/waitlist-signups", icon: <WaitlistIcon /> },
+    ],
+  },
+  {
+    heading: "Finance",
+    items: [
+      { label: "Wallets", path: "/admin/wallet", icon: <WalletIcon /> },
+      { label: "Commission", path: "/admin/commission", icon: <CommissionIcon /> },
+      { label: "Platform Wallet", path: "/admin/commission/wallet", icon: <PlatformIcon /> },
+      { label: "Reports", path: "/admin/commission/reports", icon: <ReportIcon /> },
+    ],
+  },
+  {
+    heading: "Catalog",
+    items: [
+      { label: "Cards", path: "/admin/cards", icon: <CardsIcon /> },
+      { label: "Listings", path: "/admin/listings", icon: <ListingsIcon /> },
+      { label: "Pricing", path: "/admin/pricing/update", icon: <PricingIcon /> },
+    ],
+  },
+  {
+    heading: "Trading",
+    items: [
+      { label: "Auctions", path: "/admin/auctions", icon: <AuctionIcon /> },
+      { label: "Transactions", path: "/admin/transactions", icon: <TxnIcon /> },
+      { label: "Pending", path: "/admin/transactions/pending", icon: <PendingIcon /> },
+    ],
+  },
+];
+
 /** The iridescent brand wordmark (Holo signature moment). */
 function Wordmark() {
   return (
     <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.6, userSelect: "none" }}>
-      <Typography component="span" sx={{ fontFamily: "var(--fa-display, inherit)", fontWeight: 800, fontSize: 20, letterSpacing: "-0.03em" }}>
+      <Typography component="span" sx={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.03em" }}>
         Foil
       </Typography>
       <Typography
@@ -81,9 +132,16 @@ function Wordmark() {
 /**
  * Shared application shell: a persistent sidebar (desktop) / drawer (mobile)
  * plus a top bar with the brand wordmark. Pages opt in by wrapping their
- * content: `<AppShell><PageContent/></AppShell>` — no per-page drawer state.
+ * content: `<AppShell><PageContent/></AppShell>`. Pass variant="admin" for the
+ * admin console navigation.
  */
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({
+  children,
+  variant = "user",
+}: {
+  children: React.ReactNode;
+  variant?: "user" | "admin";
+}) {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -91,24 +149,71 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isAdmin = session?.user?.role === "admin";
+  const isAdminUser = session?.user?.role === "admin";
+  const isAdminView = variant === "admin";
 
-  const isActive = (path: string) =>
-    pathname === path || (path !== "/dashboard" && pathname?.startsWith(path));
+  const isActive = (path: string) => {
+    if (pathname === path) return true;
+    if (path === "/dashboard" || path === "/admin/dashboard") return false;
+    return !!pathname?.startsWith(path);
+  };
 
   const go = (path: string) => {
     router.push(path);
     setMobileOpen(false);
   };
 
-  const navItems: NavItem[] = isAdmin
-    ? [...USER_NAV, { label: "Admin Panel", path: "/admin/dashboard", icon: <AdminIcon /> }]
-    : USER_NAV;
+  const sections: NavSection[] = isAdminView
+    ? ADMIN_SECTIONS
+    : [
+        {
+          items: isAdminUser
+            ? [...USER_NAV, { label: "Admin Panel", path: "/admin/dashboard", icon: <AdminIcon /> }]
+            : USER_NAV,
+        },
+      ];
+
+  const navButton = (item: NavItem) => {
+    const active = isActive(item.path);
+    const isAdminLink = item.path === "/admin/dashboard" && !isAdminView;
+    return (
+      <ListItemButton
+        key={item.path}
+        onClick={() => go(item.path)}
+        selected={!!active}
+        sx={{
+          borderRadius: 2,
+          mb: 0.5,
+          color: active ? "primary.main" : "text.secondary",
+          ...(isAdminLink && {
+            border: "1px solid",
+            borderColor: active ? "primary.main" : "rgba(155,92,255,0.25)",
+          }),
+          "& .MuiListItemIcon-root": { color: active ? "primary.main" : "text.secondary", minWidth: 38 },
+          "&.Mui-selected, &.Mui-selected:hover": { bgcolor: "action.selected" },
+          "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+        }}
+      >
+        <ListItemIcon>{item.icon}</ListItemIcon>
+        <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: active ? 700 : 500, fontSize: 14.5 }} />
+      </ListItemButton>
+    );
+  };
 
   const drawerContent = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "background.paper" }}>
-      <Toolbar sx={{ px: 2.5 }}>
+      <Toolbar sx={{ px: 2.5, gap: 1 }}>
         <Wordmark />
+        {isAdminView && (
+          <Typography variant="overline" sx={{ color: "primary.main", ml: 0.5 }}>
+            Admin
+          </Typography>
+        )}
+        {session?.user?.id && (
+          <Box sx={{ ml: "auto" }}>
+            <AuctionNotifications userId={parseInt(session.user.id)} />
+          </Box>
+        )}
       </Toolbar>
       <Divider />
 
@@ -120,7 +225,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Typography variant="body2" fontWeight={600} noWrap>
             {session.user.name}
           </Typography>
-          {isAdmin && (
+          {isAdminUser && (
             <Typography variant="caption" color="primary.main" fontWeight={700}>
               Administrator
             </Typography>
@@ -128,7 +233,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </Box>
       )}
 
-      {!isAdmin && (
+      {!isAdminView && !isAdminUser && (
         <Box sx={{ px: 2.5, pb: 1 }}>
           <CurrencySelector size="small" />
         </Box>
@@ -136,35 +241,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <Divider />
 
-      <List sx={{ flexGrow: 1, px: 1.5, py: 1, overflowY: "auto" }}>
-        {navItems.map((item) => {
-          const active = isActive(item.path);
-          const isAdminLink = item.path.startsWith("/admin");
-          return (
-            <ListItemButton
-              key={item.path}
-              onClick={() => go(item.path)}
-              selected={!!active}
-              sx={{
-                borderRadius: 2,
-                mb: 0.5,
-                color: active ? "primary.main" : "text.secondary",
-                ...(isAdminLink && {
-                  border: "1px solid",
-                  borderColor: active ? "primary.main" : "rgba(155,92,255,0.25)",
-                }),
-                "& .MuiListItemIcon-root": { color: active ? "primary.main" : "text.secondary", minWidth: 38 },
-                "&.Mui-selected": { bgcolor: "action.selected" },
-                "&.Mui-selected:hover": { bgcolor: "action.selected" },
-                "&:hover": { bgcolor: "action.hover", color: "text.primary" },
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: active ? 700 : 500, fontSize: 14.5 }} />
-            </ListItemButton>
-          );
-        })}
-      </List>
+      <Box sx={{ flexGrow: 1, overflowY: "auto", px: 1.5, py: 1 }}>
+        {sections.map((section, i) => (
+          <List
+            key={section.heading ?? `sec-${i}`}
+            dense
+            subheader={
+              section.heading ? (
+                <ListSubheader
+                  disableSticky
+                  sx={{ bgcolor: "transparent", color: "text.disabled", fontFamily: "monospace", fontSize: 11, letterSpacing: "0.12em", lineHeight: 2.4 }}
+                >
+                  {section.heading.toUpperCase()}
+                </ListSubheader>
+              ) : undefined
+            }
+          >
+            {section.items.map(navButton)}
+          </List>
+        ))}
+        {isAdminView && (
+          <>
+            <Divider sx={{ my: 1 }} />
+            <List dense>{navButton({ label: "Back to App", path: "/dashboard", icon: <BackIcon /> })}</List>
+          </>
+        )}
+      </Box>
 
       <Divider />
       <List sx={{ px: 1.5, py: 1 }}>
@@ -183,7 +285,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
-      {/* Mobile top bar */}
       {!isDesktop && (
         <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
           <Toolbar sx={{ gap: 1 }}>
@@ -195,7 +296,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </AppBar>
       )}
 
-      {/* Sidebar: permanent on desktop, temporary on mobile */}
       <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }} aria-label="Main navigation">
         {isDesktop ? (
           <Drawer
@@ -225,7 +325,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </Box>
 
-      {/* Main content */}
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` } }}>
         {!isDesktop && <Toolbar />}
         {children}
