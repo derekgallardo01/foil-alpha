@@ -224,6 +224,25 @@ model WalletTransaction {
   @@map("wallet_transactions")
 }
 
+// Seller cash-out requests. On request the amount is held in the user's
+// frozen_balance (escrow); an admin then pays it out (deduct balance + release
+// hold) or rejects it (release hold, no balance change).
+model WalletWithdrawal {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  amount       Decimal   @db.Decimal(10, 2)
+  status       String    @default("PENDING") @db.VarChar(20) // PENDING | PAID | REJECTED | CANCELLED
+  method       String?   @db.VarChar(100) // free-text payout destination/note
+  admin_id     Int?
+  admin_note   String?   @db.VarChar(255)
+  requested_at DateTime  @default(now()) @db.DateTime(0)
+  processed_at DateTime? @db.DateTime(0)
+
+  @@index([user_id])
+  @@index([status])
+  @@map("wallet_withdrawals")
+}
+
 model Notification {
   id         Int      @id @default(autoincrement())
   user_id    Int
