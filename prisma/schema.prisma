@@ -173,7 +173,12 @@ model Bid {
   id         Int      @id @default(autoincrement())
   userCardId Int
   bidderId   Int
+  // `amount` is the bid's CURRENT EFFECTIVE price and always equals the bidder's
+  // frozen escrow hold. `max_amount` is the proxy ceiling: the system auto-raises
+  // `amount` toward it to stay winning, but never above it. NULL = a plain bid
+  // (max == amount).
   amount     Decimal  @db.Decimal(10, 2)
+  max_amount Decimal? @db.Decimal(10, 2)
   is_active  Boolean  @default(true)
   createdAt  DateTime @default(now())
 

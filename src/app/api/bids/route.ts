@@ -4,6 +4,28 @@ import { requireUser } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { createBidNotifications, createBidOutbidNotification } from '../../lib/notification';
 import { emitAppEvent } from '../../lib/events';
+import { resolveProxyBid, BID_INCREMENT } from '../../lib/bid-resolution';
+import type { Prisma } from '@prisma/client';
+
+/** Round to cents to keep escrow math free of float dust. */
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const clampAmt = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/** A user-facing (400) bid rejection, as opposed to an unexpected 500. */
+class BidError extends Error {}
+
+/**
+ * Atomically move `delta` (> 0) from a user's available balance into escrow,
+ * only if their available balance covers it. This locking conditional write is
+ * the concurrency gate for every escrow hold. Returns true on success.
+ */
+async function freezeFunds(tx: Prisma.TransactionClient, userId: number, delta: number): Promise<boolean> {
+    const affected = await tx.$executeRaw`
+        UPDATE user_wallets
+        SET frozen_balance = frozen_balance + ${delta}
+        WHERE user_id = ${userId} AND (balance - frozen_balance) >= ${delta}`;
+    return affected === 1;
+}
 
 // GET /api/bids - Get bids for a card or user's bids
 export async function GET(request: NextRequest) {
@@ -102,222 +124,173 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST /api/bids - Place a new bid (NO fund freezing)
+// POST /api/bids - Place a bid. Optionally include `max_amount` to set a proxy
+// (auto) bid: the system raises your effective bid toward that ceiling to keep
+// you winning, but never above it. A bid with no max is a plain first-price bid.
 export async function POST(request: NextRequest) {
     try {
         const auth = await requireUser();
         if ("response" in auth) return auth.response;
-        const user = auth.user;
+        const bidderId = auth.user.id;
 
-        const bidderId = user.id;
         const body = await request.json();
-        const { user_card_id, amount } = body;
+        const { user_card_id, amount, max_amount } = body;
 
         if (!user_card_id || !amount || amount <= 0) {
-            return NextResponse.json({
-                error: 'user_card_id and positive amount are required'
-            }, { status: 400 });
+            return NextResponse.json({ error: 'user_card_id and positive amount are required' }, { status: 400 });
         }
 
-        const bidAmount = Number(amount);
-
-        // Get the card being bid on
-        const userCard = await prisma.userCard.findUnique({
-            where: { id: user_card_id }
-        });
-
-        if (!userCard) {
-            return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+        const bidAmount = round2(Number(amount));
+        const maxAmount = max_amount != null ? round2(Number(max_amount)) : bidAmount;
+        const isProxy = maxAmount > bidAmount;
+        if (!Number.isFinite(maxAmount) || maxAmount < bidAmount) {
+            return NextResponse.json({ error: 'Your maximum bid must be at least your bid amount.' }, { status: 400 });
         }
 
-        // Get card details
-        const card = await prisma.card.findUnique({
-            where: { id: userCard.card_id }
-        });
+        const userCard = await prisma.userCard.findUnique({ where: { id: user_card_id } });
+        if (!userCard) return NextResponse.json({ error: 'Card not found' }, { status: 404 });
 
-        // Get owner details
-        const owner = await prisma.user.findUnique({
-            where: { id: userCard.owner_id },
-            select: { id: true, name: true }
-        });
+        const card = await prisma.card.findUnique({ where: { id: userCard.card_id } });
+        const owner = await prisma.user.findUnique({ where: { id: userCard.owner_id }, select: { id: true, name: true } });
+        if (!card || !owner) return NextResponse.json({ error: 'Card or owner not found' }, { status: 404 });
 
-        if (!card || !owner) {
-            return NextResponse.json({ error: 'Card or owner not found' }, { status: 404 });
-        }
-
-        // Validation checks
         if (userCard.owner_id === bidderId) {
             return NextResponse.json({ error: 'Cannot bid on your own card' }, { status: 400 });
         }
-
         if (!userCard.is_for_sale || userCard.sale_type !== 'AUCTION') {
             return NextResponse.json({ error: 'Card is not available for auction' }, { status: 400 });
         }
 
-        if (userCard.is_sold) {
-            return NextResponse.json({ error: 'Card has already been sold' }, { status: 400 });
-        }
-
-        if (userCard.auction_end && new Date() > userCard.auction_end) {
-            return NextResponse.json({ error: 'Auction has ended' }, { status: 400 });
-        }
-
-        // Check if bid meets minimum requirements
         const reservePrice = Number(userCard.reserve_price) || 0;
         if (bidAmount < reservePrice) {
-            return NextResponse.json({
-                error: `Bid must be at least $${reservePrice.toFixed(2)} (reserve price)`
-            }, { status: 400 });
+            return NextResponse.json({ error: `Bid must be at least $${reservePrice.toFixed(2)} (reserve price)` }, { status: 400 });
         }
 
-        // Get current highest bid
-        const currentHighestBid = await prisma.bid.findFirst({
-            where: {
-                userCardId: user_card_id,
-                is_active: true
-            },
-            orderBy: { amount: 'desc' }
-        });
-
-        // Get bidder details for the highest bid
-        const currentHighestBidder = currentHighestBid ? await prisma.user.findUnique({
-            where: { id: currentHighestBid.bidderId },
-            select: { id: true, name: true }
-        }) : null;
-
-        const currentHighestBidWithBidder = currentHighestBid ? {
-            ...currentHighestBid,
-            bidder: currentHighestBidder
-        } : null;
-
-        if (currentHighestBid && bidAmount <= Number(currentHighestBid.amount)) {
-            return NextResponse.json({
-                error: `Bid must be higher than current highest bid of $${Number(currentHighestBid.amount).toFixed(2)}`
-            }, { status: 400 });
-        }
-
-        // Bidder must have the funds; the bid amount is held in escrow (frozen)
-        // until the auction resolves.
-        const bidderWallet = await prisma.userWallet.findUnique({
-            where: { user_id: bidderId }
-        });
-
-        if (!bidderWallet) {
-            return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
-        }
-
-        // Funds already held for this bidder's existing active bid on this card are
-        // released when the new bid replaces it, so they count toward availability.
-        const existingOwnBid = await prisma.bid.findFirst({
-            where: { userCardId: user_card_id, bidderId, is_active: true },
-        });
-        const alreadyHeldForThisAuction = existingOwnBid ? Number(existingOwnBid.amount) : 0;
-
-        const availableBalance =
-            Number(bidderWallet.balance) - Number(bidderWallet.frozen_balance) + alreadyHeldForThisAuction;
-        if (availableBalance < bidAmount) {
-            return NextResponse.json({
-                error: `Insufficient balance. Available: $${availableBalance.toFixed(2)}, Required: $${bidAmount.toFixed(2)}`
-            }, { status: 400 });
-        }
-
-        // Execute the bidding transaction, holding the bid amount in escrow.
+        // All price/escrow logic runs under a per-auction row lock so concurrent
+        // bids on the same auction are serialized (read → resolve → write is atomic).
         const result = await prisma.$transaction(async (tx) => {
-            // 1. If there's a previous bid from this user, deactivate it
-            const previousBidFromUser = await tx.bid.findFirst({
-                where: {
-                    userCardId: user_card_id,
-                    bidderId: bidderId,
-                    is_active: true
-                }
-            });
+            await tx.$executeRaw`SELECT id FROM user_cards WHERE id = ${user_card_id} FOR UPDATE`;
 
-            if (previousBidFromUser) {
-                await tx.bid.update({
-                    where: { id: previousBidFromUser.id },
-                    data: { is_active: false }
+            // Re-check liveness under the lock (sold/ended can race the request).
+            const uc = await tx.userCard.findUnique({ where: { id: user_card_id } });
+            if (!uc || uc.is_sold) throw new BidError('Card has already been sold');
+            if (uc.auction_end && new Date() > uc.auction_end) throw new BidError('Auction has ended');
+
+            // The challenger's existing hold (they may be raising their own max).
+            const ownBid = await tx.bid.findFirst({ where: { userCardId: user_card_id, bidderId, is_active: true } });
+            const priorHold = ownBid ? Number(ownBid.amount) : 0;
+
+            // Current highest OTHER active bid.
+            const topOther = await tx.bid.findFirst({
+                where: { userCardId: user_card_id, is_active: true, bidderId: { not: bidderId } },
+                orderBy: { amount: 'desc' },
+            });
+            const top = topOther
+                ? { effective: Number(topOther.amount), max: Number(topOther.max_amount ?? topOther.amount) }
+                : null;
+
+            if (top && bidAmount <= top.effective) {
+                throw new BidError(`Bid must be higher than the current bid of $${top.effective.toFixed(2)}`);
+            }
+
+            // Resolve the proxy war (pure).
+            const res = resolveProxyBid({ challengerAmount: bidAmount, challengerMax: maxAmount, reserve: reservePrice, top });
+            let challengerWins = res.challengerWins;
+            let challengerEffective = round2(res.challengerEffective);
+            let topEffective = round2(res.topEffective);
+
+            // Escalate the standing top bidder if the resolution calls for it —
+            // all-or-nothing: if they can't afford the full jump they don't defend,
+            // and the challenger wins at just over the standing price instead.
+            if (topOther && top && topEffective > top.effective) {
+                const topDelta = round2(topEffective - top.effective);
+                if (await freezeFunds(tx, topOther.bidderId, topDelta)) {
+                    await tx.bid.update({ where: { id: topOther.id }, data: { amount: topEffective } });
+                } else {
+                    topEffective = top.effective;
+                    challengerWins = true;
+                    challengerEffective = round2(clampAmt(top.effective + BID_INCREMENT, bidAmount, maxAmount));
+                }
+            }
+
+            // Place the challenger's bid, keeping frozen escrow == effective amount.
+            const challengerDelta = round2(challengerEffective - priorHold);
+            if (challengerDelta > 0) {
+                if (!(await freezeFunds(tx, bidderId, challengerDelta))) {
+                    throw new BidError('Insufficient available balance to place this bid.');
+                }
+            } else if (challengerDelta < 0) {
+                await tx.userWallet.update({
+                    where: { user_id: bidderId },
+                    data: { frozen_balance: { increment: challengerDelta } },
                 });
             }
 
-            // 2. Create the new bid
+            if (ownBid) await tx.bid.update({ where: { id: ownBid.id }, data: { is_active: false } });
             const newBid = await tx.bid.create({
                 data: {
                     userCardId: user_card_id,
-                    bidderId: bidderId,
-                    amount: bidAmount,
-                    is_active: true
-                }
+                    bidderId,
+                    amount: challengerEffective,
+                    max_amount: isProxy ? maxAmount : null,
+                    is_active: true,
+                },
             });
 
-            // 3. Hold the new bid in escrow, releasing any prior hold this bidder
-            //    had on this auction (net change to frozen_balance). The WHERE
-            //    clause re-checks availability at write time under a row lock, so
-            //    concurrent bids/withdrawals can't oversubscribe the balance.
-            const prevHeld = previousBidFromUser ? Number(previousBidFromUser.amount) : 0;
-            const delta = bidAmount - prevHeld;
-            const affected = await tx.$executeRaw`
-                UPDATE user_wallets
-                SET frozen_balance = frozen_balance + ${delta}
-                WHERE user_id = ${bidderId} AND (balance - frozen_balance) >= ${delta}`;
-            if (affected !== 1) {
-                throw new Error('Insufficient available balance to place this bid.');
-            }
-
             return {
-                bid: newBid,
-                previousHighestBid: currentHighestBidWithBidder
+                newBid,
+                challengerWins,
+                challengerEffective,
+                currentHighest: challengerWins ? challengerEffective : topEffective,
+                // Only the previous top bidder is newly outbid, and only when the challenger takes the lead.
+                outbid: challengerWins && topOther ? { bidderId: topOther.bidderId, prevAmount: top!.effective } : null,
             };
         });
 
-        // Create notifications (outside of transaction for better error handling)
+        // Notifications (best-effort, outside the transaction).
         try {
-            // Notify card owner of new bid
-            await createBidNotifications(
-                userCard.owner_id,
-                bidderId,
-                card.name,
-                bidAmount,
-                result.bid.id
-            );
-
-            // Notify previous highest bidder if they were outbid
-            if (result.previousHighestBid && result.previousHighestBid.bidderId !== bidderId) {
+            await createBidNotifications(userCard.owner_id, bidderId, card.name, result.challengerEffective, result.newBid.id);
+            if (result.outbid && result.outbid.bidderId !== bidderId) {
                 await createBidOutbidNotification(
-                    result.previousHighestBid.bidderId,
+                    result.outbid.bidderId,
                     card.name,
-                    Number(result.previousHighestBid.amount),
-                    bidAmount,
-                    result.bid.id,
+                    result.outbid.prevAmount,
+                    result.currentHighest,
+                    result.newBid.id,
                     user_card_id
                 );
             }
         } catch (notificationError) {
             console.error('Error creating notifications:', notificationError);
-            // Don't fail the entire request for notification errors
         }
 
-        // Push the new bid to every live-auction viewer.
         emitAppEvent({ type: 'bid', auctionId: user_card_id });
 
         return NextResponse.json({
             success: true,
+            winning: result.challengerWins,
+            current_bid: result.currentHighest,
+            your_max: isProxy ? maxAmount : null,
             bid: {
-                id: result.bid.id,
-                user_card_id: user_card_id,
-                amount: bidAmount,
+                id: result.newBid.id,
+                user_card_id,
+                amount: result.challengerEffective,
+                max_amount: isProxy ? maxAmount : null,
                 card_name: card.name,
-                created_at: result.bid.createdAt
+                created_at: result.newBid.createdAt,
             },
-            message: 'Bid placed successfully! The bid amount is held until the auction resolves.'
+            message: result.challengerWins
+                ? `You're the highest bidder at $${result.currentHighest.toFixed(2)}.`
+                : `You've been outbid — the current bid is now $${result.currentHighest.toFixed(2)}. Raise your maximum to bid again.`,
         });
 
     } catch (error) {
+        if (error instanceof BidError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
         console.error('Error placing bid:', error);
         return NextResponse.json(
-            {
-                error: 'Failed to place bid',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            },
+            { error: 'Failed to place bid', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
@@ -370,14 +343,22 @@ export async function DELETE(request: NextRequest) {
 
         // Deactivate the bid and release its escrow hold.
         await prisma.$transaction(async (tx) => {
-            await tx.bid.update({
-                where: { id: parseInt(bidId) },
-                data: { is_active: false }
+            // Serialize with concurrent bids (proxy escalation can change the
+            // amount), then release exactly the current hold — only if THIS call
+            // is the one that deactivates the bid.
+            await tx.$executeRaw`SELECT id FROM user_cards WHERE id = ${bid.userCardId} FOR UPDATE`;
+            const fresh = await tx.bid.findUnique({ where: { id: parseInt(bidId) } });
+            if (!fresh) return;
+            const flipped = await tx.bid.updateMany({
+                where: { id: fresh.id, is_active: true },
+                data: { is_active: false },
             });
-            await tx.userWallet.update({
-                where: { user_id: userId },
-                data: { frozen_balance: { decrement: Number(bid.amount) } }
-            });
+            if (flipped.count === 1) {
+                await tx.userWallet.update({
+                    where: { user_id: userId },
+                    data: { frozen_balance: { decrement: Number(fresh.amount) } },
+                });
+            }
         });
 
         return NextResponse.json({

@@ -73,6 +73,7 @@ interface BiddingModalProps {
 
 export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: BiddingModalProps) {
     const [bidAmount, setBidAmount] = useState('');
+    const [maxBid, setMaxBid] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -101,6 +102,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
     useEffect(() => {
         if (open) {
             setBidAmount('');
+            setMaxBid('');
             setError(null);
             setSuccess(null);
 
@@ -142,6 +144,14 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
             return false;
         }
 
+        if (maxBid.trim() !== '') {
+            const max = parseFloat(maxBid);
+            if (isNaN(max) || max < amount) {
+                setError('Your maximum bid must be at least your bid amount.');
+                return false;
+            }
+        }
+
         return true;
     };
 
@@ -161,6 +171,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                 body: JSON.stringify({
                     user_card_id: userCard.id,
                     amount: parseFloat(bidAmount),
+                    ...(maxBid.trim() !== '' ? { max_amount: parseFloat(maxBid) } : {}),
                 }),
             });
 
@@ -170,8 +181,9 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                 throw new Error(data.error || 'Failed to place bid');
             }
 
-            setSuccess(`Bid of ${formatPrice(parseFloat(bidAmount))} placed successfully! ${data.message || ''}`);
+            setSuccess(data.message || 'Bid placed successfully!');
             setBidAmount('');
+            setMaxBid('');
 
             // Call the callback to refresh the parent component
             if (onBidPlaced) {
@@ -323,7 +335,21 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                         InputProps={{
                                             startAdornment: <InputAdornment position="start">$</InputAdornment>,
                                         }}
-                                        helperText={`Minimum bid: ${formatPrice(minimumBid)} • No funds will be reserved`}
+                                        helperText={`Minimum bid: ${formatPrice(minimumBid)} • your bid is held in escrow until the auction ends`}
+                                        sx={{ mb: 2 }}
+                                        disabled={loading}
+                                    />
+
+                                    <TextField
+                                        fullWidth
+                                        label="Maximum bid (optional)"
+                                        type="number"
+                                        value={maxBid}
+                                        onChange={(e) => setMaxBid(e.target.value)}
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                        }}
+                                        helperText="Set a max and we'll auto-bid for you up to it, only as much as needed to stay ahead. Your max is reserved while you're the top bidder."
                                         sx={{ mb: 2 }}
                                         disabled={loading}
                                     />
