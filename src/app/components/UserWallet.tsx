@@ -192,7 +192,7 @@ export default function UserWallet() {
         return (
             <Card>
                 <CardContent>
-                    <Typography color="text.secondary">Wallet not found. Contact admin to create your wallet.</Typography>
+                    <Typography color="text.secondary">Wallet not found. It’s created automatically on your first deposit or trade.</Typography>
                 </CardContent>
             </Card>
         );
@@ -329,11 +329,11 @@ export default function UserWallet() {
                         </Typography>
                     ) : wallet.available_balance > 0 ? (
                         <Typography variant="body2" sx={{ color: 'warning.main' }}>
-                            ⚠️ Low balance - contact admin to add more funds.
+                            ⚠️ Low balance - use “Add funds” below to top up.
                         </Typography>
                     ) : (
                         <Typography variant="body2" sx={{ color: 'error.main' }}>
-                            ❌ No available balance - contact admin to add funds.
+                            ❌ No available balance - use “Add funds” below to top up.
                         </Typography>
                     )}
                 </Box>
@@ -406,7 +406,7 @@ export default function UserWallet() {
                             No transactions yet
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Contact admin to add funds or start trading!
+                            Add funds to your wallet or start trading!
                         </Typography>
                     </Box>
                 )}
