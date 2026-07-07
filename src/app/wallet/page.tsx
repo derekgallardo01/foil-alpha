@@ -14,6 +14,7 @@ import { AccountBalanceWallet as WalletIcon } from "@mui/icons-material";
 import UserWallet from "../components/UserWallet";
 import AddFundsCard from "../components/AddFundsCard";
 import WithdrawFundsCard from "../components/WithdrawFundsCard";
+import PayoutSetupCard from "../components/PayoutSetupCard";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import { toast } from "react-toastify";
@@ -30,6 +31,15 @@ export default function WalletPage() {
             router.replace("/wallet");
         } else if (deposit === "cancelled") {
             toast.info("Deposit cancelled.");
+            router.replace("/wallet");
+        }
+
+        const payouts = searchParams.get("payouts");
+        if (payouts === "done") {
+            toast.success("Payout account updated.");
+            router.replace("/wallet");
+        } else if (payouts === "refresh") {
+            toast.info("Payout setup was interrupted — you can resume it below.");
             router.replace("/wallet");
         }
     }, [searchParams, router]);
@@ -69,6 +79,8 @@ export default function WalletPage() {
                 <UserWallet />
 
                 <AddFundsCard />
+
+                <PayoutSetupCard />
 
                 <WithdrawFundsCard />
 
