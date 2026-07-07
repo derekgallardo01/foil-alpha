@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { Prisma } from "@prisma/client";
 import { stripe } from "../../../lib/stripe";
 import { prisma } from "../../../lib/prisma";
 import { createNotification } from "../../../lib/notification";
+
+/** True for a Prisma unique-constraint violation (P2002). */
+function isUniqueViolation(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+}
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -101,33 +107,39 @@ async function handleDispute(dispute: Stripe.Dispute) {
  */
 async function debitWallet(userId: number, amount: number, refType: string, refKey: string, label: string) {
   if (amount <= 0) return;
-  const applied = await prisma.$transaction(async (tx) => {
-    // A given refund/dispute reverses at most once.
-    const already = await tx.walletTransaction.findFirst({
-      where: { reference_type: refType, description: refKey },
-    });
-    if (already) return false;
+  let applied = false;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const wallet = await tx.userWallet.findUnique({ where: { user_id: userId } });
+      if (!wallet) return; // no wallet -> nothing to reverse
 
-    const wallet = await tx.userWallet.findUnique({ where: { user_id: userId } });
-    if (!wallet) return false;
-
-    const before = Number(wallet.balance);
-    const after = before - amount;
-    await tx.userWallet.update({ where: { user_id: userId }, data: { balance: after } });
-    await tx.walletTransaction.create({
-      data: {
-        user_id: userId,
-        wallet_id: wallet.id,
-        transaction_type: refType,
-        amount: -amount,
-        balance_before: before,
-        balance_after: after,
-        description: refKey,
-        reference_type: refType,
-      },
+      // Atomic decrement (no lost update) + unique idempotency_key on the ledger
+      // row (a redelivered/duplicate refund|dispute fails the insert -> rolls
+      // back, so a given refund/dispute reverses at most once). Balance may go
+      // negative — a clawback of already-spent funds is a genuine debt.
+      const updated = await tx.userWallet.update({
+        where: { user_id: userId },
+        data: { balance: { decrement: amount } },
+      });
+      await tx.walletTransaction.create({
+        data: {
+          user_id: userId,
+          wallet_id: wallet.id,
+          transaction_type: refType,
+          amount: -amount,
+          balance_before: Number(updated.balance) + amount,
+          balance_after: Number(updated.balance),
+          description: refKey,
+          reference_type: refType,
+          idempotency_key: `${refType}:${refKey}`,
+        },
+      });
+      applied = true;
     });
-    return true;
-  });
+  } catch (e) {
+    if (isUniqueViolation(e)) return; // already reversed
+    throw e;
+  }
 
   if (applied) {
     try {
@@ -144,35 +156,36 @@ async function debitWallet(userId: number, amount: number, refType: string, refK
 }
 
 async function creditWallet(userId: number, amount: number, sessionId: string) {
-  await prisma.$transaction(async (tx) => {
-    // Idempotency: a given Checkout Session credits at most once.
-    const already = await tx.walletTransaction.findFirst({
-      where: { reference_type: "STRIPE_DEPOSIT", description: sessionId },
-    });
-    if (already) return;
-
-    let wallet = await tx.userWallet.findUnique({ where: { user_id: userId } });
-    if (!wallet) {
-      wallet = await tx.userWallet.create({
-        data: { user_id: userId, balance: 0, frozen_balance: 0 },
+  try {
+    await prisma.$transaction(async (tx) => {
+      let wallet = await tx.userWallet.findUnique({ where: { user_id: userId } });
+      if (!wallet) {
+        wallet = await tx.userWallet.create({
+          data: { user_id: userId, balance: 0, frozen_balance: 0 },
+        });
+      }
+      // Atomic increment (no lost update) + unique idempotency_key (concurrent
+      // redelivery of the same session fails the insert -> rolls back).
+      const updated = await tx.userWallet.update({
+        where: { user_id: userId },
+        data: { balance: { increment: amount } },
       });
-    }
-
-    const before = Number(wallet.balance);
-    const after = before + amount;
-
-    await tx.userWallet.update({ where: { user_id: userId }, data: { balance: after } });
-    await tx.walletTransaction.create({
-      data: {
-        user_id: userId,
-        wallet_id: wallet.id,
-        transaction_type: "DEPOSIT",
-        amount,
-        balance_before: before,
-        balance_after: after,
-        description: sessionId,
-        reference_type: "STRIPE_DEPOSIT",
-      },
+      await tx.walletTransaction.create({
+        data: {
+          user_id: userId,
+          wallet_id: wallet.id,
+          transaction_type: "DEPOSIT",
+          amount,
+          balance_before: Number(updated.balance) - amount,
+          balance_after: Number(updated.balance),
+          description: sessionId,
+          reference_type: "STRIPE_DEPOSIT",
+          idempotency_key: `deposit:${sessionId}`,
+        },
+      });
     });
-  });
+  } catch (e) {
+    if (isUniqueViolation(e)) return; // already credited
+    throw e;
+  }
 }
