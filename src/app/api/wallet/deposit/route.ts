@@ -51,6 +51,9 @@ export async function POST(req: NextRequest) {
         },
       ],
       metadata: { userId: String(user.id), type: "wallet_deposit" },
+      // Also stamp the PaymentIntent so refund/dispute webhooks (which see the
+      // charge, not the session) can map the reversal back to this user.
+      payment_intent_data: { metadata: { userId: String(user.id), type: "wallet_deposit" } },
       success_url: `${base}/wallet?deposit=success`,
       cancel_url: `${base}/wallet?deposit=cancelled`,
     });
