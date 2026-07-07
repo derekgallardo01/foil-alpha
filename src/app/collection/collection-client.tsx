@@ -53,6 +53,7 @@ import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
 import { useRequireAuth } from "../lib/useRequireAuth";
 import EnhancedCardDisplay from './EnhancedCardDisplay';
 import CollectionAnalytics from './CollectionAnalytics';
+import PortfolioPerformance from './PortfolioPerformance';
 import BulkPriceUpdateModal from './BulkPriceUpdateModal';
 import CollectionListView from './CollectionListView';
 
@@ -481,6 +482,8 @@ export default function CollectionPage() {
                 />
 
                 <CollectionAnalytics summary={summary} />
+
+                <PortfolioPerformance cards={enhancedUserCards} />
 
                 <Paper variant="outlined" sx={{ mb: 3, border: 1, borderColor: 'divider' }}>
                     <Tabs
