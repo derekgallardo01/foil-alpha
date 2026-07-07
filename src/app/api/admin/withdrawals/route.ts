@@ -40,10 +40,65 @@ export async function GET(req: NextRequest) {
   });
 }
 
+type Payout = { method: "stripe" | "manual"; transfer_id?: string; transfer_error?: string };
+
 /**
- * POST /api/admin/withdrawals  { id, action: "pay" | "reject", note? }
- * Pay:    deduct balance + release the escrow hold, write a ledger row.
+ * Push the real payout via Stripe Connect if enabled and the seller has onboarded.
+ * The SAME idempotency key is used on the initial pay and every retry, so a
+ * transfer whose response was lost is deduped by Stripe instead of double-sent.
+ * Returns `{method:'manual'}` (no transfer) when Connect is off or the seller
+ * isn't connected — the admin then handles the payout manually.
+ */
+async function runPayout(
+  withdrawalId: number,
+  userId: number,
+  amount: number,
+  priorNote: string | null
+): Promise<Payout> {
+  const payout: Payout = { method: "manual" };
+  if (!isConnectEnabled() || !stripe) return payout;
+
+  const seller = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { stripe_connect_account_id: true },
+  });
+  const acctId = seller?.stripe_connect_account_id;
+  if (!acctId) return payout;
+
+  const note = (extra: string) => [priorNote, extra].filter(Boolean).join(" · ").slice(0, 255);
+  try {
+    const transfer = await stripe.transfers.create(
+      {
+        amount: Math.round(amount * 100),
+        currency: "usd",
+        destination: acctId,
+        metadata: { withdrawalId: String(withdrawalId) },
+      },
+      { idempotencyKey: `withdrawal-${withdrawalId}` }
+    );
+    payout.method = "stripe";
+    payout.transfer_id = transfer.id;
+    await prisma.walletWithdrawal.update({
+      where: { id: withdrawalId },
+      data: { admin_note: note(`Stripe transfer ${transfer.id}`) },
+    });
+  } catch (e) {
+    payout.transfer_error = e instanceof Error ? e.message : "transfer failed";
+    console.error("Connect transfer failed:", e);
+    await prisma.walletWithdrawal.update({
+      where: { id: withdrawalId },
+      data: { admin_note: note("Payout not sent — use Retry payout") },
+    });
+  }
+  return payout;
+}
+
+/**
+ * POST /api/admin/withdrawals  { id, action: "pay" | "reject" | "retry_payout", note? }
+ * Pay:    deduct balance + release the escrow hold + ledger row, then push the
+ *         Stripe transfer (if Connect is on and the seller onboarded).
  * Reject: release the escrow hold (no balance change).
+ * Retry:  idempotently re-attempt the transfer for an already-PAID withdrawal.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin();
@@ -60,8 +115,39 @@ export async function POST(req: NextRequest) {
   const action = body.action;
   const note = typeof body.note === "string" ? body.note.slice(0, 255) : null;
 
-  if (!Number.isInteger(id) || (action !== "pay" && action !== "reject")) {
-    return NextResponse.json({ error: "id and action ('pay'|'reject') are required." }, { status: 400 });
+  if (!Number.isInteger(id) || (action !== "pay" && action !== "reject" && action !== "retry_payout")) {
+    return NextResponse.json(
+      { error: "id and action ('pay'|'reject'|'retry_payout') are required." },
+      { status: 400 }
+    );
+  }
+
+  // Retry a failed payout on an already-settled (PAID) withdrawal — idempotent,
+  // so a transfer whose response was lost is deduped rather than double-sent.
+  if (action === "retry_payout") {
+    const w = await prisma.walletWithdrawal.findUnique({ where: { id } });
+    if (!w) return NextResponse.json({ error: "Withdrawal not found." }, { status: 404 });
+    if (w.status !== "PAID") {
+      return NextResponse.json({ error: "Only a paid withdrawal can retry its payout." }, { status: 400 });
+    }
+    const payout = await runPayout(w.id, w.user_id, Number(w.amount), null);
+    if (payout.transfer_id) {
+      try {
+        await createNotification({
+          user_id: w.user_id,
+          type: "WITHDRAWAL_PAID",
+          title: "Withdrawal paid",
+          message: `Your withdrawal of $${Number(w.amount).toFixed(2)} has been paid out.`,
+        });
+      } catch (e) {
+        console.error("Notification failed:", e);
+      }
+    }
+    return NextResponse.json({
+      success: !payout.transfer_error,
+      payout,
+      withdrawal: { ...w, amount: Number(w.amount) },
+    });
   }
 
   try {
@@ -120,57 +206,42 @@ export async function POST(req: NextRequest) {
       return { ...w, status: newStatus };
     });
 
-    // Push the real payout via Stripe Connect if enabled and the seller has
-    // onboarded. The internal balance is already settled (above), so a failed
-    // transfer is a recoverable "owed" state, not a double-payout. The
-    // idempotency key makes a retry safe, and settling-before-transfer means a
-    // concurrent reject can't win after money has moved.
-    const payout: { method: "stripe" | "manual"; transfer_id?: string; transfer_error?: string } = { method: "manual" };
-    if (result.status === "PAID" && isConnectEnabled() && stripe) {
-      const seller = await prisma.user.findUnique({
-        where: { id: result.user_id },
-        select: { stripe_connect_account_id: true },
-      });
-      const acctId = seller?.stripe_connect_account_id;
-      if (acctId) {
-        try {
-          const transfer = await stripe.transfers.create(
-            {
-              amount: Math.round(Number(result.amount) * 100),
-              currency: "usd",
-              destination: acctId,
-              metadata: { withdrawalId: String(result.id) },
-            },
-            { idempotencyKey: `withdrawal-${result.id}` }
-          );
-          payout.method = "stripe";
-          payout.transfer_id = transfer.id;
-          await prisma.walletWithdrawal.update({
-            where: { id: result.id },
-            data: { admin_note: `Stripe transfer ${transfer.id}` },
-          });
-        } catch (e) {
-          payout.transfer_error = e instanceof Error ? e.message : "transfer failed";
-          console.error("Connect transfer failed:", e);
-          await prisma.walletWithdrawal.update({
-            where: { id: result.id },
-            data: { admin_note: `Transfer FAILED (retry): ${payout.transfer_error}`.slice(0, 255) },
-          });
-        }
-      }
-    }
+    // The internal balance is already settled (above), so a failed transfer is a
+    // recoverable "owed" state (retryable), not a double-payout; settling before
+    // transferring means a concurrent reject can't win after money has moved.
+    const payout: Payout =
+      result.status === "PAID"
+        ? await runPayout(result.id, result.user_id, Number(result.amount), note)
+        : { method: "manual" };
 
-    // Notify the requester (best-effort).
+    // Notify the requester (best-effort). Only claim "paid out" if the money
+    // actually went (manual payout = admin sends it; stripe = transfer succeeded);
+    // if the transfer failed, tell them it's approved and processing, not paid.
     try {
       const paid = result.status === "PAID";
-      await createNotification({
-        user_id: result.user_id,
-        type: paid ? "WITHDRAWAL_PAID" : "WITHDRAWAL_REJECTED",
-        title: paid ? "Withdrawal paid" : "Withdrawal rejected",
-        message: paid
-          ? `Your withdrawal of $${Number(result.amount).toFixed(2)} has been paid out.`
-          : `Your withdrawal of $${Number(result.amount).toFixed(2)} was rejected${note ? `: ${note}` : "."}`,
-      });
+      const payoutSent = payout.method !== "stripe" || !!payout.transfer_id;
+      if (paid && payoutSent) {
+        await createNotification({
+          user_id: result.user_id,
+          type: "WITHDRAWAL_PAID",
+          title: "Withdrawal paid",
+          message: `Your withdrawal of $${Number(result.amount).toFixed(2)} has been paid out.`,
+        });
+      } else if (paid) {
+        await createNotification({
+          user_id: result.user_id,
+          type: "WITHDRAWAL_PROCESSING",
+          title: "Withdrawal approved",
+          message: `Your withdrawal of $${Number(result.amount).toFixed(2)} is approved — the payout is processing.`,
+        });
+      } else {
+        await createNotification({
+          user_id: result.user_id,
+          type: "WITHDRAWAL_REJECTED",
+          title: "Withdrawal rejected",
+          message: `Your withdrawal of $${Number(result.amount).toFixed(2)} was rejected${note ? `: ${note}` : "."}`,
+        });
+      }
     } catch (e) {
       console.error("Withdrawal notification failed:", e);
     }

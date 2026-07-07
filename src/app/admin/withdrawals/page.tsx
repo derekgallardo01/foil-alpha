@@ -67,7 +67,7 @@ export default function AdminWithdrawalsPage() {
     load();
   }, [load]);
 
-  const act = async (id: number, action: "pay" | "reject") => {
+  const act = async (id: number, action: "pay" | "reject" | "retry_payout") => {
     if (action === "reject" && !confirm("Reject this withdrawal? The hold is released back to the user.")) return;
     if (action === "pay" && !confirm("Mark as PAID? This deducts the amount from the user's balance.")) return;
     setBusyId(id);
@@ -82,7 +82,15 @@ export default function AdminWithdrawalsPage() {
         toast.error(data.error || "Action failed.");
         return;
       }
-      toast.success(action === "pay" ? "Marked as paid." : "Rejected.");
+      // A settled withdrawal whose Stripe transfer failed needs a retry — surface
+      // it loudly rather than as a plain success.
+      if (data.payout?.transfer_error) {
+        toast.error(`Marked paid, but the payout did NOT send: ${data.payout.transfer_error}. Use "Retry payout".`, { autoClose: false });
+      } else if (action === "retry_payout") {
+        toast.success(data.payout?.transfer_id ? "Payout sent." : "Payout still failed — check Stripe.");
+      } else {
+        toast.success(action === "pay" ? "Marked as paid." : "Rejected.");
+      }
       load();
     } catch {
       toast.error("Something went wrong.");
@@ -159,6 +167,13 @@ export default function AdminWithdrawalsPage() {
                               </Button>
                               <Button size="small" variant="contained" onClick={() => act(w.id, "pay")} disabled={busyId === w.id}>
                                 Mark paid
+                              </Button>
+                            </Box>
+                          ) : w.status === "PAID" && (w.admin_note || "").includes("Payout not sent") ? (
+                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", alignItems: "center" }}>
+                              <Box sx={{ fontSize: 12, color: "error.main" }}>Payout failed</Box>
+                              <Button size="small" variant="contained" color="warning" onClick={() => act(w.id, "retry_payout")} disabled={busyId === w.id}>
+                                Retry payout
                               </Button>
                             </Box>
                           ) : (
