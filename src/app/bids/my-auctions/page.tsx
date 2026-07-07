@@ -211,7 +211,7 @@ export default function MyAuctionsPage() {
             <Container sx={{ marginTop: 4, marginBottom: 4 }}>
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <GavelIcon sx={{ color: 'primary.main' }} />
                     <Box

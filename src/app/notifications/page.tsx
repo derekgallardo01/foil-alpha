@@ -357,7 +357,7 @@ export default function NotificationsPage() {
             <Container sx={{ marginTop: 4, marginBottom: 4 }}>
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Badge badgeContent={unreadCount} color="error">
                         <NotificationIcon sx={{ color: 'primary.main' }} />
@@ -460,7 +460,7 @@ export default function NotificationsPage() {
                                                 {getNotificationIcon(notification.type)}
                                             </Box>
                                             <Box sx={{ flex: 1 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                                                     <Typography variant="h6" component="h3">
                                                         {notification.title}
                                                     </Typography>

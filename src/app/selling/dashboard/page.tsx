@@ -543,9 +543,9 @@ export default function SellingDashboard() {
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell>Card</TableCell>
-                                                <TableCell>Sale Type</TableCell>
+                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Sale Type</TableCell>
                                                 <TableCell align="right">Sale Price</TableCell>
-                                                <TableCell>Buyer</TableCell>
+                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Buyer</TableCell>
                                                 <TableCell>Date Sold</TableCell>
                                             </TableRow>
                                         </TableHead>
@@ -583,7 +583,7 @@ export default function SellingDashboard() {
                                                             </Box>
                                                         </Box>
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                                         <Chip
                                                             label={getTransactionTypeLabel(item.sale_type)}
                                                             color="primary"
@@ -596,7 +596,7 @@ export default function SellingDashboard() {
                                                             {formatPrice(item.sale_price)}
                                                         </Typography>
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                             <PersonIcon fontSize="small" />
                                                             <Typography variant="body2">
