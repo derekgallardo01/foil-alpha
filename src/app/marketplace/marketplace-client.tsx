@@ -557,6 +557,25 @@ export default function MarketplacePage() {
         fetchNotificationCount();
     };
 
+    // Open the bidding modal directly from an ?auction=<id> deep link
+    // (e.g. the dashboard "Bid Now" button on a live auction).
+    useEffect(() => {
+        const auctionId = searchParams.get('auction');
+        if (!auctionId || status !== 'authenticated') return;
+        let cancelled = false;
+        (async () => {
+            const biddingCard = await fetchCardForBidding(`user-${auctionId}`);
+            if (!cancelled && biddingCard) {
+                setSelectedCardForBidding(biddingCard);
+                setBiddingModalOpen(true);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [status]);
+
     if (status === 'loading') {
         return (
             <Container>
