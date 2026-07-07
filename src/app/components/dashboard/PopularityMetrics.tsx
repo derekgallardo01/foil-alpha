@@ -196,7 +196,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                     borderColor: 'primary.main'
                                 }
                             }}
-                            onClick={() => router.push(`/marketplace?card=${topCard.id}`)}
+                            onClick={() => router.push(`/marketplace?search=${encodeURIComponent(topCard.name)}`)}
                         >
                             <CardContent>
                                 <Grid container spacing={2}>
@@ -299,7 +299,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                         bgcolor: 'action.hover'
                                     }
                                 }}
-                                onClick={() => router.push(`/marketplace?card=${card.id}`)}
+                                onClick={() => router.push(`/marketplace?search=${encodeURIComponent(card.name)}`)}
                             >
                                 <ListItemAvatar>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

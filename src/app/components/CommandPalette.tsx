@@ -76,7 +76,7 @@ export default function CommandPalette({
           label: c.set_name ? `${c.name} · ${c.set_name}` : c.name,
           group: "Cards & Listings",
           icon: <StyleIcon fontSize="small" />,
-          run: () => router.push(`/marketplace?card=${c.id}`),
+          run: () => router.push(`/marketplace?search=${encodeURIComponent(c.name)}`),
         }));
         setResults(cmds);
       } catch {

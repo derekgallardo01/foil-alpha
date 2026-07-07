@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Container,
     Typography,
@@ -166,6 +166,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function MarketplacePage() {
     const { session, status } = useRequireAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { selectedCurrency, isUSDFallback } = useCurrencyContext();
     const [cards, setCards] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
@@ -209,6 +210,13 @@ export default function MarketplacePage() {
 
     // FIXED: Debounced search to prevent excessive API calls
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+    // Seed the search box from a ?search= deep link (⌘K palette, trending tables).
+    useEffect(() => {
+        const q = searchParams.get('search');
+        if (q) setSearchTerm(q);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Fetch unread notifications count
     const fetchNotificationCount = async () => {

@@ -339,7 +339,7 @@ export default function TrendingCardsTable({
                                             bgcolor: 'action.hover'
                                         }
                                     }}
-                                    onClick={() => router.push(`/marketplace?card=${card.id}`)}
+                                    onClick={() => router.push(`/marketplace?search=${encodeURIComponent(card.name)}`)}
                                 >
                                     <TableCell sx={{ color: 'text.primary' }}>{index + 1}</TableCell>
                                     <TableCell>
