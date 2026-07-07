@@ -114,7 +114,8 @@ export async function POST(request: NextRequest) {
                         userCardId: auction.id, // Fixed: was user_card_id
                         is_active: true
                     },
-                    orderBy: { amount: 'desc' }
+                    // Deterministic tiebreaker: on equal amounts the earliest bid wins.
+                    orderBy: [{ amount: 'desc' }, { createdAt: 'asc' }]
                 });
 
                 if (!highestBid) {

@@ -174,6 +174,9 @@ export async function POST(request: NextRequest) {
             // Re-check liveness under the lock (sold/ended can race the request).
             const uc = await tx.userCard.findUnique({ where: { id: user_card_id } });
             if (!uc || uc.is_sold) throw new BidError('Card has already been sold');
+            // Re-check under the lock: a manual admin-end sets is_for_sale=false
+            // (possibly before auction_end), so this catches a bid racing an end.
+            if (!uc.is_for_sale || uc.sale_type !== 'AUCTION') throw new BidError('Auction is no longer available');
             if (uc.auction_end && new Date() > uc.auction_end) throw new BidError('Auction has ended');
 
             // The challenger's existing hold (they may be raising their own max).
@@ -183,7 +186,8 @@ export async function POST(request: NextRequest) {
             // Current highest OTHER active bid.
             const topOther = await tx.bid.findFirst({
                 where: { userCardId: user_card_id, is_active: true, bidderId: { not: bidderId } },
-                orderBy: { amount: 'desc' },
+                // Deterministic tiebreaker: on equal amounts the earliest bid leads.
+                orderBy: [{ amount: 'desc' }, { createdAt: 'asc' }],
             });
             const top = topOther
                 ? { effective: Number(topOther.amount), max: Number(topOther.max_amount ?? topOther.amount) }
