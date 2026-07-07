@@ -77,27 +77,10 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
       console.error('Error fetching notifications:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
 
-      // Fallback to sample notifications
-      const sampleNotifications: Notification[] = [
-        {
-          id: 1,
-          type: 'AUCTION_WON',
-          title: 'Auction Won!',
-          message: 'Congratulations! You won the auction.',
-          created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-          is_read: false,
-        },
-        {
-          id: 2,
-          type: 'BID_OUTBID',
-          title: "You've been outbid",
-          message: 'Your bid has been exceeded by another bidder.',
-          created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-          is_read: false,
-        },
-      ];
-      setNotifications(sampleNotifications);
-      setUnreadCount(sampleNotifications.length);
+      // Don't fabricate notifications on error — show none rather than masking
+      // the failure with fake "Auction Won"/"Outbid" samples.
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
@@ -125,12 +108,12 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
   const markAsRead = async (notificationId: number) => {
     try {
       const response = await fetch('/api/notifications', {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          notification_id: notificationId
+          notificationId
         })
       });
 
@@ -150,12 +133,12 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
   const markAllAsRead = async () => {
     try {
       const response = await fetch('/api/notifications', {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mark_as_read: 'all'
+          markAllAsRead: true
         })
       });
 

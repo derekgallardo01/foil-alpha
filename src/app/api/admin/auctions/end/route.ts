@@ -6,6 +6,7 @@ import {
     createAuctionWonNotifications,
     createAuctionLostNotifications
 } from '../../../../lib/notification';
+import { releaseBidHolds } from '../../../../lib/wallet-settlement';
 
 export async function POST(request: NextRequest) {
     try {
@@ -95,7 +96,9 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                // Deactivate all bids
+                // Reserve not met: no sale — release every bidder's escrow hold,
+                // then deactivate all bids.
+                await releaseBidHolds(tx, { auctionId: auction_id });
                 await tx.bid.updateMany({
                     where: {
                         userCardId: auction_id,
@@ -139,22 +142,15 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            // Get losing bidders
+            // Get losing bidders (for notifications). Bids stay ACTIVE and their
+            // escrow stays held until the winner confirms (releases losers) or
+            // declines (auction continues with them) — see bids/confirm-purchase.
             const losingBids = await tx.bid.findMany({
                 where: {
                     userCardId: auction_id,
                     is_active: true,
                     id: { not: highestBid.id }
                 }
-            });
-
-            // Deactivate all bids
-            await tx.bid.updateMany({
-                where: {
-                    userCardId: auction_id,
-                    is_active: true
-                },
-                data: { is_active: false }
             });
 
             return {

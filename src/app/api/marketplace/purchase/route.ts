@@ -132,9 +132,12 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
     }
 
     const buyerBalance = Number(buyerWallet.balance);
+    // Available = balance minus funds already frozen in active bids, so a buyer
+    // can't spend money that's escrowed elsewhere.
+    const available = buyerBalance - Number(buyerWallet.frozen_balance);
 
-    if (buyerBalance < cardPrice) {
-      throw new Error(`Insufficient funds. Required: $${cardPrice.toFixed(2)}, Available: $${buyerBalance.toFixed(2)}`);
+    if (available < cardPrice) {
+      throw new Error(`Insufficient funds. Required: $${cardPrice.toFixed(2)}, Available: $${available.toFixed(2)}`);
     }
 
     // Get seller's wallet
@@ -331,11 +334,9 @@ async function purchaseCatalogCard(buyerId: number, catalogCardId: number, quant
     }
 
     const unitPrice = Number(catalogCard.market_price);
-    const commission = await calculateCommission(unitPrice, catalogCard.rarity);
-    // Seller-funded model: buyer pays exactly the listed price.
-    const totalCostPerCard = unitPrice;
-    const totalCost = totalCostPerCard * quantity;
-    const totalCommission = commission.admin_receives * quantity;
+    // Catalog cards are sold by the platform itself, so the platform receives the
+    // full amount — there is no separate third-party commission split.
+    const totalCost = unitPrice * quantity;
 
     // Get or create buyer's wallet
     let buyerWallet = await tx.userWallet.findUnique({
@@ -353,9 +354,10 @@ async function purchaseCatalogCard(buyerId: number, catalogCardId: number, quant
     }
 
     const buyerBalance = Number(buyerWallet.balance);
+    const available = buyerBalance - Number(buyerWallet.frozen_balance);
 
-    if (buyerBalance < totalCost) {
-      throw new Error(`Insufficient funds. Required: $${totalCost.toFixed(2)}, Available: $${buyerBalance.toFixed(2)}`);
+    if (available < totalCost) {
+      throw new Error(`Insufficient funds. Required: $${totalCost.toFixed(2)}, Available: $${available.toFixed(2)}`);
     }
 
     // Update wallet
@@ -364,28 +366,17 @@ async function purchaseCatalogCard(buyerId: number, catalogCardId: number, quant
       data: { balance: { decrement: totalCost } }
     });
 
-    // Record transactions
-    await Promise.all([
-      recordCommissionTransaction({
-        transaction_type: 'MARKETPLACE_SALE',
-        amount: unitPrice * quantity,
-        description: `Marketplace sale: ${quantity}x ${catalogCard.name}`,
-        reference_type: 'CARD',
-        reference_id: catalogCardId,
-        buyer_id: buyerId,
-        card_id: catalogCardId
-      }, tx),
-      recordCommissionTransaction({
-        transaction_type: 'COMMISSION',
-        amount: totalCommission,
-        description: `Commission from ${quantity}x ${catalogCard.name} purchase`,
-        reference_type: 'CARD',
-        reference_id: catalogCardId,
-        buyer_id: buyerId,
-        card_id: catalogCardId,
-        commission_rate: commission.commission_rate
-      }, tx)
-    ]);
+    // Record the sale — the platform is the seller and receives the full amount
+    // (one ledger entry; no phantom extra commission credit).
+    await recordCommissionTransaction({
+      transaction_type: 'MARKETPLACE_SALE',
+      amount: totalCost,
+      description: `Catalog sale: ${quantity}x ${catalogCard.name}`,
+      reference_type: 'CARD',
+      reference_id: catalogCardId,
+      buyer_id: buyerId,
+      card_id: catalogCardId
+    }, tx);
 
     // Create user cards
     const userCards = [];

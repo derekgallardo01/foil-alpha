@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { requireAdmin } from '../../../../lib/auth';
 import { createPurchaseConfirmedNotifications } from '../../../../lib/notification';
+import { calculateCommission, recordCommissionTransaction } from '../../../../lib/commission-utils';
+import { releaseBidHolds } from '../../../../lib/wallet-settlement';
 
 export async function POST(request: NextRequest) {
     try {
@@ -70,14 +72,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Buyer wallet not found' }, { status: 404 });
         }
 
-        const availableBalance = Number(buyerWallet.balance) - Number(buyerWallet.frozen_balance);
         const purchaseAmount = Number(transaction.amount);
 
-        if (availableBalance < purchaseAmount) {
+        // The winning bid is held in escrow (frozen), so the funds are already
+        // reserved for this purchase — require the total balance to cover it.
+        if (Number(buyerWallet.balance) < purchaseAmount) {
             return NextResponse.json({
-                error: `Insufficient buyer balance. Available: $${availableBalance.toFixed(2)}, Required: $${purchaseAmount.toFixed(2)}`
+                error: `Insufficient buyer balance. Balance: $${Number(buyerWallet.balance).toFixed(2)}, Required: $${purchaseAmount.toFixed(2)}`
             }, { status: 400 });
         }
+
+        // Seller-funded commission (mirrors bids/confirm-purchase).
+        const commission = await calculateCommission(purchaseAmount, card.rarity);
+        const platformFee = Number(commission.commission_amount);
+        const sellerReceives = purchaseAmount - platformFee;
 
         // Force complete the transaction
         const result = await prisma.$transaction(async (tx) => {
@@ -112,20 +120,42 @@ export async function POST(request: NextRequest) {
                 throw new Error('Wallet not found');
             }
 
-            // Update buyer wallet (deduct funds)
+            // Update buyer wallet: deduct payment and release the escrow hold.
             const updatedBuyerWallet = await tx.userWallet.update({
                 where: { user_id: transaction.buyer_id },
                 data: {
-                    balance: { decrement: purchaseAmount }
+                    balance: { decrement: purchaseAmount },
+                    frozen_balance: { decrement: purchaseAmount }
                 }
             });
 
-            // Update seller wallet (add funds)
+            // Update seller wallet: net of the platform fee.
             const updatedSellerWallet = await tx.userWallet.update({
                 where: { user_id: transaction.seller_id },
                 data: {
-                    balance: { increment: purchaseAmount }
+                    balance: { increment: sellerReceives }
                 }
+            });
+
+            // Credit the platform commission (updates admin_wallet + writes an
+            // admin_wallet_transactions ledger row), and track the sale volume.
+            if (platformFee > 0) {
+                await recordCommissionTransaction({
+                    transaction_type: 'COMMISSION',
+                    amount: platformFee,
+                    description: `Commission from force-completed ${card.name} sale`,
+                    reference_type: 'TRANSACTION',
+                    reference_id: transaction_id,
+                    user_card_id: transaction.user_card_id,
+                    buyer_id: transaction.buyer_id,
+                    seller_id: transaction.seller_id,
+                    card_id: card.id,
+                    commission_rate: commission.commission_rate
+                }, tx);
+            }
+            await tx.admin_wallet.updateMany({
+                where: { wallet_type: 'PLATFORM' },
+                data: { total_marketplace_sales: { increment: purchaseAmount } }
             });
 
             // Create wallet transaction records (add wallet_id)
@@ -151,10 +181,10 @@ export async function POST(request: NextRequest) {
                         user_id: transaction.seller_id,
                         wallet_id: currentSellerWallet.id, // Add required wallet_id
                         transaction_type: 'SALE',
-                        amount: purchaseAmount,
+                        amount: sellerReceives,
                         balance_before: Number(currentSellerWallet.balance),
                         balance_after: Number(updatedSellerWallet.balance),
-                        description: `Force completed sale: ${card.name} (Admin: ${user.name})`,
+                        description: `Force completed sale: ${card.name} (platform fee $${platformFee.toFixed(2)}, Admin: ${user.name})`,
                         reference_id: transaction_id,
                         reference_type: 'TRANSACTION',
                         admin_id: user.id
@@ -162,10 +192,11 @@ export async function POST(request: NextRequest) {
                 })
             ]);
 
-            // 4. Deactivate all other bids for this card (fix field name)
+            // 4. Release losing bidders' escrow, then deactivate all bids.
+            await releaseBidHolds(tx, { auctionId: transaction.user_card_id, exceptBidderId: transaction.buyer_id });
             await tx.bid.updateMany({
                 where: {
-                    userCardId: transaction.user_card_id, // Fix: user_card_id → userCardId
+                    userCardId: transaction.user_card_id,
                     is_active: true
                 },
                 data: { is_active: false }

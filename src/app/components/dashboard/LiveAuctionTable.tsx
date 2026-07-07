@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import {
     Gavel,
-    Visibility,
     Refresh,
     LocalOffer
 } from '@mui/icons-material';
@@ -47,7 +46,6 @@ interface LiveAuction {
     time_remaining: number;
     auction_end: Date;
     condition: string | null;
-    watching_count: number;
 }
 
 interface LiveAuctionTableProps {
@@ -185,22 +183,21 @@ export default function LiveAuctionTable({
                             <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>Current Bid</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Bids</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Time Left</TableCell>
-                            <TableCell align="center" sx={{ bgcolor: 'background.paper', ...hideBelowMd }}>Watching</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Action</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {loading ? (
-                            <TableRowsSkeleton rows={4} cols={8} />
+                            <TableRowsSkeleton rows={4} cols={7} />
                         ) : error ? (
                             <TableRow>
-                                <TableCell colSpan={8}>
+                                <TableCell colSpan={7}>
                                     <ErrorState variant="inline" message="Couldn't load live auctions." onRetry={fetchAuctions} />
                                 </TableCell>
                             </TableRow>
                         ) : auctions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
+                                <TableCell colSpan={7} align="center">
                                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
                                         No active auctions at the moment
                                     </Typography>
@@ -261,14 +258,6 @@ export default function LiveAuctionTable({
                                         <Box sx={{ color: getTimeColor(auction.time_remaining) }}>
                                             <Typography variant="body2">
                                                 {formatTimeRemaining(auction.time_remaining)}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="center" sx={hideBelowMd}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                                            <Visibility fontSize="small" sx={{ color: 'text.secondary' }} />
-                                            <Typography variant="body2">
-                                                {auction.watching_count}
                                             </Typography>
                                         </Box>
                                     </TableCell>

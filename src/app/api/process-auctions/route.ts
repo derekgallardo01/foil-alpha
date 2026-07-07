@@ -7,6 +7,7 @@ import {
     createAuctionLostNotifications,
     createPurchaseExpiredNotifications
 } from '../../lib/notification';
+import { releaseBidHolds } from '../../lib/wallet-settlement';
 
 export async function POST(request: NextRequest) {
     try {
@@ -143,19 +144,21 @@ export async function POST(request: NextRequest) {
                 // Check if bid meets reserve price
                 const reservePrice = Number(auction.reserve_price) || 0;
                 if (Number(highestBid.amount) < reservePrice) {
-                    // Reserve not met - end auction
-                    await prisma.userCard.update({
-                        where: { id: auction.id },
-                        data: { is_for_sale: false }
-                    });
+                    // Reserve not met - end auction, releasing every bidder's escrow.
+                    await prisma.$transaction(async (tx) => {
+                        await tx.userCard.update({
+                            where: { id: auction.id },
+                            data: { is_for_sale: false }
+                        });
 
-                    // Deactivate all bids - fixed field name
-                    await prisma.bid.updateMany({
-                        where: {
-                            userCardId: auction.id, // Fixed: was user_card_id
-                            is_active: true
-                        },
-                        data: { is_active: false }
+                        await releaseBidHolds(tx, { auctionId: auction.id });
+                        await tx.bid.updateMany({
+                            where: {
+                                userCardId: auction.id,
+                                is_active: true
+                            },
+                            data: { is_active: false }
+                        });
                     });
 
                     results.push({
@@ -192,27 +195,20 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
-                    // Get all losing bidders - fixed field name
+                    // Losing bidders (for notifications). Bids stay ACTIVE and their
+                    // escrow stays held until the winner confirms/declines/expires —
+                    // see bids/confirm-purchase and the expiry handler below.
                     const losingBids = await tx.bid.findMany({
                         where: {
-                            userCardId: auction.id, // Fixed: was user_card_id
+                            userCardId: auction.id,
                             is_active: true,
                             id: { not: highestBid.id }
                         }
                     });
 
-                    // Deactivate all bids (auction is over) - fixed field name
-                    await tx.bid.updateMany({
-                        where: {
-                            userCardId: auction.id, // Fixed: was user_card_id
-                            is_active: true
-                        },
-                        data: { is_active: false }
-                    });
-
                     return {
                         transaction: pendingTransaction,
-                        losingBidders: losingBids.map(bid => bid.bidderId) // Fixed: was bidder_id
+                        losingBidders: losingBids.map(bid => bid.bidderId)
                     };
                 });
 
@@ -296,11 +292,27 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
-                    // Reactivate other bids (excluding the expired winner) - fixed field name
+                    // The winner let the 24h window lapse: release their escrow hold
+                    // and drop their bid. The auction relists and continues with the
+                    // remaining bidders (whose holds stay put).
+                    await tx.userWallet.update({
+                        where: { user_id: expiredTransaction.buyer_id },
+                        data: { frozen_balance: { decrement: Number(expiredTransaction.amount) } }
+                    });
                     await tx.bid.updateMany({
                         where: {
-                            userCardId: expiredTransaction.user_card_id, // Fixed: was user_card_id
-                            bidderId: { not: expiredTransaction.buyer_id } // Fixed: was bidder_id
+                            userCardId: expiredTransaction.user_card_id,
+                            bidderId: expiredTransaction.buyer_id,
+                            is_active: true
+                        },
+                        data: { is_active: false }
+                    });
+
+                    // Ensure the remaining bidders' bids are active to keep competing.
+                    await tx.bid.updateMany({
+                        where: {
+                            userCardId: expiredTransaction.user_card_id,
+                            bidderId: { not: expiredTransaction.buyer_id }
                         },
                         data: { is_active: true }
                     });

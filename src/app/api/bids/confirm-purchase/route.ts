@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
-import { calculateCommission } from '../../../lib/commission-utils';
+import { calculateCommission, recordCommissionTransaction } from '../../../lib/commission-utils';
 import {
     createPurchaseConfirmedNotifications,
     createPurchaseDeclinedNotifications
@@ -159,17 +159,27 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                // Credit the platform commission wallet.
+                // Credit the platform commission (updates admin_wallet balance +
+                // total_commissions and writes an admin_wallet_transactions ledger
+                // row), then track the sale volume.
                 if (platformFee > 0) {
-                    await tx.admin_wallet.updateMany({
-                        where: { wallet_type: 'PLATFORM' },
-                        data: {
-                            balance: { increment: platformFee },
-                            total_commissions: { increment: platformFee },
-                            total_marketplace_sales: { increment: purchaseAmount }
-                        }
-                    });
+                    await recordCommissionTransaction({
+                        transaction_type: 'COMMISSION',
+                        amount: platformFee,
+                        description: `Commission from ${card.name} auction sale`,
+                        reference_type: 'TRANSACTION',
+                        reference_id: transaction_id,
+                        user_card_id: transaction.user_card_id,
+                        buyer_id: buyerId,
+                        seller_id: transaction.seller_id,
+                        card_id: card.id,
+                        commission_rate: commission.commission_rate
+                    }, tx);
                 }
+                await tx.admin_wallet.updateMany({
+                    where: { wallet_type: 'PLATFORM' },
+                    data: { total_marketplace_sales: { increment: purchaseAmount } }
+                });
 
                 // Create wallet transaction records (add wallet_id)
                 await Promise.all([
