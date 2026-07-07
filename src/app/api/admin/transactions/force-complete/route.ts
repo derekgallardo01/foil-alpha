@@ -89,15 +89,21 @@ export async function POST(request: NextRequest) {
 
         // Force complete the transaction
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Complete the transaction (remove completed_at field if it doesn't exist)
-            const completedTransaction = await tx.transaction.update({
-                where: { id: transaction_id },
+            // 1. Atomically CLAIM the transaction (PENDING->COMPLETED). Gates a
+            //    double force-complete, or a force-complete racing the buyer's own
+            //    confirm/decline, so settlement runs exactly once.
+            const claimed = await tx.transaction.updateMany({
+                where: { id: transaction_id, status: 'PENDING_BUYER_CONFIRMATION' },
                 data: {
                     status: 'COMPLETED',
                     transaction_type: 'ADMIN_FORCE_COMPLETED',
                     notes: `Force completed by admin ${user.name} - Buyer failed to confirm within 24 hours`
                 }
             });
+            if (claimed.count !== 1) {
+                throw new Error('This transaction has already been processed');
+            }
+            const completedTransaction = (await tx.transaction.findUnique({ where: { id: transaction_id } }))!;
 
             // 2. Transfer card ownership
             await tx.userCard.update({

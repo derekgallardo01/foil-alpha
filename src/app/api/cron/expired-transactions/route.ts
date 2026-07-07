@@ -60,18 +60,38 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Process the expired transaction
-                await prisma.$transaction(async (tx) => {
-                    // 1. Update transaction status
-                    await tx.transaction.update({
-                        where: { id: transaction.id },
+                const settled = await prisma.$transaction(async (tx) => {
+                    // 1. Atomically CLAIM the transaction (PENDING->EXPIRED). Gates a
+                    //    race with force-complete or the process-auctions expiry loop
+                    //    (both act on the same expired-PENDING population), so it
+                    //    settles exactly once.
+                    const claimed = await tx.transaction.updateMany({
+                        where: { id: transaction.id, status: 'PENDING_BUYER_CONFIRMATION' },
                         data: {
                             status: 'EXPIRED',
                             transaction_type: 'BID_PURCHASE_EXPIRED',
                             notes: 'Purchase confirmation window expired (24 hours)'
                         }
                     });
+                    if (claimed.count !== 1) return false; // already settled elsewhere
 
-                    // 2. Reset card status (make it available for auction again)
+                    // 2. Release the expired winner's escrow hold + drop their bid.
+                    //    (Do NOT reactivate history: the remaining bidders' bids stay
+                    //    active with their holds, so the auction just continues.)
+                    await tx.userWallet.updateMany({
+                        where: { user_id: transaction.buyer_id },
+                        data: { frozen_balance: { decrement: Number(transaction.amount) } }
+                    });
+                    await tx.bid.updateMany({
+                        where: {
+                            userCardId: transaction.user_card_id,
+                            bidderId: transaction.buyer_id,
+                            is_active: true
+                        },
+                        data: { is_active: false }
+                    });
+
+                    // 3. Relist the card for auction.
                     await tx.userCard.update({
                         where: { id: transaction.user_card_id },
                         data: {
@@ -80,24 +100,6 @@ export async function POST(request: NextRequest) {
                             notes: null // Clear pending notes
                         }
                     });
-
-                    // 3. Reactivate other bids (except the expired one)
-                    const activeBids = await tx.bid.findMany({
-                        where: {
-                            userCardId: transaction.user_card_id,
-                            bidderId: { not: transaction.buyer_id }
-                        }
-                    });
-
-                    if (activeBids.length > 0) {
-                        await tx.bid.updateMany({
-                            where: {
-                                userCardId: transaction.user_card_id,
-                                bidderId: { not: transaction.buyer_id }
-                            },
-                            data: { is_active: true }
-                        });
-                    }
 
                     // 4. Create transaction history
                     await tx.cardTransactionHistory.create({
@@ -109,7 +111,10 @@ export async function POST(request: NextRequest) {
                             notes: `Purchase confirmation expired for ${Number(transaction.amount).toFixed(2)}`
                         }
                     });
+                    return true;
                 });
+
+                if (!settled) continue; // another path already settled this one
 
                 // 5. Create expiration notifications (outside transaction for better error handling)
                 try {

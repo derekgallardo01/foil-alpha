@@ -110,15 +110,21 @@ export async function POST(request: NextRequest) {
 
             // Process the purchase
             const result = await prisma.$transaction(async (tx) => {
-                // 1. Complete the transaction (remove completed_at field if it doesn't exist)
-                const completedTransaction = await tx.transaction.update({
-                    where: { id: transaction_id },
+                // 1. Atomically CLAIM the transaction: only one concurrent confirm
+                //    can flip PENDING_BUYER_CONFIRMATION->COMPLETED, so a double-
+                //    click can't double-charge / re-transfer the card.
+                const claimed = await tx.transaction.updateMany({
+                    where: { id: transaction_id, status: 'PENDING_BUYER_CONFIRMATION' },
                     data: {
                         status: 'COMPLETED',
                         transaction_type: 'BID_PURCHASE_CONFIRMED',
                         notes: 'Purchase confirmed by buyer'
                     }
                 });
+                if (claimed.count !== 1) {
+                    throw new Error('This purchase has already been processed');
+                }
+                const completedTransaction = (await tx.transaction.findUnique({ where: { id: transaction_id } }))!;
 
                 // 2. Transfer card ownership
                 await tx.userCard.update({
@@ -280,15 +286,20 @@ export async function POST(request: NextRequest) {
         } else {
             // BUYER DECLINES PURCHASE
             const result = await prisma.$transaction(async (tx) => {
-                // 1. Update transaction as declined
-                await tx.transaction.update({
-                    where: { id: transaction_id },
+                // 1. Atomically CLAIM the transaction (PENDING->CANCELLED). Gates a
+                //    concurrent confirm-vs-decline / double-decline so the escrow
+                //    hold is released exactly once.
+                const claimed = await tx.transaction.updateMany({
+                    where: { id: transaction_id, status: 'PENDING_BUYER_CONFIRMATION' },
                     data: {
                         status: 'CANCELLED',
                         transaction_type: 'BID_PURCHASE_DECLINED',
                         notes: 'Purchase declined by buyer'
                     }
                 });
+                if (claimed.count !== 1) {
+                    throw new Error('This purchase has already been processed');
+                }
 
                 // Release the declining buyer's escrow hold (losing bidders keep
                 // their holds — they remain in the relisted auction).
