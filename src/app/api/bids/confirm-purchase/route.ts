@@ -306,13 +306,20 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                // 3. Reactivate other bids (they can still compete) - fix field name
+                // 3. Deactivate ONLY the decliner's own active bid — they're out.
+                //    The losing bidders' bids were never deactivated at auction end
+                //    (they stay active with their holds), so the auction simply
+                //    continues with them on the next resolution. Do NOT re-activate
+                //    historical rows: a bidder can have superseded/cancelled bids
+                //    whose holds are already released, and reactivating them would
+                //    later be double-released → negative frozen balance.
                 await tx.bid.updateMany({
                     where: {
-                        userCardId: transaction.user_card_id, // Fix: user_card_id → userCardId
-                        bidderId: { not: buyerId } // Don't reactivate decliner's bids
+                        userCardId: transaction.user_card_id,
+                        bidderId: buyerId,
+                        is_active: true
                     },
-                    data: { is_active: true }
+                    data: { is_active: false }
                 });
 
                 return {

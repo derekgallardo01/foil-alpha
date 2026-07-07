@@ -81,6 +81,12 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       throw new Error('Card not found or no longer available for sale');
     }
 
+    // Auction listings must be bid on — buying one outright would bypass the
+    // bidding flow and strand every bidder's escrow hold on this card.
+    if (userCard.sale_type === 'AUCTION') {
+      throw new Error('This item is an auction — place a bid instead of buying directly');
+    }
+
     // Verify buyer is not the owner
     if (userCard.owner_id === buyerId) {
       throw new Error('You cannot purchase your own card');
@@ -112,6 +118,11 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
 
     const cardPrice = Number(userCard.fixed_price || 0);
     console.log(`💰 Card price: $${cardPrice}`);
+
+    // Never transfer a card for $0 (e.g. a listing with no price set).
+    if (!(cardPrice > 0)) {
+      throw new Error('This listing has no valid purchase price');
+    }
 
     // Calculate commission
     const commission = await calculateCommission(cardPrice, card.rarity);

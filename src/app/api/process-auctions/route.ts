@@ -310,15 +310,10 @@ export async function POST(request: NextRequest) {
                         },
                         data: { is_active: false }
                     });
-
-                    // Ensure the remaining bidders' bids are active to keep competing.
-                    await tx.bid.updateMany({
-                        where: {
-                            userCardId: expiredTransaction.user_card_id,
-                            bidderId: { not: expiredTransaction.buyer_id }
-                        },
-                        data: { is_active: true }
-                    });
+                    // The remaining bidders' bids were never deactivated (they keep
+                    // their holds), so the auction just continues with them — no
+                    // reactivation needed. (Reactivating history would double-release
+                    // already-released holds → negative frozen balance.)
                 });
 
                 // Create expiration notifications
