@@ -94,7 +94,6 @@ export default function AdminUsersClient() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>("");
   const [editUser, setEditUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [rowLoading, setRowLoading] = useState<{ [key: number]: boolean }>({});
@@ -102,14 +101,10 @@ export default function AdminUsersClient() {
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const [fetchAttempts, setFetchAttempts] = useState<number>(0);
   const [selected, setSelected] = useState<number[]>([]);
-  const [roleFilter, setRoleFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
   const [activityLogUser, setActivityLogUser] = useState<User | null>(null);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [activityLogLoading, setActivityLogLoading] = useState<boolean>(false);
-  const [registeredAtStart, setRegisteredAtStart] = useState<string>("");
-  const [registeredAtEnd, setRegisteredAtEnd] = useState<string>("");
   const [confirmAction, setConfirmAction] = useState<{ action: string; callback: () => void } | null>(null);
 
   // Wallet Management States
@@ -327,28 +322,11 @@ export default function AdminUsersClient() {
     };
   }, [users]);
 
-  // Debounced Search
-
-  const filteredUsers = useMemo(() => {
-    let result = [...users];
-
-    // Filter out admin users - only show regular users
-    result = result.filter((user) => user && user.role !== "admin");
-
-    if (searchQuery) {
-      result = result.filter(
-        (user) =>
-          user &&
-          (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-    if (roleFilter) result = result.filter((user) => user && user.role === roleFilter);
-    if (statusFilter) result = result.filter((user) => user && user.subscriptionStatus === statusFilter);
-    if (registeredAtStart) result = result.filter((user) => user && new Date(user.registeredAt) >= new Date(registeredAtStart));
-    if (registeredAtEnd) result = result.filter((user) => user && new Date(user.registeredAt) <= new Date(registeredAtEnd));
-    return result.filter(Boolean);
-  }, [users, searchQuery, roleFilter, statusFilter, registeredAtStart, registeredAtEnd]);
+  // Only regular users are shown in this console (admins are excluded).
+  const filteredUsers = useMemo(
+    () => users.filter((user) => user && user.role !== "admin"),
+    [users]
+  );
 
   // Export Functionality
   const exportToCSV = () => {

@@ -183,7 +183,6 @@ export default function MarketplacePage() {
 
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [availableSets, setAvailableSets] = useState<{ name: string; count: number }[]>([]);
-    const [availableTypes, setAvailableTypes] = useState<{ name: string; count: number }[]>([]);
     const [availableRarities, setAvailableRarities] = useState<{ name: string; count: number }[]>([]); // FIXED: Added rarities
     const [priceRangeInfo, setPriceRangeInfo] = useState({ min: 0, max: 1000, avg: 50 }); // FIXED: Added price range info
 
@@ -313,7 +312,6 @@ export default function MarketplacePage() {
             // FIXED: Update filter options with proper structure
             if (data.filters) {
                 setAvailableSets(data.filters.sets || []);
-                setAvailableTypes(data.filters.types || []);
                 setAvailableRarities(data.filters.rarities || []);
                 setPriceRangeInfo(data.filters.price_range || { min: 0, max: 1000, avg: 50 });
 

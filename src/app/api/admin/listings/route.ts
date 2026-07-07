@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get listings without problematic includes
-    const [listings, totalCount] = await Promise.all([
+    const [listings] = await Promise.all([
       prisma.userCard.findMany({
         where,
         skip,

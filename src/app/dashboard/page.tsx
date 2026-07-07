@@ -25,7 +25,6 @@ import {
   Sell as SellIcon,
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import StatCard from '../components/StatCard';
 import PortfolioOverview, { PortfolioSummary, PortfolioTopItem } from '../components/dashboard/PortfolioOverview';
@@ -60,7 +59,6 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [stats, setStats] = useState<DashboardStats>({
     totalValue: 0,

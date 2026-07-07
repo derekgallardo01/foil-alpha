@@ -810,30 +810,6 @@ export default function AdminCardsClient() {
         setTimeout(() => editDialogRef.current?.focus(), 0);
     };
 
-    const handleAddCard = () => {
-        setEditCard({
-            id: 0,
-            name: "",
-            set_name: "",
-            set_number: "",
-            rarity: "Common",
-            card_type: "Pokemon",
-            subtype: "",
-            hp: undefined,
-            image_url: "",
-            small_image_url: "",
-            tcg_id: "",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            totalOwned: 0,
-            forSaleCount: 0,
-            soldCount: 0,
-            uniqueOwners: 0,
-        });
-        setValidationErrors({});
-        setTimeout(() => editDialogRef.current?.focus(), 0);
-    };
-
     const handleSaveCard = async () => {
         if (!editCard || !session) return;
 

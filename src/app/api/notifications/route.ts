@@ -21,27 +21,22 @@ export async function GET(request: NextRequest) {
             ...(unreadOnly ? { read: false } : {}),
         };
 
-        const [notifications, totalCount] = await Promise.all([
-            prisma.notification.findMany({
-                where: whereCondition,
-                orderBy: { created_at: 'desc' },
-                take: limit,
-                skip: offset,
-                select: {
-                    id: true,
-                    type: true,
-                    title: true,
-                    message: true,
-                    data: true,
-                    read: true,
-                    created_at: true,
-                    updated_at: true,
-                },
-            }),
-            prisma.notification.count({
-                where: whereCondition,
-            })
-        ]);
+        const notifications = await prisma.notification.findMany({
+            where: whereCondition,
+            orderBy: { created_at: 'desc' },
+            take: limit,
+            skip: offset,
+            select: {
+                id: true,
+                type: true,
+                title: true,
+                message: true,
+                data: true,
+                read: true,
+                created_at: true,
+                updated_at: true,
+            },
+        });
 
         // Return array directly for backward compatibility
         return NextResponse.json(notifications);

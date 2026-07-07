@@ -22,8 +22,6 @@ import type { Card, Listing, EnhancedListing } from './marketplace-client';
 
 // Price Comparison Component with Currency Support
 export function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === 'admin';
     const marketPrice = listing.card.market_price || 0;
     const userPrice = listing.fixed_price || listing.reserve_price || 0;
     const priceDiff = userPrice > 0 && marketPrice > 0 ?
@@ -99,7 +97,7 @@ export function PriceComparisonBox({ listing }: { listing: EnhancedListing }) {
 
 // Market Summary Component with Currency Support
 export function MarketSummarySection({ cards }: { cards: EnhancedListing[] }) {
-    const { convertPrice, formatPrice, selectedCurrency } = useCurrencyContext();
+    const { selectedCurrency } = useCurrencyContext();
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === 'admin';
 

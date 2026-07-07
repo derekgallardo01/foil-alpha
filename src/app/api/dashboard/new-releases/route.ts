@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         let where: any = {};
-        let orderBy: any = { created_at: 'desc' }; // Default ordering
 
         switch (type) {
             case 'recent':
@@ -23,7 +22,6 @@ export async function GET(request: NextRequest) {
                     },
                     market_price: { not: null, gt: 0 }
                 };
-                orderBy = { created_at: 'desc' };
                 break;
 
             case 'upcoming':
@@ -34,7 +32,6 @@ export async function GET(request: NextRequest) {
                         gte: thirtyDaysAgo
                     }
                 };
-                orderBy = { market_price: 'desc' };
                 break;
 
             case 'popular':
@@ -43,7 +40,6 @@ export async function GET(request: NextRequest) {
                     market_price: { not: null, gt: 0 },
                     view_count: { gt: 0 }
                 };
-                orderBy = { view_count: 'desc' };
                 break;
         }
 

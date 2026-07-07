@@ -258,7 +258,6 @@ export default function PurchaseConfirmationModal({
     if (!listingData) return null;
 
     const cardPrice = listingData.fixed_price || listingData.current_price || 0;
-    const isMarketplaceSale = listingData.type === 'CATALOG';
 
     return (
         <Dialog
