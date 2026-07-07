@@ -45,6 +45,7 @@ import { StatRowSkeleton } from "../../../components/ui/Skeletons";
 import ErrorState from "../../../components/ui/ErrorState";
 import { formatPrice } from "../../../lib/format";
 import { toCsv, downloadCsv } from "../../../lib/csv";
+import { hideBelowMd } from "../../../lib/responsive";
 
 interface AdminWallet {
     id: number;
@@ -348,9 +349,9 @@ export default function AdminWalletManagement() {
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Date</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Type</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Amount</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Balance After</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Description</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Rate</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', ...hideBelowMd }}>Balance After</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', ...hideBelowMd }}>Description</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', ...hideBelowMd }}>Rate</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -372,13 +373,13 @@ export default function AdminWalletManagement() {
                                                         }}>
                                                             <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{transaction.amount >= 0 ? '+' : ''}{formatPrice(transaction.amount)}</Typography>
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>
+                                                        <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', ...hideBelowMd }}>
                                                             <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{formatPrice(transaction.balance_after)}</Typography>
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.primary', maxWidth: 300, display: { xs: 'none', md: 'table-cell' } }}>
+                                                        <TableCell sx={{ color: 'text.primary', maxWidth: 300, ...hideBelowMd }}>
                                                             {transaction.description}
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', display: { xs: 'none', md: 'table-cell' } }}>
+                                                        <TableCell sx={{ color: 'text.secondary', ...hideBelowMd }}>
                                                             <Typography variant="mono" component="span">{transaction.commission_rate ? `${transaction.commission_rate}%` : '-'}</Typography>
                                                         </TableCell>
                                                     </TableRow>

@@ -40,6 +40,7 @@ import ErrorState from "../../../components/ui/ErrorState";
 import { formatPrice } from "../../../lib/format";
 import { toCsv, downloadCsv } from "../../../lib/csv";
 import { useRequireAuth } from "../../../lib/useRequireAuth";
+import { hideBelowMd } from "../../../lib/responsive";
 
 interface ReportData {
     commission_by_rarity: Array<{
@@ -314,10 +315,10 @@ export default function CommissionReports() {
                                                     <TableRow>
                                                         <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Month</TableCell>
                                                         <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Commissions</TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Marketplace Sales</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', ...hideBelowMd }}>Marketplace Sales</TableCell>
                                                         <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Total Revenue</TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Transactions</TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Growth</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', ...hideBelowMd }}>Transactions</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', ...hideBelowMd }}>Growth</TableCell>
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>
@@ -334,16 +335,16 @@ export default function CommissionReports() {
                                                                 <TableCell sx={{ color: 'success.main' }}>
                                                                     <Typography variant="mono" component="span">{formatPrice(item.commissions)}</Typography>
                                                                 </TableCell>
-                                                                <TableCell sx={{ color: 'info.main', display: { xs: 'none', md: 'table-cell' } }}>
+                                                                <TableCell sx={{ color: 'info.main', ...hideBelowMd }}>
                                                                     <Typography variant="mono" component="span">{formatPrice(item.marketplace_sales)}</Typography>
                                                                 </TableCell>
                                                                 <TableCell sx={{ color: 'text.primary', fontWeight: 'bold' }}>
                                                                     <Typography variant="mono" component="span">{formatPrice(item.total_revenue)}</Typography>
                                                                 </TableCell>
-                                                                <TableCell sx={{ color: 'text.secondary', display: { xs: 'none', md: 'table-cell' } }}>
+                                                                <TableCell sx={{ color: 'text.secondary', ...hideBelowMd }}>
                                                                     <Typography variant="mono" component="span">{item.transaction_count}</Typography>
                                                                 </TableCell>
-                                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                                                <TableCell sx={hideBelowMd}>
                                                                     {index < reportData.monthly_breakdown.length - 1 && (
                                                                         <Chip
                                                                             label={`${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`}

@@ -38,6 +38,7 @@ import StatCard from "../../components/StatCard";
 import { StatRowSkeleton } from "../../components/ui/Skeletons";
 import { formatPrice } from "../../lib/format";
 import { useRequireAuth } from "../../lib/useRequireAuth";
+import { hideBelowMd } from "../../lib/responsive";
 
 interface Rarity {
     id: number;
@@ -307,8 +308,8 @@ export default function CommissionManagement() {
                                             <TableHead>
                                                 <TableRow>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Rarity</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Symbol</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Color</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', ...hideBelowMd }}>Symbol</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', ...hideBelowMd }}>Color</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Commission Rate (%)</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Status</TableCell>
                                                 </TableRow>
@@ -319,10 +320,10 @@ export default function CommissionManagement() {
                                                         <TableCell sx={{ color: 'text.primary' }}>
                                                             {rarity.name}
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', display: { xs: 'none', md: 'table-cell' } }}>
+                                                        <TableCell sx={{ color: 'text.secondary', ...hideBelowMd }}>
                                                             {rarity.symbol || '-'}
                                                         </TableCell>
-                                                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                                        <TableCell sx={hideBelowMd}>
                                                             {rarity.color ? (
                                                                 <Box
                                                                     sx={{

@@ -43,6 +43,7 @@ import StatCard from "../../../components/StatCard";
 import EmptyState from "../../../components/ui/EmptyState";
 import ErrorState from "../../../components/ui/ErrorState";
 import { StatRowSkeleton } from "../../../components/ui/Skeletons";
+import { hideBelowMd } from "../../../lib/responsive";
 
 interface ActivityLog {
     id: number;
@@ -295,8 +296,8 @@ export default function UserActivityPage() {
                                 <TableRow>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>User</TableCell>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Action</TableCell>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', display: { xs: 'none', md: 'table-cell' } }}>Timestamp</TableCell>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', display: { xs: 'none', md: 'table-cell' } }}>Details</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', ...hideBelowMd }}>Timestamp</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', ...hideBelowMd }}>Details</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -325,12 +326,12 @@ export default function UserActivityPage() {
                                                 size="small"
                                             />
                                         </TableCell>
-                                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                        <TableCell sx={hideBelowMd}>
                                             <Typography variant="mono" color="text.secondary">
                                                 {format(new Date(activity.timestamp), 'MMM dd, yyyy HH:mm:ss')}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                        <TableCell sx={hideBelowMd}>
                                             {activity.details && (
                                                 <Tooltip title={JSON.stringify(activity.details, null, 2)}>
                                                     <Typography variant="caption" sx={{ cursor: 'pointer' }}>

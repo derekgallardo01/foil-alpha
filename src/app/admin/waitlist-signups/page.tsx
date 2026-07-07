@@ -21,6 +21,7 @@ import { toast } from "react-toastify";
 import AppShell from "../../components/AppShell";
 import PageHeader from "../../components/ui/PageHeader";
 import ErrorState from "../../components/ui/ErrorState";
+import { hideBelowMd } from "../../lib/responsive";
 
 // Define the WaitlistEntry interface
 interface WaitlistEntry {
@@ -164,9 +165,9 @@ export default function WaitlistSignupsPage() {
                     <TableCell sx={{ color: "text.secondary" }}>Name</TableCell>
                     <TableCell sx={{ color: "text.secondary" }}>Email</TableCell>
                     <TableCell sx={{ color: "text.secondary" }}>Status</TableCell>
-                    <TableCell sx={{ color: "text.secondary", display: { xs: 'none', md: 'table-cell' } }}>Source</TableCell>
-                    <TableCell sx={{ color: "text.secondary", display: { xs: 'none', md: 'table-cell' } }}>Created At</TableCell>
-                    <TableCell sx={{ color: "text.secondary", display: { xs: 'none', md: 'table-cell' } }}>Metadata</TableCell>
+                    <TableCell sx={{ color: "text.secondary", ...hideBelowMd }}>Source</TableCell>
+                    <TableCell sx={{ color: "text.secondary", ...hideBelowMd }}>Created At</TableCell>
+                    <TableCell sx={{ color: "text.secondary", ...hideBelowMd }}>Metadata</TableCell>
                     <TableCell sx={{ color: "text.secondary" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -199,8 +200,8 @@ export default function WaitlistSignupsPage() {
                           {entry.status}
                         </Box>
                       </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{entry.source}</TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      <TableCell sx={hideBelowMd}>{entry.source}</TableCell>
+                      <TableCell sx={hideBelowMd}>
                         {new Date(entry.created_at).toLocaleString("en-US", {
                           timeZone: "America/New_York",
                           year: "numeric",
@@ -211,7 +212,7 @@ export default function WaitlistSignupsPage() {
                           second: "numeric",
                         })}
                       </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      <TableCell sx={hideBelowMd}>
                         <Box
                           sx={{
                             px: 1,

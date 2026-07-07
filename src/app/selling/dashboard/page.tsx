@@ -56,6 +56,7 @@ import { CardGridSkeleton } from '../../components/ui/Skeletons';
 import { getRarityColor } from '../../lib/rarity';
 import { formatDuration, formatDateTime } from '../../lib/format';
 import { useRequireAuth } from '../../lib/useRequireAuth';
+import { hideBelowMd } from "../../lib/responsive";
 
 interface Card {
     id: number;
@@ -543,9 +544,9 @@ export default function SellingDashboard() {
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell>Card</TableCell>
-                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Sale Type</TableCell>
+                                                <TableCell sx={hideBelowMd}>Sale Type</TableCell>
                                                 <TableCell align="right">Sale Price</TableCell>
-                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Buyer</TableCell>
+                                                <TableCell sx={hideBelowMd}>Buyer</TableCell>
                                                 <TableCell>Date Sold</TableCell>
                                             </TableRow>
                                         </TableHead>
@@ -583,7 +584,7 @@ export default function SellingDashboard() {
                                                             </Box>
                                                         </Box>
                                                     </TableCell>
-                                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                                    <TableCell sx={hideBelowMd}>
                                                         <Chip
                                                             label={getTransactionTypeLabel(item.sale_type)}
                                                             color="primary"
@@ -596,7 +597,7 @@ export default function SellingDashboard() {
                                                             {formatPrice(item.sale_price)}
                                                         </Typography>
                                                     </TableCell>
-                                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                                    <TableCell sx={hideBelowMd}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                             <PersonIcon fontSize="small" />
                                                             <Typography variant="body2">

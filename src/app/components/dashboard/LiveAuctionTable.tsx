@@ -26,6 +26,7 @@ import {
 import { useRouter } from 'next/navigation';
 import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
+import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
 
 interface LiveAuction {
     id: number;
@@ -186,12 +187,12 @@ export default function LiveAuctionTable({
                     <TableHead>
                         <TableRow>
                             <TableCell sx={{ bgcolor: 'background.paper' }}>Card</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Seller</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper', display: { xs: 'none', sm: 'table-cell' } }}>Condition</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', ...hideBelowMd }}>Seller</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', ...hideBelowSm }}>Condition</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>Current Bid</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Bids</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Time Left</TableCell>
-                            <TableCell align="center" sx={{ bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Watching</TableCell>
+                            <TableCell align="center" sx={{ bgcolor: 'background.paper', ...hideBelowMd }}>Watching</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Action</TableCell>
                         </TableRow>
                     </TableHead>
@@ -232,10 +233,10 @@ export default function LiveAuctionTable({
                                             </Box>
                                         </Box>
                                     </TableCell>
-                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                    <TableCell sx={hideBelowMd}>
                                         <Typography variant="body2">{auction.seller}</Typography>
                                     </TableCell>
-                                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                                    <TableCell sx={hideBelowSm}>
                                         <Chip
                                             label={auction.condition || 'Unknown'}
                                             size="small"
@@ -270,7 +271,7 @@ export default function LiveAuctionTable({
                                             </Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                    <TableCell align="center" sx={hideBelowMd}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                                             <Visibility fontSize="small" sx={{ color: 'text.secondary' }} />
                                             <Typography variant="body2">
