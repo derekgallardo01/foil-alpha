@@ -174,6 +174,15 @@ export async function POST(request: NextRequest) {
 
                 // Winner found - create pending transaction for confirmation
                 const result = await prisma.$transaction(async (tx) => {
+                    // Atomically CLAIM the card (end the listing). If a concurrent
+                    // auction-end already claimed it, skip — prevents two pending
+                    // transactions for one card (which would let it be sold twice).
+                    const cardClaimed = await tx.userCard.updateMany({
+                        where: { id: auction.id, is_sold: false, is_for_sale: true },
+                        data: { is_for_sale: false }
+                    });
+                    if (cardClaimed.count !== 1) return null;
+
                     // Create pending transaction for winner to confirm
                     const pendingTransaction = await tx.transaction.create({
                         data: {
@@ -187,11 +196,10 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
-                    // Mark auction as ended but not sold yet
+                    // Record the pending-transaction ref on the (already-claimed) card.
                     await tx.userCard.update({
                         where: { id: auction.id },
                         data: {
-                            is_for_sale: false, // Auction ended
                             notes: `Pending winner confirmation - Transaction #${pendingTransaction.id}`
                         }
                     });
@@ -212,6 +220,8 @@ export async function POST(request: NextRequest) {
                         losingBidders: losingBids.map(bid => bid.bidderId)
                     };
                 });
+
+                if (!result) continue; // card was already claimed by another auction-end
 
                 // Create notifications
                 try {
@@ -272,16 +282,19 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
-                await prisma.$transaction(async (tx) => {
-                    // Mark transaction as expired
-                    await tx.transaction.update({
-                        where: { id: expiredTransaction.id },
+                const settled = await prisma.$transaction(async (tx) => {
+                    // Atomically CLAIM the transaction (PENDING->EXPIRED). Gates a
+                    // race with force-complete or the separate expired-transactions
+                    // cron (same expired-PENDING population), so it settles once.
+                    const claimed = await tx.transaction.updateMany({
+                        where: { id: expiredTransaction.id, status: 'PENDING_BUYER_CONFIRMATION' },
                         data: {
                             status: 'EXPIRED',
                             transaction_type: 'AUCTION_WIN_EXPIRED',
                             notes: 'Purchase confirmation expired after 24 hours'
                         }
                     });
+                    if (claimed.count !== 1) return false; // already settled elsewhere
 
                     // Reset card to available for sale (relist)
                     await tx.userCard.update({
@@ -314,7 +327,10 @@ export async function POST(request: NextRequest) {
                     // their holds), so the auction just continues with them — no
                     // reactivation needed. (Reactivating history would double-release
                     // already-released holds → negative frozen balance.)
+                    return true;
                 });
+
+                if (!settled) continue; // another path already settled this one
 
                 // Create expiration notifications
                 try {

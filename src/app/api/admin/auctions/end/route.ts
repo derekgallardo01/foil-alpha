@@ -121,6 +121,15 @@ export async function POST(request: NextRequest) {
 
         // Winner found - create pending transaction
         const result = await prisma.$transaction(async (tx) => {
+            // Atomically CLAIM the card (end the listing). If a concurrent
+            // auction-end already claimed it, skip — prevents two pending
+            // transactions for one card (which would let it be sold twice).
+            const cardClaimed = await tx.userCard.updateMany({
+                where: { id: auction_id, is_sold: false, is_for_sale: true },
+                data: { is_for_sale: false }
+            });
+            if (cardClaimed.count !== 1) return null;
+
             // Create pending transaction for winner confirmation
             const pendingTransaction = await tx.transaction.create({
                 data: {
@@ -134,11 +143,10 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            // Mark auction as ended
+            // Record the pending-transaction ref on the (already-claimed) card.
             await tx.userCard.update({
                 where: { id: auction_id },
                 data: {
-                    is_for_sale: false,
                     notes: `Manually ended by admin - Pending winner confirmation (Transaction #${pendingTransaction.id})`
                 }
             });
@@ -159,6 +167,10 @@ export async function POST(request: NextRequest) {
                 losingBidders: losingBids.map(bid => bid.bidderId)
             };
         });
+
+        if (!result) {
+            return NextResponse.json({ error: 'Auction is no longer available (already ended)' }, { status: 409 });
+        }
 
         // Send notifications
         try {
