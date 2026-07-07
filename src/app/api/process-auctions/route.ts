@@ -147,10 +147,14 @@ export async function POST(request: NextRequest) {
                 if (Number(highestBid.amount) < reservePrice) {
                     // Reserve not met - end auction, releasing every bidder's escrow.
                     await prisma.$transaction(async (tx) => {
-                        await tx.userCard.update({
-                            where: { id: auction.id },
+                        // Atomically CLAIM the card first so two concurrent ends can't
+                        // both release the same holds (which would double-decrement
+                        // frozen_balance -> negative).
+                        const claimed = await tx.userCard.updateMany({
+                            where: { id: auction.id, is_sold: false, is_for_sale: true },
                             data: { is_for_sale: false }
                         });
+                        if (claimed.count !== 1) return; // already ended by another run
 
                         await releaseBidHolds(tx, { auctionId: auction.id });
                         await tx.bid.updateMany({
@@ -311,7 +315,7 @@ export async function POST(request: NextRequest) {
                     // The winner let the 24h window lapse: release their escrow hold
                     // and drop their bid. The auction relists and continues with the
                     // remaining bidders (whose holds stay put).
-                    await tx.userWallet.update({
+                    await tx.userWallet.updateMany({
                         where: { user_id: expiredTransaction.buyer_id },
                         data: { frozen_balance: { decrement: Number(expiredTransaction.amount) } }
                     });

@@ -89,13 +89,16 @@ export async function POST(request: NextRequest) {
         if (Number(highestBid.amount) < reservePrice) {
             // Reserve not met
             await prisma.$transaction(async (tx) => {
-                await tx.userCard.update({
-                    where: { id: auction_id },
+                // Atomically CLAIM the card first so two concurrent ends can't both
+                // release the same holds (double-decrement frozen_balance -> negative).
+                const claimed = await tx.userCard.updateMany({
+                    where: { id: auction_id, is_sold: false, is_for_sale: true },
                     data: {
                         is_for_sale: false,
                         notes: `Manually ended by admin ${user.name} - Reserve not met (${reservePrice})`
                     }
                 });
+                if (claimed.count !== 1) return; // already ended by another run
 
                 // Reserve not met: no sale — release every bidder's escrow hold,
                 // then deactivate all bids.
