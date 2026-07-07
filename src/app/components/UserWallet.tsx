@@ -201,7 +201,7 @@ export default function UserWallet() {
     return (
         <Card sx={{ mb: 3 }}>
             <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AccountBalanceWallet sx={{ color: 'primary.main', fontSize: 28 }} />
                         <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 'bold' }}>

@@ -1,6 +1,7 @@
 "use client";
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Button } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, useMediaQuery } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { History } from "@mui/icons-material";
 import PriceChart from "./PriceChart";
 
@@ -21,16 +22,18 @@ export default function PriceHistoryModal({
   userCardId?: number;
   cardName: string;
 }) {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth fullScreen={fullScreen}>
       <DialogTitle>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <History />
           Price History — {cardName}
         </Box>
       </DialogTitle>
-      <DialogContent sx={{ height: 600 }}>
-        <PriceChart cardId={cardId} userCardId={userCardId} height={550} showUserPrice autoRefresh={false} />
+      <DialogContent sx={{ height: { xs: "auto", sm: 600 } }}>
+        <PriceChart cardId={cardId} userCardId={userCardId} height={fullScreen ? 360 : 550} showUserPrice autoRefresh={false} />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

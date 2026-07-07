@@ -163,7 +163,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
 
     return (
         <Paper variant="outlined" sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Whatshot sx={{ color: 'primary.main' }} />
                     Most Popular Cards

@@ -637,7 +637,7 @@ export default function MarketplacePage() {
 
             {/* FIXED: Enhanced Search & Filters Section */}
             <Paper variant="outlined" sx={{ p: 3, mb: 3, border: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
                         <Typography variant="h6">Search & Filters</Typography>

@@ -155,7 +155,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
 
     return (
         <Paper variant="outlined" sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <NewReleases sx={{ color: 'primary.main' }} />
                     New Releases & Pre-orders

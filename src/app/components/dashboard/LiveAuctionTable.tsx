@@ -136,7 +136,7 @@ export default function LiveAuctionTable({
 
     return (
         <Paper variant="outlined" sx={{ p: 3, height, border: 1, borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Gavel sx={{ color: 'primary.main' }} />
                     Live Auctions
@@ -150,7 +150,7 @@ export default function LiveAuctionTable({
                     />
                 </Typography>
 
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <Button
                         size="small"
                         color="primary"
@@ -186,12 +186,12 @@ export default function LiveAuctionTable({
                     <TableHead>
                         <TableRow>
                             <TableCell sx={{ bgcolor: 'background.paper' }}>Card</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper' }}>Seller</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper' }}>Condition</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Seller</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', display: { xs: 'none', sm: 'table-cell' } }}>Condition</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>Current Bid</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Bids</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Time Left</TableCell>
-                            <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Watching</TableCell>
+                            <TableCell align="center" sx={{ bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Watching</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Action</TableCell>
                         </TableRow>
                     </TableHead>
@@ -232,10 +232,10 @@ export default function LiveAuctionTable({
                                             </Box>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                         <Typography variant="body2">{auction.seller}</Typography>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                                         <Chip
                                             label={auction.condition || 'Unknown'}
                                             size="small"
@@ -270,7 +270,7 @@ export default function LiveAuctionTable({
                                             </Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell align="center">
+                                    <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                                             <Visibility fontSize="small" sx={{ color: 'text.secondary' }} />
                                             <Typography variant="body2">

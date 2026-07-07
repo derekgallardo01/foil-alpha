@@ -204,7 +204,7 @@ export default function TrendingCardsTable({
                     Trending Cards
                 </Typography>
 
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <ToggleButtonGroup
                         value={trendType}
                         exclusive
@@ -295,11 +295,11 @@ export default function TrendingCardsTable({
                         <TableRow>
                             <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 50 }}>#</TableCell>
                             <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Card</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Set</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Rarity</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', display: { xs: 'none', md: 'table-cell' } }}>Set</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', display: { xs: 'none', sm: 'table-cell' } }}>Rarity</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Price</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Change</TableCell>
-                            <TableCell align="center" sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 100 }}>Trend</TableCell>
+                            <TableCell align="center" sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 100, display: { xs: 'none', md: 'table-cell' } }}>Trend</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
                                 {trendType === 'volume' ? 'Volume' : trendType === 'popularity' ? 'Views' : 'Vol 24h'}
                             </TableCell>
@@ -370,12 +370,12 @@ export default function TrendingCardsTable({
                                             </Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                         <Typography variant="body2" color="text.secondary">
                                             {card.set_name}
                                         </Typography>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                                         <Chip
                                             label={card.rarity}
                                             size="small"
@@ -409,7 +409,7 @@ export default function TrendingCardsTable({
                                             </Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell align="center" sx={{ p: 1 }}>
+                                    <TableCell align="center" sx={{ p: 1, display: { xs: 'none', md: 'table-cell' } }}>
                                         <Box sx={{ width: 80, height: 30 }}>
                                             <Line data={getSparklineData(card.sparkline)} options={sparklineOptions} />
                                         </Box>

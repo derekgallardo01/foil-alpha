@@ -212,7 +212,7 @@ const Watchlist = () => {
           borderColor: "divider",
         }}
       >
-        <Typography variant="h2" sx={{ marginBottom: "20px", fontSize: "2rem", color: "primary.main" }}>
+        <Typography variant="h2" sx={{ marginBottom: "20px", fontSize: { xs: "1.5rem", sm: "2rem" }, color: "primary.main" }}>
           Product Watchlist
         </Typography>
         <Button

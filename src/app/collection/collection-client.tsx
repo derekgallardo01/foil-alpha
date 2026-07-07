@@ -546,6 +546,7 @@ export default function CollectionPage() {
                                         size="small"
                                         onChange={(_e, v) => v && setTypeFilter(v as ItemTypeFilter)}
                                         aria-label="Filter by item type"
+                                        sx={{ flexWrap: 'wrap' }}
                                     >
                                         <ToggleButton value="all">All ({summary?.totalLines ?? userCards.length})</ToggleButton>
                                         <ToggleButton value="cards">Cards ({summary ? summary.cardCount - summary.gradedCount : 0})</ToggleButton>
