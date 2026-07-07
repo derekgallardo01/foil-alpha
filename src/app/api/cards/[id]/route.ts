@@ -29,20 +29,37 @@ export async function GET(request: NextRequest) {
       orderBy: { created_at: "desc" },
     });
 
-    const sellerIds = [...new Set(listings.map((l) => l.owner_id))];
     const listingIds = listings.map((l) => l.id);
-    const [sellers, activeBids] = await Promise.all([
-      sellerIds.length
-        ? prisma.user.findMany({ where: { id: { in: sellerIds } }, select: { id: true, name: true } })
-        : [],
+
+    // Every copy of this card (across all owners) — for realized sale history.
+    const copyIds = (await prisma.userCard.findMany({ where: { card_id: id }, select: { id: true } })).map((c) => c.id);
+
+    const [activeBids, sales] = await Promise.all([
       listingIds.length
         ? prisma.bid.findMany({
             where: { userCardId: { in: listingIds }, is_active: true },
             select: { userCardId: true, amount: true },
           })
         : [],
+      copyIds.length
+        ? prisma.transaction.findMany({
+            where: { user_card_id: { in: copyIds }, status: "COMPLETED" },
+            orderBy: { updated_at: "desc" },
+            take: 15,
+          })
+        : [],
     ]);
-    const sellerById = new Map(sellers.map((s) => [s.id, s]));
+
+    // One user lookup covering listing sellers + both parties of each sale.
+    const userIds = [
+      ...new Set([...listings.map((l) => l.owner_id), ...sales.flatMap((s) => [s.buyer_id, s.seller_id])]),
+    ];
+    const users = userIds.length
+      ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })
+      : [];
+    const userById = new Map(users.map((u) => [u.id, u]));
+    const nameOf = (uid: number) => userById.get(uid)?.name ?? "Unknown";
+
     const highest = new Map<number, number>();
     const counts = new Map<number, number>();
     for (const b of activeBids) {
@@ -76,9 +93,17 @@ export async function GET(request: NextRequest) {
         fixed_price: l.fixed_price != null ? Number(l.fixed_price) : null,
         reserve_price: l.reserve_price != null ? Number(l.reserve_price) : null,
         auction_end: l.auction_end,
-        seller: sellerById.get(l.owner_id)?.name ?? "Unknown",
+        seller: nameOf(l.owner_id),
         current_bid: highest.get(l.id) ?? null,
         bid_count: counts.get(l.id) ?? 0,
+      })),
+      sales: sales.map((s) => ({
+        id: s.id,
+        amount: Number(s.amount),
+        seller: nameOf(s.seller_id),
+        buyer: nameOf(s.buyer_id),
+        type: s.transaction_type,
+        date: s.updated_at,
       })),
     });
   } catch (error) {
