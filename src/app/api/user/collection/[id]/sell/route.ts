@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '../../../../../lib/auth';
 import { prisma } from '../../../../../lib/prisma';
 import { calculateCommission } from '../../../../../lib/commission-utils';
+import { notifyWatchersOnPriceDrop } from '../../../../../lib/notification';
 
 // POST /api/user/collection/[id]/sell - List a card for sale
 export async function POST(
@@ -183,6 +184,17 @@ export async function POST(
             where: { id: parseInt(userCardId) },
             data: updateData
         });
+
+        // If this re-priced an already-live FIXED listing downward, alert watchers.
+        // `userCard` is the pre-update snapshot, so it holds the old price/state.
+        if (sale_type === 'FIXED' && userCard.is_for_sale && userCard.sale_type === 'FIXED') {
+            try {
+                const oldFixed = userCard.fixed_price != null ? Number(userCard.fixed_price) : null;
+                await notifyWatchersOnPriceDrop(parseInt(userCardId), oldFixed, Number(fixed_price));
+            } catch (e) {
+                console.error('Price-drop alert failed:', e);
+            }
+        }
 
         console.log('✅ Card listed successfully with commission info:', {
             id: updatedCard.id,
