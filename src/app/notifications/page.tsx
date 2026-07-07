@@ -236,6 +236,7 @@ export default function NotificationsPage() {
                 router.push('/collection');
                 break;
             case 'BID_OUTBID':
+            case 'AUCTION_ENDING':
                 router.push(
                     notification.data?.user_card_id
                         ? `/marketplace?auction=${notification.data.user_card_id}`

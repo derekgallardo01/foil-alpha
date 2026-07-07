@@ -5,7 +5,8 @@ import { requireAdmin } from '../../lib/auth';
 import {
     createAuctionWonNotifications,
     createAuctionLostNotifications,
-    createPurchaseExpiredNotifications
+    createPurchaseExpiredNotifications,
+    createNotification
 } from '../../lib/notification';
 import { releaseBidHolds } from '../../lib/wallet-settlement';
 import { emitAppEvent } from '../../lib/events';
@@ -94,6 +95,60 @@ export async function POST(request: NextRequest) {
         const expiredCardMap = new Map(expiredCards.map(c => [c.id, c]));
         const expiredBuyerMap = new Map(expiredBuyers.map(b => [b.id, b]));
         const expiredSellerMap = new Map(expiredSellers.map(s => [s.id, s]));
+
+        // ── Ending-soon alerts ───────────────────────────────────────────────
+        // Notify watchers once when a watched auction is within an hour of ending.
+        // Money-free: this only creates notifications; `ending_soon_notified` is
+        // claimed atomically so each auction alerts at most once.
+        try {
+            const soon = new Date(Date.now() + 60 * 60 * 1000);
+            const endingSoon = await prisma.userCard.findMany({
+                where: {
+                    sale_type: 'AUCTION',
+                    is_for_sale: true,
+                    is_sold: false,
+                    ending_soon_notified: false,
+                    auction_end: { gt: new Date(), lte: soon },
+                },
+            });
+            let notified = 0;
+            if (endingSoon.length > 0) {
+                const soonCardIds = [...new Set(endingSoon.map((a) => a.card_id))];
+                const soonCards = new Map(
+                    (await prisma.card.findMany({ where: { id: { in: soonCardIds } }, select: { id: true, name: true } }))
+                        .map((c) => [c.id, c.name] as const)
+                );
+                for (const auction of endingSoon) {
+                    const claimed = await prisma.userCard.updateMany({
+                        where: { id: auction.id, ending_soon_notified: false },
+                        data: { ending_soon_notified: true },
+                    });
+                    if (claimed.count !== 1) continue; // another run got it
+                    const watchers = await prisma.watchedListing.findMany({
+                        where: { user_card_id: auction.id },
+                        select: { user_id: true },
+                    });
+                    const cardName = soonCards.get(auction.card_id) ?? 'a card';
+                    for (const w of watchers) {
+                        try {
+                            await createNotification({
+                                user_id: w.user_id,
+                                type: 'AUCTION_ENDING',
+                                title: 'Auction ending soon',
+                                message: `An auction you're watching — ${cardName} — ends within the hour.`,
+                                data: { card_name: cardName, user_card_id: auction.id },
+                            });
+                            notified++;
+                        } catch (e) {
+                            console.error('Ending-soon notify failed:', e);
+                        }
+                    }
+                }
+            }
+            if (notified > 0) emitAppEvent({ type: 'notification' });
+        } catch (e) {
+            console.error('Ending-soon pass failed:', e);
+        }
 
         const results = [];
 

@@ -24,6 +24,7 @@ import GradientHeading from "../../components/ui/GradientHeading";
 import EmptyState from "../../components/ui/EmptyState";
 import ErrorState from "../../components/ui/ErrorState";
 import PriceChart from "../../components/PriceChart";
+import WatchButton from "../../components/WatchButton";
 import { formatPrice, formatTimeLeft, formatDateTime } from "../../lib/format";
 import { getRarityHex } from "../../lib/rarity";
 
@@ -37,6 +38,7 @@ interface Listing {
   seller_id: number;
   seller: string;
   seller_rating: { average: number; count: number } | null;
+  watching: boolean;
   current_bid: number | null;
   bid_count: number;
 }
@@ -231,19 +233,22 @@ export default function CardDetailPage() {
                                 {isAuction && l.auction_end ? formatTimeLeft(l.auction_end) : "—"}
                               </TableCell>
                               <TableCell align="right">
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  onClick={() =>
-                                    router.push(
-                                      isAuction
-                                        ? `/marketplace?auction=${l.user_card_id}`
-                                        : `/marketplace?search=${encodeURIComponent(data.card.name)}`
-                                    )
-                                  }
-                                >
-                                  {isAuction ? "Bid" : "Buy"}
-                                </Button>
+                                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", alignItems: "center" }}>
+                                  <WatchButton userCardId={l.user_card_id} initialWatching={l.watching} />
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    onClick={() =>
+                                      router.push(
+                                        isAuction
+                                          ? `/marketplace?auction=${l.user_card_id}`
+                                          : `/marketplace?search=${encodeURIComponent(data.card.name)}`
+                                      )
+                                    }
+                                  >
+                                    {isAuction ? "Bid" : "Buy"}
+                                  </Button>
+                                </Box>
                               </TableCell>
                             </TableRow>
                           );

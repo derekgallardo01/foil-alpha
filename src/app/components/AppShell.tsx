@@ -34,6 +34,7 @@ import {
   Notifications as NotificationsIcon,
   Sell as SellIcon,
   LocalOffer as MyBidsIcon,
+  Favorite as WatchingIcon,
   ReceiptLong as PurchasesIcon,
   AdminPanelSettings as AdminIcon,
   People as PeopleIcon,
@@ -63,7 +64,8 @@ type NavSection = { heading?: string; items: NavItem[] };
 const USER_NAV: NavItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
   { label: "Marketplace", path: "/marketplace", icon: <StorefrontIcon /> },
-  { label: "Watchlist", path: "/watchlist", icon: <WatchIcon /> },
+  { label: "Watching", path: "/watching", icon: <WatchingIcon /> },
+  { label: "Restock Tracker", path: "/watchlist", icon: <WatchIcon /> },
   { label: "Collection", path: "/collection", icon: <CollectionsIcon /> },
   { label: "Wallet", path: "/wallet", icon: <WalletIcon /> },
   { label: "My Sales", path: "/selling/dashboard", icon: <SellIcon /> },
