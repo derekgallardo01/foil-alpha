@@ -26,7 +26,8 @@ import {
     Tab,
     Badge,
     ToggleButton,
-    ToggleButtonGroup
+    ToggleButtonGroup,
+    InputAdornment
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import {
@@ -34,7 +35,10 @@ import {
     Warning,
     ShoppingCart,
     PriceCheck,
-    Collections as CollectionsIcon
+    Collections as CollectionsIcon,
+    Search as SearchIcon,
+    GridView as GridViewIcon,
+    ViewList as ViewListIcon
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import AppShell from "../components/AppShell";
@@ -50,6 +54,7 @@ import { useRequireAuth } from "../lib/useRequireAuth";
 import EnhancedCardDisplay from './EnhancedCardDisplay';
 import CollectionAnalytics from './CollectionAnalytics';
 import BulkPriceUpdateModal from './BulkPriceUpdateModal';
+import CollectionListView from './CollectionListView';
 
 export interface UserCard {
     id: number;
@@ -132,6 +137,8 @@ export default function CollectionPage() {
     const [selectedCardsForUpdate, setSelectedCardsForUpdate] = useState<number[]>([]);
     const [collectionSortBy, setCollectionSortBy] = useState('newest');
     const [typeFilter, setTypeFilter] = useState<ItemTypeFilter>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [summary, setSummary] = useState<CollectionSummary | null>(null);
     const [sellData, setSellData] = useState<SellDialogData>({
         userCardId: 0,
@@ -390,18 +397,21 @@ export default function CollectionPage() {
     }, [enhancedUserCards, collectionSortBy]);
 
     const visibleCards = useMemo(() => {
-        switch (typeFilter) {
-            case 'cards':
-                return sortedUserCards.filter((c) => c.card.product_type !== 'SEALED' && !c.is_graded);
-            case 'sealed':
-                return sortedUserCards.filter((c) => c.card.product_type === 'SEALED');
-            case 'graded':
-                return sortedUserCards.filter((c) => c.is_graded);
-            case 'all':
-            default:
-                return sortedUserCards;
+        let list = sortedUserCards;
+        if (typeFilter === 'cards') list = list.filter((c) => c.card.product_type !== 'SEALED' && !c.is_graded);
+        else if (typeFilter === 'sealed') list = list.filter((c) => c.card.product_type === 'SEALED');
+        else if (typeFilter === 'graded') list = list.filter((c) => c.is_graded);
+
+        const q = searchQuery.trim().toLowerCase();
+        if (q) {
+            list = list.filter((c) =>
+                c.card.name.toLowerCase().includes(q) ||
+                (c.card.set_name?.toLowerCase().includes(q) ?? false) ||
+                (c.card.rarity?.toLowerCase().includes(q) ?? false)
+            );
         }
-    }, [sortedUserCards, typeFilter]);
+        return list;
+    }, [sortedUserCards, typeFilter, searchQuery]);
 
     if (loading) {
         return (
@@ -515,6 +525,21 @@ export default function CollectionPage() {
                         ) : (
                             <>
                                 <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <TextField
+                                        size="small"
+                                        placeholder="Search name, set, rarity…"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{ minWidth: { xs: '100%', sm: 240 } }}
+                                    />
+
                                     <ToggleButtonGroup
                                         value={typeFilter}
                                         exclusive
@@ -528,7 +553,7 @@ export default function CollectionPage() {
                                         <ToggleButton value="sealed">Sealed ({summary?.sealedCount ?? 0})</ToggleButton>
                                     </ToggleButtonGroup>
 
-                                    <FormControl size="small" sx={{ minWidth: 180, ml: { sm: 'auto' } }}>
+                                    <FormControl size="small" sx={{ minWidth: 170, ml: { sm: 'auto' } }}>
                                         <InputLabel sx={{ color: 'text.secondary' }}>Sort By</InputLabel>
                                         <Select
                                             value={collectionSortBy}
@@ -544,6 +569,17 @@ export default function CollectionPage() {
                                         </Select>
                                     </FormControl>
 
+                                    <ToggleButtonGroup
+                                        value={viewMode}
+                                        exclusive
+                                        size="small"
+                                        onChange={(_e, v) => v && setViewMode(v)}
+                                        aria-label="View mode"
+                                    >
+                                        <ToggleButton value="grid" aria-label="Grid view"><GridViewIcon fontSize="small" /></ToggleButton>
+                                        <ToggleButton value="list" aria-label="List view"><ViewListIcon fontSize="small" /></ToggleButton>
+                                    </ToggleButtonGroup>
+
                                     {selectedCardsForUpdate.length > 0 && (
                                         <Button
                                             variant="outlined"
@@ -557,16 +593,32 @@ export default function CollectionPage() {
                                 </Box>
 
                                 {visibleCards.length === 0 ? (
-                                    <EmptyState
-                                        icon={<CollectionsIcon />}
-                                        title={
-                                            typeFilter === 'cards' ? 'No raw cards'
-                                                : typeFilter === 'sealed' ? 'No sealed products'
-                                                : typeFilter === 'graded' ? 'No graded cards'
-                                                : 'No items'
-                                        }
-                                        description="Try a different filter to see the rest of your collection."
-                                        action={<Button variant="outlined" onClick={() => setTypeFilter('all')}>Show all</Button>}
+                                    searchQuery.trim() ? (
+                                        <EmptyState
+                                            icon={<SearchIcon />}
+                                            title={`No matches for “${searchQuery.trim()}”`}
+                                            description="Try a different search term or filter."
+                                            action={<Button variant="outlined" onClick={() => setSearchQuery('')}>Clear search</Button>}
+                                        />
+                                    ) : (
+                                        <EmptyState
+                                            icon={<CollectionsIcon />}
+                                            title={
+                                                typeFilter === 'cards' ? 'No raw cards'
+                                                    : typeFilter === 'sealed' ? 'No sealed products'
+                                                    : typeFilter === 'graded' ? 'No graded cards'
+                                                    : 'No items'
+                                            }
+                                            description="Try a different filter to see the rest of your collection."
+                                            action={<Button variant="outlined" onClick={() => setTypeFilter('all')}>Show all</Button>}
+                                        />
+                                    )
+                                ) : viewMode === 'list' ? (
+                                    <CollectionListView
+                                        cards={visibleCards}
+                                        onShowPriceHistory={handleShowPriceHistory}
+                                        onSellCard={handleSellCard}
+                                        onRemoveFromSale={handleRemoveFromSale}
                                     />
                                 ) : (
                                     <Grid container spacing={3}>
