@@ -24,7 +24,7 @@ import GradientHeading from "../../components/ui/GradientHeading";
 import EmptyState from "../../components/ui/EmptyState";
 import ErrorState from "../../components/ui/ErrorState";
 import PriceChart from "../../components/PriceChart";
-import { formatPrice, formatTimeLeft } from "../../lib/format";
+import { formatPrice, formatTimeLeft, formatDateTime } from "../../lib/format";
 import { getRarityHex } from "../../lib/rarity";
 
 interface Listing {
@@ -37,6 +37,15 @@ interface Listing {
   seller: string;
   current_bid: number | null;
   bid_count: number;
+}
+
+interface Sale {
+  id: number;
+  amount: number;
+  seller: string;
+  buyer: string;
+  type: string;
+  date: string;
 }
 
 interface CardDetail {
@@ -59,7 +68,7 @@ export default function CardDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params?.id);
-  const [data, setData] = useState<{ card: CardDetail; listings: Listing[] } | null>(null);
+  const [data, setData] = useState<{ card: CardDetail; listings: Listing[]; sales: Sale[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -70,7 +79,7 @@ export default function CardDetailPage() {
       const res = await fetch(`/api/cards/${id}`);
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error("failed");
-      setData({ card: json.card, listings: json.listings });
+      setData({ card: json.card, listings: json.listings, sales: json.sales ?? [] });
     } catch {
       setError(true);
     } finally {
@@ -231,6 +240,46 @@ export default function CardDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {data.sales.length > 0 && (
+              <Card sx={{ mt: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Sale history
+                  </Typography>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Seller → Buyer</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Type</TableCell>
+                          <TableCell align="right">Price</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {data.sales.map((s) => (
+                          <TableRow key={s.id} hover>
+                            <TableCell>{formatDateTime(s.date)}</TableCell>
+                            <TableCell>
+                              {s.seller} <Box component="span" sx={{ color: "text.secondary" }}>→</Box> {s.buyer}
+                            </TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                              <Chip size="small" variant="outlined" label={s.type.replace(/_/g, " ")} />
+                            </TableCell>
+                            <TableCell align="right">
+                              <Box sx={{ fontFamily: (t) => t.typography.mono?.fontFamily, fontWeight: 700 }}>
+                                {formatPrice(s.amount)}
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </Container>
