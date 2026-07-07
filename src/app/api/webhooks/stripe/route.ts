@@ -156,16 +156,28 @@ async function debitWallet(userId: number, amount: number, refType: string, refK
 }
 
 async function creditWallet(userId: number, amount: number, sessionId: string) {
+  // Ensure the wallet exists BEFORE the crediting transaction, tolerating a
+  // concurrent create. This is essential: if the crediting tx created the wallet
+  // itself, a user_id unique-violation from two concurrent first deposits would
+  // be indistinguishable from the idempotency-key violation below and would
+  // silently drop a legitimate second deposit.
+  try {
+    await prisma.userWallet.upsert({
+      where: { user_id: userId },
+      create: { user_id: userId, balance: 0, frozen_balance: 0 },
+      update: {},
+    });
+  } catch (e) {
+    if (!isUniqueViolation(e)) throw e; // a concurrent create won the race — fine
+  }
+
   try {
     await prisma.$transaction(async (tx) => {
-      let wallet = await tx.userWallet.findUnique({ where: { user_id: userId } });
-      if (!wallet) {
-        wallet = await tx.userWallet.create({
-          data: { user_id: userId, balance: 0, frozen_balance: 0 },
-        });
-      }
+      const wallet = await tx.userWallet.findUnique({ where: { user_id: userId } });
+      if (!wallet) throw new Error("Wallet missing after upsert");
       // Atomic increment (no lost update) + unique idempotency_key (concurrent
-      // redelivery of the same session fails the insert -> rolls back).
+      // redelivery of the same session fails the insert -> rolls back). The only
+      // unique constraint reachable here is idempotency_key.
       const updated = await tx.userWallet.update({
         where: { user_id: userId },
         data: { balance: { increment: amount } },
