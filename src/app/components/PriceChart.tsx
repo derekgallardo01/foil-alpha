@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { useTheme } from '@mui/material/styles';
+import { formatPriceNA as formatPrice } from '../lib/format';
 import {
     TrendingUp,
     TrendingDown,
@@ -150,10 +151,6 @@ export default function PriceChart({
         return () => clearInterval(interval);
     }, [autoRefresh, cardId, userCardId, timeRange]);
 
-    const formatPrice = (price: number | null | undefined) => {
-        if (!price) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
-    };
 
     const getTrendIcon = (trend: string) => {
         switch (trend) {

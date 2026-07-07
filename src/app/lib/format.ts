@@ -4,15 +4,27 @@
 
 export function formatPrice(
   value: number | string | null | undefined,
-  opts?: { decimals?: number }
+  opts?: { decimals?: number; emptyLabel?: string }
 ): string {
   const n = Number(value);
-  if (!Number.isFinite(n)) return "$0.00";
+  // `emptyLabel` (e.g. "N/A") is returned for null/undefined/NaN; a real 0 still
+  // formats as "$0.00". This replaces the local `!price ? 'N/A'` copies, which
+  // also (incorrectly) hid a genuine $0 — the shared version is the more correct.
+  if (!Number.isFinite(n)) return opts?.emptyLabel ?? "$0.00";
   const decimals = opts?.decimals ?? 2;
   return `$${n.toLocaleString(undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })}`;
+}
+
+/**
+ * Price that shows "N/A" (not "$0.00") when the value is missing. This is the
+ * policy the dashboard/marketplace components used via their local copies; a
+ * real 0 still formats as "$0.00".
+ */
+export function formatPriceNA(value: number | string | null | undefined): string {
+  return formatPrice(value, { emptyLabel: "N/A" });
 }
 
 /** Compact currency, e.g. $12.3K, for tight stat tiles. */

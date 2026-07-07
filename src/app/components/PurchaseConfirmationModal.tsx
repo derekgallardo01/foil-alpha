@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { getRarityColor } from '../lib/rarity';
+import { formatPriceNA as formatPrice } from '../lib/format';
 
 interface Card {
     id: number;
@@ -85,10 +86,6 @@ export default function PurchaseConfirmationModal({
     const [commissionInfo, setCommissionInfo] = useState<CommissionInfo | null>(null);
     const [loadingCommission, setLoadingCommission] = useState(false);
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
-    };
 
     // Calculate commission when modal opens
     useEffect(() => {

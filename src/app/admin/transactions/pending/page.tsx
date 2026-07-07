@@ -32,7 +32,7 @@ import AppShell from '../../../components/AppShell';
 import PageHeader from '../../../components/ui/PageHeader';
 import ErrorState from '../../../components/ui/ErrorState';
 import EmptyState from '../../../components/ui/EmptyState';
-import { formatDateTime } from '../../../lib/format';
+import { formatDateTime, formatPrice } from '../../../lib/format';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
 
 interface PendingTransaction {
@@ -105,10 +105,6 @@ export default function AdminPendingTransactionsPage() {
         }
     }, [status, session]);
 
-    const formatPrice = (price: number) => {
-        const num = typeof price === 'number' ? price : Number(price) || 0;
-        return `$${num.toFixed(2)}`;
-    };
 
     const getTimeRemaining = (expiresAt: string) => {
         const now = new Date().getTime();
