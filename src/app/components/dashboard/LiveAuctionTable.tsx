@@ -25,6 +25,7 @@ import {
 import { useRouter } from 'next/navigation';
 import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
+import { useEventStream } from "../../lib/useEventStream";
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
 import { getConditionColor } from "../../lib/rarity";
 import WidgetHeader from "../ui/WidgetHeader";
@@ -85,10 +86,16 @@ export default function LiveAuctionTable({
         fetchAuctions();
 
         if (autoRefresh) {
-            const interval = setInterval(fetchAuctions, 30000); // Refresh every 30 seconds
+            // Real-time push is primary (see below); this is a slow safety net.
+            const interval = setInterval(fetchAuctions, 60000);
             return () => clearInterval(interval);
         }
     }, [sortBy, autoRefresh]);
+
+    // Live updates: refetch when a bid lands or an auction ends.
+    useEventStream((e) => {
+        if (e.type === 'bid' || e.type === 'auction_ended') fetchAuctions();
+    });
 
     const formatPrice = (price: number | null) => {
         if (!price) return 'N/A';

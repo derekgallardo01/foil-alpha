@@ -26,6 +26,7 @@ import {
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import { useEventStream } from '../lib/useEventStream';
 
 interface Notification {
   id: number;
@@ -89,10 +90,15 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
   useEffect(() => {
     fetchNotifications();
 
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
+    // Slow safety-net poll; real-time push (below) is primary.
+    const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [userId]);
+
+  // Live: refresh the bell the moment a notification is pushed to this user.
+  useEventStream((e) => {
+    if (e.type === 'notification') fetchNotifications();
+  });
 
   const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);

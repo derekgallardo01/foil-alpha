@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { createBidNotifications, createBidOutbidNotification } from '../../lib/notification';
+import { emitAppEvent } from '../../lib/events';
 
 // GET /api/bids - Get bids for a card or user's bids
 export async function GET(request: NextRequest) {
@@ -283,6 +284,9 @@ export async function POST(request: NextRequest) {
             // Don't fail the entire request for notification errors
         }
 
+        // Push the new bid to every live-auction viewer.
+        emitAppEvent({ type: 'bid', auctionId: user_card_id });
+
         return NextResponse.json({
             success: true,
             bid: {
@@ -292,7 +296,7 @@ export async function POST(request: NextRequest) {
                 card_name: card.name,
                 created_at: result.bid.createdAt
             },
-            message: 'Bid placed successfully! No funds have been reserved.'
+            message: 'Bid placed successfully! The bid amount is held until the auction resolves.'
         });
 
     } catch (error) {

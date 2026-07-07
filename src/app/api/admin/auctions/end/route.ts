@@ -7,6 +7,7 @@ import {
     createAuctionLostNotifications
 } from '../../../../lib/notification';
 import { releaseBidHolds } from '../../../../lib/wallet-settlement';
+import { emitAppEvent } from '../../../../lib/events';
 
 export async function POST(request: NextRequest) {
     try {
@@ -182,6 +183,8 @@ export async function POST(request: NextRequest) {
         } catch (notificationError) {
             console.error('Error creating notifications:', notificationError);
         }
+
+        emitAppEvent({ type: 'auction_ended', auctionId: auction_id });
 
         return NextResponse.json({
             success: true,
