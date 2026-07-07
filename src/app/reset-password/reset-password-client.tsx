@@ -12,7 +12,10 @@ import {
   Paper,
   Link,
   Backdrop,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import GradientHeading from "../components/ui/GradientHeading";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
@@ -47,6 +50,7 @@ const validateForm = (password: string, confirmPassword: string, token: string |
 export default function ResetPasswordClient() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isNetworkError, setIsNetworkError] = useState<boolean>(false);
@@ -183,13 +187,26 @@ export default function ResetPasswordClient() {
                     <motion.div variants={itemVariants}>
                       <TextField
                         label="New Password"
-                        type="password"
+                        type={showPw ? "text" : "password"}
                         fullWidth
                         required
                         margin="normal"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         variant="outlined"
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={() => setShowPw((s) => !s)}
+                                edge="end"
+                                aria-label="toggle password visibility"
+                              >
+                                {showPw ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
                         InputLabelProps={{ style: { color: "text.secondary" } }}
                         sx={{ input: { color: "text.primary" } }}
                         disabled={loading || !!message}
@@ -201,13 +218,26 @@ export default function ResetPasswordClient() {
                     <motion.div variants={itemVariants}>
                       <TextField
                         label="Confirm Password"
-                        type="password"
+                        type={showPw ? "text" : "password"}
                         fullWidth
                         required
                         margin="normal"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         variant="outlined"
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={() => setShowPw((s) => !s)}
+                                edge="end"
+                                aria-label="toggle password visibility"
+                              >
+                                {showPw ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
                         InputLabelProps={{ style: { color: "text.secondary" } }}
                         sx={{ input: { color: "text.primary" } }}
                         disabled={loading || !!message}

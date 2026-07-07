@@ -1,7 +1,7 @@
 // app/verify-email/verify-email-client.tsx
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -33,6 +33,36 @@ export default function VerifyEmailClient() {
   const [code, setCode] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [resending, setResending] = useState<boolean>(false);
+  const [cooldown, setCooldown] = useState<number>(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const handleResend = async () => {
+    if (!email) {
+      setError("Head back to register and sign up first to get a code.");
+      return;
+    }
+    setResending(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      toast.info(data.message || "A new code is on its way.");
+      setCooldown(30);
+    } catch {
+      toast.error("Couldn't resend the code. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleVerify = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -118,7 +148,7 @@ export default function VerifyEmailClient() {
 
                 {error && (
                   <motion.div variants={itemVariants}>
-                    <Typography color="error" sx={{ mt: 1 }}>{error}</Typography>
+                    <Typography color="error" sx={{ mt: 1 }} role="alert">{error}</Typography>
                   </motion.div>
                 )}
 
@@ -134,6 +164,17 @@ export default function VerifyEmailClient() {
                   >
                     {loading ? <CircularProgress size={24} color="inherit" /> : "Verify"}
                   </Button>
+                </motion.div>
+
+                <motion.div variants={itemVariants}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2, gap: 1, flexWrap: "wrap" }}>
+                    <Button variant="text" size="small" onClick={handleResend} disabled={resending || cooldown > 0}>
+                      {cooldown > 0 ? `Resend code (${cooldown}s)` : resending ? "Sending…" : "Didn't get it? Resend code"}
+                    </Button>
+                    <Button variant="text" size="small" onClick={() => router.push("/register")}>
+                      Back to register
+                    </Button>
+                  </Box>
                 </motion.div>
               </form>
             </motion.div>
