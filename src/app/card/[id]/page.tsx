@@ -34,6 +34,7 @@ interface Listing {
   fixed_price: number | null;
   reserve_price: number | null;
   auction_end: string | null;
+  seller_id: number;
   seller: string;
   seller_rating: { average: number; count: number } | null;
   current_bid: number | null;
@@ -195,7 +196,13 @@ export default function CardDetailPage() {
                           return (
                             <TableRow key={l.user_card_id} hover>
                               <TableCell>
-                                {l.seller}
+                                <Box
+                                  component="span"
+                                  onClick={() => router.push(`/seller/${l.seller_id}`)}
+                                  sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+                                >
+                                  {l.seller}
+                                </Box>
                                 {l.seller_rating && l.seller_rating.count > 0 ? (
                                   <Box component="span" sx={{ ml: 1, color: "warning.main", fontSize: 12, whiteSpace: "nowrap" }}>
                                     ★ {l.seller_rating.average}
