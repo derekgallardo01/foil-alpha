@@ -70,7 +70,8 @@ screenshots/
 .idea/
 
 # Prisma
-prisma/migrations/
+# NOTE: prisma/migrations/ is intentionally TRACKED now (see docs/MIGRATIONS.md).
+# The migration history is the source of truth for schema changes.
 *.sqlite
 *.sqlite-journal
 
