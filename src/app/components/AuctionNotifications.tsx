@@ -171,6 +171,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
       case 'SALE_COMPLETED':
       case 'SALE_COMPLETE':
       case 'PURCHASE_CONFIRMED':
+      case 'PRICE_DROP':
         return <MoneyIcon sx={{ color: 'success.main' }} />;
       case 'AUCTION_LOST':
         return <CancelIcon sx={{ color: 'error.main' }} />;

@@ -251,6 +251,13 @@ export default function NotificationsPage() {
             case 'PURCHASE_EXPIRED':
                 router.push('/bids/my-auctions');
                 break;
+            case 'PRICE_DROP':
+                router.push(
+                    notification.data?.card_name
+                        ? `/marketplace?search=${encodeURIComponent(notification.data.card_name)}`
+                        : '/marketplace'
+                );
+                break;
             default:
                 break;
         }
@@ -266,6 +273,7 @@ export default function NotificationsPage() {
                 return <UrgentIcon />;
             case 'SALE_COMPLETED':
             case 'PURCHASE_CONFIRMED':
+            case 'PRICE_DROP':
                 return <MoneyIcon />;
             case 'AUCTION_WON':
             case 'AUCTION_LOST':
@@ -289,6 +297,7 @@ export default function NotificationsPage() {
             case 'AUCTION_WON':
             case 'SALE_COMPLETED':
             case 'PURCHASE_CONFIRMED':
+            case 'PRICE_DROP':
                 return 'success';
             case 'BID_ACCEPTED':
                 return 'warning'; // Urgent action required

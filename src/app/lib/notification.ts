@@ -14,6 +14,44 @@ export interface CreateNotificationData {
 // Admin email for notifications
 const ADMIN_EMAIL = 'derekgallardo01@gmail.com';
 
+/**
+ * Notify everyone watching a listing that its fixed price dropped. No-op unless
+ * there's a real decrease (old and new both present, new < old). Best-effort.
+ */
+export async function notifyWatchersOnPriceDrop(
+    userCardId: number,
+    oldPrice: number | null | undefined,
+    newPrice: number | null | undefined
+): Promise<void> {
+    const oldP = oldPrice != null ? Number(oldPrice) : null;
+    const newP = newPrice != null ? Number(newPrice) : null;
+    if (oldP == null || newP == null || !(newP < oldP)) return;
+
+    const watchers = await prisma.watchedListing.findMany({
+        where: { user_card_id: userCardId },
+        select: { user_id: true },
+    });
+    if (watchers.length === 0) return;
+
+    const uc = await prisma.userCard.findUnique({ where: { id: userCardId }, select: { card_id: true } });
+    const card = uc ? await prisma.card.findUnique({ where: { id: uc.card_id }, select: { name: true } }) : null;
+    const cardName = card?.name ?? "a card you're watching";
+    const pct = oldP > 0 ? Math.round(((oldP - newP) / oldP) * 100) : 0;
+
+    await Promise.all(
+        watchers.map((w) =>
+            createNotification({
+                user_id: w.user_id,
+                type: 'PRICE_DROP',
+                title: 'Price drop',
+                message: `${cardName} you're watching dropped to $${newP.toFixed(2)} (was $${oldP.toFixed(2)}${pct ? `, −${pct}%` : ''}).`,
+                data: { card_name: cardName, user_card_id: userCardId, old_price: oldP, new_price: newP },
+            }).catch((e) => console.error('Price-drop notify failed:', e))
+        )
+    );
+    emitAppEvent({ type: 'notification' });
+}
+
 // Get user email for notifications
 async function getUserEmail(userId: number): Promise<string | null> {
     try {
