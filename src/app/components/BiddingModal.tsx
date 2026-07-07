@@ -30,6 +30,7 @@ import {
     Info as InfoIcon
 } from '@mui/icons-material';
 import { getRarityColor } from '../lib/rarity';
+import WatchButton from './WatchButton';
 import { formatDateTime, formatDuration, formatPriceNA as formatPrice } from '../lib/format';
 
 interface Card {
@@ -213,6 +214,9 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <GavelIcon color="secondary" />
                     <Typography variant="h6">Place Bid</Typography>
+                    <Box sx={{ ml: 'auto' }}>
+                        <WatchButton userCardId={userCard.id} />
+                    </Box>
                 </Box>
             </DialogTitle>
 

@@ -161,12 +161,27 @@ model UserCard {
   grade_label           String?  @db.VarChar(50)
   acquired_market_price Decimal? @db.Decimal(10, 2)
   external_owned_id     String?  @unique(map: "uniq_uc_external_owned") @db.VarChar(100)
+  // Set true once the "ending soon" alert has been sent to watchers, so the
+  // auction cron notifies each watched auction at most once.
+  ending_soon_notified  Boolean  @default(false)
 
   @@index([owner_id])
   @@index([card_id])
   @@index([is_for_sale])
   @@index([is_sold])
   @@map("user_cards")
+}
+
+model WatchedListing {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  user_card_id Int
+  created_at   DateTime @default(now()) @db.DateTime(0)
+
+  @@unique([user_id, user_card_id])
+  @@index([user_id])
+  @@index([user_card_id])
+  @@map("watched_listings")
 }
 
 model Bid {

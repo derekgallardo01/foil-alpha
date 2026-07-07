@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { getSellerRatings } from "../../../lib/reviews";
+import { getAuthUser } from "../../../lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,20 @@ export async function GET(request: NextRequest) {
     const nameOf = (uid: number) => userById.get(uid)?.name ?? "Unknown";
     const sellerRatings = await getSellerRatings(listings.map((l) => l.owner_id));
 
+    // Which of these listings the signed-in viewer (if any) is watching.
+    const viewer = await getAuthUser();
+    const watchedSet =
+      viewer && listingIds.length
+        ? new Set(
+            (
+              await prisma.watchedListing.findMany({
+                where: { user_id: viewer.id, user_card_id: { in: listingIds } },
+                select: { user_card_id: true },
+              })
+            ).map((w) => w.user_card_id)
+          )
+        : new Set<number>();
+
     const highest = new Map<number, number>();
     const counts = new Map<number, number>();
     for (const b of activeBids) {
@@ -98,6 +113,7 @@ export async function GET(request: NextRequest) {
         seller_id: l.owner_id,
         seller: nameOf(l.owner_id),
         seller_rating: sellerRatings.get(l.owner_id) ?? null,
+        watching: watchedSet.has(l.id),
         current_bid: highest.get(l.id) ?? null,
         bid_count: counts.get(l.id) ?? 0,
       })),
