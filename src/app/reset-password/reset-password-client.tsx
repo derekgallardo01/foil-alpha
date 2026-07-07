@@ -13,6 +13,7 @@ import {
   Link,
   Backdrop,
 } from "@mui/material";
+import GradientHeading from "../components/ui/GradientHeading";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { GoogleAnalytics, event as gaEvent } from "nextjs-google-analytics";
@@ -166,21 +167,9 @@ export default function ResetPasswordClient() {
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
           <motion.div initial={{ rotateY: 180 }} animate={{ rotateY: 0 }} transition={{ duration: 0.6 }}>
             <Paper elevation={0} sx={{ p: 4, bgcolor: "background.paper", border: 1, borderColor: "divider", borderRadius: 2, boxShadow: 3 }}>
-              <Typography
-                variant="h5"
-                component="p"
-                sx={{
-                  mb: 2,
-                  textAlign: "center",
-                  background: (t) => t.foil.gradient,
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  fontWeight: 800,
-                }}
-              >
+              <GradientHeading variant="h5" component="p" sx={{ mb: 2, textAlign: "center" }}>
                 Foil Alpha
-              </Typography>
+              </GradientHeading>
               <Box sx={{ width: "100%" }}>
                 <Typography variant="h4" sx={{ mb: 3, textAlign: "center", color: "text.primary" }}>
                   Reset Password

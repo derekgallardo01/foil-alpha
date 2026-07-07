@@ -26,6 +26,7 @@ import {
     ListItemIcon,
     ListItemText
 } from '@mui/material';
+import GradientHeading from '../../components/ui/GradientHeading';
 import Grid from '@mui/material/Grid2';
 import {
     Gavel as GavelIcon,
@@ -210,17 +211,9 @@ export default function MyAuctionsPage() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <GavelIcon sx={{ color: 'primary.main' }} />
-                    <Box
-                        component="span"
-                        sx={{
-                            background: (t) => t.foil.gradient,
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                        }}
-                    >
+                    <GradientHeading component="span" variant="inherit">
                         My Auctions
-                    </Box>
+                    </GradientHeading>
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <IconButton onClick={fetchMyAuctions} title="Refresh">

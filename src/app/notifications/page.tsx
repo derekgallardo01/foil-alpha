@@ -20,6 +20,7 @@ import {
     ToggleButton,
     ToggleButtonGroup
 } from '@mui/material';
+import GradientHeading from '../components/ui/GradientHeading';
 import {
     Notifications as NotificationIcon,
     MarkEmailRead as MarkReadIcon,
@@ -371,17 +372,9 @@ export default function NotificationsPage() {
                     <Badge badgeContent={unreadCount} color="error">
                         <NotificationIcon sx={{ color: 'primary.main' }} />
                     </Badge>
-                    <Box
-                        component="span"
-                        sx={{
-                            background: (t) => t.foil.gradient,
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                        }}
-                    >
+                    <GradientHeading component="span" variant="inherit">
                         Notifications
-                    </Box>
+                    </GradientHeading>
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                     <ToggleButtonGroup
