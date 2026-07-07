@@ -245,12 +245,18 @@ export async function POST(request: NextRequest) {
             });
 
             // 3. Hold the new bid in escrow, releasing any prior hold this bidder
-            //    had on this auction (net change to frozen_balance).
+            //    had on this auction (net change to frozen_balance). The WHERE
+            //    clause re-checks availability at write time under a row lock, so
+            //    concurrent bids/withdrawals can't oversubscribe the balance.
             const prevHeld = previousBidFromUser ? Number(previousBidFromUser.amount) : 0;
-            await tx.userWallet.update({
-                where: { user_id: bidderId },
-                data: { frozen_balance: { increment: bidAmount - prevHeld } },
-            });
+            const delta = bidAmount - prevHeld;
+            const affected = await tx.$executeRaw`
+                UPDATE user_wallets
+                SET frozen_balance = frozen_balance + ${delta}
+                WHERE user_id = ${bidderId} AND (balance - frozen_balance) >= ${delta}`;
+            if (affected !== 1) {
+                throw new Error('Insufficient available balance to place this bid.');
+            }
 
             return {
                 bid: newBid,

@@ -136,7 +136,7 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       buyerWallet = await tx.userWallet.create({
         data: {
           user_id: buyerId,
-          balance: 1000,
+          balance: 0, // No free starter funds — deposit or earn to fund the wallet.
           frozen_balance: 0
         }
       });
@@ -358,7 +358,7 @@ async function purchaseCatalogCard(buyerId: number, catalogCardId: number, quant
       buyerWallet = await tx.userWallet.create({
         data: {
           user_id: buyerId,
-          balance: 1000,
+          balance: 0, // No free starter funds — deposit or earn to fund the wallet.
           frozen_balance: 0
         }
       });

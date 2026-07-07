@@ -13,6 +13,7 @@ import {
 import { AccountBalanceWallet as WalletIcon } from "@mui/icons-material";
 import UserWallet from "../components/UserWallet";
 import AddFundsCard from "../components/AddFundsCard";
+import WithdrawFundsCard from "../components/WithdrawFundsCard";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import { toast } from "react-toastify";
@@ -68,6 +69,8 @@ export default function WalletPage() {
                 <UserWallet />
 
                 <AddFundsCard />
+
+                <WithdrawFundsCard />
 
                 <Box sx={{ textAlign: 'center', mt: 3 }}>
                     <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>

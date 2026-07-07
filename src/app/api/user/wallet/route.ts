@@ -136,6 +136,16 @@ export async function POST(request: NextRequest) {
     const { action, amount } = body;
 
     if (action === 'add_funds') {
+      // Free self-credit is a DEV-ONLY convenience. In production, funds may only
+      // enter the wallet via a real Stripe deposit (see /api/wallet/deposit) —
+      // otherwise users could mint balance and cash it out via withdrawals.
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { error: 'Add funds with a card via the deposit flow.' },
+          { status: 403 }
+        );
+      }
+
       const addAmount = parseFloat(amount);
       if (addAmount <= 0) {
         return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
