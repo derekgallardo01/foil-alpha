@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Paper,
@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { formatPriceNA as formatPrice } from '../../lib/format';
+import { useDashboardResource } from '../../lib/useDashboardResource';
 import {
     NewReleases,
     ChevronLeft,
@@ -56,45 +57,13 @@ interface NewReleasesCarouselProps {
 
 export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselProps) {
     const router = useRouter();
-    const [releases, setReleases] = useState<SetRelease[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [releaseType, setReleaseType] = useState<'recent' | 'upcoming' | 'popular'>('recent');
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    const fetchReleases = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            console.log(`Fetching releases: type=${releaseType}, limit=${limit}`);
-
-            const response = await fetch(`/api/dashboard/new-releases?type=${releaseType}&limit=${limit}`);
-            const data = await response.json();
-
-            console.log('New releases response:', data);
-
-            if (data.success && data.data) {
-                setReleases(data.data);
-                setCurrentIndex(0);
-                console.log(`Loaded ${data.data.length} releases`);
-            } else {
-                console.error('Failed to fetch releases:', data.error);
-                setError(data.error || 'Failed to load releases');
-                setReleases([]);
-            }
-        } catch (error) {
-            console.error('Error fetching releases:', error);
-            setError('Network error loading releases');
-            setReleases([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchReleases();
-    }, [releaseType]);
+    const { data: releases, loading, error, refetch } = useDashboardResource<SetRelease>(
+        `/api/dashboard/new-releases?type=${releaseType}&limit=${limit}`,
+        { deps: [releaseType, limit], onData: () => setCurrentIndex(0) }
+    );
 
     const handlePrevious = () => {
         setCurrentIndex((prev) => Math.max(0, prev - 3));
@@ -172,7 +141,7 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
 
                         <IconButton
                             size="small"
-                            onClick={fetchReleases}
+                            onClick={refetch}
                             sx={{ color: 'primary.main' }}
                         >
                             <Refresh />

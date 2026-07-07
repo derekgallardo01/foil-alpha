@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Paper,
@@ -42,6 +42,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@mui/material/styles';
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
 import { formatPriceNA as formatPrice } from "../../lib/format";
+import { useDashboardResource } from "../../lib/useDashboardResource";
 import { getRarityHex } from "../../lib/rarity";
 import WidgetHeader from "../ui/WidgetHeader";
 
@@ -82,44 +83,13 @@ export default function TrendingCardsTable({
 }: TrendingCardsTableProps) {
     const router = useRouter();
     const theme = useTheme();
-    const [cards, setCards] = useState<TrendingCard[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [trendType, setTrendType] = useState<'price' | 'volume' | 'popularity'>('price');
     const [period, setPeriod] = useState(initialPeriod);
 
-    const fetchTrendingCards = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            console.log(`Fetching trending cards: type=${trendType}, period=${period}, limit=${limit}`);
-
-            const response = await fetch(`/api/dashboard/trending-cards?type=${trendType}&period=${period}&limit=${limit}`);
-            const data = await response.json();
-
-            console.log('Trending cards response:', data);
-
-            if (data.success && data.data) {
-                setCards(data.data);
-                console.log(`Loaded ${data.data.length} trending cards`);
-            } else {
-                console.error('Failed to fetch trending cards:', data.error);
-                setError(data.error || 'Failed to load trending cards');
-                setCards([]);
-            }
-        } catch (error) {
-            console.error('Error fetching trending cards:', error);
-            setError('Network error loading trending cards');
-            setCards([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchTrendingCards();
-    }, [trendType, period]);
+    const { data: cards, loading, error, refetch } = useDashboardResource<TrendingCard>(
+        `/api/dashboard/trending-cards?type=${trendType}&period=${period}&limit=${limit}`,
+        { deps: [trendType, period, limit] }
+    );
 
 
     const formatPercentage = (value: number | null) => {
@@ -258,7 +228,7 @@ export default function TrendingCardsTable({
 
                         <IconButton
                             size="small"
-                            onClick={fetchTrendingCards}
+                            onClick={refetch}
                             sx={{ color: 'primary.main' }}
                         >
                             <Refresh />
@@ -310,7 +280,7 @@ export default function TrendingCardsTable({
                                         <Typography color="error" gutterBottom>
                                             {error}
                                         </Typography>
-                                        <IconButton onClick={fetchTrendingCards} sx={{ color: 'primary.main' }}>
+                                        <IconButton onClick={refetch} sx={{ color: 'primary.main' }}>
                                             <Refresh />
                                         </IconButton>
                                     </Box>

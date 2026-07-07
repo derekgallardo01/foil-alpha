@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Paper,
@@ -31,6 +31,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { getRarityHex } from '../../lib/rarity';
 import { formatPriceNA as formatPrice } from '../../lib/format';
+import { useDashboardResource } from '../../lib/useDashboardResource';
 import WidgetHeader from '../ui/WidgetHeader';
 
 interface PopularCard {
@@ -54,43 +55,12 @@ interface PopularityMetricsProps {
 export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps) {
     const router = useRouter();
     const theme = useTheme();
-    const [popularCards, setPopularCards] = useState<PopularCard[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [period, setPeriod] = useState('7d');
 
-    const fetchPopularCards = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            console.log(`Fetching popular cards: period=${period}, limit=${limit}`);
-
-            const response = await fetch(`/api/dashboard/popular-cards?period=${period}&limit=${limit}`);
-            const data = await response.json();
-
-            console.log('Popular cards response:', data);
-
-            if (data.success && data.data) {
-                setPopularCards(data.data);
-                console.log(`Loaded ${data.data.length} popular cards`);
-            } else {
-                console.error('Failed to fetch popular cards:', data.error);
-                setError(data.error || 'Failed to load popular cards');
-                setPopularCards([]);
-            }
-        } catch (error) {
-            console.error('Error fetching popular cards:', error);
-            setError('Network error loading popular cards');
-            setPopularCards([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchPopularCards();
-    }, [period]);
+    const { data: popularCards, loading, error } = useDashboardResource<PopularCard>(
+        `/api/dashboard/popular-cards?period=${period}&limit=${limit}`,
+        { deps: [period, limit] }
+    );
 
 
     const getPopularityColor = (score: number) => {
