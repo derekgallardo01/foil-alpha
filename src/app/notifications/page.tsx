@@ -252,6 +252,7 @@ export default function NotificationsPage() {
                 router.push('/bids/my-auctions');
                 break;
             case 'PRICE_DROP':
+            case 'SAVED_SEARCH_MATCH':
                 router.push(
                     notification.data?.card_name
                         ? `/marketplace?search=${encodeURIComponent(notification.data.card_name)}`

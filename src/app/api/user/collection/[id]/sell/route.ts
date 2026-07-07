@@ -4,6 +4,7 @@ import { requireUser } from '../../../../../lib/auth';
 import { prisma } from '../../../../../lib/prisma';
 import { calculateCommission } from '../../../../../lib/commission-utils';
 import { notifyWatchersOnPriceDrop } from '../../../../../lib/notification';
+import { notifySavedSearchMatches } from '../../../../../lib/saved-search';
 
 // POST /api/user/collection/[id]/sell - List a card for sale
 export async function POST(
@@ -71,7 +72,7 @@ export async function POST(
         // Get card details separately
         const card = await prisma.card.findUnique({
             where: { id: userCard.card_id },
-            select: { name: true, id: true, rarity: true }
+            select: { name: true, id: true, rarity: true, set_name: true }
         });
 
         // Get owner details separately
@@ -193,6 +194,23 @@ export async function POST(
                 await notifyWatchersOnPriceDrop(parseInt(userCardId), oldFixed, Number(fixed_price));
             } catch (e) {
                 console.error('Price-drop alert failed:', e);
+            }
+        }
+
+        // Newly listed (was not for sale) → alert users whose saved search matches.
+        if (!userCard.is_for_sale) {
+            try {
+                const matchPrice = sale_type === 'FIXED'
+                    ? Number(fixed_price)
+                    : reserve_price != null ? Number(reserve_price) : null;
+                await notifySavedSearchMatches(
+                    parseInt(userCardId),
+                    { name: card.name, set_name: card.set_name, rarity: card.rarity },
+                    matchPrice,
+                    userId
+                );
+            } catch (e) {
+                console.error('Saved-search alert failed:', e);
             }
         }
 
