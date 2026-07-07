@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "start": "NODE_ENV=production next start",
     "lint": "next lint",
     "deploy": "npm run build && pm2 reload foil-alpha",
@@ -98,6 +101,7 @@
     "@types/selenium-webdriver": "^4.1.28",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.29.0",
     "eslint-config-next": "15.1.3",
     "eslint-plugin-prisma": "^1.0.1",
@@ -108,6 +112,7 @@
     "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.5",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10"
   }
 }
