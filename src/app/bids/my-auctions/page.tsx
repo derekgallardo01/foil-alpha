@@ -37,7 +37,7 @@ import {
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
 import { getRarityColor } from '../../lib/rarity';
-import { formatDateTime, formatDuration } from '../../lib/format';
+import { formatDateTime, formatDuration, formatPriceNA as formatPrice } from '../../lib/format';
 import { useRequireAuth } from '../../lib/useRequireAuth';
 
 interface Card {
@@ -127,10 +127,6 @@ export default function MyAuctionsPage() {
         }
     }, [status]);
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
-    };
 
     const getAuctionStatus = (auction: MyAuction) => {
         if (auction.is_sold) return { label: 'Sold', color: 'success' as const };

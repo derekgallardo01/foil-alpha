@@ -30,7 +30,7 @@ import {
     Info as InfoIcon
 } from '@mui/icons-material';
 import { getRarityColor } from '../lib/rarity';
-import { formatDateTime, formatDuration } from '../lib/format';
+import { formatDateTime, formatDuration, formatPriceNA as formatPrice } from '../lib/format';
 
 interface Card {
     id: number;
@@ -117,10 +117,6 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
         }
     }, [open, userCard]);
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
-    };
 
     const getMinimumBid = () => {
         if (!userCard) return 0;

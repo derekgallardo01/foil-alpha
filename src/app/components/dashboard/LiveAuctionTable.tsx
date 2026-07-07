@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
 import { useEventStream } from "../../lib/useEventStream";
+import { formatPriceNA as formatPrice } from "../../lib/format";
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
 import { getConditionColor } from "../../lib/rarity";
 import WidgetHeader from "../ui/WidgetHeader";
@@ -97,10 +98,6 @@ export default function LiveAuctionTable({
         if (e.type === 'bid' || e.type === 'auction_ended') fetchAuctions();
     });
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${price.toFixed(2)}`;
-    };
 
     const getTimeColor = (timeRemaining: number) => {
         const hours = timeRemaining / (1000 * 60 * 60);

@@ -16,6 +16,7 @@ import {
     CircularProgress
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
+import { formatPriceNA as formatPrice } from '../../lib/format';
 import {
     NewReleases,
     ChevronLeft,
@@ -103,10 +104,6 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
         setCurrentIndex((prev) => Math.min(releases.length - 3, prev + 3));
     };
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${price.toFixed(2)}`;
-    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {

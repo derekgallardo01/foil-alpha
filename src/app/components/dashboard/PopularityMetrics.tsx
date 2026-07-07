@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { getRarityHex } from '../../lib/rarity';
+import { formatPriceNA as formatPrice } from '../../lib/format';
 import WidgetHeader from '../ui/WidgetHeader';
 
 interface PopularCard {
@@ -91,10 +92,6 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
         fetchPopularCards();
     }, [period]);
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${price.toFixed(2)}`;
-    };
 
     const getPopularityColor = (score: number) => {
         if (score > 1000) return theme.palette.primary.main;

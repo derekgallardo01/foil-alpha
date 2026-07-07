@@ -54,7 +54,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { CardGridSkeleton } from '../../components/ui/Skeletons';
 import { getRarityColor } from '../../lib/rarity';
-import { formatDuration, formatDateTime } from '../../lib/format';
+import { formatDuration, formatDateTime, formatPriceNA as formatPrice } from '../../lib/format';
 import { useRequireAuth } from '../../lib/useRequireAuth';
 import { hideBelowMd } from "../../lib/responsive";
 
@@ -194,10 +194,6 @@ export default function SellingDashboard() {
     }, [status]);
 
     // Fix: Update formatPrice to handle undefined values
-    const formatPrice = (price: number | null | undefined) => {
-        if (price === null || price === undefined) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
-    };
 
     const getAuctionStatus = (sale: ActiveSale) => {
         if (sale.sale_type === 'FIXED') return { label: 'Fixed Price', color: 'primary' as const };

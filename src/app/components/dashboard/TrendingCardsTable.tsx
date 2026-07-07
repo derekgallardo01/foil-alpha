@@ -41,6 +41,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@mui/material/styles';
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
+import { formatPriceNA as formatPrice } from "../../lib/format";
 import { getRarityHex } from "../../lib/rarity";
 import WidgetHeader from "../ui/WidgetHeader";
 
@@ -120,10 +121,6 @@ export default function TrendingCardsTable({
         fetchTrendingCards();
     }, [trendType, period]);
 
-    const formatPrice = (price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${price.toFixed(2)}`;
-    };
 
     const formatPercentage = (value: number | null) => {
         if (value === null || value === undefined) return '0%';
