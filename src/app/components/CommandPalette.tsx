@@ -12,7 +12,8 @@ import {
   Typography,
   Chip,
 } from "@mui/material";
-import { Search as SearchIcon } from "@mui/icons-material";
+import { Search as SearchIcon, Style as StyleIcon } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 
 export type Command = {
   id: string;
@@ -38,8 +39,10 @@ export default function CommandPalette({
   onClose: () => void;
   commands: Command[];
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [results, setResults] = useState<Command[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -48,19 +51,51 @@ export default function CommandPalette({
     if (open) {
       setQuery("");
       setActive(0);
+      setResults([]);
       // Defer so the dialog is mounted before we focus.
       const t = setTimeout(() => inputRef.current?.focus(), 0);
       return () => clearTimeout(t);
     }
   }, [open]);
 
+  // Debounced card/listing search — results become selectable commands.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        const cmds: Command[] = (data.cards ?? []).map((c: { id: number; name: string; set_name?: string | null }) => ({
+          id: `card:${c.id}`,
+          label: c.set_name ? `${c.name} · ${c.set_name}` : c.name,
+          group: "Cards & Listings",
+          icon: <StyleIcon fontSize="small" />,
+          run: () => router.push(`/marketplace?card=${c.id}`),
+        }));
+        setResults(cmds);
+      } catch {
+        /* aborted or offline — leave prior results */
+      }
+    }, 200);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [query, router]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return commands;
-    return commands.filter((c) =>
-      `${c.label} ${c.group} ${c.keywords ?? ""}`.toLowerCase().includes(q)
-    );
-  }, [query, commands]);
+    const nav = q
+      ? commands.filter((c) => `${c.label} ${c.group} ${c.keywords ?? ""}`.toLowerCase().includes(q))
+      : commands;
+    return [...nav, ...results];
+  }, [query, commands, results]);
 
   // Keep the active index in range as the list shrinks.
   useEffect(() => {
@@ -122,7 +157,7 @@ export default function CommandPalette({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Search pages and actions…"
+          placeholder="Search pages, actions, and cards…"
           fullWidth
           sx={{ color: "text.primary", fontSize: 16 }}
         />
