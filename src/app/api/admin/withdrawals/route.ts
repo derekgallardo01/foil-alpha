@@ -58,6 +58,16 @@ async function runPayout(
   const payout: Payout = { method: "manual" };
   if (!isConnectEnabled() || !stripe) return payout;
 
+  // DB is the idempotency source of truth: if a transfer was already recorded
+  // for this withdrawal, reuse it — no Stripe call, no pagination concerns.
+  const wd = await prisma.walletWithdrawal.findUnique({
+    where: { id: withdrawalId },
+    select: { stripe_transfer_id: true },
+  });
+  if (wd?.stripe_transfer_id) {
+    return { method: "stripe", transfer_id: wd.stripe_transfer_id };
+  }
+
   const seller = await prisma.user.findUnique({
     where: { id: userId },
     select: { stripe_connect_account_id: true },
@@ -77,7 +87,7 @@ async function runPayout(
       payout.transfer_id = already.id;
       await prisma.walletWithdrawal.update({
         where: { id: withdrawalId },
-        data: { admin_note: note(`Stripe transfer ${already.id}`) },
+        data: { stripe_transfer_id: already.id, admin_note: note(`Stripe transfer ${already.id}`) },
       });
       return payout;
     }
@@ -95,7 +105,7 @@ async function runPayout(
     payout.transfer_id = transfer.id;
     await prisma.walletWithdrawal.update({
       where: { id: withdrawalId },
-      data: { admin_note: note(`Stripe transfer ${transfer.id}`) },
+      data: { stripe_transfer_id: transfer.id, admin_note: note(`Stripe transfer ${transfer.id}`) },
     });
   } catch (e) {
     payout.transfer_error = e instanceof Error ? e.message : "transfer failed";

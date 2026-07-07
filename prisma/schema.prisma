@@ -245,6 +245,10 @@ model WalletWithdrawal {
   admin_note   String?   @db.VarChar(255)
   requested_at DateTime  @default(now()) @db.DateTime(0)
   processed_at DateTime? @db.DateTime(0)
+  // The Stripe Connect transfer id once a real payout has been sent. Source of
+  // truth for payout idempotency (checked before any Stripe call), so a retry
+  // never double-sends regardless of the idempotency-key window.
+  stripe_transfer_id String? @db.VarChar(255)
 
   @@index([user_id])
   @@index([status])
