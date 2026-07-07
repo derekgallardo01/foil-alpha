@@ -16,7 +16,6 @@ import {
     CircularProgress,
     Chip,
     Stack,
-    Divider,
     Paper
 } from '@mui/material';
 import {
@@ -25,7 +24,6 @@ import {
     Delete as DeleteIcon,
     Refresh as RefreshIcon,
     CheckCircle as CheckIcon,
-    Info as InfoIcon,
     Warning as WarningIcon,
     Error as ErrorIcon,
     Gavel as AuctionIcon,

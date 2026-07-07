@@ -25,19 +25,14 @@ import {
     Tabs,
     Tab,
     Badge,
-    Divider,
     ToggleButton,
     ToggleButtonGroup
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import {
-    Schedule,
-    Visibility,
-    Edit,
     CheckCircle,
     Warning,
     ShoppingCart,
-    Assessment,
     PriceCheck,
     Collections as CollectionsIcon
 } from "@mui/icons-material";
@@ -49,7 +44,6 @@ import PageHeader from "../components/ui/PageHeader";
 import { formatPrice, formatDuration } from "../lib/format";
 import { CardGridSkeleton } from "../components/ui/Skeletons";
 import PendingPurchaseModal from "../components/PendingPurchaseModal";
-import PriceChart from "../components/PriceChart";
 import PriceHistoryModal from "../components/PriceHistoryModal";
 import PendingPurchasesWidget from "../components/PendingPurchasesWidget";
 import { useRequireAuth } from "../lib/useRequireAuth";

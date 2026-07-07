@@ -27,7 +27,6 @@ import {
     AdminPanelSettings,
     CurrencyExchange,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
 import type { ChipProps } from "@mui/material";
 import PriceDisplay, { LargePriceDisplay } from "./PriceDisplay";
 import CurrencySelector from "./CurrencySelector";

@@ -11,7 +11,6 @@ import {
     CardMedia,
     Button,
     Chip,
-    Alert,
     CircularProgress,
     Paper,
     Table,
@@ -43,11 +42,9 @@ import {
     AttachMoney as MoneyIcon,
     Check as AcceptIcon,
     Refresh as RefreshIcon,
-    TrendingUp as TrendingUpIcon,
     History as HistoryIcon,
     Sell as SellIcon,
-    ShoppingCart as ShoppingCartIcon,
-    Dashboard as DashboardIcon
+    ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';

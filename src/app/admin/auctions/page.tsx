@@ -31,9 +31,7 @@ import Grid from '@mui/material/Grid2';
 import {
     Gavel as GavelIcon,
     AccessTime as ClockIcon,
-    Person as PersonIcon,
     AttachMoney as MoneyIcon,
-    PlayArrow as StartIcon,
     Stop as EndIcon,
     Refresh as RefreshIcon,
     Settings as SettingsIcon,

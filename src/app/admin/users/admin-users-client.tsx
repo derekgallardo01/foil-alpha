@@ -16,12 +16,10 @@ import {
   DialogActions,
   Select,
   MenuItem,
-  Toolbar,
   IconButton,
   FormControlLabel,
   Checkbox,
   Chip,
-  Divider,
   List,
   ListItem,
   ListItemText,
@@ -37,7 +35,6 @@ import LockOpenIcon from "@mui/icons-material/LockOpen";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
-import sanitizeHtml from "sanitize-html";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
 import PageHeader from "../../components/ui/PageHeader";

@@ -31,7 +31,6 @@ import {
     Gavel as GavelIcon,
     AccessTime as ClockIcon,
     Person as PersonIcon,
-    AttachMoney as MoneyIcon,
     Check as AcceptIcon,
     Refresh as RefreshIcon
 } from '@mui/icons-material';

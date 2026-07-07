@@ -22,10 +22,6 @@ import {
     Paper,
     Divider,
     Badge,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Slider,
     FormLabel,
     LinearProgress,
@@ -41,7 +37,6 @@ import {
     Refresh as RefreshIcon,
     History,
     PriceCheck,
-    Add as AddIcon,
     CurrencyExchange,
     Clear as ClearIcon,
     Storefront as StorefrontIcon,
@@ -49,9 +44,8 @@ import {
 import { toast } from 'react-toastify';
 import AppShell from '../components/AppShell';
 import BiddingModal from '../components/BiddingModal';
-import PriceChart from '../components/PriceChart';
 import PriceHistoryModal from '../components/PriceHistoryModal';
-import PriceDisplay, { LargePriceDisplay, PriceWithReference } from '../components/PriceDisplay';
+import PriceDisplay from '../components/PriceDisplay';
 import CurrencySelector from '../components/CurrencySelector';
 import { useCurrencyContext } from '../lib/currency-context';
 import { getRarityColor } from '../lib/rarity';

@@ -15,19 +15,15 @@ import {
     IconButton,
     Chip,
     Button,
-    LinearProgress,
-    Tooltip,
     Badge
 } from '@mui/material';
 import {
     Gavel,
-    Timer,
     Visibility,
     Refresh,
     LocalOffer
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import CountdownTimer from '../CountdownTimer';
 import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
 

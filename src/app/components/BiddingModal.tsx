@@ -26,7 +26,6 @@ import {
     AccessTime as ClockIcon,
     Gavel as GavelIcon,
     Person as PersonIcon,
-    AttachMoney as MoneyIcon,
     TrendingUp as TrendingIcon,
     Info as InfoIcon
 } from '@mui/icons-material';

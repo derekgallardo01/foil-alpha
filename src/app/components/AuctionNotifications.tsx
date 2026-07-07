@@ -5,7 +5,6 @@ import {
   IconButton,
   Badge,
   Menu,
-  MenuItem,
   Typography,
   List,
   ListItem,
@@ -15,7 +14,6 @@ import {
   Chip,
   Button,
   Divider,
-  Paper,
   CircularProgress
 } from '@mui/material';
 import {

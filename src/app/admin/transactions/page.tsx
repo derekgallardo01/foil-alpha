@@ -38,7 +38,6 @@ import {
     Visibility as ViewIcon,
     CheckCircle as CompleteIcon,
     Search as SearchIcon,
-    FilterList as FilterIcon,
     Download as ExportIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';

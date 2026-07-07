@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
 import {
     Box,
-    Paper,
     Typography,
     Button,
     Card,
@@ -27,8 +26,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    IconButton,
-    Tooltip
+    IconButton
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import {
@@ -40,8 +38,7 @@ import {
     Error as ErrorIcon,
     CheckCircle,
     Info,
-    PlayArrow,
-    Stop
+    PlayArrow
 } from '@mui/icons-material';
 import AppShell from "../../../components/AppShell";
 import PageHeader from "../../../components/ui/PageHeader";

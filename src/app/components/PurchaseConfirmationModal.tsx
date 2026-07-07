@@ -23,7 +23,6 @@ import {
     ShoppingCart as CartIcon,
     AttachMoney as MoneyIcon,
     CheckCircle as CheckIcon,
-    Warning as WarningIcon,
     Percent as PercentIcon,
     AccountBalance as WalletIcon,
     Store as StoreIcon,
