@@ -70,15 +70,25 @@ export async function POST(request: NextRequest) {
         const result = await prisma.$transaction(async (tx) => {
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-            // 0. Atomically CLAIM the bid: only one concurrent accept can flip it
-            //    active->inactive, so a single bid can't spawn two pending
-            //    transactions (which would let the card be sold twice).
+            // 0a. Atomically CLAIM the bid: only one concurrent accept can flip it
+            //     active->inactive.
             const claimed = await tx.bid.updateMany({
                 where: { id: bid_id, is_active: true },
                 data: { is_active: false }
             });
             if (claimed.count !== 1) {
                 throw new Error('This bid is no longer active');
+            }
+
+            // 0b. Atomically CLAIM the card (pause the listing pending buyer
+            //     confirmation). This gates at the CARD level, so a seller can't
+            //     accept two different bids on the same card and sell it twice.
+            const cardClaimed = await tx.userCard.updateMany({
+                where: { id: bid.userCardId, is_sold: false, is_for_sale: true },
+                data: { is_for_sale: false }
+            });
+            if (cardClaimed.count !== 1) {
+                throw new Error('This card is no longer available');
             }
 
             // 1. Create pending transaction (single operation) - fix field names
