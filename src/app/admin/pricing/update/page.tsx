@@ -46,6 +46,7 @@ import StatCard from "../../../components/StatCard";
 import ErrorState from "../../../components/ui/ErrorState";
 import { StatRowSkeleton } from "../../../components/ui/Skeletons";
 import { formatPrice } from "../../../lib/format";
+import BackfillPriceHistoryCard from "./BackfillPriceHistoryCard";
 
 interface PricingSyncResult {
     total_cards: number;
@@ -206,6 +207,11 @@ export default function AdminPricingUpdatePage() {
             }
         />
         <Box sx={{ p: 3 }}>
+            {/* Phase 2 forecasting data acquisition */}
+            <Box sx={{ mb: 3 }}>
+                <BackfillPriceHistoryCard />
+            </Box>
+
             {/* Cron Status Section */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
                 <Grid size={{ xs: 12 }}>
