@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
         if (userCardId) {
             where.userCardId = parseInt(userCardId);
         } else if (userId) {
+            // A user may only read their own bids by id; admins may read anyone's.
+            // Otherwise this leaks another user's bid history (incl. their email).
+            if (Number(userId) !== user.id && user.role !== 'admin') {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
             where.bidderId = parseInt(userId);
         } else {
             where.bidderId = user.id;

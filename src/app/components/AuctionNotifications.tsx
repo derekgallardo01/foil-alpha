@@ -33,10 +33,8 @@ interface Notification {
   type: string;
   title: string;
   message: string;
-  is_read: boolean;
-  reference_id?: number;
-  reference_type?: string;
-  metadata?: any;
+  read: boolean;
+  data?: any;
   created_at: string;
 }
 
@@ -126,7 +124,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
       if (response.ok) {
         setNotifications(prev =>
           prev.map(n =>
-            n.id === notificationId ? { ...n, is_read: true } : n
+            n.id === notificationId ? { ...n, read: true } : n
           )
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
@@ -149,7 +147,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
       });
 
       if (response.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         setUnreadCount(0);
       }
     } catch (error) {
@@ -220,13 +218,13 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
   };
 
   const getCardName = (notification: Notification) => {
-    return notification.metadata?.card_name || 'Card';
+    return notification.data?.card_name || 'Card';
   };
 
   const getAmount = (notification: Notification) => {
-    const amount = notification.metadata?.amount ||
-      notification.metadata?.bid_amount ||
-      notification.metadata?.winning_amount;
+    const amount = notification.data?.amount ||
+      notification.data?.bid_amount ||
+      notification.data?.winning_amount;
     return amount ? `$${Number(amount).toFixed(2)}` : '';
   };
 
@@ -315,7 +313,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
             </Box>
             {error && (
               <Typography variant="caption" color="error" display="block">
-                {error} - Showing sample data
+                Couldn&apos;t load notifications
               </Typography>
             )}
           </Box>,
@@ -345,7 +343,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
                 <ListItem
                   key={notification.id}
                   sx={{
-                    bgcolor: notification.is_read ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                    bgcolor: notification.read ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
                     cursor: 'pointer',
                     '&:hover': {
                       bgcolor: 'rgba(255, 255, 255, 0.1)',
@@ -424,7 +422,7 @@ export default function AuctionNotifications({ userId }: AuctionNotificationsPro
                       </Box>
                     }
                   />
-                  {!notification.is_read && (
+                  {!notification.read && (
                     <Box
                       sx={{
                         width: 8,
