@@ -423,7 +423,8 @@ export async function createBidOutbidNotification(
     cardName: string,
     previousBidAmount: number,
     newBidAmount: number,
-    bidId: number
+    bidId: number,
+    userCardId?: number
 ) {
     return createNotification({
         user_id: previousBidderId,
@@ -434,6 +435,10 @@ export async function createBidOutbidNotification(
             card_name: cardName,
             previous_bid: previousBidAmount,
             new_bid: newBidAmount,
+            bid_amount: newBidAmount,
+            // Lets the notification deep-link straight back to the auction so the
+            // outbid user can re-bid in one click (/marketplace?auction=<id>).
+            user_card_id: userCardId,
             reference_id: bidId,
             reference_type: 'BID'
         }

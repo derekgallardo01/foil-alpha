@@ -16,7 +16,9 @@ import {
     CircularProgress,
     Chip,
     Stack,
-    Paper
+    Paper,
+    ToggleButton,
+    ToggleButtonGroup
 } from '@mui/material';
 import {
     Notifications as NotificationIcon,
@@ -67,6 +69,7 @@ export default function NotificationsPage() {
     const [error, setError] = useState<string | null>(null);
     const [markingRead, setMarkingRead] = useState<Set<number>>(new Set());
     const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+    const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
     // Pending purchase modal state
     const [pendingPurchaseModal, setPendingPurchaseModal] = useState<{
@@ -83,7 +86,9 @@ export default function NotificationsPage() {
             setLoading(true);
             setError(null);
 
-            const response = await fetch('/api/notifications?unread_only=true');
+            const response = await fetch(
+                filter === 'unread' ? '/api/notifications?unread_only=true' : '/api/notifications'
+            );
 
             if (!response.ok) {
                 throw new Error('Failed to fetch notifications');
@@ -230,7 +235,11 @@ export default function NotificationsPage() {
                 router.push('/collection');
                 break;
             case 'BID_OUTBID':
-                router.push('/marketplace');
+                router.push(
+                    notification.data?.user_card_id
+                        ? `/marketplace?auction=${notification.data.user_card_id}`
+                        : '/marketplace'
+                );
                 break;
             case 'SALE_COMPLETED':
             case 'PURCHASE_CONFIRMED':
@@ -325,7 +334,7 @@ export default function NotificationsPage() {
         if (status === 'authenticated') {
             fetchNotifications();
         }
-    }, [status]);
+    }, [status, filter]);
 
     // Auto-refresh notifications every 30 seconds
     useEffect(() => {
@@ -333,7 +342,7 @@ export default function NotificationsPage() {
             const interval = setInterval(fetchNotifications, 30000);
             return () => clearInterval(interval);
         }
-    }, [status]);
+    }, [status, filter]);
 
     if (status === 'loading') {
         return (
@@ -374,7 +383,17 @@ export default function NotificationsPage() {
                         Notifications
                     </Box>
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <ToggleButtonGroup
+                        size="small"
+                        exclusive
+                        value={filter}
+                        onChange={(_e, v) => v && setFilter(v)}
+                        aria-label="Filter notifications"
+                    >
+                        <ToggleButton value="all">All</ToggleButton>
+                        <ToggleButton value="unread">Unread</ToggleButton>
+                    </ToggleButtonGroup>
                     <IconButton onClick={fetchNotifications} title="Refresh">
                         <RefreshIcon />
                     </IconButton>
@@ -422,10 +441,12 @@ export default function NotificationsPage() {
                 <Paper sx={{ p: 4, textAlign: 'center' }}>
                     <NotificationIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h6" color="text.secondary">
-                        No notifications yet
+                        {filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        You'll see notifications here when you receive bids, make sales, or other activity occurs.
+                        {filter === 'unread'
+                            ? "You're all caught up. Switch to All to see your history."
+                            : "You'll see notifications here when you receive bids, make sales, or other activity occurs."}
                     </Typography>
                 </Paper>
             ) : (

@@ -287,7 +287,8 @@ export async function POST(request: NextRequest) {
                     card.name,
                     Number(result.previousHighestBid.amount),
                     bidAmount,
-                    result.bid.id
+                    result.bid.id,
+                    user_card_id
                 );
             }
         } catch (notificationError) {
