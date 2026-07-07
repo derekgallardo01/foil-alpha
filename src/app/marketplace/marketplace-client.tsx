@@ -39,6 +39,7 @@ import {
     PriceCheck,
     CurrencyExchange,
     Clear as ClearIcon,
+    BookmarkAdd as BookmarkAddIcon,
     Storefront as StorefrontIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
@@ -163,6 +164,14 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
+interface SavedQuery {
+    search?: string;
+    set?: string;
+    rarity?: string;
+    price_min?: number;
+    price_max?: number;
+}
+
 export default function MarketplacePage() {
     const { session, status } = useRequireAuth();
     const router = useRouter();
@@ -181,6 +190,7 @@ export default function MarketplacePage() {
     const [priceStatusFilter, setPriceStatusFilter] = useState('');
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]); // FIXED: Added price range
     const [sortBy, setSortBy] = useState('newest');
+    const [savedSearches, setSavedSearches] = useState<Array<{ id: number; name: string; query: SavedQuery }>>([]);
 
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [availableSets, setAvailableSets] = useState<{ name: string; count: number }[]>([]);
@@ -362,6 +372,53 @@ export default function MarketplacePage() {
         setPriceRange([0, 1000]); // Use fixed values instead of priceRangeInfo
         setSortBy('newest');
     }, []); // No dependencies needed since we're using fixed values
+
+    // ── Saved searches ──────────────────────────────────────────────────────
+    const fetchSavedSearches = useCallback(async () => {
+        try {
+            const res = await fetch('/api/saved-searches');
+            if (res.ok) setSavedSearches((await res.json()).data ?? []);
+        } catch { /* ignore */ }
+    }, []);
+
+    useEffect(() => { fetchSavedSearches(); }, [fetchSavedSearches]);
+
+    const saveCurrentSearch = useCallback(async () => {
+        const query: Record<string, unknown> = {};
+        if (searchTerm) query.search = searchTerm;
+        if (selectedSet) query.set = selectedSet;
+        if (selectedRarity) query.rarity = selectedRarity;
+        if (priceRange[0] > 0) query.price_min = priceRange[0];
+        if (priceRange[1] < 1000) query.price_max = priceRange[1];
+        const defaultName = searchTerm || selectedSet || selectedRarity || 'My search';
+        const name = window.prompt('Name this search (you\'ll be alerted to new matches)', defaultName);
+        if (!name) return;
+        try {
+            const res = await fetch('/api/saved-searches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, query }),
+            });
+            const data = await res.json();
+            if (!res.ok) { toast.error(data.error || 'Could not save search.'); return; }
+            toast.success('Search saved — we\'ll notify you of new matches.');
+            fetchSavedSearches();
+        } catch { toast.error('Something went wrong.'); }
+    }, [searchTerm, selectedSet, selectedRarity, priceRange, fetchSavedSearches]);
+
+    const applySavedSearch = useCallback((q: SavedQuery) => {
+        setSearchTerm(q?.search ?? '');
+        setSelectedSet(q?.set ?? '');
+        setSelectedRarity(q?.rarity ?? '');
+        setPriceRange([q?.price_min ?? 0, q?.price_max ?? 1000]);
+    }, []);
+
+    const deleteSavedSearch = useCallback(async (id: number) => {
+        try {
+            await fetch(`/api/saved-searches?id=${id}`, { method: 'DELETE' });
+            fetchSavedSearches();
+        } catch { /* ignore */ }
+    }, [fetchSavedSearches]);
 
     const fetchCardForBidding = async (listingId: string): Promise<BiddingUserCard | null> => {
         if (!listingId.startsWith('user-')) {
@@ -674,15 +731,40 @@ export default function MarketplacePage() {
                             sx={{ ml: 2 }}
                         />
                     </Box>
-                    <Button
-                        onClick={clearAllFilters}
-                        startIcon={<ClearIcon />}
-                        size="small"
-                        variant="outlined"
-                    >
-                        Clear All
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                            onClick={saveCurrentSearch}
+                            startIcon={<BookmarkAddIcon />}
+                            size="small"
+                            variant="outlined"
+                        >
+                            Save search
+                        </Button>
+                        <Button
+                            onClick={clearAllFilters}
+                            startIcon={<ClearIcon />}
+                            size="small"
+                            variant="outlined"
+                        >
+                            Clear All
+                        </Button>
+                    </Box>
                 </Box>
+
+                {savedSearches.length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                        {savedSearches.map((s) => (
+                            <Chip
+                                key={s.id}
+                                label={s.name}
+                                size="small"
+                                variant="outlined"
+                                onClick={() => applySavedSearch(s.query)}
+                                onDelete={() => deleteSavedSearch(s.id)}
+                            />
+                        ))}
+                    </Box>
+                )}
 
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 12, md: 3 }}>

@@ -184,6 +184,18 @@ model WatchedListing {
   @@map("watched_listings")
 }
 
+model SavedSearch {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  name       String   @db.VarChar(120)
+  // The marketplace filter this represents: { search?, set?, rarity?, price_min?, price_max? }.
+  query      Json
+  created_at DateTime @default(now()) @db.DateTime(0)
+
+  @@index([user_id])
+  @@map("saved_searches")
+}
+
 model Bid {
   id         Int      @id @default(autoincrement())
   userCardId Int
