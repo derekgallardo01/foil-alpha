@@ -217,6 +217,11 @@ model WalletTransaction {
   reference_type   String   @db.VarChar(50)
   reference_id     Int?
   admin_id         Int?
+  // Dedup key for externally-triggered credits/reversals (Stripe session /
+  // refund / dispute id). NULL for everything else; NULLs are distinct in a
+  // unique index, so a duplicate webhook delivery fails the insert instead of
+  // double-crediting.
+  idempotency_key  String?  @unique @db.VarChar(255)
   created_at       DateTime @default(now()) @db.DateTime(0)
 
   @@index([user_id], map: "wallet_transactions_user_id_fkey")
