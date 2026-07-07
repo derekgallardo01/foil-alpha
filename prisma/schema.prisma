@@ -23,6 +23,9 @@ model User {
   registeredAt          DateTime  @default(now()) @map("registeredAt") @db.DateTime(0)
   is_verified           Int?      @default(0) @map("is_verified") @db.TinyInt
   verification_code     String?   @map("verification_code") @db.VarChar(10)
+  // Stripe Connect (Express) account for real seller payouts. Null until the
+  // seller onboards; payouts fall back to manual admin handling without it.
+  stripe_connect_account_id String? @db.VarChar(255)
 
   @@map("users")
 }

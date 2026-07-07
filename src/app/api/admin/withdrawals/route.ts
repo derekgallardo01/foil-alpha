@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { requireAdmin } from "../../../lib/auth";
 import { createNotification } from "../../../lib/notification";
+import { stripe, isConnectEnabled } from "../../../lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +120,46 @@ export async function POST(req: NextRequest) {
       return { ...w, status: newStatus };
     });
 
+    // Push the real payout via Stripe Connect if enabled and the seller has
+    // onboarded. The internal balance is already settled (above), so a failed
+    // transfer is a recoverable "owed" state, not a double-payout. The
+    // idempotency key makes a retry safe, and settling-before-transfer means a
+    // concurrent reject can't win after money has moved.
+    const payout: { method: "stripe" | "manual"; transfer_id?: string; transfer_error?: string } = { method: "manual" };
+    if (result.status === "PAID" && isConnectEnabled() && stripe) {
+      const seller = await prisma.user.findUnique({
+        where: { id: result.user_id },
+        select: { stripe_connect_account_id: true },
+      });
+      const acctId = seller?.stripe_connect_account_id;
+      if (acctId) {
+        try {
+          const transfer = await stripe.transfers.create(
+            {
+              amount: Math.round(Number(result.amount) * 100),
+              currency: "usd",
+              destination: acctId,
+              metadata: { withdrawalId: String(result.id) },
+            },
+            { idempotencyKey: `withdrawal-${result.id}` }
+          );
+          payout.method = "stripe";
+          payout.transfer_id = transfer.id;
+          await prisma.walletWithdrawal.update({
+            where: { id: result.id },
+            data: { admin_note: `Stripe transfer ${transfer.id}` },
+          });
+        } catch (e) {
+          payout.transfer_error = e instanceof Error ? e.message : "transfer failed";
+          console.error("Connect transfer failed:", e);
+          await prisma.walletWithdrawal.update({
+            where: { id: result.id },
+            data: { admin_note: `Transfer FAILED (retry): ${payout.transfer_error}`.slice(0, 255) },
+          });
+        }
+      }
+    }
+
     // Notify the requester (best-effort).
     try {
       const paid = result.status === "PAID";
@@ -134,7 +175,7 @@ export async function POST(req: NextRequest) {
       console.error("Withdrawal notification failed:", e);
     }
 
-    return NextResponse.json({ success: true, withdrawal: { ...result, amount: Number(result.amount) } });
+    return NextResponse.json({ success: true, payout, withdrawal: { ...result, amount: Number(result.amount) } });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Action failed." },
