@@ -57,16 +57,19 @@ export async function GET(request: NextRequest) {
       orderBy: { amount: 'desc' }
     });
 
-    // Get bidder details for each bid
-    const bidsWithBidder = await Promise.all(
-      bids.map(async (bid) => {
-        const bidder = await prisma.user.findUnique({
-          where: { id: bid.bidderId },
-          select: { id: true, name: true, email: true }
-        });
-        return { ...bid, bidder };
-      })
-    );
+    // Batch-fetch bidders in one query instead of one findUnique per bid.
+    const bidderIds = [...new Set(bids.map((b) => b.bidderId))];
+    const bidders = bidderIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: bidderIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : [];
+    const bidderById = new Map(bidders.map((u) => [u.id, u] as const));
+    const bidsWithBidder = bids.map((bid) => ({
+      ...bid,
+      bidder: bidderById.get(bid.bidderId) ?? null,
+    }));
 
     // Get transaction history
     const history = await prisma.cardTransactionHistory.findMany({
@@ -74,22 +77,24 @@ export async function GET(request: NextRequest) {
       orderBy: { created_at: 'desc' }
     });
 
-    // Get user details for transaction history
-    const historyWithUsers = await Promise.all(
-      history.map(async (transaction) => {
-        const fromUser = transaction.fromUserId ? await prisma.user.findUnique({
-          where: { id: transaction.fromUserId },
-          select: { id: true, name: true }
-        }) : null;
-
-        const toUser = transaction.toUserId ? await prisma.user.findUnique({
-          where: { id: transaction.toUserId },
-          select: { id: true, name: true }
-        }) : null;
-
-        return { ...transaction, fromUser, toUser };
-      })
-    );
+    // Batch-fetch every from/to user referenced by the history in one query.
+    const historyUserIds = [
+      ...new Set(
+        history.flatMap((t) => [t.fromUserId, t.toUserId]).filter((v): v is number => v != null)
+      ),
+    ];
+    const historyUsers = historyUserIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: historyUserIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const historyUserById = new Map(historyUsers.map((u) => [u.id, u] as const));
+    const historyWithUsers = history.map((transaction) => ({
+      ...transaction,
+      fromUser: transaction.fromUserId ? historyUserById.get(transaction.fromUserId) ?? null : null,
+      toUser: transaction.toUserId ? historyUserById.get(transaction.toUserId) ?? null : null,
+    }));
 
     const currentHighestBid = bidsWithBidder[0];
     const timeLeft = listing.auction_end ? Math.max(0, listing.auction_end.getTime() - Date.now()) : null;
@@ -219,22 +224,24 @@ export async function PUT(request: NextRequest) {
       orderBy: { created_at: 'desc' }
     });
 
-    // Get user details for transaction history
-    const historyWithUsers = await Promise.all(
-      history.map(async (transaction) => {
-        const fromUser = transaction.fromUserId ? await prisma.user.findUnique({
-          where: { id: transaction.fromUserId },
-          select: { id: true, name: true }
-        }) : null;
-
-        const toUser = transaction.toUserId ? await prisma.user.findUnique({
-          where: { id: transaction.toUserId },
-          select: { id: true, name: true }
-        }) : null;
-
-        return { ...transaction, fromUser, toUser };
-      })
-    );
+    // Batch-fetch every from/to user referenced by the history in one query.
+    const historyUserIds = [
+      ...new Set(
+        history.flatMap((t) => [t.fromUserId, t.toUserId]).filter((v): v is number => v != null)
+      ),
+    ];
+    const historyUsers = historyUserIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: historyUserIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const historyUserById = new Map(historyUsers.map((u) => [u.id, u] as const));
+    const historyWithUsers = history.map((transaction) => ({
+      ...transaction,
+      fromUser: transaction.fromUserId ? historyUserById.get(transaction.fromUserId) ?? null : null,
+      toUser: transaction.toUserId ? historyUserById.get(transaction.toUserId) ?? null : null,
+    }));
 
     return NextResponse.json({
       ...updatedListing,
