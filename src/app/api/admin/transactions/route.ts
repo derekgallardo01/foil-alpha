@@ -1,15 +1,12 @@
 // src/app/api/admin/transactions/route.ts - Updated version
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
@@ -65,58 +62,64 @@ export async function GET(request: NextRequest) {
             return sum + Number(t.amount);
         }, 0);
 
-        // Get related data for transactions (same as before)
-        const transactionsWithDetails = await Promise.all(
-            transactions.map(async (transaction) => {
-                const userCard = await prisma.userCard.findUnique({
-                    where: { id: transaction.user_card_id }
-                });
+        // Get related data for transactions (batched to avoid per-item N+1)
+        const userCardIds = [...new Set(transactions.map((t) => t.user_card_id))];
+        const userCards = await prisma.userCard.findMany({
+            where: { id: { in: userCardIds } }
+        });
+        const userCardMap = new Map(userCards.map((uc) => [uc.id, uc] as const));
 
-                const card = userCard ? await prisma.card.findUnique({
-                    where: { id: userCard.card_id },
-                    select: {
-                        id: true,
-                        name: true,
-                        set_name: true,
-                        image_url: true
-                    }
-                }) : null;
+        const cardIds = [...new Set(userCards.map((uc) => uc.card_id))];
+        const cards = await prisma.card.findMany({
+            where: { id: { in: cardIds } },
+            select: {
+                id: true,
+                name: true,
+                set_name: true,
+                image_url: true
+            }
+        });
+        const cardMap = new Map(cards.map((c) => [c.id, c] as const));
 
-                const buyer = await prisma.user.findUnique({
-                    where: { id: transaction.buyer_id },
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                });
+        const userIds = [...new Set([
+            ...transactions.map((t) => t.buyer_id),
+            ...transactions.map((t) => t.seller_id)
+        ])];
+        const relatedUsers = await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: {
+                id: true,
+                name: true,
+                email: true
+            }
+        });
+        const userMap = new Map(relatedUsers.map((u) => [u.id, u] as const));
 
-                const seller = await prisma.user.findUnique({
-                    where: { id: transaction.seller_id },
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                });
+        const transactionsWithDetails = transactions.map((transaction) => {
+            const userCard = userCardMap.get(transaction.user_card_id) ?? null;
 
-                const expiresAt = transaction.status === 'PENDING_BUYER_CONFIRMATION'
-                    ? new Date(new Date(transaction.created_at).getTime() + 24 * 60 * 60 * 1000)
-                    : null;
+            const card = userCard ? (cardMap.get(userCard.card_id) ?? null) : null;
 
-                return {
-                    ...transaction,
-                    userCard: userCard ? {
-                        ...userCard,
-                        card: card
-                    } : null,
-                    buyer,
-                    seller,
-                    expires_at: expiresAt?.toISOString(),
-                    is_expired: expiresAt ? new Date() > expiresAt : false
-                };
-            })
-        );
+            const buyer = userMap.get(transaction.buyer_id) ?? null;
+
+            const seller = userMap.get(transaction.seller_id) ?? null;
+
+            const expiresAt = transaction.status === 'PENDING_BUYER_CONFIRMATION'
+                ? new Date(new Date(transaction.created_at).getTime() + 24 * 60 * 60 * 1000)
+                : null;
+
+            return {
+                ...transaction,
+                userCard: userCard ? {
+                    ...userCard,
+                    card: card
+                } : null,
+                buyer,
+                seller,
+                expires_at: expiresAt?.toISOString(),
+                is_expired: expiresAt ? new Date() > expiresAt : false
+            };
+        });
 
         return NextResponse.json({
             transactions: transactionsWithDetails,

@@ -5,7 +5,6 @@ import {
     Box,
     Paper,
     Typography,
-    Grid,
     Card,
     CardContent,
     Avatar,
@@ -20,6 +19,7 @@ import {
     ListItemSecondaryAction,
     CircularProgress
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { useTheme } from '@mui/material/styles';
 import {
     Whatshot,
@@ -29,6 +29,8 @@ import {
     LocalOffer
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import { getRarityHex } from '../../lib/rarity';
+import WidgetHeader from '../ui/WidgetHeader';
 
 interface PopularCard {
     id: number;
@@ -101,21 +103,6 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
         return theme.palette.success.main;
     };
 
-    const getRarityColor = (rarity: string) => {
-        const colors: Record<string, string> = {
-            'Common': '#757575',
-            'Uncommon': '#66BB6A',
-            'Rare': '#42A5F5',
-            'Rare Holo': '#AB47BC',
-            'Ultra Rare': '#FF7043',
-            'Secret Rare': '#EF5350',
-            'VMAX': '#9B5Cff',
-            'VSTAR': '#FFD54F',
-            'Promo': '#9C27B0'
-        };
-        return colors[rarity] || '#757575';
-    };
-
     const getPlaceholderImage = () => "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='56' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' fill='%23333' rx='4'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='%23666' font-size='10'%3E?%3C/text%3E%3C/svg%3E";
 
     const topCard = popularCards[0];
@@ -163,24 +150,23 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
 
     return (
         <Paper variant="outlined" sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Whatshot sx={{ color: 'primary.main' }} />
-                    Most Popular Cards
-                </Typography>
-
-                <ToggleButtonGroup
-                    value={period}
-                    exclusive
-                    onChange={(e, value) => value && setPeriod(value)}
-                    size="small"
-                    sx={toggleSx}
-                >
-                    <ToggleButton value="24h">24H</ToggleButton>
-                    <ToggleButton value="7d">7D</ToggleButton>
-                    <ToggleButton value="30d">30D</ToggleButton>
-                </ToggleButtonGroup>
-            </Box>
+            <WidgetHeader
+                icon={<Whatshot sx={{ color: 'primary.main' }} />}
+                title="Most Popular Cards"
+                actions={
+                    <ToggleButtonGroup
+                        value={period}
+                        exclusive
+                        onChange={(e, value) => value && setPeriod(value)}
+                        size="small"
+                        sx={toggleSx}
+                    >
+                        <ToggleButton value="24h">24H</ToggleButton>
+                        <ToggleButton value="7d">7D</ToggleButton>
+                        <ToggleButton value="30d">30D</ToggleButton>
+                    </ToggleButtonGroup>
+                }
+            />
 
             {popularCards.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
@@ -210,11 +196,11 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                     borderColor: 'primary.main'
                                 }
                             }}
-                            onClick={() => router.push(`/marketplace?card=${topCard.id}`)}
+                            onClick={() => router.push(`/marketplace?search=${encodeURIComponent(topCard.name)}`)}
                         >
                             <CardContent>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={12} md={3}>
+                                    <Grid size={{ xs: 12, md: 3 }}>
                                         <Avatar
                                             src={topCard.image_url || getPlaceholderImage()}
                                             variant="rounded"
@@ -224,7 +210,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={9}>
+                                    <Grid size={{ xs: 12, md: 9 }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                             <Box>
                                                 <Typography variant="h5" gutterBottom sx={{ color: 'text.primary' }}>
@@ -238,7 +224,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                         label={topCard.rarity}
                                                         size="small"
                                                         sx={{
-                                                            bgcolor: getRarityColor(topCard.rarity),
+                                                            bgcolor: getRarityHex(topCard.rarity),
                                                             color: 'white',
                                                             fontSize: '0.75rem'
                                                         }}
@@ -254,7 +240,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                         </Box>
 
                                         <Grid container spacing={2} sx={{ mt: 2 }}>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <Visibility sx={{ color: 'text.disabled', mb: 0.5 }} />
                                                     <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -263,7 +249,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                     <Typography variant="caption" color="text.secondary">Views</Typography>
                                                 </Box>
                                             </Grid>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <LocalOffer sx={{ color: 'text.disabled', mb: 0.5 }} />
                                                     <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -272,7 +258,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                     <Typography variant="caption" color="text.secondary">Listings</Typography>
                                                 </Box>
                                             </Grid>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <TrendingUp sx={{ color: 'text.disabled', mb: 0.5 }} />
                                                     <Typography variant="mono" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -281,7 +267,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                     <Typography variant="caption" color="text.secondary">Recent Sales</Typography>
                                                 </Box>
                                             </Grid>
-                                            <Grid item xs={6} sm={3}>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
                                                 <Box sx={{ textAlign: 'center' }}>
                                                     <Typography variant="mono" component="div" sx={{ color: 'text.primary', fontWeight: 700 }}>
                                                         {formatPrice(topCard.market_price)}
@@ -313,7 +299,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                         bgcolor: 'action.hover'
                                     }
                                 }}
-                                onClick={() => router.push(`/marketplace?card=${card.id}`)}
+                                onClick={() => router.push(`/marketplace?search=${encodeURIComponent(card.name)}`)}
                             >
                                 <ListItemAvatar>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -341,7 +327,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                 size="small"
                                                 sx={{
                                                     height: 20,
-                                                    bgcolor: getRarityColor(card.rarity),
+                                                    bgcolor: getRarityHex(card.rarity),
                                                     color: 'white',
                                                     fontSize: '0.7rem'
                                                 }}

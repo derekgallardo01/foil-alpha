@@ -1,6 +1,7 @@
 // src/app/lib/notification.ts - Enhanced with email notifications
 import { prisma } from './prisma';
 import { sendEmail } from './email';
+import { emitAppEvent } from './events';
 
 export interface CreateNotificationData {
     user_id: number;
@@ -204,6 +205,9 @@ export async function createNotification(notificationData: CreateNotificationDat
                 read: false
             }
         });
+
+        // Push to the recipient's live stream (bell badge) — best-effort.
+        emitAppEvent({ type: 'notification', userId: notificationData.user_id });
 
         // Send email notification
         await sendNotificationEmail(notificationData.user_id, {

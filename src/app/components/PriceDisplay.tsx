@@ -3,7 +3,6 @@
 
 import React from 'react';
 import {
-    Box,
     Typography,
     Tooltip,
     TypographyProps

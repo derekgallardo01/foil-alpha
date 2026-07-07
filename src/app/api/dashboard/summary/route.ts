@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { getAuthUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
+        const user = await getAuthUser();
 
         // Calculate date for 7 days ago for price change calculation
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -114,8 +113,8 @@ export async function GET(request: NextRequest) {
 
         // User-specific stats if logged in
         let userStats = null;
-        if (session?.user?.id) {
-            const userId = parseInt(session.user.id);
+        if (user) {
+            const userId = user.id;
 
             // Fetch user cards separately
             const userCards = await prisma.userCard.findMany({

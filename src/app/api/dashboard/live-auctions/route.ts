@@ -113,7 +113,6 @@ export async function GET(request: NextRequest) {
                 time_remaining: timeRemaining,
                 auction_end: auction.auction_end,
                 condition: auction.condition,
-                watching_count: Math.floor(Math.random() * 50) + 10, // TODO: Implement real watching count
             };
         }).filter(a => a.card !== null);
 

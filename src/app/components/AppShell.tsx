@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -16,6 +16,7 @@ import {
   IconButton,
   Divider,
   Typography,
+  Chip,
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -45,9 +46,11 @@ import {
   ReceiptLong as TxnIcon,
   PendingActions as PendingIcon,
   ArrowBack as BackIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import CurrencySelector from "./CurrencySelector";
 import AuctionNotifications from "./AuctionNotifications";
+import CommandPalette, { Command } from "./CommandPalette";
 
 const DRAWER_WIDTH = 248;
 
@@ -148,6 +151,19 @@ export default function AppShell({
   const { data: session } = useSession();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Global ⌘K / Ctrl+K toggles the command palette.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const isAdminUser = session?.user?.role === "admin";
   const isAdminView = variant === "admin";
@@ -172,6 +188,28 @@ export default function AppShell({
             : USER_NAV,
         },
       ];
+
+  // Flatten every visible nav destination (+ Log out) into palette commands.
+  const commands: Command[] = useMemo(() => {
+    const list: Command[] = sections.flatMap((section) =>
+      section.items.map((item) => ({
+        id: `nav:${item.path}`,
+        label: item.label,
+        group: section.heading ?? "Navigate",
+        icon: item.icon,
+        run: () => go(item.path),
+      }))
+    );
+    list.push({
+      id: "action:logout",
+      label: "Log out",
+      group: "Actions",
+      icon: <LogoutIcon />,
+      run: () => signOut({ callbackUrl: "/login" }),
+    });
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections]);
 
   const navButton = (item: NavItem) => {
     const active = isActive(item.path);
@@ -241,6 +279,29 @@ export default function AppShell({
 
       <Divider />
 
+      <Box sx={{ px: 1.5, pt: 1 }}>
+        <ListItemButton
+          onClick={() => {
+            setPaletteOpen(true);
+            setMobileOpen(false);
+          }}
+          sx={{
+            borderRadius: 2,
+            color: "text.secondary",
+            border: 1,
+            borderColor: "divider",
+            "& .MuiListItemIcon-root": { color: "text.secondary", minWidth: 34 },
+            "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+          }}
+        >
+          <ListItemIcon>
+            <SearchIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Search" primaryTypographyProps={{ fontSize: 14 }} />
+          <Chip label="⌘K" size="small" variant="outlined" sx={{ height: 20, "& .MuiChip-label": { px: 0.75, fontSize: 11 } }} />
+        </ListItemButton>
+      </Box>
+
       <Box sx={{ flexGrow: 1, overflowY: "auto", px: 1.5, py: 1 }}>
         {sections.map((section, i) => (
           <List
@@ -292,9 +353,14 @@ export default function AppShell({
               <MenuIcon />
             </IconButton>
             <Wordmark />
+            <IconButton sx={{ ml: "auto" }} onClick={() => setPaletteOpen(true)} aria-label="Search">
+              <SearchIcon />
+            </IconButton>
           </Toolbar>
         </AppBar>
       )}
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
 
       <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }} aria-label="Main navigation">
         {isDesktop ? (

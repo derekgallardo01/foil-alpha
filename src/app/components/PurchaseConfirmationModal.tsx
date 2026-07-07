@@ -15,21 +15,21 @@ import {
     Alert,
     CircularProgress,
     Paper,
-    Grid,
     Divider,
     Skeleton
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     ShoppingCart as CartIcon,
     AttachMoney as MoneyIcon,
     CheckCircle as CheckIcon,
-    Warning as WarningIcon,
     Percent as PercentIcon,
     AccountBalance as WalletIcon,
     Store as StoreIcon,
     Person as PersonIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+import { getRarityColor } from '../lib/rarity';
 
 interface Card {
     id: number;
@@ -88,17 +88,6 @@ export default function PurchaseConfirmationModal({
     const formatPrice = (price: number | null) => {
         if (!price) return 'N/A';
         return `$${Number(price).toFixed(2)}`;
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
     };
 
     // Calculate commission when modal opens
@@ -233,7 +222,6 @@ export default function PurchaseConfirmationModal({
                 setSuccess(true);
 
                 const cardName = data.purchase_details?.card_name || listingData.card.name;
-                const totalPaid = data.purchase_details?.total_paid || data.purchase_details?.total_cost;
 
                 toast.success(`Successfully purchased ${cardName}!`);
 
@@ -270,7 +258,6 @@ export default function PurchaseConfirmationModal({
     if (!listingData) return null;
 
     const cardPrice = listingData.fixed_price || listingData.current_price || 0;
-    const isMarketplaceSale = listingData.type === 'CATALOG';
 
     return (
         <Dialog
@@ -331,7 +318,7 @@ export default function PurchaseConfirmationModal({
                     // Purchase Confirmation
                     <Grid container spacing={3}>
                         {/* Card Display */}
-                        <Grid item xs={12} md={5}>
+                        <Grid size={{ xs: 12, md: 5 }}>
                             <Card sx={{
                                 border: 1,
                                 borderColor: 'divider',
@@ -351,7 +338,7 @@ export default function PurchaseConfirmationModal({
                         </Grid>
 
                         {/* Card Details */}
-                        <Grid item xs={12} md={7}>
+                        <Grid size={{ xs: 12, md: 7 }}>
                             <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
                                 {listingData.card.name}
                             </Typography>

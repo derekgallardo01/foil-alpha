@@ -1,4 +1,4 @@
-import { createTheme } from "@mui/material/styles";
+import { createTheme, responsiveFontSizes } from "@mui/material/styles";
 import type { CSSProperties } from "react";
 import "@fontsource-variable/sora";
 import "@fontsource-variable/inter";
@@ -203,4 +203,7 @@ theme = createTheme(theme, {
   },
 });
 
-export default theme;
+// Scale headings (and other variants) down on narrow viewports so long titles
+// like "Card Marketplace" don't overflow on phones. Custom variants (mono) and
+// inline fontSize overrides are unaffected.
+export default responsiveFontSizes(theme);

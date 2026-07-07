@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 import {
     Box,
     Typography,
@@ -22,13 +21,17 @@ import {
     IconButton,
     FormControlLabel,
     Checkbox,
-    Grid,
     Card,
     Chip,
     InputLabel,
     FormControl,
-    Autocomplete
+    Autocomplete,
+    Tooltip,
+    Switch,
+    FormLabel,
+    Divider
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -41,8 +44,22 @@ import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
-import Wordmark from "../../components/Wordmark";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
+import { formatPrice, formatTimeLeft, formatDuration, formatDateTime } from "../../lib/format";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+
+// Small label/value row for the details dialog.
+function DetailRow({ label, value }: { label: string; value: string }) {
+    return (
+        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, py: 0.25 }}>
+            <Typography variant="body2" color="text.secondary">{label}</Typography>
+            <Typography variant="body2" sx={{ textAlign: "right" }}>{value}</Typography>
+        </Box>
+    );
+}
 
 // Animation variants
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
@@ -94,15 +111,26 @@ interface ListingsResponse {
 }
 
 export default function AdminListingsClient() {
-    const router = useRouter();
-
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [listings, setListings] = useState<Listing[]>([]);
     const [allCards, setAllCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [createListingOpen, setCreateListingOpen] = useState<boolean>(false);
+    const [editListingOpen, setEditListingOpen] = useState<boolean>(false);
+    const [editData, setEditData] = useState<{
+        id: number;
+        cardName: string;
+        sale_type: 'FIXED' | 'AUCTION';
+        fixed_price: string;
+        reserve_price: string;
+        auction_duration_hours: string;
+        notes: string;
+        is_for_sale: boolean;
+    } | null>(null);
+    const [viewOpen, setViewOpen] = useState<boolean>(false);
+    const [viewListing, setViewListing] = useState<Listing | null>(null);
     const [actionLoading, setActionLoading] = useState<boolean>(false);
     const [rowLoading, setRowLoading] = useState<{ [key: number]: boolean }>({});
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
@@ -133,13 +161,6 @@ export default function AdminListingsClient() {
     const createDialogRef = useRef<HTMLDivElement>(null);
     const hasFetchedRef = useRef(false);
 
-    // Role-Based Access Control (RBAC)
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
-
     // Fetch listings
     const fetchListings = useCallback(async () => {
         if (!session) return;
@@ -155,7 +176,6 @@ export default function AdminListingsClient() {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
             });
 
@@ -190,7 +210,6 @@ export default function AdminListingsClient() {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
             });
 
@@ -232,23 +251,6 @@ export default function AdminListingsClient() {
     // Debounced Search
     const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
 
-    const formatPrice = useCallback((price: number | null) => {
-        if (!price) return 'N/A';
-        return `$${Number(price).toFixed(2)}`;
-    }, []);
-
-    const formatTimeLeft = useCallback((timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    }, []);
-
     const getStatusColor = useCallback((listing: Listing) => {
         if (listing.is_sold) return 'success';
         if (!listing.is_for_sale) return 'default';
@@ -264,8 +266,18 @@ export default function AdminListingsClient() {
     }, []);
 
     // Moved handleEditListing and handleDeleteListing before columns
-    const handleEditListing = useCallback(() => {
-        toast.info("Edit listing functionality to be implemented");
+    const handleEditListing = useCallback((listing: Listing) => {
+        setEditData({
+            id: listing.id,
+            cardName: listing.card.name,
+            sale_type: listing.sale_type,
+            fixed_price: listing.fixed_price != null ? String(listing.fixed_price) : '',
+            reserve_price: listing.reserve_price != null ? String(listing.reserve_price) : '',
+            auction_duration_hours: '168',
+            notes: listing.notes ?? '',
+            is_for_sale: listing.is_for_sale,
+        });
+        setEditListingOpen(true);
     }, []);
 
     const handleDeleteListing = useCallback(async (listingId: number) => {
@@ -273,6 +285,13 @@ export default function AdminListingsClient() {
 
         setRowLoading((prev) => ({ ...prev, [listingId]: true }));
         try {
+            // Persist the delete server-side before updating local state, otherwise
+            // the row reappears on the next refresh.
+            const res = await fetch(`/api/admin/listings/${listingId}`, { method: "DELETE" });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to remove listing");
+            }
             setListings((prev) => prev.filter((listing) => listing.id !== listingId));
             setSelected((prev) => prev.filter((id) => id !== listingId));
             toast.success("Listing removed successfully!");
@@ -379,7 +398,7 @@ export default function AdminListingsClient() {
                     <Typography variant="mono" color="text.primary">{params.row.bid_count}</Typography>
                     {params.row.sale_type === 'AUCTION' && params.row.time_left_ms && (
                         <Typography variant="caption" color="text.secondary">
-                            {formatTimeLeft(params.row.time_left_ms)}
+                            {formatTimeLeft(params.row.auction_end)}
                         </Typography>
                     )}
                 </Box>
@@ -405,7 +424,7 @@ export default function AdminListingsClient() {
                 <Box>
                     <IconButton
                         size="small"
-                        onClick={() => handleEditListing()}
+                        onClick={() => handleEditListing(params.row)}
                         disabled={rowLoading[Number(params.id)] || actionLoading}
                         sx={{ mr: 1 }}
                         aria-label="Edit listing"
@@ -415,7 +434,8 @@ export default function AdminListingsClient() {
                     <IconButton
                         size="small"
                         onClick={() => {
-                            toast.info("View listing details functionality to be implemented");
+                            setViewListing(params.row);
+                            setViewOpen(true);
                         }}
                         disabled={rowLoading[Number(params.id)] || actionLoading}
                         sx={{ mr: 1 }}
@@ -435,7 +455,7 @@ export default function AdminListingsClient() {
                 </Box>
             ),
         },
-    ], [visibleColumns, formatPrice, getStatusText, getStatusColor, formatTimeLeft, rowLoading, actionLoading, handleEditListing, handleDeleteListing]);
+    ], [visibleColumns, getStatusText, getStatusColor, rowLoading, actionLoading, handleEditListing, handleDeleteListing]);
 
     const handleCreateListing = useCallback(() => {
         setNewListing({
@@ -479,7 +499,6 @@ export default function AdminListingsClient() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`,
                 },
                 body: JSON.stringify(newListing),
             });
@@ -505,6 +524,85 @@ export default function AdminListingsClient() {
             setActionLoading(false);
         }
     }, [session, newListing]);
+
+    const handleUpdateListing = useCallback(async () => {
+        if (!session || !editData) return;
+
+        if (editData.sale_type === 'FIXED' && (!editData.fixed_price || parseFloat(editData.fixed_price) <= 0)) {
+            toast.error("Fixed price is required and must be greater than 0");
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            const body: Record<string, unknown> = {
+                is_for_sale: editData.is_for_sale,
+                sale_type: editData.sale_type,
+                notes: editData.notes,
+            };
+            if (editData.sale_type === 'FIXED') {
+                body.fixed_price = parseFloat(editData.fixed_price) || 0;
+            } else {
+                body.reserve_price = editData.reserve_price ? parseFloat(editData.reserve_price) : null;
+                body.auction_duration_hours = parseInt(editData.auction_duration_hours) || 168;
+            }
+
+            const response = await fetch(`/api/admin/listings/${editData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to update listing');
+            }
+
+            setEditListingOpen(false);
+            setEditData(null);
+            toast.success('Listing updated successfully!');
+            await fetchListings(); // Re-sync canonical state (e.g. new auction end).
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : 'Error updating listing');
+        } finally {
+            setActionLoading(false);
+        }
+    }, [session, editData, fetchListings]);
+
+    const handleBulkDelete = useCallback(async () => {
+        if (!session || selected.length === 0) return;
+        if (!confirm(`Delete ${selected.length} selected listing(s)? This cannot be undone.`)) return;
+
+        setActionLoading(true);
+        const ids = [...selected];
+        try {
+            const results = await Promise.allSettled(
+                ids.map((id) =>
+                    fetch(`/api/admin/listings/${id}`, { method: 'DELETE' }).then((r) => {
+                        if (!r.ok) throw new Error(String(id));
+                        return id;
+                    })
+                )
+            );
+            const deleted = results
+                .filter((r): r is PromiseFulfilledResult<number> => r.status === 'fulfilled')
+                .map((r) => r.value);
+            const failed = ids.length - deleted.length;
+
+            if (deleted.length > 0) {
+                setListings((prev) => prev.filter((l) => !deleted.includes(l.id)));
+                setSelected((prev) => prev.filter((id) => !deleted.includes(id)));
+                toast.success(`Deleted ${deleted.length} listing(s)`);
+            }
+            if (failed > 0) {
+                toast.error(`${failed} listing(s) could not be deleted`);
+            }
+        } finally {
+            setActionLoading(false);
+        }
+    }, [session, selected]);
 
     return (
         <AppShell variant="admin">
@@ -536,38 +634,11 @@ export default function AdminListingsClient() {
                             overflow: "visible",
                         }}
                     >
-                        <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                                <Wordmark size={40} />
-                            </motion.div>
-                        </Box>
-                        <Typography
-                            variant="h4"
-                            sx={{
-                                mb: 3,
-                                textAlign: "center",
-                                background: (theme) => theme.foil.gradient,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                backgroundClip: "text",
-                            }}
-                        >
-                            Admin - Marketplace Listings
-                        </Typography>
-
-                        {/* Listing Stats Dashboard */}
-                        <motion.div variants={itemVariants}>
-                            <Box sx={{ mb: 2, display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 2 }}>
-                                <Typography sx={{ color: "text.secondary" }}>Total Listings: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.total}</Typography></Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Active: <Typography component="span" variant="mono" sx={{ color: "success.main" }}>{stats.active}</Typography></Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Sold: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.sold}</Typography></Typography>
-                                <Typography sx={{ color: "text.secondary" }}>Total Bids: <Typography component="span" variant="mono" sx={{ color: "text.primary" }}>{stats.totalBids}</Typography></Typography>
-                            </Box>
-                        </motion.div>
-
-                        <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                            <motion.div variants={itemVariants}>
-                                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 2 }}>
+                        <PageHeader
+                            title="Listings"
+                            icon={<GavelIcon />}
+                            actions={
+                                <>
                                     <Button
                                         variant="contained"
                                         color="primary"
@@ -585,9 +656,29 @@ export default function AdminListingsClient() {
                                     >
                                         Refresh
                                     </Button>
-                                </Box>
-                            </motion.div>
+                                </>
+                            }
+                        />
 
+                        {/* Listing Stats Dashboard */}
+                        <motion.div variants={itemVariants}>
+                            <Grid container spacing={2} sx={{ mb: 3 }}>
+                                <Grid size={{ xs: 6, md: 3 }}>
+                                    <StatCard label="Total Listings" value={stats.total} accent />
+                                </Grid>
+                                <Grid size={{ xs: 6, md: 3 }}>
+                                    <StatCard label="Active" value={stats.active} />
+                                </Grid>
+                                <Grid size={{ xs: 6, md: 3 }}>
+                                    <StatCard label="Sold" value={stats.sold} />
+                                </Grid>
+                                <Grid size={{ xs: 6, md: 3 }}>
+                                    <StatCard label="Total Bids" value={stats.totalBids} />
+                                </Grid>
+                            </Grid>
+                        </motion.div>
+
+                        <motion.div variants={containerVariants} initial="hidden" animate="visible">
                             {/* Column Visibility Toggle */}
                             <motion.div variants={itemVariants}>
                                 <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -675,17 +766,32 @@ export default function AdminListingsClient() {
                                         <Typography sx={{ flex: "1 1 100%", color: "text.primary" }}>
                                             <Typography component="span" variant="mono" sx={{ color: "primary.main" }}>{selected.length}</Typography> selected
                                         </Typography>
-                                        <IconButton
-                                            color="error"
-                                            onClick={() => {
-                                                toast.info("Bulk operations to be implemented");
-                                            }}
-                                            disabled={actionLoading}
-                                            aria-label="Delete selected listings"
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
+                                        <Tooltip title="Delete selected">
+                                            <span>
+                                                <IconButton
+                                                    color="error"
+                                                    onClick={handleBulkDelete}
+                                                    disabled={actionLoading}
+                                                    aria-label="Delete selected listings"
+                                                >
+                                                    {actionLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
                                     </Toolbar>
+                                </motion.div>
+                            )}
+
+                            {/* Fetch error surface */}
+                            {error && (
+                                <motion.div variants={itemVariants}>
+                                    <Box sx={{ mb: 2 }}>
+                                        <ErrorState
+                                            variant="inline"
+                                            message={error}
+                                            onRetry={fetchListings}
+                                        />
+                                    </Box>
                                 </motion.div>
                             )}
 
@@ -722,9 +828,11 @@ export default function AdminListingsClient() {
                             </motion.div>
 
                             {listings.length === 0 && !error && (
-                                <Typography variant="body1" sx={{ mt: 2, textAlign: "center", color: "text.secondary" }}>
-                                    No listings found. Create your first marketplace listing!
-                                </Typography>
+                                <EmptyState
+                                    icon={<GavelIcon />}
+                                    title="No listings found"
+                                    description="Create your first marketplace listing to get started."
+                                />
                             )}
                         </motion.div>
                     </Paper>
@@ -742,7 +850,7 @@ export default function AdminListingsClient() {
                 <DialogTitle>Create Marketplace Listing</DialogTitle>
                 <DialogContent>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Autocomplete
                                 options={allCards}
                                 getOptionLabel={(option) => `${option.name} - ${option.set_name} (${option.set_number})`}
@@ -783,7 +891,7 @@ export default function AdminListingsClient() {
                             />
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <FormControl fullWidth error={!!validationErrors.condition}>
                                 <InputLabel>Condition</InputLabel>
                                 <Select
@@ -800,7 +908,7 @@ export default function AdminListingsClient() {
                             </FormControl>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <FormControl fullWidth>
                                 <InputLabel>Sale Type</InputLabel>
                                 <Select
@@ -815,7 +923,7 @@ export default function AdminListingsClient() {
                         </Grid>
 
                         {newListing.sale_type === 'FIXED' && (
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Fixed Price ($)"
                                     type="number"
@@ -830,7 +938,7 @@ export default function AdminListingsClient() {
 
                         {newListing.sale_type === 'AUCTION' && (
                             <>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <TextField
                                         label="Reserve Price ($)"
                                         type="number"
@@ -840,7 +948,7 @@ export default function AdminListingsClient() {
                                         helperText="Optional minimum price"
                                     />
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <FormControl fullWidth error={!!validationErrors.auction_duration_hours}>
                                         <InputLabel>Auction Duration</InputLabel>
                                         <Select
@@ -858,7 +966,7 @@ export default function AdminListingsClient() {
                             </>
                         )}
 
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 label="Quantity"
                                 type="number"
@@ -870,7 +978,7 @@ export default function AdminListingsClient() {
                             />
                         </Grid>
 
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 label="Notes"
                                 fullWidth
@@ -884,7 +992,7 @@ export default function AdminListingsClient() {
 
                         {/* Preview selected card */}
                         {newListing.card_id && (
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                                     {(() => {
                                         const selectedCard = allCards.find(card => card.id.toString() === newListing.card_id);
@@ -918,6 +1026,186 @@ export default function AdminListingsClient() {
                     >
                         {actionLoading ? <CircularProgress size={24} /> : `Create ${newListing.quantity > 1 ? `${newListing.quantity} Listings` : 'Listing'}`}
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Edit Listing Dialog */}
+            <Dialog
+                open={editListingOpen}
+                onClose={() => setEditListingOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Edit Listing{editData ? ` — ${editData.cardName}` : ''}</DialogTitle>
+                <DialogContent>
+                    {editData && (
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid size={{ xs: 12 }}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={editData.is_for_sale}
+                                            onChange={(e) => setEditData({ ...editData, is_for_sale: e.target.checked })}
+                                        />
+                                    }
+                                    label={editData.is_for_sale ? "Active (listed for sale)" : "Inactive (hidden)"}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Sale Type</InputLabel>
+                                    <Select
+                                        value={editData.sale_type}
+                                        label="Sale Type"
+                                        onChange={(e) => setEditData({ ...editData, sale_type: e.target.value as 'FIXED' | 'AUCTION' })}
+                                    >
+                                        <MenuItem value="FIXED">Fixed Price</MenuItem>
+                                        <MenuItem value="AUCTION">Auction</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {editData.sale_type === 'FIXED' ? (
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <TextField
+                                        label="Fixed Price ($)"
+                                        type="number"
+                                        fullWidth
+                                        value={editData.fixed_price}
+                                        onChange={(e) => setEditData({ ...editData, fixed_price: e.target.value })}
+                                        inputProps={{ min: 0, step: 0.01 }}
+                                    />
+                                </Grid>
+                            ) : (
+                                <>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <TextField
+                                            label="Reserve Price ($)"
+                                            type="number"
+                                            fullWidth
+                                            value={editData.reserve_price}
+                                            onChange={(e) => setEditData({ ...editData, reserve_price: e.target.value })}
+                                            helperText="Optional minimum price"
+                                            inputProps={{ min: 0, step: 0.01 }}
+                                        />
+                                    </Grid>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Auction Duration</InputLabel>
+                                            <Select
+                                                value={editData.auction_duration_hours}
+                                                label="Auction Duration"
+                                                onChange={(e) => setEditData({ ...editData, auction_duration_hours: e.target.value })}
+                                            >
+                                                <MenuItem value="24">1 Day</MenuItem>
+                                                <MenuItem value="72">3 Days</MenuItem>
+                                                <MenuItem value="168">7 Days</MenuItem>
+                                                <MenuItem value="336">14 Days</MenuItem>
+                                            </Select>
+                                            <FormLabel sx={{ mt: 0.5, fontSize: 12 }}>Resets the auction end time</FormLabel>
+                                        </FormControl>
+                                    </Grid>
+                                </>
+                            )}
+
+                            <Grid size={{ xs: 12 }}>
+                                <TextField
+                                    label="Notes"
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    value={editData.notes}
+                                    onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setEditListingOpen(false)} disabled={actionLoading}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleUpdateListing}
+                        disabled={actionLoading}
+                    >
+                        {actionLoading ? <CircularProgress size={24} /> : 'Save Changes'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* View Listing Details Dialog */}
+            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Listing Details{viewListing ? ` — ${viewListing.card.name}` : ''}</DialogTitle>
+                <DialogContent dividers>
+                    {viewListing && (
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 4 }}>
+                                {(viewListing.card.small_image_url || viewListing.card.image_url) && (
+                                    <Image
+                                        src={viewListing.card.small_image_url || viewListing.card.image_url || ''}
+                                        alt={viewListing.card.name}
+                                        width={180}
+                                        height={252}
+                                        style={{ width: '100%', height: 'auto', borderRadius: 8 }}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                )}
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 8 }}>
+                                <Typography variant="h6">{viewListing.card.name}</Typography>
+                                <Typography variant="body2" color="text.secondary" gutterBottom>
+                                    {viewListing.card.set_name} • {viewListing.card.set_number} • {viewListing.card.rarity}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 1 }}>
+                                    <Chip size="small" label={getStatusText(viewListing)} color={getStatusColor(viewListing)} />
+                                    <Chip
+                                        size="small"
+                                        variant="outlined"
+                                        icon={viewListing.sale_type === 'AUCTION' ? <GavelIcon /> : <AttachMoneyIcon />}
+                                        label={viewListing.sale_type}
+                                        color={viewListing.sale_type === 'AUCTION' ? 'secondary' : 'primary'}
+                                    />
+                                    <Chip size="small" variant="outlined" label={`Condition: ${viewListing.condition}`} />
+                                </Box>
+                                <Divider sx={{ my: 1 }} />
+                                <DetailRow label="Owner" value={`${viewListing.owner.name} (${viewListing.owner.role})`} />
+                                {viewListing.sale_type === 'FIXED' ? (
+                                    <DetailRow label="Price" value={formatPrice(viewListing.fixed_price)} />
+                                ) : (
+                                    <>
+                                        <DetailRow label="Reserve" value={formatPrice(viewListing.reserve_price)} />
+                                        <DetailRow label="Highest Bid" value={viewListing.current_highest_bid != null ? formatPrice(viewListing.current_highest_bid) : '—'} />
+                                        <DetailRow label="Bids" value={String(viewListing.bid_count)} />
+                                        <DetailRow label="Time Left" value={viewListing.is_auction_active ? formatDuration(viewListing.time_left_ms) : 'Ended'} />
+                                        <DetailRow label="Auction End" value={viewListing.auction_end ? formatDateTime(viewListing.auction_end) : '—'} />
+                                    </>
+                                )}
+                                <DetailRow label="Created" value={formatDateTime(viewListing.created_at)} />
+                                {viewListing.notes && <DetailRow label="Notes" value={viewListing.notes} />}
+                            </Grid>
+                            {viewListing.sale_type === 'AUCTION' && viewListing.bids.length > 0 && (
+                                <Grid size={{ xs: 12 }}>
+                                    <Typography variant="subtitle2" sx={{ mt: 1, mb: 0.5 }}>Bids</Typography>
+                                    {[...viewListing.bids].sort((a, b) => b.amount - a.amount).map((bid) => (
+                                        <Box key={bid.id} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+                                            <Typography variant="body2">{bid.bidder.name}</Typography>
+                                            <Typography variant="mono" sx={{ fontWeight: 700 }}>{formatPrice(bid.amount)}</Typography>
+                                        </Box>
+                                    ))}
+                                </Grid>
+                            )}
+                        </Grid>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button variant="outlined" onClick={() => { setViewOpen(false); if (viewListing) handleEditListing(viewListing); }}>
+                        Edit
+                    </Button>
+                    <Button onClick={() => setViewOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
         </Box>

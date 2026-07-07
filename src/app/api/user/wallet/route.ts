@@ -1,26 +1,23 @@
 // src/app/api/user/wallet/route.ts - Simplified version
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const userId = parseInt(session.user.id);
-    const userName = session.user.name || 'Unknown';
+    const userId = user.id;
+    const userName = user.name || 'Unknown';
 
     console.log(`🔍 DEBUG: Wallet API called`);
     console.log(`👤 User: ${userName} (ID: ${userId})`);
     console.log(`🕐 Timestamp: ${new Date().toISOString()}`);
 
     // Check if user is admin
-    if (session.user.role === 'admin') {
+    if (user.role === 'admin') {
       return NextResponse.json({
         error: 'Admins do not have wallets',
         message: 'Use admin panel to manage user wallets'
@@ -122,16 +119,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
 
     // Check if user is admin - admins don't have wallets
-    if (session.user.role === 'admin') {
+    if (user.role === 'admin') {
       return NextResponse.json({
         error: 'Admins cannot perform wallet operations on themselves'
       }, { status: 403 });

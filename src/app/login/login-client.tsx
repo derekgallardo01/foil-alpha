@@ -16,16 +16,17 @@ import {
   Backdrop,
   IconButton,
   InputAdornment,
-  Grid,
   Card,
   CardContent,
   Alert,
 } from "@mui/material";
+import Grid from "@mui/material/Grid2";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import SocialLogins from "../components/SocialLogins";
+import GradientHeading from "../components/ui/GradientHeading";
 
 // DEV MODE: Available test users
 const DEV_USERS = [
@@ -71,6 +72,7 @@ export default function LoginClient() {
   const [rememberMe, setRememberMe] = useState(false);
   const [devMode] = useState(process.env.NODE_ENV === 'development');
   const passwordRef = useRef<HTMLInputElement>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const emailFromQuery = searchParams.get("email");
@@ -213,24 +215,12 @@ export default function LoginClient() {
       <GoogleAnalytics trackPageViews debugMode={true} />
 
       <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
-        <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
-          <motion.div initial={{ rotateY: 180 }} animate={{ rotateY: 0 }} transition={{ duration: 0.6 }}>
+        <motion.div initial={reduceMotion ? false : { opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
+          <motion.div initial={reduceMotion ? false : { rotateY: 180 }} animate={reduceMotion ? false : { rotateY: 0 }} transition={{ duration: 0.6 }}>
             <Paper elevation={0} sx={{ p: 4, bgcolor: "background.paper", border: 1, borderColor: "divider", borderRadius: 2, boxShadow: 3 }}>
-              <Typography
-                variant="h5"
-                component="p"
-                sx={{
-                  mb: 2,
-                  textAlign: "center",
-                  background: (t) => t.foil.gradient,
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  fontWeight: 800,
-                }}
-              >
+              <GradientHeading variant="h4" component="h1" sx={{ mb: 2, textAlign: "center" }}>
                 Foil Alpha
-              </Typography>
+              </GradientHeading>
 
               {/* DEV MODE: Quick Login Section */}
               {devMode && (
@@ -245,7 +235,7 @@ export default function LoginClient() {
 
                     <Grid container spacing={2}>
                       {DEV_USERS.map((user) => (
-                        <Grid item xs={12} sm={6} md={4} key={user.email}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={user.email}>
                           <Card sx={{
                             bgcolor: user.role === 'admin' ? 'error.dark' : 'primary.dark',
                             '&:hover': { bgcolor: user.role === 'admin' ? 'error.main' : 'primary.main' }
@@ -284,10 +274,10 @@ export default function LoginClient() {
               )}
 
               <Box sx={{ width: "100%" }}>
-                <Typography variant="h4" sx={{ mb: 3, textAlign: "center", color: "text.primary" }}>
-                  User Login
+                <Typography variant="subtitle1" component="h2" sx={{ textAlign: "center", color: "text.primary", fontWeight: 700 }}>
+                  Log in
                 </Typography>
-                <Typography variant="subtitle1" sx={{ textAlign: "center", color: "text.secondary" }}>
+                <Typography variant="body2" sx={{ mb: 2, textAlign: "center", color: "text.secondary" }}>
                   Access your Foil Alpha account
                 </Typography>
 
@@ -362,21 +352,19 @@ export default function LoginClient() {
 
                     {(error || isNetworkError) && (
                       <motion.div variants={itemVariants}>
-                        <Typography
-                          color={isNetworkError ? "warning" : "error"}
-                          sx={{ mt: 1, textAlign: "center" }}
+                        <Alert
+                          severity={isNetworkError ? "warning" : "error"}
+                          sx={{ mt: 2 }}
+                          action={
+                            isNetworkError ? (
+                              <Button color="inherit" size="small" onClick={performLogin}>
+                                Retry
+                              </Button>
+                            ) : undefined
+                          }
                         >
                           {error}
-                          {isNetworkError && (
-                            <Button
-                              size="small"
-                              onClick={performLogin}
-                              sx={{ ml: 1 }}
-                            >
-                              Retry
-                            </Button>
-                          )}
-                        </Typography>
+                        </Alert>
                       </motion.div>
                     )}
 

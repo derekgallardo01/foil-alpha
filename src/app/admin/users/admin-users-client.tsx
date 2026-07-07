@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 import {
   Box,
   Typography,
   CircularProgress,
   Container,
   Paper,
-  Backdrop,
   TextField,
   Button,
   Dialog,
@@ -18,19 +16,15 @@ import {
   DialogActions,
   Select,
   MenuItem,
-  Toolbar,
   IconButton,
   FormControlLabel,
   Checkbox,
   Chip,
-  Divider,
-  Grid,
-  Card,
-  CardContent,
   List,
   ListItem,
   ListItemText,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -41,9 +35,11 @@ import LockOpenIcon from "@mui/icons-material/LockOpen";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
-import sanitizeHtml from "sanitize-html";
-import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import ErrorState from "../../components/ui/ErrorState";
+import { StatRowSkeleton } from "../../components/ui/Skeletons";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 // Animation variants
@@ -94,13 +90,10 @@ interface WalletOperationData {
 }
 
 export default function AdminUsersClient() {
-  const router = useRouter();
-
-  const { data: session, status } = useSession();
+  const { session, status } = useRequireAuth({ admin: true });
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>("");
   const [editUser, setEditUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [rowLoading, setRowLoading] = useState<{ [key: number]: boolean }>({});
@@ -108,14 +101,10 @@ export default function AdminUsersClient() {
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const [fetchAttempts, setFetchAttempts] = useState<number>(0);
   const [selected, setSelected] = useState<number[]>([]);
-  const [roleFilter, setRoleFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
   const [activityLogUser, setActivityLogUser] = useState<User | null>(null);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [activityLogLoading, setActivityLogLoading] = useState<boolean>(false);
-  const [registeredAtStart, setRegisteredAtStart] = useState<string>("");
-  const [registeredAtEnd, setRegisteredAtEnd] = useState<string>("");
   const [confirmAction, setConfirmAction] = useState<{ action: string; callback: () => void } | null>(null);
 
   // Wallet Management States
@@ -146,13 +135,6 @@ export default function AdminUsersClient() {
   const editDialogRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
 
-  // Role-Based Access Control (RBAC)
-  useEffect(() => {
-    if (status === "authenticated" && session?.user?.role !== "admin") {
-      router.push("/unauthorized");
-    }
-  }, [status, session, router]);
-
   // Fetch users with wallet info
   const maxAttempts = 5;
   const cooldown = 5000;
@@ -164,16 +146,15 @@ export default function AdminUsersClient() {
     }
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch("/api/admin/users", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
       });
       if (!response.ok) throw new Error("Failed to fetch users");
       const data = await response.json();
-      console.log("Fetched users with wallet info:", data);
       setUsers(data || []);
       setLastFetchTime(now);
       setFetchAttempts((prev) => prev + 1);
@@ -214,7 +195,6 @@ export default function AdminUsersClient() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({
           user_id: selectedUserForWallet.id,
@@ -281,7 +261,6 @@ export default function AdminUsersClient() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
       });
 
@@ -318,7 +297,6 @@ export default function AdminUsersClient() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
         },
       });
       if (!response.ok) throw new Error("Failed to fetch activity log");
@@ -344,29 +322,11 @@ export default function AdminUsersClient() {
     };
   }, [users]);
 
-  // Debounced Search
-  const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
-
-  const filteredUsers = useMemo(() => {
-    let result = [...users];
-
-    // Filter out admin users - only show regular users
-    result = result.filter((user) => user && user.role !== "admin");
-
-    if (searchQuery) {
-      result = result.filter(
-        (user) =>
-          user &&
-          (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-    if (roleFilter) result = result.filter((user) => user && user.role === roleFilter);
-    if (statusFilter) result = result.filter((user) => user && user.subscriptionStatus === statusFilter);
-    if (registeredAtStart) result = result.filter((user) => user && new Date(user.registeredAt) >= new Date(registeredAtStart));
-    if (registeredAtEnd) result = result.filter((user) => user && new Date(user.registeredAt) <= new Date(registeredAtEnd));
-    return result.filter(Boolean);
-  }, [users, searchQuery, roleFilter, statusFilter, registeredAtStart, registeredAtEnd]);
+  // Only regular users are shown in this console (admins are excluded).
+  const filteredUsers = useMemo(
+    () => users.filter((user) => user && user.role !== "admin"),
+    [users]
+  );
 
   // Export Functionality
   const exportToCSV = () => {
@@ -540,11 +500,9 @@ export default function AdminUsersClient() {
 
   return (
     <AppShell variant="admin">
-      <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
+      <PageHeader title="Users" />
 
-      <GoogleAnalytics trackPageViews debugMode={true} />
+      <GoogleAnalytics trackPageViews debugMode={false} />
 
       <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
@@ -558,48 +516,29 @@ export default function AdminUsersClient() {
               overflow: "visible",
             }}
           >
-            <Typography
-              variant="h4"
-              sx={{
-                mb: 3,
-                textAlign: "center",
-                background: (theme) => theme.foil.gradient,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              Admin - Users & Wallets
-            </Typography>
-
             {/* Stats Dashboard - Without Total Balance */}
             <motion.div variants={itemVariants}>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Total Users</Typography>
-                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "text.primary" }}>{stats.total}</Typography>
-                    </CardContent>
-                  </Card>
+              {loading && users.length === 0 ? (
+                <Box sx={{ mb: 3 }}>
+                  <StatRowSkeleton count={3} />
+                </Box>
+              ) : error ? (
+                <Box sx={{ mb: 3 }}>
+                  <ErrorState variant="inline" message="Couldn't load users." onRetry={fetchUsers} />
+                </Box>
+              ) : (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <StatCard label="Total Users" value={stats.total} accent />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <StatCard label="Active" value={stats.active} />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <StatCard label="Frozen Funds" value={`$${stats.totalFrozen.toFixed(2)}`} />
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Active</Typography>
-                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "success.main" }}>{stats.active}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined" sx={{ border: 1, borderColor: "divider" }}>
-                    <CardContent>
-                      <Typography variant="h6" sx={{ color: "text.secondary" }}>Frozen Funds</Typography>
-                      <Typography variant="mono" sx={{ fontSize: "2rem", fontWeight: 600, color: "warning.main" }}>${stats.totalFrozen.toFixed(2)}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+              )}
             </motion.div>
 
             {/* Your existing controls and filters */}
@@ -700,7 +639,7 @@ export default function AdminUsersClient() {
         <DialogContent>
           <Grid container spacing={3}>
             {/* Wallet Operations */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="h6" gutterBottom>Wallet Operations</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Select
@@ -774,7 +713,7 @@ export default function AdminUsersClient() {
             </Grid>
 
             {/* Transaction History */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="h6" gutterBottom>Recent Transactions</Typography>
               <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {walletTransactions.length > 0 ? (

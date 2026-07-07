@@ -11,12 +11,12 @@ import {
     CircularProgress,
     Alert,
     Chip,
-    Grid,
     Card,
     CardContent,
     Tooltip,
     IconButton
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { useTheme } from '@mui/material/styles';
 import {
     TrendingUp,
@@ -211,7 +211,7 @@ export default function PriceChart({
         <Paper sx={{ p: 3 }}>
             {/* Header */}
             <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                     <Box>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Timeline />
@@ -257,7 +257,7 @@ export default function PriceChart({
                 {/* Price Analytics Cards */}
                 {analytics && (
                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">
@@ -270,7 +270,7 @@ export default function PriceChart({
                             </Card>
                         </Grid>
 
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">
@@ -289,7 +289,7 @@ export default function PriceChart({
                             </Card>
                         </Grid>
 
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">
@@ -302,7 +302,7 @@ export default function PriceChart({
                             </Card>
                         </Grid>
 
-                        <Grid item xs={6} sm={3}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
                             <Card variant="outlined" sx={{ height: '100%' }}>
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                     <Typography variant="body2" color="text.secondary">

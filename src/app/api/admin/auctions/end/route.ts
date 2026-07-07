@@ -1,19 +1,19 @@
 // src/app/api/admin/auctions/end/route.ts - End auction manually
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '../../../../lib/prisma';
+import { requireAdmin } from '../../../../lib/auth';
 import {
     createAuctionWonNotifications,
     createAuctionLostNotifications
 } from '../../../../lib/notification';
+import { releaseBidHolds } from '../../../../lib/wallet-settlement';
+import { emitAppEvent } from '../../../../lib/events';
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
         const body = await request.json();
         const { auction_id } = body;
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
                 where: { id: auction_id },
                 data: {
                     is_for_sale: false,
-                    notes: `Manually ended by admin ${session.user.name} - No bids received`
+                    notes: `Manually ended by admin ${user.name} - No bids received`
                 }
             });
 
@@ -93,11 +93,13 @@ export async function POST(request: NextRequest) {
                     where: { id: auction_id },
                     data: {
                         is_for_sale: false,
-                        notes: `Manually ended by admin ${session.user.name} - Reserve not met (${reservePrice})`
+                        notes: `Manually ended by admin ${user.name} - Reserve not met (${reservePrice})`
                     }
                 });
 
-                // Deactivate all bids
+                // Reserve not met: no sale — release every bidder's escrow hold,
+                // then deactivate all bids.
+                await releaseBidHolds(tx, { auctionId: auction_id });
                 await tx.bid.updateMany({
                     where: {
                         userCardId: auction_id,
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
                     amount: highestBid.amount,
                     transaction_type: 'AUCTION_WIN_PENDING',
                     status: 'PENDING_BUYER_CONFIRMATION',
-                    notes: `Auction manually ended by admin ${session.user.name}. Winner has 24 hours to confirm.`
+                    notes: `Auction manually ended by admin ${user.name}. Winner has 24 hours to confirm.`
                 }
             });
 
@@ -141,22 +143,15 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-            // Get losing bidders
+            // Get losing bidders (for notifications). Bids stay ACTIVE and their
+            // escrow stays held until the winner confirms (releases losers) or
+            // declines (auction continues with them) — see bids/confirm-purchase.
             const losingBids = await tx.bid.findMany({
                 where: {
                     userCardId: auction_id,
                     is_active: true,
                     id: { not: highestBid.id }
                 }
-            });
-
-            // Deactivate all bids
-            await tx.bid.updateMany({
-                where: {
-                    userCardId: auction_id,
-                    is_active: true
-                },
-                data: { is_active: false }
             });
 
             return {
@@ -188,6 +183,8 @@ export async function POST(request: NextRequest) {
         } catch (notificationError) {
             console.error('Error creating notifications:', notificationError);
         }
+
+        emitAppEvent({ type: 'auction_ended', auctionId: auction_id });
 
         return NextResponse.json({
             success: true,

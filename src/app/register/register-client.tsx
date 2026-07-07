@@ -17,10 +17,11 @@ import {
   Alert,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import SocialLogins from "../components/SocialLogins";
+import GradientHeading from "../components/ui/GradientHeading";
 
 // Custom error type
 interface RegisterError extends Error {
@@ -66,6 +67,7 @@ export default function RegisterClient() {
   const [success, setSuccess] = useState<boolean>(false);
   const [devMode] = useState(process.env.NODE_ENV === "development");
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
 
   const handleRegister = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -174,11 +176,15 @@ export default function RegisterClient() {
 
       <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
         <motion.div
-          initial={{ opacity: 0, y: -50 }}
+          initial={reduceMotion ? false : { opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <motion.div initial={{ rotateY: 180 }} animate={{ rotateY: 0 }} transition={{ duration: 0.6 }}>
+          <motion.div
+            initial={reduceMotion ? false : { rotateY: 180 }}
+            animate={reduceMotion ? false : { rotateY: 0 }}
+            transition={{ duration: 0.6 }}
+          >
             <Paper
               elevation={0}
               sx={{
@@ -190,21 +196,9 @@ export default function RegisterClient() {
                 boxShadow: 3,
               }}
             >
-              <Typography
-                variant="h5"
-                component="p"
-                sx={{
-                  mb: 2,
-                  textAlign: "center",
-                  background: (t) => t.foil.gradient,
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  fontWeight: 800,
-                }}
-              >
+              <GradientHeading variant="h4" component="h1" sx={{ mb: 2, textAlign: "center" }}>
                 Foil Alpha
-              </Typography>
+              </GradientHeading>
 
               {/* DEV MODE: Info Alert */}
               {devMode && (
@@ -219,11 +213,11 @@ export default function RegisterClient() {
               )}
 
               <Box sx={{ width: "100%" }}>
-                <Typography variant="h4" sx={{ mb: 3, textAlign: "center", color: "text.primary" }}>
-                  User Registration
+                <Typography variant="subtitle1" component="h2" sx={{ textAlign: "center", color: "text.primary", fontWeight: 700 }}>
+                  Create your account
                 </Typography>
-                <Typography variant="subtitle1" sx={{ mb: 2, textAlign: "center", color: "text.secondary" }}>
-                  Create your Foil Alpha account
+                <Typography variant="body2" sx={{ mb: 2, textAlign: "center", color: "text.secondary" }}>
+                  Join Foil Alpha to track and trade your collection
                 </Typography>
 
                 <motion.div variants={containerVariants} initial="hidden" animate="visible">
@@ -306,22 +300,23 @@ export default function RegisterClient() {
 
                     {(error || isNetworkError) && (
                       <motion.div variants={itemVariants}>
-                        <Typography
-                          color={isNetworkError ? "warning" : "error"}
-                          sx={{ mt: 1, textAlign: "center" }}
-                          role="alert"
+                        <Alert
+                          severity={isNetworkError ? "warning" : "error"}
+                          sx={{ mt: 2 }}
+                          action={
+                            isNetworkError ? (
+                              <Button
+                                color="inherit"
+                                size="small"
+                                onClick={() => handleRegister({ preventDefault: () => {} } as FormEvent<HTMLFormElement>)}
+                              >
+                                Retry
+                              </Button>
+                            ) : undefined
+                          }
                         >
                           {error}
-                          {isNetworkError && (
-                            <Button
-                              size="small"
-                              onClick={() => handleRegister({ preventDefault: () => {} } as FormEvent<HTMLFormElement>)}
-                              sx={{ ml: 1 }}
-                            >
-                              Retry
-                            </Button>
-                          )}
-                        </Typography>
+                        </Alert>
                       </motion.div>
                     )}
 

@@ -15,21 +15,20 @@ import {
     IconButton,
     Chip,
     Button,
-    LinearProgress,
-    Tooltip,
     Badge
 } from '@mui/material';
 import {
     Gavel,
-    Timer,
-    Visibility,
     Refresh,
     LocalOffer
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import CountdownTimer from '../CountdownTimer';
 import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
+import { useEventStream } from "../../lib/useEventStream";
+import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
+import { getConditionColor } from "../../lib/rarity";
+import WidgetHeader from "../ui/WidgetHeader";
 
 interface LiveAuction {
     id: number;
@@ -48,7 +47,6 @@ interface LiveAuction {
     time_remaining: number;
     auction_end: Date;
     condition: string | null;
-    watching_count: number;
 }
 
 interface LiveAuctionTableProps {
@@ -88,26 +86,20 @@ export default function LiveAuctionTable({
         fetchAuctions();
 
         if (autoRefresh) {
-            const interval = setInterval(fetchAuctions, 30000); // Refresh every 30 seconds
+            // Real-time push is primary (see below); this is a slow safety net.
+            const interval = setInterval(fetchAuctions, 60000);
             return () => clearInterval(interval);
         }
     }, [sortBy, autoRefresh]);
 
+    // Live updates: refetch when a bid lands or an auction ends.
+    useEventStream((e) => {
+        if (e.type === 'bid' || e.type === 'auction_ended') fetchAuctions();
+    });
+
     const formatPrice = (price: number | null) => {
         if (!price) return 'N/A';
         return `$${price.toFixed(2)}`;
-    };
-
-    const getConditionColor = (condition: string | null) => {
-        const colors: Record<string, string> = {
-            'Mint': '#4CAF50',
-            'Near Mint': '#8BC34A',
-            'Excellent': '#FFC107',
-            'Good': '#FF9800',
-            'Fair': '#FF5722',
-            'Poor': '#F44336'
-        };
-        return colors[condition || ''] || '#757575';
     };
 
     const getTimeColor = (timeRemaining: number) => {
@@ -140,77 +132,79 @@ export default function LiveAuctionTable({
 
     return (
         <Paper variant="outlined" sx={{ p: 3, height, border: 1, borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Gavel sx={{ color: 'primary.main' }} />
-                    Live Auctions
-                    <Chip
-                        label="LIVE"
-                        size="small"
-                        color="error"
-                        sx={{
-                            animation: 'pulse 2s infinite'
-                        }}
-                    />
-                </Typography>
-
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                        size="small"
-                        color="primary"
-                        variant={sortBy === 'ending_soon' ? 'contained' : 'outlined'}
-                        onClick={() => setSortBy('ending_soon')}
-                    >
-                        Ending Soon
-                    </Button>
-                    <Button
-                        size="small"
-                        color="primary"
-                        variant={sortBy === 'most_bids' ? 'contained' : 'outlined'}
-                        onClick={() => setSortBy('most_bids')}
-                    >
-                        Most Bids
-                    </Button>
-                    <Button
-                        size="small"
-                        color="primary"
-                        variant={sortBy === 'highest_price' ? 'contained' : 'outlined'}
-                        onClick={() => setSortBy('highest_price')}
-                    >
-                        Highest Price
-                    </Button>
-                    <IconButton size="small" onClick={fetchAuctions} sx={{ color: 'primary.main' }}>
-                        <Refresh />
-                    </IconButton>
-                </Box>
-            </Box>
+            <WidgetHeader
+                icon={<Gavel sx={{ color: 'primary.main' }} />}
+                title={
+                    <>
+                        Live Auctions
+                        <Chip
+                            label="LIVE"
+                            size="small"
+                            color="error"
+                            sx={{
+                                animation: 'pulse 2s infinite'
+                            }}
+                        />
+                    </>
+                }
+                actions={
+                    <>
+                        <Button
+                            size="small"
+                            color="primary"
+                            variant={sortBy === 'ending_soon' ? 'contained' : 'outlined'}
+                            onClick={() => setSortBy('ending_soon')}
+                        >
+                            Ending Soon
+                        </Button>
+                        <Button
+                            size="small"
+                            color="primary"
+                            variant={sortBy === 'most_bids' ? 'contained' : 'outlined'}
+                            onClick={() => setSortBy('most_bids')}
+                        >
+                            Most Bids
+                        </Button>
+                        <Button
+                            size="small"
+                            color="primary"
+                            variant={sortBy === 'highest_price' ? 'contained' : 'outlined'}
+                            onClick={() => setSortBy('highest_price')}
+                        >
+                            Highest Price
+                        </Button>
+                        <IconButton size="small" onClick={fetchAuctions} sx={{ color: 'primary.main' }}>
+                            <Refresh />
+                        </IconButton>
+                    </>
+                }
+            />
 
             <TableContainer sx={{ maxHeight: height - 120 }}>
                 <Table stickyHeader size="small">
                     <TableHead>
                         <TableRow>
                             <TableCell sx={{ bgcolor: 'background.paper' }}>Card</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper' }}>Seller</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper' }}>Condition</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', ...hideBelowMd }}>Seller</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', ...hideBelowSm }}>Condition</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>Current Bid</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Bids</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Time Left</TableCell>
-                            <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Watching</TableCell>
                             <TableCell align="center" sx={{ bgcolor: 'background.paper' }}>Action</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {loading ? (
-                            <TableRowsSkeleton rows={4} cols={8} />
+                            <TableRowsSkeleton rows={4} cols={7} />
                         ) : error ? (
                             <TableRow>
-                                <TableCell colSpan={8}>
+                                <TableCell colSpan={7}>
                                     <ErrorState variant="inline" message="Couldn't load live auctions." onRetry={fetchAuctions} />
                                 </TableCell>
                             </TableRow>
                         ) : auctions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
+                                <TableCell colSpan={7} align="center">
                                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
                                         No active auctions at the moment
                                     </Typography>
@@ -236,10 +230,10 @@ export default function LiveAuctionTable({
                                             </Box>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={hideBelowMd}>
                                         <Typography variant="body2">{auction.seller}</Typography>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={hideBelowSm}>
                                         <Chip
                                             label={auction.condition || 'Unknown'}
                                             size="small"
@@ -271,14 +265,6 @@ export default function LiveAuctionTable({
                                         <Box sx={{ color: getTimeColor(auction.time_remaining) }}>
                                             <Typography variant="body2">
                                                 {formatTimeRemaining(auction.time_remaining)}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                                            <Visibility fontSize="small" sx={{ color: 'text.secondary' }} />
-                                            <Typography variant="body2">
-                                                {auction.watching_count}
                                             </Typography>
                                         </Box>
                                     </TableCell>

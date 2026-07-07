@@ -1,7 +1,6 @@
 // src/app/api/user/collection/[id]/sell/route.ts - Updated with Commission System
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../../auth/[...nextauth]/route';
+import { requireUser } from '../../../../../lib/auth';
 import { prisma } from '../../../../../lib/prisma';
 import { calculateCommission } from '../../../../../lib/commission-utils';
 
@@ -12,14 +11,13 @@ export async function POST(
 ) {
     try {
         // Always use real session (ignore dev mode)
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const userId = parseInt(session.user.id);
-        const userName = session.user.name || 'Unknown User';
-        const userEmail = session.user.email || 'unknown';
+        const userId = user.id;
+        const userName = user.name || 'Unknown User';
+        const userEmail = user.email || 'unknown';
 
         console.log(`🏷️ Sell API with Commission: ${userName} (${userEmail}) - ID: ${userId}`);
 
@@ -245,13 +243,12 @@ export async function DELETE(
 ) {
     try {
         // Always use real session (ignore dev mode)
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const userId = parseInt(session.user.id);
-        const userName = session.user.name || 'Unknown User';
+        const userId = user.id;
+        const userName = user.name || 'Unknown User';
 
         const { id: userCardId } = await context.params;
 

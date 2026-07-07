@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Container,
@@ -17,7 +16,6 @@ import {
     CircularProgress,
     Chip,
     Stack,
-    Divider,
     Paper
 } from '@mui/material';
 import {
@@ -26,7 +24,6 @@ import {
     Delete as DeleteIcon,
     Refresh as RefreshIcon,
     CheckCircle as CheckIcon,
-    Info as InfoIcon,
     Warning as WarningIcon,
     Error as ErrorIcon,
     Gavel as AuctionIcon,
@@ -39,6 +36,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import AppShell from '../components/AppShell';
 import PendingPurchaseModal from '../components/PendingPurchaseModal';
+import { useRequireAuth } from '../lib/useRequireAuth';
 
 interface Notification {
     id: number;
@@ -62,7 +60,7 @@ interface PendingPurchase {
 }
 
 export default function NotificationsPage() {
-    const { data: session, status } = useSession();
+    const { status } = useRequireAuth();
     const router = useRouter();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
@@ -324,12 +322,10 @@ export default function NotificationsPage() {
     };
 
     useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        } else if (status === 'authenticated') {
+        if (status === 'authenticated') {
             fetchNotifications();
         }
-    }, [status, router]);
+    }, [status]);
 
     // Auto-refresh notifications every 30 seconds
     useEffect(() => {
@@ -361,7 +357,7 @@ export default function NotificationsPage() {
             <Container sx={{ marginTop: 4, marginBottom: 4 }}>
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Badge badgeContent={unreadCount} color="error">
                         <NotificationIcon sx={{ color: 'primary.main' }} />
@@ -464,7 +460,7 @@ export default function NotificationsPage() {
                                                 {getNotificationIcon(notification.type)}
                                             </Box>
                                             <Box sx={{ flex: 1 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                                                     <Typography variant="h6" component="h3">
                                                         {notification.title}
                                                     </Typography>

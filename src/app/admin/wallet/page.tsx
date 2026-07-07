@@ -8,10 +8,11 @@ import {
     Button,
     Card,
     CardContent,
-    Grid,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import { ArrowBack, AccountBalanceWallet, Person, Settings } from "@mui/icons-material";
 import AppShell from "../../components/AppShell";
+import PageHeader from "../../components/ui/PageHeader";
 
 export default function AdminWalletsPage() {
     const router = useRouter();
@@ -19,11 +20,10 @@ export default function AdminWalletsPage() {
     return (
         <AppShell variant="admin">
             {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: "divider" }}>
-                <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                    Wallet Management
-                </Typography>
-                <Box sx={{ ml: 'auto' }}>
+            <PageHeader
+                title="Admin Wallet"
+                icon={<AccountBalanceWallet />}
+                actions={
                     <Button
                         variant="outlined"
                         color="primary"
@@ -32,8 +32,8 @@ export default function AdminWalletsPage() {
                     >
                         Back to Users
                     </Button>
-                </Box>
-            </Box>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 <Box sx={{ textAlign: 'center', mb: 6 }}>
@@ -48,7 +48,7 @@ export default function AdminWalletsPage() {
                 </Box>
 
                 <Grid container spacing={4} sx={{ mb: 6 }}>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             height: '100%',
                             transition: 'transform 0.2s',
@@ -73,7 +73,7 @@ export default function AdminWalletsPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             height: '100%',
                             transition: 'transform 0.2s',
@@ -96,7 +96,7 @@ export default function AdminWalletsPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             height: '100%',
                             transition: 'transform 0.2s',
@@ -129,7 +129,7 @@ export default function AdminWalletsPage() {
                     borderColor: 'divider'
                 }}>
                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2 }}>
-                        🚀 No Admin Wallet Required
+                        No Admin Wallet Required
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
                         This system operates without requiring an admin wallet. All fund operations are handled

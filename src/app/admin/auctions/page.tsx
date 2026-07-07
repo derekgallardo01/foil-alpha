@@ -1,19 +1,15 @@
 // src/app/admin/auctions/page.tsx - Updated to show actual data correctly
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import {
     Container,
     Typography,
     Box,
-    Grid,
     Card,
     CardContent,
     CardMedia,
     Button,
     Chip,
-    Alert,
     CircularProgress,
     Paper,
     Dialog,
@@ -31,12 +27,11 @@ import {
     LinearProgress,
     Avatar
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Gavel as GavelIcon,
     AccessTime as ClockIcon,
-    Person as PersonIcon,
     AttachMoney as MoneyIcon,
-    PlayArrow as StartIcon,
     Stop as EndIcon,
     Refresh as RefreshIcon,
     Settings as SettingsIcon,
@@ -46,6 +41,12 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
+import PageHeader from '../../components/ui/PageHeader';
+import StatCard from '../../components/StatCard';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import { formatPrice, formatDuration, formatDateTime } from '../../lib/format';
+import { useRequireAuth } from '../../lib/useRequireAuth';
 
 interface Card {
     id: number;
@@ -100,8 +101,7 @@ interface AuctionStats {
 }
 
 export default function AdminAuctionManagement() {
-    const { data: session, status } = useSession();
-    const router = useRouter();
+    const { session, status } = useRequireAuth({ admin: true });
     const [activeTab, setActiveTab] = useState(0);
     const [auctions, setAuctions] = useState<AuctionData[]>([]);
     const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
@@ -114,13 +114,6 @@ export default function AdminAuctionManagement() {
     const [selectedAuction, setSelectedAuction] = useState<AuctionData | null>(null);
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === 'authenticated' && session?.user?.role !== 'admin') {
-            router.push('/unauthorized');
-        }
-    }, [status, session, router]);
 
     const fetchAuctions = async () => {
         try {
@@ -153,12 +146,6 @@ export default function AdminAuctionManagement() {
                 activeAuctionsCount: auctionsData.activeAuctions || 0
             });
 
-            console.log('Fetched auction data:', {
-                auctions: auctionsData.auctions?.length || 0,
-                active: auctionsData.activeAuctions || 0,
-                pendingTransactions: auctionPendingTransactions.length
-            });
-
         } catch (err) {
             console.error('Error fetching auction data:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
@@ -181,27 +168,6 @@ export default function AdminAuctionManagement() {
             return () => clearInterval(interval);
         }
     }, [status, session]);
-
-    const formatPrice = (price: number | null) => {
-        if (price === null || price === undefined) return 'No bids';
-        return `$${Number(price).toFixed(2)}`;
-    };
-
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
-    };
 
     const getAuctionStatus = (auction: AuctionData) => {
         if (auction.is_sold) return { label: 'Sold', color: 'success' as const };
@@ -245,11 +211,10 @@ export default function AdminAuctionManagement() {
     const handleProcessAuctions = async () => {
         setActionLoading(-1); // Special loading state for process all
         try {
+            // Authorized by the admin session cookie (server checks requireAdmin);
+            // no secret is sent from the client.
             const response = await fetch('/api/process-auctions', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'admin-secret'}`,
-                },
             });
 
             const data = await response.json();
@@ -313,7 +278,10 @@ export default function AdminAuctionManagement() {
         sum + (auction.highest_bid || auction.reserve_price || 0), 0
     );
 
-    if (status === 'loading' || loading) {
+    // First-load-only guard: show a spinner only when there is no data yet, so
+    // the 30s auto-refresh (which flips `loading`) never blanks the page.
+    const hasData = auctions.length > 0 || pendingTransactions.length > 0;
+    if ((status === 'loading' || loading) && !hasData && !error) {
         return (
             <Container>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -329,98 +297,65 @@ export default function AdminAuctionManagement() {
 
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography
-                        variant="h4"
-                        sx={(theme) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            background: theme.foil.gradient,
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                        })}
-                    >
-                        <GavelIcon sx={{ color: 'primary.main' }} />
-                        Auction Management
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={actionLoading === -1 ? <CircularProgress size={16} /> : <SettingsIcon />}
-                        onClick={handleProcessAuctions}
-                        disabled={actionLoading !== null}
-                    >
-                        Process All Auctions
-                    </Button>
-                    <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: 'primary.main' }}>
-                        <RefreshIcon />
-                    </IconButton>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Auctions"
+                icon={<GavelIcon />}
+                actions={
+                    <>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={actionLoading === -1 ? <CircularProgress size={16} /> : <SettingsIcon />}
+                            onClick={handleProcessAuctions}
+                            disabled={actionLoading !== null}
+                        >
+                            Process All Auctions
+                        </Button>
+                        <IconButton onClick={fetchAuctions} title="Refresh" sx={{ color: 'primary.main' }}>
+                            <RefreshIcon />
+                        </IconButton>
+                    </>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 {/* Error State */}
                 {error && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
-                        Error: {error}
-                    </Alert>
+                    <Box sx={{ mb: 3 }}>
+                        <ErrorState variant="inline" message="Couldn't load auctions." onRetry={fetchAuctions} />
+                    </Box>
                 )}
 
                 {/* Statistics Cards */}
                 <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
-                                    {stats.activeAuctionsCount || activeAuctions.length}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Active Auctions
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <StatCard
+                            label="Active Auctions"
+                            value={stats.activeAuctionsCount || activeAuctions.length}
+                            icon={<GavelIcon />}
+                            accent
+                        />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'warning.main' }}>
-                                    {pendingTransactions.length}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Pending Confirmations
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <StatCard
+                            label="Pending Confirmations"
+                            value={pendingTransactions.length}
+                            icon={<WarningIcon />}
+                        />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'success.main' }}>
-                                    {endedAuctions.filter(a => a.is_sold).length}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Sold Auctions
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <StatCard
+                            label="Sold Auctions"
+                            value={endedAuctions.filter(a => a.is_sold).length}
+                            icon={<CheckIcon />}
+                        />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Card>
-                            <CardContent>
-                                <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, color: 'text.primary' }}>
-                                    ${totalActiveValue.toFixed(2)}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Active Auction Value
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <StatCard
+                            label="Active Auction Value"
+                            value={formatPrice(totalActiveValue)}
+                            icon={<MoneyIcon />}
+                        />
                     </Grid>
                 </Grid>
 
@@ -455,20 +390,12 @@ export default function AdminAuctionManagement() {
                     /* Active Auctions */
                     <Grid container spacing={3}>
                         {activeAuctions.length === 0 ? (
-                            <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                                    <GavelIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No active auctions
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        There are currently no auctions running
-                                    </Typography>
-                                </Paper>
+                            <Grid size={{ xs: 12 }}>
+                                <EmptyState icon={<GavelIcon />} title="No active auctions" />
                             </Grid>
                         ) : (
                             activeAuctions.map((auction) => (
-                                <Grid item xs={12} sm={6} md={4} key={auction.id}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={auction.id}>
                                     <Card sx={{
                                         height: '100%',
                                         display: 'flex',
@@ -533,7 +460,7 @@ export default function AdminAuctionManagement() {
                                                         Current Bid
                                                     </Typography>
                                                     <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
-                                                        {formatPrice(auction.highest_bid)}
+                                                        {auction.highest_bid == null ? 'No bids' : formatPrice(auction.highest_bid)}
                                                     </Typography>
                                                 </Box>
 
@@ -559,7 +486,7 @@ export default function AdminAuctionManagement() {
                                                             fontWeight: 'bold'
                                                         }}
                                                     >
-                                                        {formatTimeLeft(auction.time_remaining)}
+                                                        {formatDuration(auction.time_remaining)}
                                                     </Typography>
                                                 </Box>
 
@@ -619,20 +546,12 @@ export default function AdminAuctionManagement() {
                     /* Ended Auctions */
                     <Grid container spacing={3}>
                         {endedAuctions.length === 0 ? (
-                            <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                                    <ClockIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No ended auctions
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        No auctions have ended yet
-                                    </Typography>
-                                </Paper>
+                            <Grid size={{ xs: 12 }}>
+                                <EmptyState icon={<ClockIcon />} title="No ended auctions" />
                             </Grid>
                         ) : (
                             endedAuctions.map((auction) => (
-                                <Grid item xs={12} sm={6} md={4} key={auction.id}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={auction.id}>
                                     <Card sx={{
                                         height: '100%',
                                         display: 'flex',
@@ -690,7 +609,7 @@ export default function AdminAuctionManagement() {
                                                         Final Bid:
                                                     </Typography>
                                                     <Typography variant="mono" sx={{ fontSize: 18, fontWeight: 700, color: auction.highest_bid ? 'success.main' : 'text.secondary' }}>
-                                                        {formatPrice(auction.highest_bid)}
+                                                        {auction.highest_bid == null ? 'No bids' : formatPrice(auction.highest_bid)}
                                                     </Typography>
                                                 </Box>
 
@@ -729,16 +648,8 @@ export default function AdminAuctionManagement() {
                     /* Pending Confirmations */
                     <Grid container spacing={3}>
                         {pendingTransactions.length === 0 ? (
-                            <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', border: 1, borderColor: 'divider' }}>
-                                    <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No pending confirmations
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        All auction transactions are up to date
-                                    </Typography>
-                                </Paper>
+                            <Grid size={{ xs: 12 }}>
+                                <EmptyState icon={<CheckIcon />} title="No pending confirmations" />
                             </Grid>
                         ) : (
                             pendingTransactions.map((transaction) => {
@@ -747,7 +658,7 @@ export default function AdminAuctionManagement() {
                                 const isExpired = timeLeft !== null && timeLeft <= 0;
 
                                 return (
-                                    <Grid item xs={12} md={6} key={transaction.id}>
+                                    <Grid size={{ xs: 12, md: 6 }} key={transaction.id}>
                                         <Card sx={{
                                             border: 1,
                                             borderColor: isExpired ? 'error.main' : 'warning.main',
@@ -804,7 +715,7 @@ export default function AdminAuctionManagement() {
                                                 <Divider sx={{ my: 2 }} />
 
                                                 <Grid container spacing={1}>
-                                                    <Grid item xs={6}>
+                                                    <Grid size={{ xs: 6 }}>
                                                         <Typography variant="caption" color="text.secondary">
                                                             Buyer
                                                         </Typography>
@@ -812,7 +723,7 @@ export default function AdminAuctionManagement() {
                                                             {transaction.buyer?.name || 'Unknown'}
                                                         </Typography>
                                                     </Grid>
-                                                    <Grid item xs={6}>
+                                                    <Grid size={{ xs: 6 }}>
                                                         <Typography variant="caption" color="text.secondary">
                                                             Seller
                                                         </Typography>
@@ -820,7 +731,7 @@ export default function AdminAuctionManagement() {
                                                             {transaction.seller?.name || 'Unknown'}
                                                         </Typography>
                                                     </Grid>
-                                                    <Grid item xs={12}>
+                                                    <Grid size={{ xs: 12 }}>
                                                         <Typography variant="caption" color="text.secondary">
                                                             Created
                                                         </Typography>
@@ -829,12 +740,12 @@ export default function AdminAuctionManagement() {
                                                         </Typography>
                                                     </Grid>
                                                     {timeLeft !== null && (
-                                                        <Grid item xs={12}>
+                                                        <Grid size={{ xs: 12 }}>
                                                             <Typography variant="caption" color="text.secondary">
                                                                 Time Remaining
                                                             </Typography>
                                                             <Typography variant="body2" sx={{ color: isExpired ? 'error.main' : 'warning.main', fontWeight: 'bold' }}>
-                                                                {isExpired ? 'Expired' : formatTimeLeft(timeLeft)}
+                                                                {isExpired ? 'Expired' : formatDuration(timeLeft)}
                                                             </Typography>
                                                             <LinearProgress
                                                                 variant="determinate"
@@ -910,7 +821,7 @@ export default function AdminAuctionManagement() {
                             {/* Auction Summary */}
                             <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'background.default', border: 1, borderColor: 'divider' }}>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={4}>
+                                    <Grid size={{ xs: 4 }}>
                                         <img
                                             src={selectedAuction.card?.image_url || '/placeholder-card.png'}
                                             alt={selectedAuction.card?.name || 'Card'}
@@ -920,7 +831,7 @@ export default function AdminAuctionManagement() {
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={8}>
+                                    <Grid size={{ xs: 8 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
                                             <Box>
                                                 <Typography variant="h6" sx={{ color: 'text.primary' }}>
@@ -938,7 +849,7 @@ export default function AdminAuctionManagement() {
                                         </Box>
 
                                         <Grid container spacing={2} sx={{ mt: 1 }}>
-                                            <Grid item xs={6}>
+                                            <Grid size={{ xs: 6 }}>
                                                 <Typography variant="caption" color="text.secondary" display="block">
                                                     Condition
                                                 </Typography>
@@ -946,7 +857,7 @@ export default function AdminAuctionManagement() {
                                                     {selectedAuction.condition || 'N/A'}
                                                 </Typography>
                                             </Grid>
-                                            <Grid item xs={6}>
+                                            <Grid size={{ xs: 6 }}>
                                                 <Typography variant="caption" color="text.secondary" display="block">
                                                     Reserve Price
                                                 </Typography>
@@ -954,7 +865,7 @@ export default function AdminAuctionManagement() {
                                                     {formatPrice(selectedAuction.reserve_price)}
                                                 </Typography>
                                             </Grid>
-                                            <Grid item xs={6}>
+                                            <Grid size={{ xs: 6 }}>
                                                 <Typography variant="caption" color="text.secondary" display="block">
                                                     Owner
                                                 </Typography>
@@ -965,7 +876,7 @@ export default function AdminAuctionManagement() {
                                                     {selectedAuction.owner?.email || ''}
                                                 </Typography>
                                             </Grid>
-                                            <Grid item xs={6}>
+                                            <Grid size={{ xs: 6 }}>
                                                 <Typography variant="caption" color="text.secondary" display="block">
                                                     Auction Ends
                                                 </Typography>
@@ -974,7 +885,7 @@ export default function AdminAuctionManagement() {
                                                 </Typography>
                                                 {selectedAuction.time_remaining && selectedAuction.time_remaining > 0 && (
                                                     <Typography variant="caption" sx={{ color: 'warning.main' }}>
-                                                        {formatTimeLeft(selectedAuction.time_remaining)} remaining
+                                                        {formatDuration(selectedAuction.time_remaining)} remaining
                                                     </Typography>
                                                 )}
                                             </Grid>
@@ -982,15 +893,15 @@ export default function AdminAuctionManagement() {
 
                                         <Box sx={{ mt: 2, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
                                             <Grid container spacing={2}>
-                                                <Grid item xs={6}>
+                                                <Grid size={{ xs: 6 }}>
                                                     <Typography variant="caption" color="text.secondary">
                                                         Current Bid
                                                     </Typography>
                                                     <Typography variant="mono" sx={{ fontSize: 22, fontWeight: 700, color: selectedAuction.highest_bid ? 'success.main' : 'text.secondary', display: 'block' }}>
-                                                        {formatPrice(selectedAuction.highest_bid)}
+                                                        {selectedAuction.highest_bid == null ? 'No bids' : formatPrice(selectedAuction.highest_bid)}
                                                     </Typography>
                                                 </Grid>
-                                                <Grid item xs={6}>
+                                                <Grid size={{ xs: 6 }}>
                                                     <Typography variant="caption" color="text.secondary">
                                                         Total Bids
                                                     </Typography>

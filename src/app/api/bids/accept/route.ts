@@ -1,18 +1,16 @@
 // src/app/api/bids/accept/route.ts - Fixed TypeScript error
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { createBidAcceptedNotifications } from '../../../lib/notification';
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const sellerId = parseInt(session.user.id);
+        const sellerId = user.id;
         const body = await request.json();
         const { bid_id } = body;
 

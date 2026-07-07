@@ -7,8 +7,8 @@ import {
   Box,
   TextField,
   Button,
-  Grid,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 
 const Settings = () => {
   const [username, setUsername] = useState("");
@@ -28,7 +28,7 @@ const Settings = () => {
   return (
     <Grid container spacing={2}>
       {/* Account Settings Card */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h5" gutterBottom>Account Settings</Typography>
@@ -56,7 +56,7 @@ const Settings = () => {
       </Grid>
 
       {/* Notifications Card */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h5" gutterBottom>Notifications</Typography>

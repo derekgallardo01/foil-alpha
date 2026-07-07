@@ -1,19 +1,16 @@
 // src/app/selling/dashboard/page.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Container,
     Typography,
     Box,
-    Grid,
     Card,
     CardContent,
     CardMedia,
     Button,
     Chip,
-    Alert,
     CircularProgress,
     Paper,
     Table,
@@ -37,6 +34,7 @@ import {
     ListItemIcon,
     ListItemText
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Gavel as GavelIcon,
     AccessTime as ClockIcon,
@@ -44,14 +42,21 @@ import {
     AttachMoney as MoneyIcon,
     Check as AcceptIcon,
     Refresh as RefreshIcon,
-    TrendingUp as TrendingUpIcon,
     History as HistoryIcon,
     Sell as SellIcon,
-    ShoppingCart as ShoppingCartIcon,
-    Dashboard as DashboardIcon
+    ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
+import StatCard from '../../components/StatCard';
+import PageHeader from '../../components/ui/PageHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import { CardGridSkeleton } from '../../components/ui/Skeletons';
+import { getRarityColor } from '../../lib/rarity';
+import { formatDuration, formatDateTime } from '../../lib/format';
+import { useRequireAuth } from '../../lib/useRequireAuth';
+import { hideBelowMd } from "../../lib/responsive";
 
 interface Card {
     id: number;
@@ -112,7 +117,7 @@ interface SalesStats {
 }
 
 export default function SellingDashboard() {
-    const { data: session, status } = useSession();
+    const { status } = useRequireAuth();
     const router = useRouter();
     const [salesData, setSalesData] = useState<SalesData>({ activeSales: [], soldItems: [] });
     const [loading, setLoading] = useState(true);
@@ -175,12 +180,6 @@ export default function SellingDashboard() {
     };
 
     useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        }
-    }, [status, router]);
-
-    useEffect(() => {
         if (status === 'authenticated') {
             fetchSalesData();
         }
@@ -200,37 +199,10 @@ export default function SellingDashboard() {
         return `$${Number(price).toFixed(2)}`;
     };
 
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
-    };
-
     const getAuctionStatus = (sale: ActiveSale) => {
         if (sale.sale_type === 'FIXED') return { label: 'Fixed Price', color: 'primary' as const };
         if (sale.time_remaining && sale.time_remaining > 0) return { label: 'Active', color: 'success' as const };
         return { label: 'Ended', color: 'error' as const };
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
     };
 
     const handleAcceptBid = (bid: Bid) => {
@@ -309,127 +281,52 @@ export default function SellingDashboard() {
         return null;
     }
 
+    const hasData = salesData.activeSales.length > 0 || salesData.soldItems.length > 0;
+
     return (
         <AppShell>
-        <Container sx={{ marginTop: 4, marginBottom: 4 }}>
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
-                <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SellIcon sx={{ color: 'primary.main' }} />
-                    <Box
-                        component="span"
-                        sx={{
-                            background: (t) => t.foil.gradient,
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                        }}
-                    >
-                        My Sales
-                    </Box>
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton onClick={fetchSalesData} title="Refresh">
-                        <RefreshIcon />
-                    </IconButton>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/collection')}
-                        size="small"
-                        startIcon={<ShoppingCartIcon />}
-                    >
-                        Sell Cards
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push('/marketplace')}
-                        size="small"
-                    >
-                        Marketplace
-                    </Button>
-                </Box>
-            </Box>
-
+            <PageHeader
+                title="My Sales"
+                icon={<SellIcon />}
+                actions={
+                    <>
+                        <IconButton onClick={fetchSalesData} title="Refresh" aria-label="Refresh sales">
+                            <RefreshIcon />
+                        </IconButton>
+                        <Button
+                            variant="outlined"
+                            onClick={() => router.push('/collection')}
+                            size="small"
+                            startIcon={<ShoppingCartIcon />}
+                        >
+                            Sell Cards
+                        </Button>
+                        <Button variant="outlined" onClick={() => router.push('/marketplace')} size="small">
+                            Marketplace
+                        </Button>
+                    </>
+                }
+            />
+        <Container maxWidth="xl" sx={{ pb: 4 }}>
             {/* Quick Stats Cards */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Active Sales
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
-                                        {stats.totalActiveSales}
-                                    </Typography>
-                                </Box>
-                                <SellIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+            <Grid container spacing={3} sx={{ mb: 3, mt: 0 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <StatCard label="Active Sales" value={stats.totalActiveSales} icon={<SellIcon fontSize="small" />} />
                 </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Total Sold
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
-                                        {stats.totalSoldItems}
-                                    </Typography>
-                                </Box>
-                                <HistoryIcon sx={{ fontSize: 40, color: 'success.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <StatCard label="Total Sold" value={stats.totalSoldItems} icon={<HistoryIcon fontSize="small" />} />
                 </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Total Revenue
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'success.main' }}>
-                                        {formatPrice(stats.totalRevenue)}
-                                    </Typography>
-                                </Box>
-                                <MoneyIcon sx={{ fontSize: 40, color: 'success.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <StatCard accent label="Total Revenue" value={formatPrice(stats.totalRevenue)} icon={<MoneyIcon fontSize="small" />} />
                 </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Box>
-                                    <Typography variant="overline" sx={{ color: 'text.disabled' }} gutterBottom display="block">
-                                        Total Bids
-                                    </Typography>
-                                    <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
-                                        {stats.totalBidsReceived}
-                                    </Typography>
-                                </Box>
-                                <GavelIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <StatCard label="Total Bids" value={stats.totalBidsReceived} icon={<GavelIcon fontSize="small" />} />
                 </Grid>
             </Grid>
 
             {/* Error State */}
-            {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                    Error: {error}
-                </Alert>
+            {error && hasData && (
+                <ErrorState variant="inline" message="Couldn't refresh your sales." onRetry={fetchSalesData} />
             )}
 
             {/* Content Tabs */}
@@ -458,34 +355,32 @@ export default function SellingDashboard() {
                 </Tabs>
             </Paper>
 
-            {/* Loading State */}
-            {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress />
-                </Box>
+            {/* Loading / content — spinner only on first load so the 30s auto-refresh
+                doesn't blank the tabs. */}
+            {loading && !hasData ? (
+                <CardGridSkeleton count={6} />
+            ) : error && !hasData ? (
+                <ErrorState message="We couldn't load your sales right now." onRetry={fetchSalesData} />
             ) : (
                 <>
                     {/* Active Sales Tab */}
                     {currentTab === 0 && (
                         <>
                             {salesData.activeSales.length === 0 ? (
-                                <Paper sx={{ p: 4, textAlign: 'center' }}>
-                                    <SellIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No active sales or auctions
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        List your cards in your collection to start selling
-                                    </Typography>
-                                    <Button
-                                        variant="contained"
-                                        onClick={() => router.push('/collection')}
-                                        sx={{ mt: 2 }}
-                                        startIcon={<ShoppingCartIcon />}
-                                    >
-                                        Go to Collection
-                                    </Button>
-                                </Paper>
+                                <EmptyState
+                                    icon={<SellIcon />}
+                                    title="No active sales or auctions"
+                                    description="List cards from your collection to start selling."
+                                    action={
+                                        <Button
+                                            variant="contained"
+                                            onClick={() => router.push('/collection')}
+                                            startIcon={<ShoppingCartIcon />}
+                                        >
+                                            Go to Collection
+                                        </Button>
+                                    }
+                                />
                             ) : (
                                 <Grid container spacing={3}>
                                     {salesData.activeSales.map((sale) => {
@@ -493,13 +388,14 @@ export default function SellingDashboard() {
                                         const hasActiveBids = sale.bid_count > 0;
 
                                         return (
-                                            <Grid item xs={12} sm={6} md={4} key={sale.id}>
+                                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={sale.id}>
                                                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                                     {/* Card Image */}
                                                     <Box sx={{ position: 'relative' }}>
                                                         <CardMedia
                                                             component="img"
                                                             height="200"
+                                                            loading="lazy"
                                                             image={sale.card.small_image_url || sale.card.image_url || '/placeholder-card.png'}
                                                             alt={sale.card.name}
                                                             sx={{ objectFit: 'contain', bgcolor: 'background.default' }}
@@ -585,7 +481,7 @@ export default function SellingDashboard() {
                                                                                 </Typography>
                                                                             </Box>
                                                                             <Typography variant="body2" color="error.main">
-                                                                                {formatTimeLeft(sale.time_remaining)}
+                                                                                {formatDuration(sale.time_remaining)}
                                                                             </Typography>
                                                                         </Box>
                                                                     )}
@@ -637,24 +533,20 @@ export default function SellingDashboard() {
                     {currentTab === 1 && (
                         <>
                             {salesData.soldItems.length === 0 ? (
-                                <Paper sx={{ p: 4, textAlign: 'center' }}>
-                                    <HistoryIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary">
-                                        No sales history yet
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        Your completed sales will appear here
-                                    </Typography>
-                                </Paper>
+                                <EmptyState
+                                    icon={<HistoryIcon />}
+                                    title="No sales history yet"
+                                    description="Your completed sales will appear here."
+                                />
                             ) : (
                                 <TableContainer component={Paper}>
                                     <Table>
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell>Card</TableCell>
-                                                <TableCell>Sale Type</TableCell>
+                                                <TableCell sx={hideBelowMd}>Sale Type</TableCell>
                                                 <TableCell align="right">Sale Price</TableCell>
-                                                <TableCell>Buyer</TableCell>
+                                                <TableCell sx={hideBelowMd}>Buyer</TableCell>
                                                 <TableCell>Date Sold</TableCell>
                                             </TableRow>
                                         </TableHead>
@@ -680,19 +572,19 @@ export default function SellingDashboard() {
                                                                 <Typography variant="body2" fontWeight="medium">
                                                                     {item.card.name}
                                                                 </Typography>
-                                                                <Typography variant="caption" color="text.secondary">
+                                                                <Typography variant="caption" color="text.secondary" display="block">
                                                                     {item.card.set_name}
                                                                 </Typography>
-                                                                <br />
                                                                 <Chip
                                                                     label={item.condition}
                                                                     size="small"
                                                                     variant="outlined"
+                                                                    sx={{ mt: 0.5 }}
                                                                 />
                                                             </Box>
                                                         </Box>
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell sx={hideBelowMd}>
                                                         <Chip
                                                             label={getTransactionTypeLabel(item.sale_type)}
                                                             color="primary"
@@ -705,7 +597,7 @@ export default function SellingDashboard() {
                                                             {formatPrice(item.sale_price)}
                                                         </Typography>
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell sx={hideBelowMd}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                             <PersonIcon fontSize="small" />
                                                             <Typography variant="body2">
@@ -746,7 +638,7 @@ export default function SellingDashboard() {
                             {/* Card Summary */}
                             <Paper sx={{ p: 2, mb: 3 }}>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={4}>
+                                    <Grid size={{ xs: 4 }}>
                                         <img
                                             src={selectedSale.card.small_image_url || selectedSale.card.image_url || '/placeholder-card.png'}
                                             alt={selectedSale.card.name}
@@ -756,7 +648,7 @@ export default function SellingDashboard() {
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={8}>
+                                    <Grid size={{ xs: 8 }}>
                                         <Typography variant="h6">{selectedSale.card.name}</Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             {selectedSale.card.set_name}

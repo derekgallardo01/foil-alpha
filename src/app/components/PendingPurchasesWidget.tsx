@@ -17,10 +17,8 @@ import {
 import {
     Timer as TimerIcon,
     Warning as WarningIcon,
-    ShoppingCart as CartIcon,
     CheckCircle as CheckIcon
 } from '@mui/icons-material';
-import { toast } from 'react-toastify';
 import PendingPurchaseModal from './PendingPurchaseModal';
 
 interface PendingPurchase {

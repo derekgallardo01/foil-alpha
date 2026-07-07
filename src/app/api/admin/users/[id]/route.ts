@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDbConnection } from "../../../../lib/db";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../auth/[...nextauth]/route";
+import { requireAdmin } from "../../../../lib/auth";
 import type { RowDataPacket } from "mysql2/promise";
-import type { Session } from "next-auth"; // Import Session type
 
 interface UserRow extends RowDataPacket {
   id: string;
@@ -16,10 +14,8 @@ interface UserRow extends RowDataPacket {
 }
 
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions) as Session | null; // Type assertion
-  if (!session || session.user.role !== "admin") {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-  }
+  const auth = await requireAdmin();
+  if ("response" in auth) return auth.response;
 
   const { id: userId } = await context.params;
   const dbConnection = await getDbConnection();

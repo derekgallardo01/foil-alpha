@@ -1,17 +1,16 @@
 // src/app/api/bids/route.ts - Updated with new bidding flow (no fund freezing)
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { requireUser } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { createBidNotifications, createBidOutbidNotification } from '../../lib/notification';
+import { emitAppEvent } from '../../lib/events';
 
 // GET /api/bids - Get bids for a card or user's bids
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
         const { searchParams } = new URL(request.url);
         const userCardId = searchParams.get('user_card_id');
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest) {
         } else if (userId) {
             where.bidderId = parseInt(userId);
         } else {
-            where.bidderId = parseInt(session.user.id);
+            where.bidderId = user.id;
         }
 
         const bids = await prisma.bid.findMany({
@@ -32,46 +31,60 @@ export async function GET(request: NextRequest) {
             orderBy: { createdAt: 'desc' }
         });
 
-        // Get related data separately for each bid
-        const bidsWithDetails = await Promise.all(
-            bids.map(async (bid) => {
-                const userCard = await prisma.userCard.findUnique({
-                    where: { id: bid.userCardId }
-                });
+        // Batch-load related data to avoid the per-bid N+1 queries.
+        const userCardIds = [...new Set(bids.map((bid) => bid.userCardId))];
+        const userCards = userCardIds.length
+            ? await prisma.userCard.findMany({ where: { id: { in: userCardIds } } })
+            : [];
+        const userCardById = new Map(userCards.map((uc) => [uc.id, uc]));
 
-                const card = userCard ? await prisma.card.findUnique({
-                    where: { id: userCard.card_id }
-                }) : null;
+        const cardIds = [...new Set(userCards.map((uc) => uc.card_id))];
+        const cards = cardIds.length
+            ? await prisma.card.findMany({ where: { id: { in: cardIds } } })
+            : [];
+        const cardById = new Map(cards.map((c) => [c.id, c]));
 
-                const owner = userCard ? await prisma.user.findUnique({
-                    where: { id: userCard.owner_id },
-                    select: { id: true, name: true, email: true }
-                }) : null;
-
-                const bidder = await prisma.user.findUnique({
-                    where: { id: bid.bidderId },
-                    select: { id: true, name: true, email: true }
-                });
-
-                return {
-                    id: bid.id,
-                    user_card_id: bid.userCardId,
-                    bidder: bidder,
-                    amount: Number(bid.amount),
-                    is_active: bid.is_active,
-                    created_at: bid.createdAt,
-                    card: card ? {
-                        id: card.id,
-                        name: card.name,
-                        set_name: card.set_name,
-                        image_url: card.image_url
-                    } : null,
-                    owner: owner,
-                    auction_end: userCard?.auction_end,
-                    current_highest_bid: Number(bid.amount)
-                };
+        const userIds = [
+            ...new Set([
+                ...userCards.map((uc) => uc.owner_id),
+                ...bids.map((bid) => bid.bidderId),
+            ]),
+        ];
+        const users = userIds.length
+            ? await prisma.user.findMany({
+                where: { id: { in: userIds } },
+                select: { id: true, name: true, email: true }
             })
-        );
+            : [];
+        const userById = new Map(users.map((u) => [u.id, u]));
+
+        const bidsWithDetails = bids.map((bid) => {
+            const userCard = userCardById.get(bid.userCardId) ?? null;
+
+            const card = userCard ? cardById.get(userCard.card_id) ?? null : null;
+
+            const owner = userCard ? userById.get(userCard.owner_id) ?? null : null;
+
+            const bidder = userById.get(bid.bidderId) ?? null;
+
+            return {
+                id: bid.id,
+                user_card_id: bid.userCardId,
+                bidder: bidder,
+                amount: Number(bid.amount),
+                is_active: bid.is_active,
+                created_at: bid.createdAt,
+                card: card ? {
+                    id: card.id,
+                    name: card.name,
+                    set_name: card.set_name,
+                    image_url: card.image_url
+                } : null,
+                owner: owner,
+                auction_end: userCard?.auction_end,
+                current_highest_bid: Number(bid.amount)
+            };
+        });
 
         return NextResponse.json(bidsWithDetails.filter(bid => bid.card !== null));
 
@@ -87,12 +100,11 @@ export async function GET(request: NextRequest) {
 // POST /api/bids - Place a new bid (NO fund freezing)
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const bidderId = parseInt(session.user.id);
+        const bidderId = user.id;
         const body = await request.json();
         const { user_card_id, amount } = body;
 
@@ -272,6 +284,9 @@ export async function POST(request: NextRequest) {
             // Don't fail the entire request for notification errors
         }
 
+        // Push the new bid to every live-auction viewer.
+        emitAppEvent({ type: 'bid', auctionId: user_card_id });
+
         return NextResponse.json({
             success: true,
             bid: {
@@ -281,7 +296,7 @@ export async function POST(request: NextRequest) {
                 card_name: card.name,
                 created_at: result.bid.createdAt
             },
-            message: 'Bid placed successfully! No funds have been reserved.'
+            message: 'Bid placed successfully! The bid amount is held until the auction resolves.'
         });
 
     } catch (error) {
@@ -299,12 +314,11 @@ export async function POST(request: NextRequest) {
 // DELETE /api/bids - Cancel a bid (no fund unfreezing needed)
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const userId = parseInt(session.user.id);
+        const userId = user.id;
         const { searchParams } = new URL(request.url);
         const bidId = searchParams.get('bid_id');
 

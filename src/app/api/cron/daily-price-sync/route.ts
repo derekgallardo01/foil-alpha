@@ -1,7 +1,9 @@
 // src/app/api/cron/daily-price-sync/route.ts - FIXED FOR YOUR SCHEMA & API
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI, type PokemonPriceTrackerCardV2 } from '../../../lib/pokemon-price-tracker-api';
+import { ingestCardPriceHistory } from '../../../lib/price-history-ingest';
 import { Prisma } from '@prisma/client';
 
 interface SyncStats {
@@ -27,15 +29,14 @@ export async function POST(request: NextRequest) {
     try {
         console.log('🚀 Starting daily price sync...');
 
-        // Optional: Verify this is a legitimate cron request
+        // Authorize either as the cron (shared secret) or a signed-in admin.
+        // The admin UI "Test Cron" button calls this with its session cookie.
         const authHeader = request.headers.get('authorization');
         const cronSecret = process.env.CRON_SECRET;
-
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-            return NextResponse.json({
-                success: false,
-                error: 'Unauthorized - Invalid cron secret'
-            }, { status: 401 });
+        const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+        if (!isCron) {
+            const auth = await requireAdmin();
+            if ("response" in auth) return auth.response;
         }
 
         const startTime = new Date();
@@ -137,13 +138,13 @@ export async function POST(request: NextRequest) {
             errors: []
         };
 
-        // Process cards one by one to respect rate limits
-        for (const card of cardsToUpdate) {
+        // Fetch + persist pricing for a single card, recording the outcome in `stats`.
+        const syncOneCard = async (card: (typeof cardsToUpdate)[number]) => {
             try {
                 if (!card.price_tracker_id) {
                     console.warn(`⚠️ Card ${card.name} has no price tracker ID`);
                     stats.cards_skipped++;
-                    continue;
+                    return;
                 }
 
                 console.log(`🔄 Updating prices for: ${card.name} (${card.price_tracker_id})`);
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
                             updated_at: new Date()
                         }
                     });
-                    continue;
+                    return;
                 }
 
                 // FIXED: Extract the actual card data correctly
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
                 if (!newMarketPrice || newMarketPrice <= 0) {
                     console.warn(`⚠️ No valid price found for ${card.name}`);
                     stats.cards_skipped++;
-                    continue;
+                    return;
                 }
 
                 const oldPrice = card.market_price ? Number(card.market_price) : null;
@@ -233,6 +234,15 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
+                // Also persist the full V2 price *time series* (idempotent), so
+                // the forecasting dataset deepens with every sync — not just the
+                // single latest point written above.
+                try {
+                    await ingestCardPriceHistory(card.id, cardData.priceHistory);
+                } catch (ingestErr) {
+                    console.warn(`⚠️ History ingest failed for ${card.name}:`, ingestErr);
+                }
+
                 stats.cards_updated++;
                 stats.cards_processed++;
 
@@ -267,6 +277,11 @@ export async function POST(request: NextRequest) {
                     console.error(`Failed to update sync error count for ${card.name}:`, dbError);
                 }
             }
+        };
+
+        // Process cards one by one to respect rate limits (60/min).
+        for (const card of cardsToUpdate) {
+            await syncOneCard(card);
         }
 
         // Finalize stats
@@ -352,84 +367,84 @@ export async function POST(request: NextRequest) {
     }
 }
 
+// GET ?action=status — coverage + last-sync summary.
+async function getSyncStatus(): Promise<NextResponse> {
+    const latestSync = await prisma.priceSyncLog.findFirst({
+        orderBy: { created_at: 'desc' },
+        where: { sync_type: 'daily_automated' }
+    });
+
+    const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const cardsNeedingUpdate = await prisma.card.count({
+        where: {
+            AND: [
+                { price_tracker_id: { not: "" } },
+                { sync_enabled: true },
+                {
+                    OR: [
+                        { last_updated: null },
+                        { last_updated: { lt: cutoffTime } }
+                    ]
+                }
+            ]
+        }
+    });
+
+    const totalCards = await prisma.card.count({
+        where: {
+            AND: [
+                { price_tracker_id: { not: "" } },
+                { sync_enabled: true }
+            ]
+        }
+    });
+
+    const cardsWithPrices = await prisma.card.count({
+        where: {
+            AND: [
+                { price_tracker_id: { not: "" } },
+                { market_price: { not: null } },
+                { market_price: { gt: 0 } }
+            ]
+        }
+    });
+
+    return NextResponse.json({
+        success: true,
+        status: {
+            cards_needing_update: cardsNeedingUpdate,
+            total_trackable_cards: totalCards,
+            cards_with_prices: cardsWithPrices,
+            coverage_percentage: totalCards > 0 ? Math.round((cardsWithPrices / totalCards) * 100) : 0,
+            last_sync: latestSync,
+            daily_api_limit: 50,
+            recommended_sync_frequency: 'Every 24 hours',
+            next_sync_estimate: latestSync ?
+                new Date(latestSync.created_at.getTime() + 24 * 60 * 60 * 1000).toISOString() :
+                'Not scheduled'
+        }
+    });
+}
+
+// GET ?action=logs — recent sync-log rows.
+async function getSyncLogs(searchParams: URLSearchParams): Promise<NextResponse> {
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const logs = await prisma.priceSyncLog.findMany({
+        where: { sync_type: 'daily_automated' },
+        orderBy: { created_at: 'desc' },
+        take: limit
+    });
+
+    return NextResponse.json({ success: true, logs });
+}
+
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const action = searchParams.get('action');
 
-        if (action === 'status') {
-            // Get sync status information
-            const latestSync = await prisma.priceSyncLog.findFirst({
-                orderBy: { created_at: 'desc' },
-                where: { sync_type: 'daily_automated' }
-            });
-
-            const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const cardsNeedingUpdate = await prisma.card.count({
-                where: {
-                    AND: [
-                        { price_tracker_id: { not: "" } }, // Not empty string
-                        { sync_enabled: true },
-                        {
-                            OR: [
-                                { last_updated: null },
-                                { last_updated: { lt: cutoffTime } }
-                            ]
-                        }
-                    ]
-                }
-            });
-
-            const totalCards = await prisma.card.count({
-                where: {
-                    AND: [
-                        { price_tracker_id: { not: "" } }, // Not empty string
-                        { sync_enabled: true }
-                    ]
-                }
-            });
-
-            const cardsWithPrices = await prisma.card.count({
-                where: {
-                    AND: [
-                        { price_tracker_id: { not: "" } },
-                        { market_price: { not: null } },
-                        { market_price: { gt: 0 } }
-                    ]
-                }
-            });
-
-            return NextResponse.json({
-                success: true,
-                status: {
-                    cards_needing_update: cardsNeedingUpdate,
-                    total_trackable_cards: totalCards,
-                    cards_with_prices: cardsWithPrices,
-                    coverage_percentage: totalCards > 0 ? Math.round((cardsWithPrices / totalCards) * 100) : 0,
-                    last_sync: latestSync,
-                    daily_api_limit: 50,
-                    recommended_sync_frequency: 'Every 24 hours',
-                    next_sync_estimate: latestSync ?
-                        new Date(latestSync.created_at.getTime() + 24 * 60 * 60 * 1000).toISOString() :
-                        'Not scheduled'
-                }
-            });
-        }
-
-        if (action === 'logs') {
-            // Get recent sync logs
-            const limit = parseInt(searchParams.get('limit') || '10');
-            const logs = await prisma.priceSyncLog.findMany({
-                where: { sync_type: 'daily_automated' },
-                orderBy: { created_at: 'desc' },
-                take: limit
-            });
-
-            return NextResponse.json({
-                success: true,
-                logs
-            });
-        }
+        if (action === 'status') return getSyncStatus();
+        if (action === 'logs') return getSyncLogs(searchParams);
 
         // Default health check
         return NextResponse.json({

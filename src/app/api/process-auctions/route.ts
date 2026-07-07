@@ -1,18 +1,25 @@
 // src/app/api/process-auctions/route.ts - Updated with new confirmation flow
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
+import { requireAdmin } from '../../lib/auth';
 import {
     createAuctionWonNotifications,
     createAuctionLostNotifications,
     createPurchaseExpiredNotifications
 } from '../../lib/notification';
+import { releaseBidHolds } from '../../lib/wallet-settlement';
+import { emitAppEvent } from '../../lib/events';
 
 export async function POST(request: NextRequest) {
     try {
-        // This endpoint should be called by a cron job or admin
+        // Authorize either as the in-app cron (shared secret) or a signed-in admin.
+        // The admin UI calls this with its session cookie — no secret in the client.
         const authHeader = request.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const cronSecret = process.env.CRON_SECRET;
+        const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+        if (!isCron) {
+            const auth = await requireAdmin();
+            if ("response" in auth) return auth.response;
         }
 
         console.log('Processing ended auctions...');
@@ -138,19 +145,21 @@ export async function POST(request: NextRequest) {
                 // Check if bid meets reserve price
                 const reservePrice = Number(auction.reserve_price) || 0;
                 if (Number(highestBid.amount) < reservePrice) {
-                    // Reserve not met - end auction
-                    await prisma.userCard.update({
-                        where: { id: auction.id },
-                        data: { is_for_sale: false }
-                    });
+                    // Reserve not met - end auction, releasing every bidder's escrow.
+                    await prisma.$transaction(async (tx) => {
+                        await tx.userCard.update({
+                            where: { id: auction.id },
+                            data: { is_for_sale: false }
+                        });
 
-                    // Deactivate all bids - fixed field name
-                    await prisma.bid.updateMany({
-                        where: {
-                            userCardId: auction.id, // Fixed: was user_card_id
-                            is_active: true
-                        },
-                        data: { is_active: false }
+                        await releaseBidHolds(tx, { auctionId: auction.id });
+                        await tx.bid.updateMany({
+                            where: {
+                                userCardId: auction.id,
+                                is_active: true
+                            },
+                            data: { is_active: false }
+                        });
                     });
 
                     results.push({
@@ -187,27 +196,20 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
-                    // Get all losing bidders - fixed field name
+                    // Losing bidders (for notifications). Bids stay ACTIVE and their
+                    // escrow stays held until the winner confirms/declines/expires —
+                    // see bids/confirm-purchase and the expiry handler below.
                     const losingBids = await tx.bid.findMany({
                         where: {
-                            userCardId: auction.id, // Fixed: was user_card_id
+                            userCardId: auction.id,
                             is_active: true,
                             id: { not: highestBid.id }
                         }
                     });
 
-                    // Deactivate all bids (auction is over) - fixed field name
-                    await tx.bid.updateMany({
-                        where: {
-                            userCardId: auction.id, // Fixed: was user_card_id
-                            is_active: true
-                        },
-                        data: { is_active: false }
-                    });
-
                     return {
                         transaction: pendingTransaction,
-                        losingBidders: losingBids.map(bid => bid.bidderId) // Fixed: was bidder_id
+                        losingBidders: losingBids.map(bid => bid.bidderId)
                     };
                 });
 
@@ -234,6 +236,8 @@ export async function POST(request: NextRequest) {
                 } catch (notificationError) {
                     console.error('Error creating auction end notifications:', notificationError);
                 }
+
+                emitAppEvent({ type: 'auction_ended', auctionId: auction.id });
 
                 results.push({
                     auction_id: auction.id,
@@ -291,14 +295,25 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
-                    // Reactivate other bids (excluding the expired winner) - fixed field name
+                    // The winner let the 24h window lapse: release their escrow hold
+                    // and drop their bid. The auction relists and continues with the
+                    // remaining bidders (whose holds stay put).
+                    await tx.userWallet.update({
+                        where: { user_id: expiredTransaction.buyer_id },
+                        data: { frozen_balance: { decrement: Number(expiredTransaction.amount) } }
+                    });
                     await tx.bid.updateMany({
                         where: {
-                            userCardId: expiredTransaction.user_card_id, // Fixed: was user_card_id
-                            bidderId: { not: expiredTransaction.buyer_id } // Fixed: was bidder_id
+                            userCardId: expiredTransaction.user_card_id,
+                            bidderId: expiredTransaction.buyer_id,
+                            is_active: true
                         },
-                        data: { is_active: true }
+                        data: { is_active: false }
                     });
+                    // The remaining bidders' bids were never deactivated (they keep
+                    // their holds), so the auction just continues with them — no
+                    // reactivation needed. (Reactivating history would double-release
+                    // already-released holds → negative frozen balance.)
                 });
 
                 // Create expiration notifications

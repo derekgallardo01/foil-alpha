@@ -78,3 +78,6 @@ prisma/migrations/
 get-token.js
 tsconfig.node.json
 public/dollar-sign.ico
+
+# Personal Collectr export data (reproducible via scripts/import-collectr.mjs)
+import/

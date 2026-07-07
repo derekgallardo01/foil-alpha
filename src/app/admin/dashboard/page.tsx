@@ -2,16 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
     Box,
     Container,
-    Grid,
-    Card,
-    CardContent,
     Typography,
-    CircularProgress,
     Button,
     List,
     ListItem,
@@ -20,19 +15,22 @@ import {
     Paper,
     Avatar,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     TrendingUp,
     People,
     Store,
     Gavel,
     Assessment,
-    ArrowUpward,
-    ArrowDownward,
     Refresh,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
-import { toast } from "react-toastify";
 import AppShell from "../../components/AppShell";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import { StatRowSkeleton } from "../../components/ui/Skeletons";
+import ErrorState from "../../components/ui/ErrorState";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -66,8 +64,9 @@ interface RecentActivity {
 
 export default function AdminDashboard() {
     const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [stats, setStats] = useState<DashboardStats>({
         totalUsers: 0,
         activeUsers: 0,
@@ -80,22 +79,15 @@ export default function AdminDashboard() {
     });
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
-
     // Fetch dashboard data
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
+            setError(false);
 
             // Fetch users data
             const usersResponse = await fetch("/api/admin/users", {
                 headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
                 },
             });
 
@@ -105,7 +97,6 @@ export default function AdminDashboard() {
             // Fetch cards data with all=true to get total count
             const cardsResponse = await fetch("/api/admin/cards?all=true", {
                 headers: {
-                    "Authorization": `Bearer ${session?.accessToken}`,
                 },
             });
 
@@ -127,7 +118,6 @@ export default function AdminDashboard() {
             try {
                 const auctionsResponse = await fetch("/api/admin/auctions?status=active", {
                     headers: {
-                        "Authorization": `Bearer ${session?.accessToken}`,
                     },
                 });
 
@@ -148,7 +138,6 @@ export default function AdminDashboard() {
                 // Get all transactions to calculate stats
                 const transactionsResponse = await fetch("/api/admin/transactions?limit=1000", {
                     headers: {
-                        "Authorization": `Bearer ${session?.accessToken}`,
                     },
                 });
 
@@ -198,7 +187,6 @@ export default function AdminDashboard() {
             try {
                 const recentTransResponse = await fetch("/api/admin/transactions?limit=5", {
                     headers: {
-                        "Authorization": `Bearer ${session?.accessToken}`,
                     },
                 });
 
@@ -252,12 +240,9 @@ export default function AdminDashboard() {
             setStats(newStats);
             setRecentActivity(recentActivities.slice(0, 10)); // Show only 10 most recent
 
-            console.log("📊 Dashboard Stats Updated with Actual Data:", newStats);
-            toast.success("Dashboard data loaded!");
-
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
-            toast.error("Failed to load dashboard data");
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -274,49 +259,38 @@ export default function AdminDashboard() {
         {
             title: "Total Users",
             value: stats.totalUsers.toLocaleString(),
-            icon: <People sx={{ fontSize: 40, color: 'text.disabled' }} />,
-            change: "+12%",
-            changeType: "up" as const,
+            icon: <People fontSize="small" />,
+            accent: true,
             link: "/admin/users"
         },
         {
             title: "Active Users",
             value: stats.activeUsers.toLocaleString(),
-            icon: <People sx={{ fontSize: 40, color: 'text.disabled' }} />,
-            change: "+8%",
-            changeType: "up" as const,
+            icon: <People fontSize="small" />,
             link: "/admin/users"
         },
         {
             title: "Total Cards",
             value: stats.totalCards.toLocaleString(), // *** FIXED: Now shows actual count ***
-            icon: <Store sx={{ fontSize: 40, color: 'text.disabled' }} />,
-            change: "+25%",
-            changeType: "up" as const,
+            icon: <Store fontSize="small" />,
             link: "/admin/cards"
         },
         {
             title: "Active Auctions",
             value: stats.activeAuctions.toLocaleString(),
-            icon: <Gavel sx={{ fontSize: 40, color: 'text.disabled' }} />,
-            change: "-5%",
-            changeType: "down" as const,
+            icon: <Gavel fontSize="small" />,
             link: "/admin/auctions"
         },
         {
             title: "Total Sales",
             value: stats.totalSales.toLocaleString(),
-            icon: <TrendingUp sx={{ fontSize: 40, color: 'text.disabled' }} />,
-            change: "+18%",
-            changeType: "up" as const,
+            icon: <TrendingUp fontSize="small" />,
             link: "/admin/transactions"
         },
         {
             title: "Active Listings",
             value: stats.activeListings.toLocaleString(),
-            icon: <Store sx={{ fontSize: 40, color: 'text.disabled' }} />,
-            change: "+10%",
-            changeType: "up" as const,
+            icon: <Store fontSize="small" />,
             link: "/admin/listings"
         },
     ];
@@ -340,31 +314,11 @@ export default function AdminDashboard() {
         }
     };
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <CircularProgress />
-            </Box>
-        );
-    }
-
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", px: { xs: 2, md: 3 }, pt: 3, pb: 1 }}>
-                <Typography
-                    variant="h4"
-                    sx={(theme) => ({
-                        fontWeight: 'bold',
-                        background: theme.foil.gradient,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                    })}
-                >
-                    Admin Dashboard
-                </Typography>
-                <Box sx={{ ml: 'auto' }}>
+            <PageHeader
+                title="Admin Dashboard"
+                actions={
                     <Button
                         variant="outlined"
                         color="primary"
@@ -373,58 +327,52 @@ export default function AdminDashboard() {
                     >
                         Refresh
                     </Button>
-                </Box>
-            </Box>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 <motion.div initial="hidden" animate="visible" variants={containerVariants}>
                     {/* Stats Cards */}
                     <motion.div variants={itemVariants}>
-                        <Grid container spacing={3} sx={{ mb: 4 }}>
-                            {statCards.map((stat, index) => (
-                                <Grid item xs={12} sm={6} md={4} lg={2} key={index}>
-                                    <Card
-                                        sx={{
-                                            cursor: 'pointer',
-                                            transition: 'transform 0.2s',
-                                            '&:hover': { transform: 'translateY(-2px)' }
-                                        }}
-                                        onClick={() => router.push(stat.link)}
-                                    >
-                                        <CardContent>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                                {stat.icon}
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    {stat.changeType === 'up' && <ArrowUpward sx={{ fontSize: 16, color: 'success.main' }} />}
-                                                    {stat.changeType === 'down' && <ArrowDownward sx={{ fontSize: 16, color: 'error.main' }} />}
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{
-                                                            color: stat.changeType === 'up' ? 'success.main' :
-                                                                stat.changeType === 'down' ? 'error.main' : 'text.secondary'
-                                                        }}
-                                                    >
-                                                        {stat.change}
-                                                    </Typography>
-                                                </Box>
+                        <Box sx={{ mb: 4 }}>
+                            {loading ? (
+                                <StatRowSkeleton count={6} />
+                            ) : error ? (
+                                <ErrorState
+                                    message="Couldn't load dashboard stats."
+                                    onRetry={fetchDashboardData}
+                                />
+                            ) : (
+                                <Grid container spacing={3}>
+                                    {statCards.map((stat, index) => (
+                                        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} key={index}>
+                                            <Box
+                                                onClick={() => router.push(stat.link)}
+                                                sx={{
+                                                    cursor: 'pointer',
+                                                    height: '100%',
+                                                    transition: 'transform 0.2s',
+                                                    '&:hover': { transform: 'translateY(-2px)' }
+                                                }}
+                                            >
+                                                <StatCard
+                                                    label={stat.title}
+                                                    value={stat.value}
+                                                    icon={stat.icon}
+                                                    accent={stat.accent}
+                                                />
                                             </Box>
-                                            <Typography variant="mono" component="div" sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'text.primary' }}>
-                                                {stat.value}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                                {stat.title}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
+                                        </Grid>
+                                    ))}
                                 </Grid>
-                            ))}
-                        </Grid>
+                            )}
+                        </Box>
                     </motion.div>
 
                     {/* Main Content Grid */}
                     <Grid container spacing={3}>
                         {/* Recent Activity */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <motion.div variants={itemVariants}>
                                 <Paper
                                     variant="outlined"
@@ -481,7 +429,7 @@ export default function AdminDashboard() {
                         </Grid>
 
                         {/* Quick Actions */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <motion.div variants={itemVariants}>
                                 <Paper
                                     variant="outlined"
@@ -496,7 +444,7 @@ export default function AdminDashboard() {
                                         Quick Actions
                                     </Typography>
                                     <Grid container spacing={2}>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -507,7 +455,7 @@ export default function AdminDashboard() {
                                                 Manage Users
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -518,7 +466,7 @@ export default function AdminDashboard() {
                                                 Manage Cards
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -529,7 +477,7 @@ export default function AdminDashboard() {
                                                 Manage Auctions
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Button
                                                 fullWidth
                                                 variant="outlined"
@@ -540,7 +488,7 @@ export default function AdminDashboard() {
                                                 View Transactions
                                             </Button>
                                         </Grid>
-                                        {/* <Grid item xs={12}>
+                                        {/* <Grid size={{ xs: 12 }}>
                                             <Button
                                                 fullWidth
                                                 variant="contained"
@@ -561,7 +509,7 @@ export default function AdminDashboard() {
                         </Grid>
 
                         {/* System Status
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <motion.div variants={itemVariants}>
                                 <Paper
                                     sx={{
@@ -574,7 +522,7 @@ export default function AdminDashboard() {
                                         System Status
                                     </Typography>
                                     <Grid container spacing={3}>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                                     ●
@@ -587,7 +535,7 @@ export default function AdminDashboard() {
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                                     ●
@@ -600,7 +548,7 @@ export default function AdminDashboard() {
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'success.main' }}>
                                                     ●
@@ -613,7 +561,7 @@ export default function AdminDashboard() {
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid item xs={12} sm={3}>
+                                        <Grid size={{ xs: 12, sm: 3 }}>
                                             <Box sx={{ textAlign: 'center' }}>
                                                 <Typography variant="h4" sx={{ color: 'warning.main' }}>
                                                     ●

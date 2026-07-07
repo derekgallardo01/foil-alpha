@@ -1,5 +1,4 @@
 import { prisma } from './prisma';
-import bcrypt from 'bcryptjs';
 
 // Development authentication helpers
 export interface DevUser {

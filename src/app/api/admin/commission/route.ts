@@ -1,16 +1,13 @@
 // src/app/api/admin/commission/route.ts - FIXED FOR CURRENT SCHEMA
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '../../../lib/prisma';
+import { requireAdmin } from '../../../lib/auth';
 
 // GET /api/admin/commission - Get all commission settings
 export async function GET() {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
 
         // Get global setting
         const globalSetting = await prisma.commission_settings.findFirst({
@@ -100,12 +97,11 @@ export async function GET() {
 // POST /api/admin/commission - Update commission settings
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id || session.user.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const adminId = parseInt(session.user.id);
+        const adminId = user.id;
         const body = await request.json();
         const { global_commission, rarity_commissions } = body;
 

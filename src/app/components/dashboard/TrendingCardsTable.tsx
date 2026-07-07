@@ -16,7 +16,6 @@ import {
     IconButton,
     ToggleButton,
     ToggleButtonGroup,
-    CircularProgress,
     Tooltip,
     Skeleton
 } from '@mui/material';
@@ -41,6 +40,9 @@ import {
 } from 'chart.js';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@mui/material/styles';
+import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
+import { getRarityHex } from "../../lib/rarity";
+import WidgetHeader from "../ui/WidgetHeader";
 
 // Register ChartJS components
 ChartJS.register(
@@ -129,21 +131,6 @@ export default function TrendingCardsTable({
         return value > 0 ? `+${formatted}%` : `-${formatted}%`;
     };
 
-    const getRarityColor = (rarity: string) => {
-        const colors: Record<string, string> = {
-            'Common': '#757575',
-            'Uncommon': '#66BB6A',
-            'Rare': '#42A5F5',
-            'Rare Holo': '#AB47BC',
-            'Ultra Rare': '#FF7043',
-            'Secret Rare': '#EF5350',
-            'VMAX': '#9B5Cff',
-            'VSTAR': '#FFD54F',
-            'Promo': '#9C27B0'
-        };
-        return colors[rarity] || '#757575';
-    };
-
     const getSparklineData = (sparkline: TrendingCard['sparkline']) => {
         if (!sparkline || sparkline.length === 0) {
             return {
@@ -199,90 +186,89 @@ export default function TrendingCardsTable({
             border: 1,
             borderColor: 'divider'
         }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TrendingUp sx={{ color: 'primary.main' }} />
-                    Trending Cards
-                </Typography>
-
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <ToggleButtonGroup
-                        value={trendType}
-                        exclusive
-                        onChange={(e, value) => value && setTrendType(value)}
-                        size="small"
-                        sx={{
-                            '& .MuiToggleButton-root': {
-                                color: 'text.secondary',
-                                borderColor: 'divider',
-                                '&.Mui-selected': {
-                                    color: 'primary.contrastText',
-                                    bgcolor: 'primary.main',
-                                    borderColor: 'primary.main',
+            <WidgetHeader
+                icon={<TrendingUp sx={{ color: 'primary.main' }} />}
+                title="Trending Cards"
+                actions={
+                    <>
+                        <ToggleButtonGroup
+                            value={trendType}
+                            exclusive
+                            onChange={(e, value) => value && setTrendType(value)}
+                            size="small"
+                            sx={{
+                                '& .MuiToggleButton-root': {
+                                    color: 'text.secondary',
+                                    borderColor: 'divider',
+                                    '&.Mui-selected': {
+                                        color: 'primary.contrastText',
+                                        bgcolor: 'primary.main',
+                                        borderColor: 'primary.main',
+                                        '&:hover': {
+                                            bgcolor: 'primary.main'
+                                        }
+                                    },
                                     '&:hover': {
-                                        bgcolor: 'primary.main'
+                                        bgcolor: 'action.hover'
                                     }
-                                },
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
                                 }
-                            }
-                        }}
-                    >
-                        <ToggleButton value="price">
-                            <Tooltip title="Price Change">
-                                <MonetizationOn />
-                            </Tooltip>
-                        </ToggleButton>
-                        <ToggleButton value="volume">
-                            <Tooltip title="Trading Volume">
-                                <ShowChart />
-                            </Tooltip>
-                        </ToggleButton>
-                        <ToggleButton value="popularity">
-                            <Tooltip title="Popularity">
-                                <Visibility />
-                            </Tooltip>
-                        </ToggleButton>
-                    </ToggleButtonGroup>
+                            }}
+                        >
+                            <ToggleButton value="price">
+                                <Tooltip title="Price Change">
+                                    <MonetizationOn />
+                                </Tooltip>
+                            </ToggleButton>
+                            <ToggleButton value="volume">
+                                <Tooltip title="Trading Volume">
+                                    <ShowChart />
+                                </Tooltip>
+                            </ToggleButton>
+                            <ToggleButton value="popularity">
+                                <Tooltip title="Popularity">
+                                    <Visibility />
+                                </Tooltip>
+                            </ToggleButton>
+                        </ToggleButtonGroup>
 
-                    <ToggleButtonGroup
-                        value={period}
-                        exclusive
-                        onChange={(e, value) => value && setPeriod(value)}
-                        size="small"
-                        sx={{
-                            '& .MuiToggleButton-root': {
-                                color: 'text.secondary',
-                                borderColor: 'divider',
-                                '&.Mui-selected': {
-                                    color: 'primary.contrastText',
-                                    bgcolor: 'primary.main',
-                                    borderColor: 'primary.main',
+                        <ToggleButtonGroup
+                            value={period}
+                            exclusive
+                            onChange={(e, value) => value && setPeriod(value)}
+                            size="small"
+                            sx={{
+                                '& .MuiToggleButton-root': {
+                                    color: 'text.secondary',
+                                    borderColor: 'divider',
+                                    '&.Mui-selected': {
+                                        color: 'primary.contrastText',
+                                        bgcolor: 'primary.main',
+                                        borderColor: 'primary.main',
+                                        '&:hover': {
+                                            bgcolor: 'primary.main'
+                                        }
+                                    },
                                     '&:hover': {
-                                        bgcolor: 'primary.main'
+                                        bgcolor: 'action.hover'
                                     }
-                                },
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
                                 }
-                            }
-                        }}
-                    >
-                        <ToggleButton value="24h">24H</ToggleButton>
-                        <ToggleButton value="7d">7D</ToggleButton>
-                        <ToggleButton value="30d">30D</ToggleButton>
-                    </ToggleButtonGroup>
+                            }}
+                        >
+                            <ToggleButton value="24h">24H</ToggleButton>
+                            <ToggleButton value="7d">7D</ToggleButton>
+                            <ToggleButton value="30d">30D</ToggleButton>
+                        </ToggleButtonGroup>
 
-                    <IconButton
-                        size="small"
-                        onClick={fetchTrendingCards}
-                        sx={{ color: 'primary.main' }}
-                    >
-                        <Refresh />
-                    </IconButton>
-                </Box>
-            </Box>
+                        <IconButton
+                            size="small"
+                            onClick={fetchTrendingCards}
+                            sx={{ color: 'primary.main' }}
+                        >
+                            <Refresh />
+                        </IconButton>
+                    </>
+                }
+            />
 
             <TableContainer sx={{
                 maxHeight: height - 120,
@@ -296,11 +282,11 @@ export default function TrendingCardsTable({
                         <TableRow>
                             <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 50 }}>#</TableCell>
                             <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Card</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Set</TableCell>
-                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Rarity</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', ...hideBelowMd }}>Set</TableCell>
+                            <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', ...hideBelowSm }}>Rarity</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Price</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Change</TableCell>
-                            <TableCell align="center" sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 100 }}>Trend</TableCell>
+                            <TableCell align="center" sx={{ bgcolor: 'background.paper', color: 'text.primary', width: 100, ...hideBelowMd }}>Trend</TableCell>
                             <TableCell align="right" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
                                 {trendType === 'volume' ? 'Volume' : trendType === 'popularity' ? 'Views' : 'Vol 24h'}
                             </TableCell>
@@ -353,7 +339,7 @@ export default function TrendingCardsTable({
                                             bgcolor: 'action.hover'
                                         }
                                     }}
-                                    onClick={() => router.push(`/marketplace?card=${card.id}`)}
+                                    onClick={() => router.push(`/marketplace?search=${encodeURIComponent(card.name)}`)}
                                 >
                                     <TableCell sx={{ color: 'text.primary' }}>{index + 1}</TableCell>
                                     <TableCell>
@@ -371,17 +357,17 @@ export default function TrendingCardsTable({
                                             </Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={hideBelowMd}>
                                         <Typography variant="body2" color="text.secondary">
                                             {card.set_name}
                                         </Typography>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={hideBelowSm}>
                                         <Chip
                                             label={card.rarity}
                                             size="small"
                                             sx={{
-                                                bgcolor: getRarityColor(card.rarity),
+                                                bgcolor: getRarityHex(card.rarity),
                                                 color: 'white',
                                                 fontWeight: 500
                                             }}
@@ -410,7 +396,7 @@ export default function TrendingCardsTable({
                                             </Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell align="center" sx={{ p: 1 }}>
+                                    <TableCell align="center" sx={{ p: 1, ...hideBelowMd }}>
                                         <Box sx={{ width: 80, height: 30 }}>
                                             <Line data={getSparklineData(card.sparkline)} options={sparklineOptions} />
                                         </Box>

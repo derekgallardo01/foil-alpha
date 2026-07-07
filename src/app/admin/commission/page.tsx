@@ -2,8 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import {
     Box,
     Container,
@@ -12,8 +10,6 @@ import {
     Typography,
     TextField,
     Button,
-    Grid,
-    CircularProgress,
     Table,
     TableBody,
     TableCell,
@@ -26,6 +22,7 @@ import {
     InputAdornment,
     Divider,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import {
     Save,
     Refresh,
@@ -36,6 +33,12 @@ import {
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import AppShell from "../../components/AppShell";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import { StatRowSkeleton } from "../../components/ui/Skeletons";
+import { formatPrice } from "../../lib/format";
+import { useRequireAuth } from "../../lib/useRequireAuth";
+import { hideBelowMd } from "../../lib/responsive";
 
 interface Rarity {
     id: number;
@@ -60,8 +63,7 @@ interface CommissionData {
 }
 
 export default function CommissionManagement() {
-    const router = useRouter();
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [data, setData] = useState<CommissionData>({
@@ -71,13 +73,6 @@ export default function CommissionManagement() {
     });
     const [globalCommission, setGlobalCommission] = useState<string>("5.00");
     const [rarityCommissions, setRarityCommissions] = useState<{ [key: string]: string }>({});
-
-    // Redirect if not admin
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
 
     // Fetch commission data
     const fetchCommissionData = async () => {
@@ -173,49 +168,32 @@ export default function CommissionManagement() {
         }));
     };
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <CircularProgress />
-            </Box>
-        );
-    }
-
     return (
         <AppShell variant="admin">
-            {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography
-                    variant="h4"
-                    sx={{
-                        fontWeight: 800,
-                        background: (theme) => theme.foil.gradient,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                    }}
-                >
-                    Commission Management
-                </Typography>
-                <Box sx={{ ml: 'auto', display: 'flex', gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Refresh />}
-                        onClick={fetchCommissionData}
-                        disabled={loading}
-                    >
-                        Refresh
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<Save />}
-                        onClick={saveCommissionSettings}
-                        disabled={saving}
-                    >
-                        {saving ? 'Saving...' : 'Save Settings'}
-                    </Button>
-                </Box>
-            </Box>
+            <PageHeader
+                title="Commission"
+                icon={<Percent />}
+                actions={
+                    <>
+                        <Button
+                            variant="outlined"
+                            startIcon={<Refresh />}
+                            onClick={fetchCommissionData}
+                            disabled={loading}
+                        >
+                            Refresh
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<Save />}
+                            onClick={saveCommissionSettings}
+                            disabled={saving}
+                        >
+                            {saving ? 'Saving...' : 'Save Settings'}
+                        </Button>
+                    </>
+                }
+            />
 
             <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
                 <motion.div
@@ -223,9 +201,12 @@ export default function CommissionManagement() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
+                    {loading ? (
+                    <StatRowSkeleton count={3} />
+                    ) : (
                     <Grid container spacing={3}>
                         {/* Admin Wallet Info */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -234,35 +215,14 @@ export default function CommissionManagement() {
                                     </Typography>
                                     {data.admin_wallet ? (
                                         <Grid container spacing={3}>
-                                            <Grid item xs={12} md={4}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
-                                                        ${data.admin_wallet.balance.toFixed(2)}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Current Balance
-                                                    </Typography>
-                                                </Box>
+                                            <Grid size={{ xs: 12, md: 4 }}>
+                                                <StatCard label="Current Balance" value={formatPrice(data.admin_wallet.balance)} accent />
                                             </Grid>
-                                            <Grid item xs={12} md={4}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
-                                                        ${data.admin_wallet.total_commissions.toFixed(2)}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Total Commissions
-                                                    </Typography>
-                                                </Box>
+                                            <Grid size={{ xs: 12, md: 4 }}>
+                                                <StatCard label="Total Commissions" value={formatPrice(data.admin_wallet.total_commissions)} />
                                             </Grid>
-                                            <Grid item xs={12} md={4}>
-                                                <Box sx={{ textAlign: 'center' }}>
-                                                    <Typography variant="mono" component="div" sx={{ fontSize: 34, fontWeight: 700, color: 'success.main' }}>
-                                                        ${data.admin_wallet.total_marketplace_sales.toFixed(2)}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Marketplace Sales
-                                                    </Typography>
-                                                </Box>
+                                            <Grid size={{ xs: 12, md: 4 }}>
+                                                <StatCard label="Marketplace Sales" value={formatPrice(data.admin_wallet.total_marketplace_sales)} />
                                             </Grid>
                                         </Grid>
                                     ) : (
@@ -275,7 +235,7 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Global Commission Setting */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -301,7 +261,7 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Commission Calculation Example */}
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -317,16 +277,16 @@ export default function CommissionManagement() {
                                             • Card Price: $100.00
                                         </Typography>
                                         <Typography variant="body2" color="success.main">
-                                            • Commission: ${(100 * parseFloat(globalCommission || "0") / 100).toFixed(2)}
+                                            • Commission: {formatPrice(100 * parseFloat(globalCommission || "0") / 100)}
                                         </Typography>
                                         <Typography variant="body2" color="text.primary">
-                                            • Buyer Pays: ${(100 + (100 * parseFloat(globalCommission || "0") / 100)).toFixed(2)}
+                                            • Buyer Pays: {formatPrice(100 + (100 * parseFloat(globalCommission || "0") / 100))}
                                         </Typography>
                                         <Typography variant="body2" color="text.primary">
-                                            • Seller Receives: ${(100 - (100 * parseFloat(globalCommission || "0") / 100)).toFixed(2)}
+                                            • Seller Receives: {formatPrice(100 - (100 * parseFloat(globalCommission || "0") / 100))}
                                         </Typography>
                                         <Typography variant="body2" color="success.main">
-                                            • Platform Gets: ${(100 * parseFloat(globalCommission || "0") / 100).toFixed(2)}
+                                            • Platform Gets: {formatPrice(100 * parseFloat(globalCommission || "0") / 100)}
                                         </Typography>
                                     </Box>
                                 </CardContent>
@@ -334,7 +294,7 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Rarity-Specific Commission Rates */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2 }}>
@@ -348,8 +308,8 @@ export default function CommissionManagement() {
                                             <TableHead>
                                                 <TableRow>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Rarity</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Symbol</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Color</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', ...hideBelowMd }}>Symbol</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', ...hideBelowMd }}>Color</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Commission Rate (%)</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Status</TableCell>
                                                 </TableRow>
@@ -360,10 +320,10 @@ export default function CommissionManagement() {
                                                         <TableCell sx={{ color: 'text.primary' }}>
                                                             {rarity.name}
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary' }}>
+                                                        <TableCell sx={{ color: 'text.secondary', ...hideBelowMd }}>
                                                             {rarity.symbol || '-'}
                                                         </TableCell>
-                                                        <TableCell>
+                                                        <TableCell sx={hideBelowMd}>
                                                             {rarity.color ? (
                                                                 <Box
                                                                     sx={{
@@ -417,8 +377,8 @@ export default function CommissionManagement() {
                         </Grid>
 
                         {/* Save Actions */}
-                        <Grid item xs={12}>
-                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                        <Grid size={{ xs: 12 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
                                 <Button
                                     variant="outlined"
                                     onClick={fetchCommissionData}
@@ -439,6 +399,7 @@ export default function CommissionManagement() {
                             </Box>
                         </Grid>
                     </Grid>
+                    )}
                 </motion.div>
             </Container>
         </AppShell>

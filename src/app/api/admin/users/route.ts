@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/route";
 import { prisma } from "../../../lib/prisma";
+import { requireAdmin } from "../../../lib/auth";
 import bcrypt from "bcryptjs";
-import type { Session } from "next-auth";
 
 // Interface for response user data
 interface UserResponse {
@@ -35,14 +33,8 @@ interface CreateUserBody {
 // GET /api/admin/users - List all users with wallet information
 export async function GET() {
   try {
-    const session = (await getServerSession(authOptions)) as Session | null;
-
-    console.log("Admin users API - Session check:", session ? 'Authenticated' : 'Not authenticated');
-
-    if (!session || session.user.role !== "admin") {
-      console.log("Unauthorized access attempt to admin users API");
-      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
 
     console.log("Fetching users from database...");
 
@@ -63,76 +55,78 @@ export async function GET() {
 
     console.log(`Found ${users.length} users, fetching wallet information...`);
 
-    const usersWithWallets: UserResponse[] = await Promise.all(
-      users.map(async (user) => {
-        try {
-          // Get or create wallet for each user
-          let wallet = await prisma.userWallet.findUnique({
-            where: { user_id: user.id },
-          });
+    const userIds = [...new Set(users.map((u) => u.id))];
 
-          // Create wallet if it doesn't exist
-          if (!wallet) {
-            console.log(`Creating missing wallet for user ${user.id} (${user.email})`);
-            wallet = await prisma.userWallet.create({
-              data: {
-                user_id: user.id,
-                balance: 0,
-                frozen_balance: 0
-              }
-            });
+    // Batch-fetch wallets for all users
+    const wallets = await prisma.userWallet.findMany({
+      where: { user_id: { in: userIds } },
+    });
+    const walletMap = new Map(wallets.map((w) => [w.user_id, w] as const));
 
-            // Create setup transaction
-            await prisma.walletTransaction.create({
-              data: {
-                user_id: user.id,
-                wallet_id: wallet.id,
-                transaction_type: 'WALLET_SETUP',
-                amount: 0,
-                balance_before: 0,
-                balance_after: 0,
-                description: 'Wallet created automatically by admin panel',
-                reference_type: 'SYSTEM_SETUP'
-              }
-            });
-          }
-
-          // Get user card statistics
-          const userCards = await prisma.userCard.count({
-            where: { owner_id: user.id },
-          });
-
-          const purchases = await prisma.cardTransactionHistory.count({
-            where: { toUserId: user.id, action: 'SALE' },
-          });
-
-          const sales = await prisma.cardTransactionHistory.count({
-            where: { fromUserId: user.id, action: 'SALE' },
-          });
-
-          return {
-            ...user,
-            balance: Number(wallet.balance),
-            frozen_balance: Number(wallet.frozen_balance),
-            available_balance: Number(wallet.balance) - Number(wallet.frozen_balance),
-            cardCount: userCards,
-            purchaseCount: purchases,
-            saleCount: sales,
-          };
-        } catch (walletError) {
-          console.error(`Error processing wallet for user ${user.id}:`, walletError);
-          return {
-            ...user,
+    // Create wallets for any users missing one (preserves original side effect)
+    for (const user of users) {
+      if (!walletMap.has(user.id)) {
+        console.log(`Creating missing wallet for user ${user.id} (${user.email})`);
+        const wallet = await prisma.userWallet.create({
+          data: {
+            user_id: user.id,
             balance: 0,
-            frozen_balance: 0,
-            available_balance: 0,
-            cardCount: 0,
-            purchaseCount: 0,
-            saleCount: 0,
-          };
-        }
-      }),
-    );
+            frozen_balance: 0
+          }
+        });
+
+        // Create setup transaction
+        await prisma.walletTransaction.create({
+          data: {
+            user_id: user.id,
+            wallet_id: wallet.id,
+            transaction_type: 'WALLET_SETUP',
+            amount: 0,
+            balance_before: 0,
+            balance_after: 0,
+            description: 'Wallet created automatically by admin panel',
+            reference_type: 'SYSTEM_SETUP'
+          }
+        });
+
+        walletMap.set(user.id, wallet);
+      }
+    }
+
+    // Batch-fetch user card + transaction statistics
+    const cardCounts = await prisma.userCard.groupBy({
+      by: ['owner_id'],
+      where: { owner_id: { in: userIds } },
+      _count: { _all: true },
+    });
+    const cardCountMap = new Map(cardCounts.map((c) => [c.owner_id, c._count._all] as const));
+
+    const purchaseCounts = await prisma.cardTransactionHistory.groupBy({
+      by: ['toUserId'],
+      where: { toUserId: { in: userIds }, action: 'SALE' },
+      _count: { _all: true },
+    });
+    const purchaseCountMap = new Map(purchaseCounts.map((c) => [c.toUserId, c._count._all] as const));
+
+    const saleCounts = await prisma.cardTransactionHistory.groupBy({
+      by: ['fromUserId'],
+      where: { fromUserId: { in: userIds }, action: 'SALE' },
+      _count: { _all: true },
+    });
+    const saleCountMap = new Map(saleCounts.map((c) => [c.fromUserId, c._count._all] as const));
+
+    const usersWithWallets: UserResponse[] = users.map((user) => {
+      const wallet = walletMap.get(user.id)!;
+      return {
+        ...user,
+        balance: Number(wallet.balance),
+        frozen_balance: Number(wallet.frozen_balance),
+        available_balance: Number(wallet.balance) - Number(wallet.frozen_balance),
+        cardCount: cardCountMap.get(user.id) || 0,
+        purchaseCount: purchaseCountMap.get(user.id) || 0,
+        saleCount: saleCountMap.get(user.id) || 0,
+      };
+    });
 
     console.log("Successfully returning users with wallet data");
     return NextResponse.json(usersWithWallets);
@@ -149,10 +143,9 @@ export async function GET() {
 // POST /api/admin/users - Create new user with wallet
 export async function POST(req: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as Session | null;
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const body = (await req.json()) as CreateUserBody;
     const { name, email, role, subscriptionStatus, password, initialBalance = 0 } = body;
@@ -217,9 +210,9 @@ export async function POST(req: Request) {
             amount: initialBalanceNum,
             balance_before: 0,
             balance_after: initialBalanceNum,
-            description: `Initial deposit by admin: ${session.user.name}`,
+            description: `Initial deposit by admin: ${user.name}`,
             reference_type: 'ADMIN_DEPOSIT',
-            admin_id: parseInt(String(session.user.id)),
+            admin_id: user.id,
           },
         });
       } else {

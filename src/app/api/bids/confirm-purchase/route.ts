@@ -1,9 +1,8 @@
 // src/app/api/bids/confirm-purchase/route.ts - New buyer confirmation API
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
-import { calculateCommission } from '../../../lib/commission-utils';
+import { calculateCommission, recordCommissionTransaction } from '../../../lib/commission-utils';
 import {
     createPurchaseConfirmedNotifications,
     createPurchaseDeclinedNotifications
@@ -11,12 +10,11 @@ import {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requireUser();
+        if ("response" in auth) return auth.response;
+        const user = auth.user;
 
-        const buyerId = parseInt(session.user.id);
+        const buyerId = user.id;
         const body = await request.json();
         const { transaction_id, confirm_purchase } = body;
 
@@ -161,17 +159,27 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                // Credit the platform commission wallet.
+                // Credit the platform commission (updates admin_wallet balance +
+                // total_commissions and writes an admin_wallet_transactions ledger
+                // row), then track the sale volume.
                 if (platformFee > 0) {
-                    await tx.admin_wallet.updateMany({
-                        where: { wallet_type: 'PLATFORM' },
-                        data: {
-                            balance: { increment: platformFee },
-                            total_commissions: { increment: platformFee },
-                            total_marketplace_sales: { increment: purchaseAmount }
-                        }
-                    });
+                    await recordCommissionTransaction({
+                        transaction_type: 'COMMISSION',
+                        amount: platformFee,
+                        description: `Commission from ${card.name} auction sale`,
+                        reference_type: 'TRANSACTION',
+                        reference_id: transaction_id,
+                        user_card_id: transaction.user_card_id,
+                        buyer_id: buyerId,
+                        seller_id: transaction.seller_id,
+                        card_id: card.id,
+                        commission_rate: commission.commission_rate
+                    }, tx);
                 }
+                await tx.admin_wallet.updateMany({
+                    where: { wallet_type: 'PLATFORM' },
+                    data: { total_marketplace_sales: { increment: purchaseAmount } }
+                });
 
                 // Create wallet transaction records (add wallet_id)
                 await Promise.all([
@@ -298,13 +306,20 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                // 3. Reactivate other bids (they can still compete) - fix field name
+                // 3. Deactivate ONLY the decliner's own active bid — they're out.
+                //    The losing bidders' bids were never deactivated at auction end
+                //    (they stay active with their holds), so the auction simply
+                //    continues with them on the next resolution. Do NOT re-activate
+                //    historical rows: a bidder can have superseded/cancelled bids
+                //    whose holds are already released, and reactivating them would
+                //    later be double-released → negative frozen balance.
                 await tx.bid.updateMany({
                     where: {
-                        userCardId: transaction.user_card_id, // Fix: user_card_id → userCardId
-                        bidderId: { not: buyerId } // Don't reactivate decliner's bids
+                        userCardId: transaction.user_card_id,
+                        bidderId: buyerId,
+                        is_active: true
                     },
-                    data: { is_active: true }
+                    data: { is_active: false }
                 });
 
                 return {

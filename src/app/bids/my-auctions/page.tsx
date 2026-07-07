@@ -1,13 +1,11 @@
 // src/app/bids/my-auctions/page.tsx - My Auctions management page
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Container,
     Typography,
     Box,
-    Grid,
     Card,
     CardContent,
     CardMedia,
@@ -28,16 +26,19 @@ import {
     ListItemIcon,
     ListItemText
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     Gavel as GavelIcon,
     AccessTime as ClockIcon,
     Person as PersonIcon,
-    AttachMoney as MoneyIcon,
     Check as AcceptIcon,
     Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import AppShell from '../../components/AppShell';
+import { getRarityColor } from '../../lib/rarity';
+import { formatDateTime, formatDuration } from '../../lib/format';
+import { useRequireAuth } from '../../lib/useRequireAuth';
 
 interface Card {
     id: number;
@@ -72,7 +73,7 @@ interface MyAuction {
 }
 
 export default function MyAuctionsPage() {
-    const { data: session, status } = useSession();
+    const { status } = useRequireAuth();
     const router = useRouter();
     const [auctions, setAuctions] = useState<MyAuction[]>([]);
     const [loading, setLoading] = useState(true);
@@ -113,12 +114,6 @@ export default function MyAuctionsPage() {
     };
 
     useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        }
-    }, [status, router]);
-
-    useEffect(() => {
         if (status === 'authenticated') {
             fetchMyAuctions();
         }
@@ -137,38 +132,11 @@ export default function MyAuctionsPage() {
         return `$${Number(price).toFixed(2)}`;
     };
 
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}d ${hours}h`;
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
-    };
-
     const getAuctionStatus = (auction: MyAuction) => {
         if (auction.is_sold) return { label: 'Sold', color: 'success' as const };
         if (!auction.is_for_sale) return { label: 'Ended', color: 'error' as const };
         if (auction.time_remaining && auction.time_remaining > 0) return { label: 'Active', color: 'primary' as const };
         return { label: 'Ended', color: 'error' as const };
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
     };
 
     const handleAcceptBid = (bid: Bid) => {
@@ -243,7 +211,7 @@ export default function MyAuctionsPage() {
             <Container sx={{ marginTop: 4, marginBottom: 4 }}>
 
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 3, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <GavelIcon sx={{ color: 'primary.main' }} />
                     <Box
@@ -311,7 +279,7 @@ export default function MyAuctionsPage() {
                                 const isActive = status.label === 'Active';
 
                                 return (
-                                    <Grid item xs={12} sm={6} md={4} key={auction.id}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={auction.id}>
                                         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                             {/* Card Image */}
                                             <Box sx={{ position: 'relative' }}>
@@ -403,7 +371,7 @@ export default function MyAuctionsPage() {
                                                                 </Typography>
                                                             </Box>
                                                             <Typography variant="body2" color="error.main">
-                                                                {formatTimeLeft(auction.time_remaining)}
+                                                                {formatDuration(auction.time_remaining)}
                                                             </Typography>
                                                         </Box>
                                                     )}
@@ -464,7 +432,7 @@ export default function MyAuctionsPage() {
                             {/* Auction Summary */}
                             <Paper sx={{ p: 2, mb: 3 }}>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={4}>
+                                    <Grid size={{ xs: 4 }}>
                                         <img
                                             src={selectedAuction.card.small_image_url || selectedAuction.card.image_url || '/placeholder-card.png'}
                                             alt={selectedAuction.card.name}
@@ -474,7 +442,7 @@ export default function MyAuctionsPage() {
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={8}>
+                                    <Grid size={{ xs: 8 }}>
                                         <Typography variant="h6">{selectedAuction.card.name}</Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             {selectedAuction.card.set_name}

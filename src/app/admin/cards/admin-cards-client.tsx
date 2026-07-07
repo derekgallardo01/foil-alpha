@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useRequireAuth } from "../../lib/useRequireAuth";
 import {
     Box,
     Typography,
@@ -22,30 +21,18 @@ import {
     IconButton,
     FormControlLabel,
     Checkbox,
-    Grid,
-    Card,
     Chip,
     InputLabel,
     FormControl,
-    CardContent,
-    CardMedia,
     Alert,
-    Pagination,
-    Tabs,
-    Tab,
     Tooltip,
-    Divider,
     Stack,
     Badge,
-    LinearProgress,
-    ListItem,
-    ListItemText,
-    ListItemIcon,
-    List
+    LinearProgress
 } from "@mui/material";
+import Grid from "@mui/material/Grid2";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import AddIcon from "@mui/icons-material/Add";
 import UploadIcon from "@mui/icons-material/Upload";
 import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -57,26 +44,26 @@ import ErrorIcon from "@mui/icons-material/Error";
 import {
     Timeline,
     Sync,
-    TrendingUp,
-    TrendingDown,
-    TrendingFlat,
     AttachMoney,
     Inventory,
     Store,
-    Category,
-    PriceCheck,
-    Warning
+    Category
 } from '@mui/icons-material';
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
 import sanitizeHtml from "sanitize-html";
-import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
-import Wordmark from "../../components/Wordmark";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/StatCard";
+import EmptyState from "../../components/ui/EmptyState";
+import { formatPrice, formatCompactPrice } from "../../lib/format";
+import { getRarityColor } from "../../lib/rarity";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
-import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI } from "../../lib/pokemon-price-tracker-api";
+import PokemonImportModal from './PokemonImportModal';
+import PriceSyncModal from './PriceSyncModal';
+import PriceTrendChip from './PriceTrendChip';
 
 
 // Animation variants
@@ -84,7 +71,7 @@ const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, trans
 const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } } };
 
 // Progress tracking interface
-interface ProgressState {
+export interface ProgressState {
     isActive: boolean;
     current: number;
     total: number;
@@ -134,7 +121,7 @@ interface CardsResponse {
 }
 
 // Progress tracking utilities
-const useProgressTracker = () => {
+export const useProgressTracker = () => {
     const [progress, setProgress] = useState<ProgressState>({
         isActive: false,
         current: 0,
@@ -245,7 +232,7 @@ const useProgressTracker = () => {
 };
 
 // Progress Display Component
-function ProgressDisplay({ progress }: { progress: ProgressState }) {
+export function ProgressDisplay({ progress }: { progress: ProgressState }) {
     const formatTime = (milliseconds: number) => {
         const seconds = Math.floor(milliseconds / 1000);
         const minutes = Math.floor(seconds / 60);
@@ -302,7 +289,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
             </Box>
 
             <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AccessTimeIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
                         <Box>
@@ -317,7 +304,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                 </Grid>
 
                 {progress.estimatedTimeRemaining > 0 && progress.status !== 'completed' && (
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Timeline sx={{ color: 'text.secondary', fontSize: 20 }} />
                             <Box>
@@ -332,7 +319,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                     </Grid>
                 )}
 
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <CheckCircleIcon sx={{ color: 'success.main', fontSize: 20 }} />
                         <Box>
@@ -347,7 +334,7 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
                 </Grid>
 
                 {(progress.failed > 0 || progress.skipped > 0) && (
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <ErrorIcon sx={{ color: 'error.main', fontSize: 20 }} />
                             <Box>
@@ -380,1222 +367,11 @@ function ProgressDisplay({ progress }: { progress: ProgressState }) {
     );
 }
 
-// Rarity color mapping function
-const getRarityColor = (rarity: string) => {
-    switch (rarity.toLowerCase()) {
-        case 'common': return 'default' as const;
-        case 'uncommon': return 'success' as const;
-        case 'rare': return 'primary' as const;
-        case 'holo rare': return 'secondary' as const;
-        case 'ultra rare': return 'error' as const;
-        default: return 'default' as const;
-    }
-};
-
-// Utility function for formatting currency
-const formatPrice = (price: number | undefined): string => {
-    if (price === undefined || price === null) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(price);
-};
-
-// Utility function for formatting numbers with commas
-const formatNumber = (num: number): string => {
-    return new Intl.NumberFormat('en-US').format(num);
-};
-
-// Price Trend Chip Component
-function PriceTrendChip({ trend, change }: { trend?: string; change?: number }) {
-    const getTrendIcon = () => {
-        switch (trend) {
-            case 'up':
-                return <TrendingUp sx={{ fontSize: 16 }} />;
-            case 'down':
-                return <TrendingDown sx={{ fontSize: 16 }} />;
-            default:
-                return <TrendingFlat sx={{ fontSize: 16 }} />;
-        }
-    };
-
-    const getTrendColor = () => {
-        switch (trend) {
-            case 'up':
-                return 'success' as const;
-            case 'down':
-                return 'error' as const;
-            default:
-                return 'default' as const;
-        }
-    };
-
-    if (!trend) return null;
-
-    return (
-        <Tooltip title={`Price trend: ${trend}${change !== undefined ? ` (${change > 0 ? '+' : ''}${change.toFixed(1)}%)` : ''}`}>
-            <Chip
-                icon={getTrendIcon()}
-                label={change !== undefined ? `${change > 0 ? '+' : ''}${change.toFixed(1)}%` : trend}
-                color={getTrendColor()}
-                size="small"
-                variant="outlined"
-            />
-        </Tooltip>
-    );
-}
-
-// Enhanced Stats Card Component
-function StatsCard({ icon, title, value, subtitle, color = "primary" }: {
-    icon: React.ReactNode;
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    color?: "primary" | "secondary" | "success" | "error" | "warning" | "info";
-}) {
-    return (
-        <Paper
-            variant="outlined"
-            sx={{
-                p: 2.5,
-                borderRadius: 2,
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                transition: 'all 0.3s ease',
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                '&:hover': {
-                    transform: 'translateY(-4px)',
-                    borderColor: 'primary.main'
-                }
-            }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{
-                    p: 1.5,
-                    borderRadius: '50%',
-                    bgcolor: `${color}.main`,
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    {icon}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        {title}
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'text.primary', typography: 'mono' }}>
-                        {value}
-                    </Typography>
-                    {subtitle && (
-                        <Typography variant="caption" color="text.secondary">
-                            {subtitle}
-                        </Typography>
-                    )}
-                </Box>
-            </Box>
-        </Paper>
-    );
-}
-
-// Enhanced Pokemon Card Import Modal Component with Progress Tracking - FIXED FOR V2 API
-function PokemonImportModal({ open, onClose, onImportComplete }: {
-    open: boolean;
-    onClose: () => void;
-    onImportComplete?: (results: any) => void;
-}) {
-    const [activeTab, setActiveTab] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [importing, setImporting] = useState(false);
-    const [error, setError] = useState('');
-
-    // Search state
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedSet, setSelectedSet] = useState('');
-    const [selectedType, setSelectedType] = useState('');
-    const [selectedRarity, setSelectedRarity] = useState('');
-
-    // Results state
-    const [searchResults, setSearchResults] = useState<any[]>([]);
-    const [selectedCards, setSelectedCards] = useState(new Set<string>());
-    const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
-
-    // Sets and filters
-    const [availableSets, setAvailableSets] = useState<any[]>([]);
-    const [availableTypes, setAvailableTypes] = useState<string[]>([]);
-    const [availableRarities, setAvailableRarities] = useState<string[]>([]);
-
-    // Progress tracking
-    const { progress, startProgress, updateProgress, updateStats, completeProgress, resetProgress } = useProgressTracker();
-
-    // Load sets and filter options
-    useEffect(() => {
-        if (open) {
-            loadFilterOptions();
-        }
-    }, [open]);
-
-    const loadFilterOptions = async () => {
-        try {
-            setLoading(true);
-
-            // Load available sets from Pokemon Price Tracker API
-            const setsResponse = await pokemonPriceTrackerAPI.getSets();
-            if (setsResponse.success && setsResponse.data) {
-                const setsArray = Array.isArray(setsResponse.data) ? setsResponse.data : [];
-                console.log('Available sets from API:', setsArray.slice(0, 3)); // Log first 3 sets for debugging
-
-                setAvailableSets(setsArray.map((set: any) => ({
-                    id: set.id, // This should be the correct Pokemon Price Tracker set ID
-                    name: set.name,
-                    total: set.cardCount || 0,
-                    releaseDate: set.releaseDate || new Date().toISOString(),
-                    // Add debug info
-                    tcgPlayerId: set.tcgPlayerId, // Alternative ID if available
-                    originalSet: set // Keep original for debugging
-                })));
-            } else {
-                console.warn('Failed to load sets:', setsResponse.error);
-                setAvailableSets([]);
-            }
-
-            // Common Pokemon values for filtering
-            setAvailableTypes(['Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Fighting', 'Darkness', 'Metal', 'Fairy', 'Dragon', 'Colorless']);
-            setAvailableRarities(['Common', 'Uncommon', 'Rare', 'Rare Holo', 'Rare Ultra', 'Rare Secret', 'Promo']);
-        } catch (error) {
-            console.error('Error loading filter options:', error);
-            setError('Failed to load filter options');
-            setAvailableSets([]);
-            setAvailableTypes([]);
-            setAvailableRarities([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Fix for the searchCards function in your admin-cards-client.tsx
-    const searchCards = async (page = 1) => {
-        try {
-            setLoading(true);
-            setError('');
-
-            startProgress(1, `Searching Pokemon cards...`);
-            updateProgress(0, 'Initiating search request', 'searching');
-
-            const searchParams: any = {
-                limit: 50,
-                page: page
-            };
-
-            // FIXED: Ensure at least one filter parameter is provided
-            let hasFilter = false;
-
-            if (searchTerm) {
-                searchParams.name = searchTerm;
-                hasFilter = true;
-            }
-            if (selectedSet) {
-                const selectedSetObj = availableSets.find(set => set.name === selectedSet);
-                if (selectedSetObj) {
-                    searchParams.setId = selectedSetObj.id;
-                    hasFilter = true;
-                }
-            }
-            if (selectedType) {
-                searchParams.cardType = selectedType;
-                hasFilter = true;
-            }
-            if (selectedRarity) {
-                searchParams.rarity = selectedRarity;
-                hasFilter = true;
-            }
-
-            // FIXED: If no filters provided, default to popular cards search
-            if (!hasFilter) {
-                console.log('No search filters provided, defaulting to popular cards');
-                searchParams.name = 'Pikachu'; // Default search to prevent 400 error
-                setSearchTerm('Pikachu'); // Update the UI to show what we're searching for
-            }
-
-            updateProgress(0.5, 'Fetching results from Pokemon Price Tracker API', 'searching');
-
-            const searchResponse = await pokemonPriceTrackerAPI.searchCardPricing(searchParams);
-
-            if (searchResponse.success && searchResponse.data) {
-                const cardsArray = Array.isArray(searchResponse.data) ? searchResponse.data : [];
-
-                console.log('Admin client received V2 data:', {
-                    count: cardsArray.length,
-                    firstCard: cardsArray[0],
-                    hasCorrectFields: cardsArray[0] ? {
-                        cardNumber: cardsArray[0].cardNumber,
-                        setName: cardsArray[0].setName,
-                        imageUrl: cardsArray[0].imageUrl,
-                        prices: cardsArray[0].prices
-                    } : null
-                });
-
-                const transformedCards = cardsArray.map((card: any) => ({
-                    ...card // Use raw V2 API data
-                }));
-
-                updateProgress(1, `Found ${transformedCards.length} cards`, 'completed');
-                setSearchResults(transformedCards);
-                setPagination({
-                    page: page,
-                    totalPages: Math.ceil(transformedCards.length / 20) || 1
-                });
-
-                setTimeout(() => {
-                    completeProgress({ completed: transformedCards.length, failed: 0, skipped: 0 });
-                }, 500);
-            } else {
-                setError(searchResponse.error || 'Search failed');
-                updateProgress(1, 'Search failed', 'error');
-            }
-        } catch (error) {
-            console.error('Error searching cards:', error);
-            setError('Failed to search cards');
-            updateProgress(1, 'Search failed', 'error');
-        } finally {
-            setLoading(false);
-            setTimeout(resetProgress, 3000);
-        }
-    };
-
-    const handleCardSelection = (cardId: string, selected: boolean) => {
-        const newSelected = new Set(selectedCards);
-        if (selected) {
-            newSelected.add(cardId);
-        } else {
-            newSelected.delete(cardId);
-        }
-        setSelectedCards(newSelected);
-    };
-
-    const importSelectedCards = async () => {
-        if (selectedCards.size === 0) {
-            setError('Please select at least one card to import');
-            return;
-        }
-
-        try {
-            setImporting(true);
-            setError('');
-
-            const cardsToImport = Array.from(selectedCards);
-            startProgress(cardsToImport.length, 'Importing selected cards...');
-
-            // FIXED: Get only selected cards, not all search results
-            const selectedCardData = searchResults.filter(card => selectedCards.has(card.id));
-            console.log('Cards being sent for import:', selectedCardData);
-            console.log('Number of cards:', selectedCardData.length);
-            console.log('Sample card structure:', selectedCardData[0]);
-
-            let processed = 0;
-            const progressInterval = setInterval(() => {
-                if (processed < cardsToImport.length) {
-                    updateProgress(processed, `Processing card ${processed + 1} of ${cardsToImport.length}`, 'importing');
-                    processed++;
-                }
-            }, 200);
-
-            // FIXED: Send only selected cards, not all search results
-            const response = await fetch('/api/cards', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    cardsData: selectedCardData, // Send only selected cards
-                    source: 'pokemon_price_tracker'
-                }),
-            });
-
-            clearInterval(progressInterval);
-
-            const data = await response.json();
-            console.log('Import API response:', data);
-
-            if (data.success) {
-                const completed = data.results?.imported || 0;
-                const failed = data.results?.errors?.length || 0;
-                const skipped = data.results?.updated || 0;
-
-                updateStats(completed, failed, skipped);
-                updateProgress(cardsToImport.length, 'Import completed successfully', 'completed');
-                completeProgress({ completed, failed, skipped });
-
-                onImportComplete?.({
-                    imported: completed,
-                    updated: skipped,
-                    errors: failed,
-                    results: data.results
-                });
-
-                setTimeout(() => {
-                    onClose();
-                    setSelectedCards(new Set());
-                    setSearchResults([]);
-                    resetProgress();
-                }, 2000);
-            } else {
-                setError(data.error || 'Import failed');
-                updateProgress(cardsToImport.length, 'Import failed', 'error');
-            }
-        } catch (error) {
-            console.error('Error importing cards:', error);
-            setError('Failed to import cards');
-            updateProgress(selectedCards.size, 'Import failed', 'error');
-        } finally {
-            setImporting(false);
-        }
-    };
-    const importEntireSet = async () => {
-        if (!selectedSet) {
-            setError('Please select a set to import');
-            return;
-        }
-
-        const selectedSetObj = availableSets.find(set => set.name === selectedSet);
-        if (!selectedSetObj) {
-            setError('Invalid set selected');
-            return;
-        }
-
-        try {
-            setImporting(true);
-            setError('');
-
-            const estimatedCards = selectedSetObj.total || 100;
-            startProgress(estimatedCards, `Importing ${selectedSet} set...`);
-
-            console.log('Starting set import for MySQL database:', {
-                setName: selectedSetObj.name,
-                setId: selectedSetObj.id,
-                estimatedCards: estimatedCards,
-                databaseType: 'MySQL'
-            });
-
-            let allSetCards: any[] = [];
-            let successMethod = '';
-
-            // Strategy 1: Direct set ID lookup
-            try {
-                console.log(`Attempting direct set lookup with ID: ${selectedSetObj.id}`);
-                updateProgress(estimatedCards * 0.25, 'Fetching set data from Pokemon Price Tracker...', 'searching');
-
-                const setCardsResponse = await pokemonPriceTrackerAPI.getSetPricing(selectedSetObj.id);
-
-                if (setCardsResponse.success && setCardsResponse.data && Array.isArray(setCardsResponse.data) && setCardsResponse.data.length > 0) {
-                    allSetCards = setCardsResponse.data;
-                    successMethod = `Direct set ID lookup: ${selectedSetObj.id}`;
-                    console.log(`SUCCESS: Found ${allSetCards.length} cards using direct set ID`);
-                } else {
-                    console.log(`No cards found with direct set ID. Response:`, {
-                        success: setCardsResponse.success,
-                        dataLength: Array.isArray(setCardsResponse.data) ? setCardsResponse.data.length : 'not array',
-                        error: setCardsResponse.error
-                    });
-                }
-            } catch (error) {
-                console.log(`Direct set lookup failed:`, error);
-            }
-
-            // Strategy 2: Search by set name if direct lookup fails
-            if (allSetCards.length === 0) {
-                try {
-                    console.log(`Trying set name search for: ${selectedSet}`);
-                    updateProgress(estimatedCards * 0.5, 'Searching by set name...', 'searching');
-
-                    const nameSearchResponse = await pokemonPriceTrackerAPI.searchCardPricing({
-                        setName: selectedSet,
-                        limit: 200
-                    });
-
-                    if (nameSearchResponse.success && nameSearchResponse.data && Array.isArray(nameSearchResponse.data) && nameSearchResponse.data.length > 0) {
-                        allSetCards = nameSearchResponse.data;
-                        successMethod = `Set name search: ${selectedSet}`;
-                        console.log(`SUCCESS: Found ${allSetCards.length} cards using set name search`);
-                    } else {
-                        console.log(`Set name search failed or returned no results:`, {
-                            success: nameSearchResponse.success,
-                            dataLength: Array.isArray(nameSearchResponse.data) ? nameSearchResponse.data.length : 'not array',
-                            error: nameSearchResponse.error
-                        });
-                    }
-                } catch (error) {
-                    console.log(`Set name search error:`, error);
-                }
-            }
-
-            // Strategy 3: Broad search with filtering if previous methods fail
-            if (allSetCards.length === 0) {
-                try {
-                    console.log(`Attempting broad search with filtering for: ${selectedSet}`);
-                    updateProgress(estimatedCards * 0.75, 'Trying broad search approach...', 'searching');
-
-                    // Try searching for common Pokemon names and filter by set
-                    const broadSearchResponse = await pokemonPriceTrackerAPI.searchCardPricing({
-                        name: 'Pikachu', // Search for a common card
-                        limit: 100
-                    });
-
-                    if (broadSearchResponse.success && broadSearchResponse.data && Array.isArray(broadSearchResponse.data)) {
-                        // Filter results to match our target set
-                        const filteredCards = broadSearchResponse.data.filter((card: any) => {
-                            if (!card.setName) return false;
-                            const cardSetName = card.setName.toLowerCase();
-                            const targetSetName = selectedSet.toLowerCase();
-                            return cardSetName.includes(targetSetName) || targetSetName.includes(cardSetName);
-                        });
-
-                        if (filteredCards.length > 0) {
-                            allSetCards = filteredCards;
-                            successMethod = `Broad search with filtering: ${selectedSet}`;
-                            console.log(`SUCCESS: Found ${allSetCards.length} cards using broad search + filtering`);
-                        } else {
-                            console.log(`Broad search returned ${broadSearchResponse.data.length} cards but none matched set "${selectedSet}"`);
-                        }
-                    } else {
-                        console.log(`Broad search failed:`, broadSearchResponse.error);
-                    }
-                } catch (error) {
-                    console.log(`Broad search error:`, error);
-                }
-            }
-
-            updateProgress(estimatedCards, 'Processing import results...', 'importing');
-
-            // If no cards found after all strategies
-            if (allSetCards.length === 0) {
-                const errorMessage = `No cards found for set "${selectedSet}".
-
-Attempted methods:
-1. Direct set ID lookup (${selectedSetObj.id})
-2. Set name search ("${selectedSet}")
-3. Broad search with filtering
-
-This could mean:
-• The set is not available in Pokemon Price Tracker's database
-• The set ID format is incorrect
-• The set name doesn't match exactly
-
-Please try:
-• Selecting a different set from the dropdown
-• Checking if the set name is spelled correctly
-• Verifying the set exists in Pokemon Price Tracker's database`;
-
-                setError(errorMessage);
-                updateProgress(estimatedCards, 'No cards found for import', 'error');
-                console.error('All import strategies failed for set:', selectedSet);
-                return;
-            }
-
-            // Log what we found for MySQL database insertion
-            console.log('Cards ready for MySQL insertion:', {
-                count: allSetCards.length,
-                method: successMethod,
-                sampleCard: {
-                    name: allSetCards[0]?.name,
-                    setName: allSetCards[0]?.setName,
-                    cardNumber: allSetCards[0]?.cardNumber,
-                    hasImageUrl: !!allSetCards[0]?.imageUrl,
-                    hasPrice: !!allSetCards[0]?.prices?.market
-                },
-                mysqlFieldMapping: {
-                    price_tracker_id: allSetCards[0]?.id,
-                    tcg_player_id: allSetCards[0]?.tcgPlayerId,
-                    name: allSetCards[0]?.name,
-                    card_number: allSetCards[0]?.cardNumber,
-                    set_name: allSetCards[0]?.setName,
-                    image_url: allSetCards[0]?.imageUrl,
-                    market_price: allSetCards[0]?.prices?.market
-                }
-            });
-
-            // Progress animation
-            let processed = 0;
-            const progressInterval = setInterval(() => {
-                if (processed < allSetCards.length - 1) {
-                    processed += Math.floor(Math.random() * 3) + 1;
-                    processed = Math.min(processed, allSetCards.length - 1);
-                    updateProgress(processed, `Importing ${processed} of ${allSetCards.length} cards to MySQL...`, 'importing');
-                }
-            }, 100);
-
-            // Send to your MySQL-compatible import API
-            const response = await fetch('/api/cards', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    cardsData: allSetCards,
-                    source: 'pokemon_price_tracker',
-                    setImport: true,
-                    databaseType: 'mysql',
-                    importMethod: successMethod
-                }),
-            });
-
-            clearInterval(progressInterval);
-
-            const data = await response.json();
-            console.log('MySQL import API response:', data);
-
-            if (data.success) {
-                const completed = data.results?.imported || 0;
-                const failed = data.results?.errors?.length || 0;
-                const skipped = data.results?.updated || 0;
-
-                updateStats(completed, failed, skipped);
-                updateProgress(allSetCards.length, 'MySQL import completed', 'completed');
-                completeProgress({ completed, failed, skipped });
-
-                console.log('Import completed for MySQL database:', {
-                    imported: completed,
-                    updated: skipped,
-                    errors: failed,
-                    method: successMethod
-                });
-
-                onImportComplete?.({
-                    imported: completed,
-                    updated: skipped,
-                    errors: failed,
-                    results: data.results
-                });
-
-                setTimeout(() => {
-                    onClose();
-                    resetProgress();
-                }, 2000);
-            } else {
-                setError(data.error || 'MySQL import failed');
-                updateProgress(estimatedCards, 'MySQL import failed', 'error');
-            }
-        } catch (error) {
-            console.error('MySQL import error:', error);
-            setError(`MySQL import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            updateProgress(selectedSetObj.total || 100, 'MySQL import failed', 'error');
-        } finally {
-            setImporting(false);
-        }
-    };
-
-    const handleClose = () => {
-        if (!importing) {
-            setSelectedCards(new Set());
-            setSearchResults([]);
-            setError('');
-            setActiveTab(0);
-            resetProgress();
-            onClose();
-        }
-    };
-
-    return (
-        <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
-            <DialogTitle>
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                    Import Pokémon Cards from API
-                </Typography>
-            </DialogTitle>
-            <DialogContent>
-                <ProgressDisplay progress={progress} />
-
-                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
-                    <Tab label="Search & Import Cards" disabled={importing} />
-                    <Tab label="Import Entire Set" disabled={importing} />
-                </Tabs>
-
-                {error && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {error}
-                    </Alert>
-                )}
-
-                {/* Tab 1: Search & Import Individual Cards */}
-                {activeTab === 0 && (
-                    <Box>
-                        {/* Search Filters */}
-                        <Grid container spacing={2} sx={{ mb: 3 }}>
-                            <Grid item xs={12} md={3}>
-                                <TextField
-                                    fullWidth
-                                    label="Search by Name"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && searchCards(1)}
-                                    disabled={importing}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={3}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Set</InputLabel>
-                                    <Select
-                                        value={selectedSet}
-                                        label="Set"
-                                        onChange={(e) => setSelectedSet(e.target.value)}
-                                        disabled={importing}
-                                    >
-                                        <MenuItem value="">All Sets</MenuItem>
-                                        {availableSets.map(set => (
-                                            <MenuItem key={set.id} value={set.name}>
-                                                {set.name}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={2}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Type</InputLabel>
-                                    <Select
-                                        value={selectedType}
-                                        label="Type"
-                                        onChange={(e) => setSelectedType(e.target.value)}
-                                        disabled={importing}
-                                    >
-                                        <MenuItem value="">All Types</MenuItem>
-                                        {availableTypes.map(type => (
-                                            <MenuItem key={type} value={type}>{type}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={2}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Rarity</InputLabel>
-                                    <Select
-                                        value={selectedRarity}
-                                        label="Rarity"
-                                        onChange={(e) => setSelectedRarity(e.target.value)}
-                                        disabled={importing}
-                                    >
-                                        <MenuItem value="">All Rarities</MenuItem>
-                                        {availableRarities.map(rarity => (
-                                            <MenuItem key={rarity} value={rarity}>{rarity}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={2}>
-                                <Button
-                                    fullWidth
-                                    variant="contained"
-                                    onClick={() => searchCards(1)}
-                                    disabled={loading || importing}
-                                    sx={{ height: '56px' }}
-                                    startIcon={loading ? <CircularProgress size={20} /> : <Sync />}
-                                >
-                                    {loading ? 'Searching...' : 'Search'}
-                                </Button>
-                            </Grid>
-                        </Grid>
-
-                        {/* Search Results */}
-                        {searchResults.length > 0 && (
-                            <Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                    <Typography variant="h6">
-                                        Search Results
-                                    </Typography>
-                                    <Chip
-                                        label={`${selectedCards.size} cards selected`}
-                                        color="primary"
-                                        variant="outlined"
-                                    />
-                                </Box>
-
-                                <Grid container spacing={2} sx={{ mb: 3 }}>
-                                    {searchResults.map((card) => (
-                                        <Grid item xs={12} sm={6} md={4} lg={3} key={card.id}>
-                                            <Card sx={{
-                                                height: '100%',
-                                                position: 'relative',
-                                                transition: 'all 0.3s ease',
-                                                border: '2px solid',
-                                                borderColor: selectedCards.has(card.id) ? 'primary.main' : 'transparent',
-                                                opacity: importing ? 0.6 : 1,
-                                                '&:hover': {
-                                                    transform: importing ? 'none' : 'translateY(-4px)',
-                                                    borderColor: importing ? undefined : (selectedCards.has(card.id) ? 'primary.main' : 'divider')
-                                                }
-                                            }}>
-                                                <Checkbox
-                                                    checked={selectedCards.has(card.id)}
-                                                    onChange={(e) => handleCardSelection(card.id, e.target.checked)}
-                                                    disabled={importing}
-                                                    sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1, bgcolor: 'rgba(0,0,0,0.5)' }}
-                                                />
-                                                {/* FIXED: Use V2 API imageUrl field directly */}
-                                                <CardMedia
-                                                    component="img"
-                                                    height="200"
-                                                    image={card.imageUrl || '/placeholder-card.png'}
-                                                    alt={card.name}
-                                                    sx={{ objectFit: 'contain', p: 1 }}
-                                                />
-                                                <CardContent>
-                                                    <Typography variant="h6" noWrap sx={{ fontWeight: 'bold' }}>
-                                                        {card.name}
-                                                    </Typography>
-                                                    {/* FIXED: Use V2 API field names */}
-                                                    <Typography variant="body2" color="text.secondary" noWrap>
-                                                        {card.setName} • #{card.cardNumber}
-                                                    </Typography>
-                                                    <Chip
-                                                        label={card.rarity}
-                                                        size="small"
-                                                        sx={{ mt: 1 }}
-                                                        color={getRarityColor(card.rarity)}
-                                                    />
-                                                    {/* FIXED: Show market price from V2 API */}
-                                                    {card.prices?.market && (
-                                                        <Typography variant="mono" sx={{ mt: 1, fontWeight: 'bold', color: 'success.main' }}>
-                                                            ${card.prices.market.toFixed(2)}
-                                                        </Typography>
-                                                    )}
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-
-                                {/* Pagination */}
-                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                                    <Pagination
-                                        count={pagination.totalPages}
-                                        page={pagination.page}
-                                        onChange={(e, page) => searchCards(page)}
-                                        disabled={loading || importing}
-                                        color="primary"
-                                    />
-                                </Box>
-                            </Box>
-                        )}
-                    </Box>
-                )}
-
-                {/* Tab 2: Import Entire Set */}
-                {activeTab === 1 && (
-                    <Box>
-                        <Typography variant="h6" sx={{ mb: 3 }}>
-                            Import All Cards from a Set
-                        </Typography>
-
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} md={8}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Select Set to Import</InputLabel>
-                                    <Select
-                                        value={selectedSet}
-                                        label="Select Set to Import"
-                                        onChange={(e) => setSelectedSet(e.target.value)}
-                                        disabled={importing}
-                                    >
-                                        {availableSets.map(set => (
-                                            <MenuItem key={set.id} value={set.name}>
-                                                {set.name} ({formatNumber(set.total)} cards) - Released: {new Date(set.releaseDate).toLocaleDateString()}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Button
-                                    fullWidth
-                                    variant="contained"
-                                    onClick={importEntireSet}
-                                    disabled={importing || !selectedSet}
-                                    color="primary"
-                                    sx={{ height: '56px' }}
-                                    startIcon={importing ? <CircularProgress size={20} /> : <DownloadIcon />}
-                                >
-                                    {importing ? 'Importing...' : 'Import Entire Set'}
-                                </Button>
-                            </Grid>
-                        </Grid>
-
-                        <Alert severity="info" sx={{ mt: 3 }} icon={<InfoOutlinedIcon />}>
-                            <Typography variant="body2">
-                                This will import all cards from the selected set. Large sets may take several minutes to process.
-                                Progress will be tracked in real-time above.
-                            </Typography>
-                        </Alert>
-                    </Box>
-                )}
-            </DialogContent>
-
-            <DialogActions sx={{ p: 3 }}>
-                <Button onClick={handleClose} disabled={importing}>
-                    {importing ? 'Cancel' : 'Close'}
-                </Button>
-                {activeTab === 0 && (
-                    <Button
-                        variant="contained"
-                        onClick={importSelectedCards}
-                        disabled={importing || selectedCards.size === 0}
-                        color="primary"
-                        startIcon={importing ? <CircularProgress size={20} /> : <DownloadIcon />}
-                    >
-                        {importing ? 'Importing...' : `Import ${selectedCards.size} Card${selectedCards.size !== 1 ? 's' : ''}`}
-                    </Button>
-                )}
-            </DialogActions>
-        </Dialog>
-    );
-}
-
-// Enhanced Price Sync Modal Component with Progress Tracking
-function PriceSyncModal({ open, onClose, onSyncComplete }: {
-    open: boolean;
-    onClose: () => void;
-    onSyncComplete?: (results: any) => void;
-}) {
-    const [loading, setLoading] = useState(false);
-    const [syncStrategy, setSyncStrategy] = useState('AUTO');
-    const [batchSize, setBatchSize] = useState(20);
-    const [maxAgeHours, setMaxAgeHours] = useState(24);
-    const [syncResults, setSyncResults] = useState<any>(null);
-    const [error, setError] = useState('');
-
-    // Progress tracking
-    const { progress, startProgress, updateProgress, updateStats, completeProgress, resetProgress } = useProgressTracker();
-
-    const handleStartSync = async () => {
-        try {
-            setLoading(true);
-            setError('');
-            setSyncResults(null);
-
-            // Start progress tracking for price sync
-            startProgress(100, 'Syncing card prices...');
-
-            let processed = 0;
-            const progressInterval = setInterval(() => {
-                if (processed < 95) { // Don't complete until we get the actual results
-                    processed += Math.floor(Math.random() * 5) + 1;
-                    processed = Math.min(processed, 95);
-                    updateProgress(processed, 'Fetching price data from APIs...', 'importing');
-                }
-            }, 300);
-
-            const response = await fetch('/api/cards/sync-prices', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    force: false,
-                    batchSize,
-                    maxAgeHours,
-                    pricingStrategy: syncStrategy,
-                }),
-            });
-
-            clearInterval(progressInterval);
-
-            const data = await response.json();
-
-            if (data.success) {
-                const completed = data.result.successful_updates || 0;
-                const failed = data.result.failed_updates || 0;
-                const skipped = data.result.skipped_cards || 0;
-
-                updateStats(completed, failed, skipped);
-                updateProgress(100, 'Price sync completed', 'completed');
-                completeProgress({ completed, failed, skipped });
-
-                setSyncResults(data.result);
-                onSyncComplete?.(data.result);
-                toast.success(`Price sync completed! ${formatNumber(data.result.successful_updates)} cards updated.`);
-            } else {
-                setError(data.error || 'Sync failed');
-                updateProgress(100, 'Price sync failed', 'error');
-                toast.error(data.error || 'Price sync failed');
-            }
-        } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-            setError(errorMsg);
-            updateProgress(100, 'Price sync failed', 'error');
-            toast.error(errorMsg);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleForceSync = async () => {
-        if (!confirm('Force sync will update ALL cards regardless of last update time. This may take a while. Continue?')) {
-            return;
-        }
-
-        try {
-            setLoading(true);
-            setError('');
-
-            // Start progress tracking for force sync
-            startProgress(100, 'Force syncing all card prices...');
-
-            let processed = 0;
-            const progressInterval = setInterval(() => {
-                if (processed < 95) {
-                    processed += Math.floor(Math.random() * 3) + 1;
-                    processed = Math.min(processed, 95);
-                    updateProgress(processed, 'Force updating all card prices...', 'importing');
-                }
-            }, 500);
-
-            const response = await fetch('/api/cards/sync-prices', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    force: true,
-                    batchSize: 10,
-                    pricingStrategy: syncStrategy,
-                }),
-            });
-
-            clearInterval(progressInterval);
-
-            const data = await response.json();
-
-            if (data.success) {
-                const completed = data.result.successful_updates || 0;
-                const failed = data.result.failed_updates || 0;
-                const skipped = data.result.skipped_cards || 0;
-
-                updateStats(completed, failed, skipped);
-                updateProgress(100, 'Force sync completed', 'completed');
-                completeProgress({ completed, failed, skipped });
-
-                setSyncResults(data.result);
-                onSyncComplete?.(data.result);
-                toast.success(`Force sync completed! ${formatNumber(data.result.successful_updates)} cards updated.`);
-            } else {
-                setError(data.error || 'Force sync failed');
-                updateProgress(100, 'Force sync failed', 'error');
-            }
-        } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-            setError(errorMsg);
-            updateProgress(100, 'Force sync failed', 'error');
-            toast.error(errorMsg);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleClose = () => {
-        if (!loading) {
-            resetProgress();
-            onClose();
-        }
-    };
-
-    return (
-        <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-            <DialogTitle>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Sync />
-                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                        Sync Card Prices
-                    </Typography>
-                </Box>
-            </DialogTitle>
-            <DialogContent>
-                {/* Progress Display */}
-                <ProgressDisplay progress={progress} />
-
-                {error && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {error}
-                    </Alert>
-                )}
-
-                {!syncResults ? (
-                    <Box>
-                        <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-                            Update card prices using the Pokémon Price Tracker API for real-time market data.
-                        </Typography>
-
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Sync Strategy</InputLabel>
-                                    <Select
-                                        value={syncStrategy}
-                                        label="Sync Strategy"
-                                        onChange={(e) => setSyncStrategy(e.target.value)}
-                                        disabled={loading}
-                                    >
-                                        <MenuItem value="AUTO">Auto (Price Tracker + TCG API)</MenuItem>
-                                        <MenuItem value="PRICE_TRACKER_ONLY">Price Tracker API Only</MenuItem>
-                                        <MenuItem value="TCG_API_ONLY">Pokémon TCG API Only</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <TextField
-                                    label="Batch Size"
-                                    type="number"
-                                    value={batchSize}
-                                    onChange={(e) => setBatchSize(parseInt(e.target.value) || 20)}
-                                    inputProps={{ min: 5, max: 50 }}
-                                    fullWidth
-                                    helperText="Cards processed per API call"
-                                    disabled={loading}
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField
-                                    label="Update Cards Older Than (Hours)"
-                                    type="number"
-                                    value={maxAgeHours}
-                                    onChange={(e) => setMaxAgeHours(parseInt(e.target.value) || 24)}
-                                    inputProps={{ min: 1, max: 168 }}
-                                    fullWidth
-                                    helperText="Only update cards that haven't been updated in this time period"
-                                    disabled={loading}
-                                />
-                            </Grid>
-                        </Grid>
-
-                        <Alert severity="info" sx={{ mt: 3 }} icon={<InfoOutlinedIcon />}>
-                            <Typography variant="body2">
-                                <strong>Rate Limits:</strong> The Pokémon Price Tracker API allows 60 requests per minute.
-                                Large syncs will be automatically throttled to respect these limits. Progress will be tracked in real-time.
-                            </Typography>
-                        </Alert>
-                    </Box>
-                ) : (
-                    <Box>
-                        <Alert severity="success" sx={{ mb: 3 }}>
-                            Price sync completed successfully!
-                        </Alert>
-
-                        <Grid container spacing={2}>
-                            <Grid item xs={6} md={3}>
-                                <StatsCard
-                                    icon={<PriceCheck />}
-                                    title="Cards Updated"
-                                    value={formatNumber(syncResults.successful_updates)}
-                                    color="success"
-                                />
-                            </Grid>
-                            <Grid item xs={6} md={3}>
-                                <StatsCard
-                                    icon={<Warning />}
-                                    title="Skipped"
-                                    value={formatNumber(syncResults.skipped_cards)}
-                                    color="warning"
-                                />
-                            </Grid>
-                            <Grid item xs={6} md={3}>
-                                <StatsCard
-                                    icon={<DeleteIcon />}
-                                    title="Failed"
-                                    value={formatNumber(syncResults.failed_updates)}
-                                    color="error"
-                                />
-                            </Grid>
-                            <Grid item xs={6} md={3}>
-                                <StatsCard
-                                    icon={<AttachMoney />}
-                                    title="Avg. Price"
-                                    value={formatPrice(syncResults.pricing_summary?.avg_market_price)}
-                                    color="primary"
-                                />
-                            </Grid>
-                        </Grid>
-
-                        {syncResults.pricing_summary && (
-                            <Box sx={{ mt: 3 }}>
-                                <Typography variant="h6" sx={{ mb: 2 }}>Pricing Summary</Typography>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} md={6}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            API Pricing Success: {formatNumber(syncResults.pricing_summary.api_pricing_success || 0)}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Fallback Pricing Used: {formatNumber(syncResults.pricing_summary.fallback_pricing_used || 0)}
-                                        </Typography>
-                                    </Grid>
-                                    <Grid item xs={12} md={6}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Price Range: {formatPrice(syncResults.pricing_summary.price_range?.min)} - {formatPrice(syncResults.pricing_summary.price_range?.max)}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Price Increases: {formatNumber(syncResults.pricing_summary.cards_with_increases || 0)}
-                                        </Typography>
-                                    </Grid>
-                                </Grid>
-                            </Box>
-                        )}
-
-                        {syncResults.errors && syncResults.errors.length > 0 && (
-                            <Box sx={{ mt: 3 }}>
-                                <Typography variant="h6" color="error" sx={{ mb: 2 }}>
-                                    Errors ({formatNumber(syncResults.errors.length)})
-                                </Typography>
-                                <Box sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'background.default', p: 2, borderRadius: 1, border: 1, borderColor: 'divider' }}>
-                                    {syncResults.errors.slice(0, 10).map((error: any, index: number) => (
-                                        <Alert severity="error" key={index} sx={{ mb: 1 }}>
-                                            <Typography variant="body2">
-                                                <strong>{error.card_name}:</strong> {error.error}
-                                            </Typography>
-                                        </Alert>
-                                    ))}
-                                    {syncResults.errors.length > 10 && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
-                                            ... and {formatNumber(syncResults.errors.length - 10)} more errors
-                                        </Typography>
-                                    )}
-                                </Box>
-                            </Box>
-                        )}
-                    </Box>
-                )}
-            </DialogContent>
-            <DialogActions sx={{ p: 3 }}>
-                <Button onClick={handleClose} disabled={loading}>
-                    {syncResults ? 'Close' : 'Cancel'}
-                </Button>
-                {!syncResults && (
-                    <>
-                        <Tooltip title="Force update all cards regardless of last update time">
-                            <Button
-                                variant="outlined"
-                                onClick={handleForceSync}
-                                disabled={loading}
-                                color="warning"
-                                startIcon={loading ? <CircularProgress size={20} /> : <Sync />}
-                            >
-                                Force Sync All
-                            </Button>
-                        </Tooltip>
-                        <Button
-                            variant="contained"
-                            onClick={handleStartSync}
-                            disabled={loading}
-                            color="primary"
-                            startIcon={loading ? <CircularProgress size={20} /> : <Sync />}
-                        >
-                            {loading ? 'Syncing...' : 'Start Sync'}
-                        </Button>
-                    </>
-                )}
-            </DialogActions>
-        </Dialog>
-    );
-}
+// Plain integer/count formatter (non-currency). Currency uses shared formatPrice from lib/format.
+export const formatNumber = (num: number): string => num.toLocaleString();
 
 export default function AdminCardsClient() {
-    const router = useRouter();
-
-    const { data: session, status } = useSession();
+    const { session, status } = useRequireAuth({ admin: true });
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -1632,13 +408,6 @@ export default function AdminCardsClient() {
     // Progress tracking for main operations
     const { progress: mainProgress, startProgress: startMainProgress, updateProgress: updateMainProgress, completeProgress: completeMainProgress, resetProgress: resetMainProgress } = useProgressTracker();
 
-    // Role-Based Access Control (RBAC)
-    useEffect(() => {
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/unauthorized");
-        }
-    }, [status, session, router]);
-
     // Enhanced fetch cards with progress tracking
     const fetchCards = useCallback(async () => {
         if (!session) return;
@@ -1660,7 +429,6 @@ export default function AdminCardsClient() {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
             });
 
@@ -1674,7 +442,6 @@ export default function AdminCardsClient() {
             setCards(data.cards || []);
 
             const totalMessage = `Loaded ${data.cards?.length || 0} cards from database`;
-            console.log(`✅ ${totalMessage}`);
             toast.success(totalMessage, { autoClose: 3000 });
 
             setTimeout(resetMainProgress, 2000);
@@ -1726,7 +493,6 @@ export default function AdminCardsClient() {
     }, [cards]);
 
     // Debounced Search
-    const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
 
     const filteredCards = useMemo(() => {
         let result = [...cards];
@@ -2044,30 +810,6 @@ export default function AdminCardsClient() {
         setTimeout(() => editDialogRef.current?.focus(), 0);
     };
 
-    const handleAddCard = () => {
-        setEditCard({
-            id: 0,
-            name: "",
-            set_name: "",
-            set_number: "",
-            rarity: "Common",
-            card_type: "Pokemon",
-            subtype: "",
-            hp: undefined,
-            image_url: "",
-            small_image_url: "",
-            tcg_id: "",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            totalOwned: 0,
-            forSaleCount: 0,
-            soldCount: 0,
-            uniqueOwners: 0,
-        });
-        setValidationErrors({});
-        setTimeout(() => editDialogRef.current?.focus(), 0);
-    };
-
     const handleSaveCard = async () => {
         if (!editCard || !session) return;
 
@@ -2100,7 +842,6 @@ export default function AdminCardsClient() {
                 method,
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.accessToken}`,
                 },
                 body: JSON.stringify(sanitizedCard),
             });
@@ -2133,7 +874,7 @@ export default function AdminCardsClient() {
         try {
             const response = await fetch(`/api/admin/cards/${cardId}`, {
                 method: "DELETE",
-                headers: { "Authorization": `Bearer ${session.accessToken}` },
+                headers: {},
             });
 
             if (!response.ok) throw new Error("Failed to delete card");
@@ -2176,7 +917,6 @@ export default function AdminCardsClient() {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`,
                 },
                 body: JSON.stringify({ cards }),
             });
@@ -2209,8 +949,6 @@ export default function AdminCardsClient() {
     };
 
     const handlePokemonImportComplete = (results: any) => {
-        console.log('🎉 Import completed with results:', results);
-
         if (results) {
             let importedCount = 0;
             let updatedCount = 0;
@@ -2238,15 +976,12 @@ export default function AdminCardsClient() {
                 if (errorCount > 0) message += ` ${formatNumber(errorCount)} had errors.`;
 
                 toast.success(message, { autoClose: 5000 });
-                console.log(`✅ ${message}`);
             } else {
                 const noCardsMessage = 'Import completed - No new cards were added. All cards may already exist.';
                 toast.info(noCardsMessage);
-                console.log(`ℹ️ ${noCardsMessage}`);
             }
 
             // Always refresh the cards list after import to get the most up-to-date data
-            console.log('🔄 Refreshing cards list...');
             fetchCards();
         } else {
             const errorMessage = 'Import completed but no results were returned';
@@ -2257,6 +992,46 @@ export default function AdminCardsClient() {
 
     return (
         <AppShell variant="admin">
+        <PageHeader
+            title="Cards"
+            icon={<Inventory />}
+            actions={
+                <>
+                    <Tooltip title="Import cards directly from Pokémon TCG API with progress tracking">
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => setPokemonImportOpen(true)}
+                            disabled={actionLoading}
+                            startIcon={<DownloadIcon />}
+                        >
+                            Import Pokémon Cards
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Sync market prices for all cards with progress tracking">
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            onClick={() => setPriceSyncOpen(true)}
+                            disabled={actionLoading}
+                            startIcon={<Sync />}
+                        >
+                            Sync Prices
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Refresh the card list">
+                        <Button
+                            variant="outlined"
+                            onClick={fetchCards}
+                            disabled={loading || actionLoading}
+                            startIcon={<RefreshIcon />}
+                        >
+                            Refresh
+                        </Button>
+                    </Tooltip>
+                </>
+            }
+        />
         <Box
             sx={{
                 display: "flex",
@@ -2270,7 +1045,7 @@ export default function AdminCardsClient() {
                 <CircularProgress color="inherit" />
             </Backdrop>
 
-            <GoogleAnalytics trackPageViews debugMode={true} />
+            <GoogleAnalytics trackPageViews debugMode={false} />
 
             <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1 }}>
                 <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
@@ -2285,141 +1060,45 @@ export default function AdminCardsClient() {
                             overflow: "visible",
                         }}
                     >
-                        <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-                                <Wordmark size={40} />
-                            </motion.div>
-                        </Box>
-
-                        <Typography
-                            variant="h4"
-                            sx={{
-                                mb: 4,
-                                textAlign: "center",
-                                fontWeight: 'bold',
-                                background: (theme) => theme.foil.gradient,
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                            }}
-                        >
-                            Admin - Card Management
-                        </Typography>
-
                         {/* Main Progress Display */}
                         <ProgressDisplay progress={mainProgress} />
 
                         {/* Enhanced Card Stats Dashboard */}
                         <motion.div variants={itemVariants}>
                             <Grid container spacing={2} sx={{ mb: 4 }}>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
+                                    <StatCard
                                         icon={<Inventory />}
-                                        title="Total Cards"
+                                        label="Total Cards"
                                         value={formatNumber(stats.total)}
-                                        color="primary"
+                                        accent
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
+                                    <StatCard
                                         icon={<Category />}
-                                        title="Total Owned"
+                                        label="Total Owned"
                                         value={formatNumber(stats.totalOwned)}
-                                        subtitle={`${stats.uniqueSets} unique sets`}
-                                        color="info"
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
+                                    <StatCard
                                         icon={<Store />}
-                                        title="For Sale"
+                                        label="For Sale"
                                         value={formatNumber(stats.forSale)}
-                                        color="success"
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
-                                    <StatsCard
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: 'flex' }}>
+                                    <StatCard
                                         icon={<AttachMoney />}
-                                        title="Market Value"
-                                        value={formatPrice(stats.totalMarketValue)}
-                                        subtitle={`Avg: ${formatPrice(stats.avgMarketPrice)}`}
-                                        color="warning"
+                                        label="Market Value"
+                                        value={formatCompactPrice(stats.totalMarketValue)}
                                     />
                                 </Grid>
                             </Grid>
                         </motion.div>
 
                         <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                            {/* Action Buttons */}
-                            <motion.div variants={itemVariants}>
-                                <Stack
-                                    direction={{ xs: 'column', sm: 'row' }}
-                                    spacing={2}
-                                    sx={{ mb: 4 }}
-                                    justifyContent="space-between"
-                                    flexWrap="wrap"
-                                >
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                        {/* <Tooltip title="Add a new card to the collection">
-                                            <Button
-                                                variant="contained"
-                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
-                                                onClick={handleAddCard}
-                                                disabled={actionLoading}
-                                                startIcon={<AddIcon />}
-                                            >
-                                                Add Card
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip title="Import multiple cards at once using CSV format">
-                                            <Button
-                                                variant="contained"
-                                                sx={{ bgcolor: "#9B5Cff", color: "grey.900", '&:hover': { bgcolor: '#7ce682' } }}
-                                                onClick={() => setBulkCreateOpen(true)}
-                                                disabled={actionLoading}
-                                                startIcon={<UploadIcon />}
-                                            >
-                                                Bulk Create
-                                            </Button>
-                                        </Tooltip> */}
-                                        <Tooltip title="Import cards directly from Pokémon TCG API with progress tracking">
-                                            <Button
-                                                variant="contained"
-                                                color="primary"
-                                                onClick={() => setPokemonImportOpen(true)}
-                                                disabled={actionLoading}
-                                                startIcon={<DownloadIcon />}
-                                            >
-                                                Import Pokémon Cards
-                                            </Button>
-                                        </Tooltip>
-                                    </Stack>
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                        <Tooltip title="Sync market prices for all cards with progress tracking">
-                                            <Button
-                                                variant="contained"
-                                                color="secondary"
-                                                onClick={() => setPriceSyncOpen(true)}
-                                                disabled={actionLoading}
-                                                startIcon={<Sync />}
-                                            >
-                                                Sync Prices
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip title="Refresh the card list">
-                                            <Button
-                                                variant="outlined"
-                                                onClick={fetchCards}
-                                                disabled={loading || actionLoading}
-                                                startIcon={<RefreshIcon />}
-                                            >
-                                                Refresh
-                                            </Button>
-                                        </Tooltip>
-                                    </Stack>
-                                </Stack>
-                            </motion.div>
-
                             {/* Column Visibility Toggle */}
                             <motion.div variants={itemVariants}>
                                 <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'background.paper', borderRadius: 2, border: 1, borderColor: 'divider' }}>
@@ -2731,14 +1410,11 @@ export default function AdminCardsClient() {
                             </motion.div>
 
                             {filteredCards.length === 0 && !error && (
-                                <Box sx={{ textAlign: 'center', py: 8 }}>
-                                    <Typography variant="h6" sx={{ color: "text.secondary", mb: 2 }}>
-                                        No cards found
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                                        Try adjusting your filters or add new cards to the collection
-                                    </Typography>
-                                </Box>
+                                <EmptyState
+                                    icon={<Inventory />}
+                                    title="No cards found"
+                                    description="Try adjusting your filters."
+                                />
                             )}
                         </motion.div>
                     </Paper>
@@ -2775,7 +1451,7 @@ export default function AdminCardsClient() {
                 <DialogContent>
                     {editCard && (
                         <Grid container spacing={3} sx={{ mt: 1 }}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Card Name"
                                     fullWidth
@@ -2786,7 +1462,7 @@ export default function AdminCardsClient() {
                                     required
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Set Name"
                                     fullWidth
@@ -2797,7 +1473,7 @@ export default function AdminCardsClient() {
                                     required
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Set Number"
                                     fullWidth
@@ -2808,7 +1484,7 @@ export default function AdminCardsClient() {
                                     required
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <FormControl fullWidth error={!!validationErrors.rarity} required>
                                     <InputLabel>Rarity</InputLabel>
                                     <Select
@@ -2824,7 +1500,7 @@ export default function AdminCardsClient() {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <FormControl fullWidth error={!!validationErrors.card_type} required>
                                     <InputLabel>Card Type</InputLabel>
                                     <Select
@@ -2838,7 +1514,7 @@ export default function AdminCardsClient() {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="Subtype"
                                     fullWidth
@@ -2847,7 +1523,7 @@ export default function AdminCardsClient() {
                                     placeholder="e.g., Basic, Stage 1, Item"
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="HP"
                                     type="number"
@@ -2857,7 +1533,7 @@ export default function AdminCardsClient() {
                                     placeholder="Hit Points (if applicable)"
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     label="TCG ID"
                                     fullWidth
@@ -2866,7 +1542,7 @@ export default function AdminCardsClient() {
                                     placeholder="Trading Card Game ID"
                                 />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <TextField
                                     label="Image URL"
                                     fullWidth
@@ -2876,7 +1552,7 @@ export default function AdminCardsClient() {
                                 />
                             </Grid>
                             {editCard.image_url && (
-                                <Grid item xs={12}>
+                                <Grid size={{ xs: 12 }}>
                                     <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2, border: 1, borderColor: 'divider' }}>
                                         <Typography variant="subtitle2" sx={{ mb: 2, color: 'text.secondary' }}>
                                             Card Preview

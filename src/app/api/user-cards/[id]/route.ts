@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
 // Interface for update data
@@ -21,15 +20,14 @@ export async function GET(
 ) {
   try {
     // Always use real session (ignore dev mode)
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { id } = await context.params;
     const userCardId = parseInt(id);
 
-    console.log(`📋 Fetching user card ${userCardId} for user ${session.user.name} (ID: ${session.user.id})`);
+    console.log(`📋 Fetching user card ${userCardId} for user ${user.name} (ID: ${user.id})`);
 
     // Get user card without problematic includes
     const userCard = await prisma.userCard.findUnique({
@@ -178,14 +176,13 @@ export async function PUT(
 ) {
   try {
     // Always use real session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { id } = await context.params;
     const userCardId = parseInt(id);
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
 
     const body = await request.json();
 
@@ -343,14 +340,13 @@ export async function DELETE(
 ) {
   try {
     // Always use real session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { id } = await context.params;
     const userCardId = parseInt(id);
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
 
     // Verify user owns this card
     const userCard = await prisma.userCard.findFirst({

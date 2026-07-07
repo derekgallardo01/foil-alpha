@@ -19,17 +19,18 @@ import {
     Alert,
     CircularProgress,
     Paper,
-    Grid,
     InputAdornment
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import {
     AccessTime as ClockIcon,
     Gavel as GavelIcon,
     Person as PersonIcon,
-    AttachMoney as MoneyIcon,
     TrendingUp as TrendingIcon,
     Info as InfoIcon
 } from '@mui/icons-material';
+import { getRarityColor } from '../lib/rarity';
+import { formatDateTime, formatDuration } from '../lib/format';
 
 interface Card {
     id: number;
@@ -121,35 +122,6 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
         return `$${Number(price).toFixed(2)}`;
     };
 
-    const formatTimeLeft = (timeLeftMs: number | null) => {
-        if (!timeLeftMs || timeLeftMs <= 0) return 'Auction Ended';
-
-        const days = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeLeftMs % (1000 * 60)) / 1000);
-
-        if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-        if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-        if (minutes > 0) return `${minutes}m ${seconds}s`;
-        return `${seconds}s`;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
-    };
-
-    const getRarityColor = (rarity: string) => {
-        switch (rarity.toLowerCase()) {
-            case 'common': return 'default' as const;
-            case 'uncommon': return 'success' as const;
-            case 'rare': return 'primary' as const;
-            case 'holo rare': return 'secondary' as const;
-            case 'ultra rare': return 'error' as const;
-            default: return 'default' as const;
-        }
-    };
-
     const getMinimumBid = () => {
         if (!userCard) return 0;
         const currentHighest = Number(userCard.current_highest_bid) || 0;
@@ -239,7 +211,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
             <DialogContent>
                 <Grid container spacing={3}>
                     {/* Card Information */}
-                    <Grid item xs={12} md={5}>
+                    <Grid size={{ xs: 12, md: 5 }}>
                         <Card>
                             <CardMedia
                                 component="img"
@@ -275,7 +247,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                     </Grid>
 
                     {/* Auction Information */}
-                    <Grid item xs={12} md={7}>
+                    <Grid size={{ xs: 12, md: 7 }}>
                         <Paper sx={{ p: 3, mb: 2 }}>
                             <Typography variant="h6" gutterBottom>
                                 Auction Details
@@ -335,7 +307,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                             }}>
                                 <ClockIcon />
                                 <Typography variant="body1" fontWeight="bold">
-                                    {isAuctionEnded ? 'Auction Ended' : `Time Left: ${formatTimeLeft(timeLeft)}`}
+                                    {isAuctionEnded ? 'Auction Ended' : `Time Left: ${formatDuration(timeLeft)}`}
                                 </Typography>
                             </Box>
 
