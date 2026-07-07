@@ -110,9 +110,10 @@ export default function LiveAuctionTable({
     };
 
     function formatTimeRemaining(time_remaining: number): React.ReactNode {
-        const now = Date.now();
-        const remaining = time_remaining - now;
-        
+        // `time_remaining` is already the ms left until auction_end (the API
+        // returns max(0, auction_end - now)); it is a duration, not a timestamp.
+        const remaining = time_remaining;
+
         if (remaining <= 0) {
             return <Chip label="ENDED" color="error" size="small" />;
         }
