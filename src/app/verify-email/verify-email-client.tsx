@@ -12,6 +12,7 @@ import {
   Container,
   Paper,
 } from "@mui/material";
+import GradientHeading from "../components/ui/GradientHeading";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 
@@ -82,21 +83,9 @@ export default function VerifyEmailClient() {
       <Container maxWidth="sm">
         <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Paper elevation={0} sx={{ p: 4, bgcolor: "background.paper", border: 1, borderColor: "divider", borderRadius: 2, boxShadow: 3 }}>
-            <Typography
-              variant="h5"
-              component="p"
-              sx={{
-                mb: 1,
-                textAlign: "center",
-                background: (t) => t.foil.gradient,
-                backgroundClip: "text",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                fontWeight: 800,
-              }}
-            >
+            <GradientHeading variant="h5" component="p" sx={{ mb: 1, textAlign: "center" }}>
               Foil Alpha
-            </Typography>
+            </GradientHeading>
             <Typography variant="h4" sx={{ mb: 2, textAlign: "center", color: "text.primary" }}>
               Verify Your Email
             </Typography>

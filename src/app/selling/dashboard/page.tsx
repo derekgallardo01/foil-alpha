@@ -265,11 +265,12 @@ export default function SellingDashboard() {
 
     if (status === 'loading') {
         return (
-            <Container>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                    <CircularProgress />
-                </Box>
-            </Container>
+            <AppShell>
+                <PageHeader title="My Sales" icon={<SellIcon />} />
+                <Container maxWidth="lg" sx={{ py: 3 }}>
+                    <CardGridSkeleton count={6} />
+                </Container>
+            </AppShell>
         );
     }
 

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"; // Add useSearchParams
 import { Box, Button, Typography, Container, Paper } from "@mui/material";
+import GradientHeading from "../components/ui/GradientHeading";
 import { motion } from "framer-motion";
 
 const containerVariants = {
@@ -45,21 +46,9 @@ export default function ActivationSuccessClient() {
         <Paper elevation={0} sx={{ p: 4, bgcolor: "background.paper", border: 1, borderColor: "divider", borderRadius: 2, boxShadow: 3 }}>
         <motion.div variants={containerVariants} initial="hidden" animate="visible">
               <motion.div variants={itemVariants}>
-                <Typography
-                  variant="h5"
-                  component="p"
-                  sx={{
-                    mb: 1,
-                    textAlign: "center",
-                    background: (t) => t.foil.gradient,
-                    backgroundClip: "text",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    fontWeight: 800,
-                  }}
-                >
+                <GradientHeading variant="h5" component="p" sx={{ mb: 1, textAlign: "center" }}>
                   Foil Alpha
-                </Typography>
+                </GradientHeading>
               </motion.div>
               <motion.div variants={itemVariants}>
                 <Typography variant="h4" sx={{ mb: 2, textAlign: "center", color: "text.primary" }}>

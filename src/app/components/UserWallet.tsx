@@ -31,6 +31,9 @@ import type { ChipProps } from "@mui/material";
 import PriceDisplay, { LargePriceDisplay } from "./PriceDisplay";
 import CurrencySelector from "./CurrencySelector";
 import { useCurrencyContext } from "../lib/currency-context";
+import ErrorState from "./ui/ErrorState";
+import EmptyState from "./ui/EmptyState";
+import { StatRowSkeleton } from "./ui/Skeletons";
 
 interface WalletData {
     balance: number;
@@ -124,12 +127,11 @@ export default function UserWallet() {
 
     if (status === "loading" || loading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                <CircularProgress sx={{ color: 'primary.main' }} />
-                <Typography sx={{ ml: 2, color: 'text.secondary' }}>
-                    Loading wallet...
-                </Typography>
-            </Box>
+            <Card sx={{ mb: 3 }}>
+                <CardContent>
+                    <StatRowSkeleton count={3} />
+                </CardContent>
+            </Card>
         );
     }
 
@@ -171,18 +173,9 @@ export default function UserWallet() {
 
     if (error) {
         return (
-            <Card>
+            <Card sx={{ mb: 3 }}>
                 <CardContent>
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {error}
-                    </Alert>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        onClick={handleRefresh}
-                    >
-                        Retry
-                    </Button>
+                    <ErrorState message={error} onRetry={handleRefresh} minHeight={160} />
                 </CardContent>
             </Card>
         );
@@ -324,17 +317,11 @@ export default function UserWallet() {
                     textAlign: 'center'
                 }}>
                     {wallet.available_balance > 50 ? (
-                        <Typography variant="body2" sx={{ color: 'success.main' }}>
-                            ✅ Your wallet is ready for purchases and bidding!
-                        </Typography>
+                        <Alert severity="success">Your wallet is ready for purchases and bidding.</Alert>
                     ) : wallet.available_balance > 0 ? (
-                        <Typography variant="body2" sx={{ color: 'warning.main' }}>
-                            ⚠️ Low balance - use “Add funds” below to top up.
-                        </Typography>
+                        <Alert severity="warning">Low balance — use “Add funds” below to top up.</Alert>
                     ) : (
-                        <Typography variant="body2" sx={{ color: 'error.main' }}>
-                            ❌ No available balance - use “Add funds” below to top up.
-                        </Typography>
+                        <Alert severity="info">No available balance — use “Add funds” below to top up.</Alert>
                     )}
                 </Box>
 
@@ -401,14 +388,12 @@ export default function UserWallet() {
                         ))}
                     </List>
                 ) : (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                            No transactions yet
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Add funds to your wallet or start trading!
-                        </Typography>
-                    </Box>
+                    <EmptyState
+                        icon={<History />}
+                        title="No transactions yet"
+                        description="Add funds to your wallet or start trading to see activity here."
+                        minHeight={160}
+                    />
                 )}
             </CardContent>
         </Card>
