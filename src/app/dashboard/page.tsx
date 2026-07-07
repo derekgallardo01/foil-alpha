@@ -28,6 +28,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import StatCard from '../components/StatCard';
+import PortfolioOverview, { PortfolioSummary, PortfolioTopItem } from '../components/dashboard/PortfolioOverview';
 import ForecastPanel from '../components/ForecastPanel';
 import ErrorState from '../components/ui/ErrorState';
 import PageHeader from '../components/ui/PageHeader';
@@ -71,6 +72,7 @@ export default function Dashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState(false);
   const [topCard, setTopCard] = useState<{ id: number; name: string } | null>(null);
+  const [portfolio, setPortfolio] = useState<{ summary: PortfolioSummary; topItems: PortfolioTopItem[] } | null>(null);
 
   // Fetch user stats
   const fetchUserStats = async () => {
@@ -79,7 +81,7 @@ export default function Dashboard() {
     setStatsError(false);
     try {
       const [collectionRes, auctionsRes] = await Promise.all([
-        fetch('/api/user/collection'),
+        fetch('/api/user/collection?limit=1000'),
         fetch('/api/bids?user_id=' + session.user.id),
       ]);
       if (!collectionRes.ok || !auctionsRes.ok) throw new Error('Failed to load stats');
@@ -95,6 +97,22 @@ export default function Dashboard() {
           : 0,
         recentSales: collectionData.recentSales || 0
       });
+
+      // Portfolio overview: holdings breakdown (from summary) + top items by value.
+      const cards = Array.isArray(collectionData.cards) ? collectionData.cards : [];
+      const topItems: PortfolioTopItem[] = [...cards]
+        .filter((c: any) => c.card?.market_price)
+        .sort((a: any, b: any) => (b.card.market_price || 0) - (a.card.market_price || 0))
+        .slice(0, 5)
+        .map((c: any) => ({
+          name: c.card.name,
+          value: c.card.market_price,
+          image: c.card.image_url,
+          graded: !!c.is_graded,
+          sealed: c.card.product_type === 'SEALED',
+          setName: c.card.set_name,
+        }));
+      setPortfolio(collectionData.summary ? { summary: collectionData.summary, topItems } : null);
     } catch (error) {
       console.error('Error fetching user stats:', error);
       setStatsError(true);
@@ -178,6 +196,15 @@ export default function Dashboard() {
                     </Grid>
                   </Grid>
                 )}
+              </Box>
+            </motion.div>
+          )}
+
+          {/* Portfolio overview (holdings breakdown + most valuable) */}
+          {session && portfolio && (
+            <motion.div variants={itemVariants}>
+              <Box sx={{ mb: 3 }}>
+                <PortfolioOverview summary={portfolio.summary} topItems={portfolio.topItems} />
               </Box>
             </motion.div>
           )}
