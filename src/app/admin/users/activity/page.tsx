@@ -295,8 +295,8 @@ export default function UserActivityPage() {
                                 <TableRow>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>User</TableCell>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Action</TableCell>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Timestamp</TableCell>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>Details</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', display: { xs: 'none', md: 'table-cell' } }}>Timestamp</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', display: { xs: 'none', md: 'table-cell' } }}>Details</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -325,12 +325,12 @@ export default function UserActivityPage() {
                                                 size="small"
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                             <Typography variant="mono" color="text.secondary">
                                                 {format(new Date(activity.timestamp), 'MMM dd, yyyy HH:mm:ss')}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                             {activity.details && (
                                                 <Tooltip title={JSON.stringify(activity.details, null, 2)}>
                                                     <Typography variant="caption" sx={{ cursor: 'pointer' }}>

@@ -164,9 +164,9 @@ export default function WaitlistSignupsPage() {
                     <TableCell sx={{ color: "text.secondary" }}>Name</TableCell>
                     <TableCell sx={{ color: "text.secondary" }}>Email</TableCell>
                     <TableCell sx={{ color: "text.secondary" }}>Status</TableCell>
-                    <TableCell sx={{ color: "text.secondary" }}>Source</TableCell>
-                    <TableCell sx={{ color: "text.secondary" }}>Created At</TableCell>
-                    <TableCell sx={{ color: "text.secondary" }}>Metadata</TableCell>
+                    <TableCell sx={{ color: "text.secondary", display: { xs: 'none', md: 'table-cell' } }}>Source</TableCell>
+                    <TableCell sx={{ color: "text.secondary", display: { xs: 'none', md: 'table-cell' } }}>Created At</TableCell>
+                    <TableCell sx={{ color: "text.secondary", display: { xs: 'none', md: 'table-cell' } }}>Metadata</TableCell>
                     <TableCell sx={{ color: "text.secondary" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -199,8 +199,8 @@ export default function WaitlistSignupsPage() {
                           {entry.status}
                         </Box>
                       </TableCell>
-                      <TableCell>{entry.source}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{entry.source}</TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         {new Date(entry.created_at).toLocaleString("en-US", {
                           timeZone: "America/New_York",
                           year: "numeric",
@@ -211,7 +211,7 @@ export default function WaitlistSignupsPage() {
                           second: "numeric",
                         })}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Box
                           sx={{
                             px: 1,

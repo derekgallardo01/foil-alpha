@@ -111,11 +111,11 @@ export default function ForecastPanel({ cardId, title = "Price Forecast" }: { ca
         </Box>
 
         {loading ? (
-          <Box sx={{ height: 300, display: "grid", placeItems: "center" }}>
+          <Box sx={{ height: { xs: 240, md: 300 }, display: "grid", placeItems: "center" }}>
             <CircularProgress sx={{ color: "primary.main" }} />
           </Box>
         ) : !hasForecast ? (
-          <Box sx={{ height: 300, display: "grid", placeItems: "center", textAlign: "center", px: 3 }}>
+          <Box sx={{ height: { xs: 240, md: 300 }, display: "grid", placeItems: "center", textAlign: "center", px: 3 }}>
             <Box>
               <Typography color="text.secondary">Not enough price history to forecast yet.</Typography>
               <Typography variant="caption" color="text.disabled">
@@ -124,7 +124,7 @@ export default function ForecastPanel({ cardId, title = "Price Forecast" }: { ca
             </Box>
           </Box>
         ) : (
-          <Box sx={{ height: 320 }}>
+          <Box sx={{ height: { xs: 260, md: 320 } }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
                 <CartesianGrid stroke={theme.palette.divider} strokeDasharray="3 3" vertical={false} />

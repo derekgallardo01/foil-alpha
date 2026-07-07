@@ -84,6 +84,7 @@ export default function EnhancedCardDisplay({
         }}>
             <IconButton
                 size="small"
+                aria-label="Price history"
                 onClick={() => onShowPriceHistory(userCard)}
                 sx={{
                     position: 'absolute',
@@ -94,10 +95,12 @@ export default function EnhancedCardDisplay({
                     border: 1,
                     borderColor: 'divider',
                     zIndex: 1,
+                    // Larger touch target on phones (≥44px), compact on desktop.
+                    p: { xs: 1.25, sm: 0.75 },
                     '&:hover': { bgcolor: 'action.hover' }
                 }}
             >
-                <Timeline sx={{ fontSize: 16 }} />
+                <Timeline sx={{ fontSize: 18 }} />
             </IconButton>
 
             {userCard.quantity > 1 && (

@@ -405,14 +405,14 @@ const AdminTransactionsPage = () => {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>ID</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>ID</TableCell>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Card</TableCell>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Buyer</TableCell>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Seller</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Buyer</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Seller</TableCell>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Amount</TableCell>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Type</TableCell>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Status</TableCell>
-                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Date</TableCell>
+                                    <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Date</TableCell>
                                     <TableCell sx={{ bgcolor: 'background.paper', color: 'text.primary', fontWeight: 'bold' }}>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -430,7 +430,7 @@ const AdminTransactionsPage = () => {
                                 ) : (
                                     paginatedTransactions.map((transaction) => (
                                         <TableRow key={transaction.id} hover>
-                                            <TableCell sx={{ color: 'text.primary' }}>
+                                            <TableCell sx={{ color: 'text.primary', display: { xs: 'none', md: 'table-cell' } }}>
                                                 <Typography variant="mono">#{transaction.id}</Typography>
                                             </TableCell>
                                             <TableCell sx={{ color: 'text.primary' }}>
@@ -454,13 +454,13 @@ const AdminTransactionsPage = () => {
                                                     <Typography variant="body2" color="text.secondary">N/A</Typography>
                                                 )}
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                                 <Typography variant="body2">{transaction.buyer?.name || 'Unknown'}</Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {transaction.buyer?.email || ''}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                                 <Typography variant="body2">{transaction.seller?.name || 'Unknown'}</Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {transaction.seller?.email || ''}
@@ -485,7 +485,7 @@ const AdminTransactionsPage = () => {
                                                     size="small"
                                                 />
                                             </TableCell>
-                                            <TableCell sx={{ color: 'text.secondary' }}>
+                                            <TableCell sx={{ color: 'text.secondary', display: { xs: 'none', md: 'table-cell' } }}>
                                                 <Typography variant="mono" sx={{ fontSize: 12 }} color="text.secondary">
                                                     {formatDateTime(transaction.created_at)}
                                                 </Typography>

@@ -326,7 +326,7 @@ export default function AdminWalletManagement() {
                         <Grid size={{ xs: 12 }}>
                             <Card>
                                 <CardContent>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                                         <Typography variant="h6" sx={{ color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Receipt />
                                             Recent Transactions
@@ -348,9 +348,9 @@ export default function AdminWalletManagement() {
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Date</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Type</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Amount</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Balance After</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Description</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Rate</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Balance After</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Description</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', bgcolor: 'background.paper', display: { xs: 'none', md: 'table-cell' } }}>Rate</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -372,13 +372,13 @@ export default function AdminWalletManagement() {
                                                         }}>
                                                             <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{transaction.amount >= 0 ? '+' : ''}{formatPrice(transaction.amount)}</Typography>
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                                                        <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>
                                                             <Typography variant="mono" component="span" sx={{ fontWeight: 700 }}>{formatPrice(transaction.balance_after)}</Typography>
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.primary', maxWidth: 300 }}>
+                                                        <TableCell sx={{ color: 'text.primary', maxWidth: 300, display: { xs: 'none', md: 'table-cell' } }}>
                                                             {transaction.description}
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary' }}>
+                                                        <TableCell sx={{ color: 'text.secondary', display: { xs: 'none', md: 'table-cell' } }}>
                                                             <Typography variant="mono" component="span">{transaction.commission_rate ? `${transaction.commission_rate}%` : '-'}</Typography>
                                                         </TableCell>
                                                     </TableRow>

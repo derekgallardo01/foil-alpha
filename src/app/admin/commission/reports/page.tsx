@@ -314,10 +314,10 @@ export default function CommissionReports() {
                                                     <TableRow>
                                                         <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Month</TableCell>
                                                         <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Commissions</TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Marketplace Sales</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Marketplace Sales</TableCell>
                                                         <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Total Revenue</TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Transactions</TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Growth</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Transactions</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Growth</TableCell>
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>
@@ -334,16 +334,16 @@ export default function CommissionReports() {
                                                                 <TableCell sx={{ color: 'success.main' }}>
                                                                     <Typography variant="mono" component="span">{formatPrice(item.commissions)}</Typography>
                                                                 </TableCell>
-                                                                <TableCell sx={{ color: 'info.main' }}>
+                                                                <TableCell sx={{ color: 'info.main', display: { xs: 'none', md: 'table-cell' } }}>
                                                                     <Typography variant="mono" component="span">{formatPrice(item.marketplace_sales)}</Typography>
                                                                 </TableCell>
                                                                 <TableCell sx={{ color: 'text.primary', fontWeight: 'bold' }}>
                                                                     <Typography variant="mono" component="span">{formatPrice(item.total_revenue)}</Typography>
                                                                 </TableCell>
-                                                                <TableCell sx={{ color: 'text.secondary' }}>
+                                                                <TableCell sx={{ color: 'text.secondary', display: { xs: 'none', md: 'table-cell' } }}>
                                                                     <Typography variant="mono" component="span">{item.transaction_count}</Typography>
                                                                 </TableCell>
-                                                                <TableCell>
+                                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                                                     {index < reportData.monthly_breakdown.length - 1 && (
                                                                         <Chip
                                                                             label={`${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`}

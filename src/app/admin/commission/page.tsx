@@ -307,8 +307,8 @@ export default function CommissionManagement() {
                                             <TableHead>
                                                 <TableRow>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Rarity</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Symbol</TableCell>
-                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Color</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Symbol</TableCell>
+                                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' } }}>Color</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Commission Rate (%)</TableCell>
                                                     <TableCell sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Status</TableCell>
                                                 </TableRow>
@@ -319,10 +319,10 @@ export default function CommissionManagement() {
                                                         <TableCell sx={{ color: 'text.primary' }}>
                                                             {rarity.name}
                                                         </TableCell>
-                                                        <TableCell sx={{ color: 'text.secondary' }}>
+                                                        <TableCell sx={{ color: 'text.secondary', display: { xs: 'none', md: 'table-cell' } }}>
                                                             {rarity.symbol || '-'}
                                                         </TableCell>
-                                                        <TableCell>
+                                                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                                             {rarity.color ? (
                                                                 <Box
                                                                     sx={{
@@ -377,7 +377,7 @@ export default function CommissionManagement() {
 
                         {/* Save Actions */}
                         <Grid size={{ xs: 12 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
                                 <Button
                                     variant="outlined"
                                     onClick={fetchCommissionData}
