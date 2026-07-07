@@ -1,554 +1,72 @@
-# Foil Alpha - Pokemon Card Auction Platform
+# Foil Alpha — trading-card marketplace & auction platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Next.js](https://img.shields.io/badge/Next.js-13.4.12-000000?logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-6.10.1-2D3748?logo=prisma)](https://www.prisma.io/)
-[![Node.js](https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js)](https://nodejs.org/)
-
-A comprehensive Pokémon card marketplace and auction platform built with Next.js 13+, TypeScript, and modern technologies. This platform provides tools for buying, selling, and auctioning Pokémon cards with real-time market data integration and secure transactions.
-
-> **Last Updated**: June 28, 2025
-
-## Features
-
-### Core Functionality
-- **User Management**
-  - Secure authentication with NextAuth.js, Google OAuth2, and Discord OAuth
-  - Role-based access control (Admin/User)
-  - Email verification & password reset
-  - User activity tracking and audit logs
-  - Wallet system with transaction history
-
-- **Pokemon Card Marketplace**
-  - Advanced card search with filters for sets, rarities, types, and more
-  - Real-time price tracking and historical price data
-  - Buy/Sell order management with secure transactions
-  - Watchlist and collection tracking
-  - Card condition grading (Mint, Near Mint, Played, etc.)
-
-- **### 🎯 Auction System
-  - **Real-time Bidding**: Live updates with WebSockets for instant bid notifications
-  - **Buy It Now (BIN)**: Instant purchase option at a premium price
-  - **Proxy Bidding**: Automatic bid increments up to your maximum
-  - **Bid History**: Complete audit trail of all bids
-  - **Escrow Service**: Secure payment handling for high-value transactions
-  - **Scheduling**: Set future start/end times for auctions
-  - **Reserve Prices**: Optional minimum price requirements
-  - **Admin Tools**: Comprehensive management interface
-  - **Automation**: Automatic winner selection and notifications
-  - **Anti-Sniping**: Automatic extension for last-minute bids
-  - **Bulk Listing**: List multiple cards in a single auction
-
-- **Admin Dashboard**
-  - User management
-  - Analytics and reporting
-  - System configuration
-  - Waitlist management
-
-## Technical Stack
-
-### Frontend
-- **Framework**: Next.js 13+ (App Router)
-- **UI**: React 19, Material-UI (MUI) v6, Tailwind CSS
-- **State Management**: React Query, Zustand
-- **Animation**: Framer Motion
-- **Form Handling**: React Hook Form with Zod validation
-- **Charts**: Chart.js for price history visualization
-
-### Backend
-- **Runtime**: Node.js 18+, TypeScript 5.0
-- **API**: Next.js API Routes
-- **Database**: MySQL with Prisma ORM
-- **Authentication**: NextAuth.js with multiple OAuth providers
-- **Real-time**: WebSockets for live auctions and bidding
-- **Payments**: Integration with Stripe for secure transactions
-
-### DevOps
-- ESLint + Prettier
-- TypeScript type checking
-- PM2 process management
-- GitHub Actions (CI/CD)
-
-## Getting Started
-
-### Prerequisites
-
-#### Required
-- **Node.js 18+** - JavaScript runtime
-- **MySQL 8.0+** - Database server
-- **npm 9+** or yarn 1.22+ - Package manager
-- **Python 3.8+** - For web scraping functionality
-
-#### Optional (for full functionality)
-- **Redis** - For real-time features and rate limiting
-- **Stripe account** - For payment processing
-- **Google OAuth credentials** - For authentication
-- **Discord OAuth credentials** - For authentication
-- **Chrome/Chromium browser** - For web scraping
-
-### Installation
-
-#### 1. Clone and Install Node Dependencies
-```bash
-git clone https://github.com/derekgallardo01/foil-alpha.git
-cd foil-alpha
-npm install
-```
-
-#### 2. Install Python Dependencies (for scraping)
-```bash
-pip install -r requirements.txt
-```
-
-#### 3. Database Setup
-
-**Create MySQL Database:**
-```sql
--- In MySQL Workbench or command line
-CREATE DATABASE foilalpha;  -- or use existing visitordb
-CREATE USER 'dev'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON foilalpha.* TO 'dev'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-**Set Environment Variables:**
-```bash
-# Create .env file in project root
-DATABASE_URL="mysql://dev:your_password@localhost:3306/foilalpha"
-NEXTAUTH_SECRET="your-random-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
-
-# Optional OAuth (for production)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret" 
-DISCORD_CLIENT_ID="your-discord-client-id"
-DISCORD_CLIENT_SECRET="your-discord-client-secret"
-STRIPE_SECRET_KEY="your-stripe-secret-key"
-```
-
-**Initialize Database:**
-```bash
-# Create tables and seed with sample data
-npx prisma migrate dev
-npm run seed
-```
-
-#### 4. Start Development Server
-```bash
-npm run dev
-```
-
-The application will be available at `http://localhost:3000`
-
-### Test Login Credentials
-After seeding, you can login with:
-- **Admin**: `admin@test.com` / `123`
-- **Users**: `collector1@test.com`, `collector2@test.com`, `trader@test.com` / `user123`
-
-## Features Overview
-
-### ✅ Core Functionality Working
-- **User Authentication** - Login/register with test accounts
-- **Dashboard** - Overview with trending cards, live auctions, price charts
-- **Marketplace** - Browse Pokemon cards with filtering
-- **Price Tracking** - Historical price data and charts
-- **User Collections** - Manage card collections
-- **Auction System** - Bid on cards and track auctions
-- **Admin Panel** - User management and system administration
-- **Web Scraping** - Live price updates from retailers (Target)
-
-### 🎯 Sample Data Included
-- 5 Pokemon cards (Charizard, Blastoise, Venusaur, Pikachu, Professor Oak)
-- 31 days of price history for each card (155 total entries)
-- User collections with cards for sale/auction
-- Active bids and auction data
-- User wallets with balances
-
-## Troubleshooting
-
-### Common Issues
-
-**Chart.js "category is not registered" Error:**
-- Fixed automatically with proper Chart.js component registration
-
-**Python Scraping ModuleNotFoundError:**
-```bash
-# Install missing Python packages
-pip install -r requirements.txt
-```
-
-**Database Connection Issues:**
-- Verify MySQL is running
-- Check DATABASE_URL in .env file
-- Ensure user has proper privileges
-
-**Prisma Migration Errors:**
-```bash
-# Reset and recreate database
-npx prisma migrate reset
-npm run seed
-```
-
-**Login 401 Errors:**
-- Verify you're using correct test credentials
-- Check if user exists: `SELECT * FROM users WHERE email='admin@test.com';`
-
-## Deployment
-
-### Production Build
-
-## Database Management
-
-### Backup Scripts
-The project includes several backup scripts for managing the database:
-{{ ... }}
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
----
-
-<div align="center">
-  Made with ❤️ by Foil Alpha Team
-</div>
-- API rate limiting
-- API documentation
-- Integration guides
-- Custom API solutions
-- API monitoring
-- API analytics
-- API security
-- API usage reports
-
-## Application Components
-
-### Pages
-- **Authentication**
-  - Login
-  - Register
-  - Forgot Password
-  - Reset Password
-  - Email Verification
-
-- **User Interface**
-  - Dashboard
-  - Settings
-  - Activation Success
-  - Protected Routes
-
-- **Admin Panel**
-  - User Management
-  - Activity Logs
-  - System Configuration
-
-- **Market Features**
-  - Product Search
-  - Price History
-  - Watchlist Management
-  - Task Management
-  - Chat System
-
-### API Endpoints
-
-#### Authentication
-- `/api/auth/login`
-- `/api/auth/register`
-- `/api/auth/forgot-password`
-- `/api/auth/reset-password`
-
-#### Auction Endpoints
-- `GET /api/auctions` - List active auctions with filters
-- `POST /api/auctions/bid` - Place a bid on an auction
-- `GET /api/auctions/:id` - Get auction details and bid history
-- `POST /api/auctions/buy-now` - Instant purchase with Buy It Now
-- `GET /api/user/auctions` - Get user's auction activity
-
-#### Admin Auction Endpoints
-- `GET /api/admin/auctions` - List all auctions (admin only)
-- `POST /api/admin/auctions/end` - End an auction early (admin only)
-- `GET /api/admin/auction-stats` - Auction statistics and metrics
-
-#### Market Data
-- `/api/products`
-- `/api/fetchProduct`
-- `/api/price-history`
-- `/api/scrapeTarget`
-
-#### User Management
-- `/api/users`
-- `/api/watchlist`
-- `/api/visitor-count`
-
-#### Waitlist Management
-- `/api/subscribe`: Handles waitlist signups with:
-  - Input validation (name and email required)
-  - Server-side email validation
-  - IP address tracking
-  - Timezone detection
-  - Detailed metadata collection (browser, OS, device info)
-  - Email notifications for new signups
-  - Duplicate entry handling
-  - Comprehensive logging
-  - Mailchimp integration for automatic newsletter subscription
-  - Success/failure status tracking for newsletter subscriptions
-
-#### Admin Features
-- `/api/admin/*`: Protected routes for admin functionality
-- `/api/admin/waitlist`: API endpoint for managing waitlist entries
-- `/api/tasks/*`: Task management endpoints
-- `/api/discord/*`: Discord integration endpoints
-
-#### System
-- `/api/protected/*`: Protected API endpoints
-- `/api/test/*`: Test endpoints
-
-## Production Configuration
-
-### Middleware Configuration
-The application includes middleware for production environment that:
-- Only allows the waitlist page (`/` or `/waitlist`) in production
-- Redirects all other routes to the waitlist page
-- Maintains API access for waitlist functionality
-- Allows admin routes in development mode only
-- Maintains NextAuth authentication for admin routes in development
-
-## Development Setup
-
-### Database Setup
-1. For local development:
-```bash
-mysql -u dev -p
-USE visitorDB;
-```
-
-2. For remote access:
-```bash
-mysql -h 157.230.211.144 -u dev -p
-USE visitorDB;
-```
-
-### Environment Variables
-Create a `.env` file with the following variables:
-```
-# Database
-DATABASE_URL="mysql://dev:[password]@localhost:3306/visitorDB"
-
-# Authentication
-NEXTAUTH_SECRET="your-secret-key"
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
-# Email
-EMAIL_USER="your-email"
-EMAIL_PASSWORD="your-email-password"
-
-# API Keys
-DISCORD_TOKEN="your-discord-token"
-```
-
-### Development Server
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-### Production Build
-```bash
-npm run build
-npm run start
-# or
-yarn build
-yarn start
-```
-
-## Security
-
-The application implements several security measures:
-
-- Password hashing with bcrypt
-- Secure session management with NextAuth.js
-- Rate limiting on API endpoints
-- Input validation and sanitization
-- Secure database connections
-- HTTPS proxy agent for API calls
-- Environment variable protection
-
-## Monitoring & Analytics
-
-- Google Analytics integration for user tracking
-- Activity logging system
-- Cron job monitoring
-- Error tracking and logging
-- Performance monitoring
-
-## Best Practices
-
-1. Always use environment variables for sensitive data
-2. Never commit database passwords or API keys
-3. Use HTTPS for all external API calls
-4. Regularly update dependencies
-5. Follow the project's coding standards
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Tech Stack
-
-- **Frontend**: Next.js 15, React 19, TypeScript
-- **UI Framework**: Material-UI (@mui/material)
-- **Database**: MySQL (via Prisma ORM)
-- **Authentication**: NextAuth.js
-- **Data Visualization**: Chart.js, @mui/x-data-grid
-- **API**: Axios
-- **Security**: bcrypt, bcryptjs
-- **Cron Jobs**: node-cron
-- **Email**: Nodemailer
-- **Scraping**: Puppeteer, Playwright
-- **Analytics**: Google Analytics
-
-## Database Details
-
-The application uses MySQL database with the following connection details:
-
-### Local Development
-- **Host**: localhost
-- **Database**: visitorDB
-- **Username**: dev
-- **Password**: [contact admin]
-- **Port**: 3306
-
-### Remote Production
-- **Host**: 157.230.211.144
-- **Database**: visitorDB
-- **Username**: dev
-- **Password**: [contact admin]
-- **Port**: 3306
-
-> **Note**: For security reasons, please contact me for the actual database password.
-
-## Database Structure
-
-The application uses MySQL with Prisma ORM. The main models include:
-
-- **User**: Stores user information, roles, and subscription status
-- **ActivityLog**: Tracks user activities and actions
-- **Waitlist**: Manages waitlist entries with:
-  - User information (name, email)
-  - Status tracking (PENDING)
-  - Source information (WEBSITE)
-  - Metadata including:
-    - Signup timestamp
-    - IP address
-    - Timezone
-    - Browser details (name, version)
-    - OS details (name, version)
-    - Device information (type, model)
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (latest LTS version)
-- MySQL Server
-- Git
-- npm or yarn
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/derekgallardo01/foil-alpha.git
-cd foil-alpha
-```
-
-2. Install dependencies:
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma)](https://www.prisma.io/)
+
+A trading-card (Pokémon) marketplace with fixed-price sales, live auctions with
+proxy bidding, a wallet with real-money deposits, and seller reputation. Built as
+a single Next.js app backed by MySQL.
+
+## Stack
+- **Next.js 14** (App Router) · **React 18** · **TypeScript**
+- **MUI v6** (component kit) + a shared in-house `components/ui/` kit
+- **Prisma 6** over **MySQL** (a legacy raw-`mysql2` pool still backs a few older routes)
+- **NextAuth v4** (credentials + optional OAuth providers)
+- **Stripe** (deposits via Checkout + webhooks; Connect payouts behind a flag)
+- Real-time via **Server-Sent Events** + an in-process event bus
+- **Vitest** for the pure-logic test suite
+- Deployed as a **single service** on Railway
+
+## What's built
+- **Collection** — import, browse (search + grid/list), and value tracking with cost-basis P/L and top gainers/losers.
+- **Marketplace** — fixed-price and auction listings with filters; per-card detail pages (`/card/[id]`) with price history and sale-history provenance.
+- **Auctions** — live bidding with **eBay-style proxy/auto-bid** (set a max, the system bids only as much as needed), escrow holds, reserve prices, and a buyer-side **My Bids** view with live winning/outbid status.
+- **Wallet** — Stripe deposits, escrow (`frozen_balance`) for active bids, withdrawals, and Stripe **Connect payouts** to sellers (feature-flagged). See [ARCHITECTURE.md](ARCHITECTURE.md) for the money model.
+- **Reputation** — buyers rate sellers after completed purchases; ratings surface on listings and seller profiles (`/seller/[id]`).
+- **Notifications** — bids/outbids/wins/sales with a real-time bell and a full history page; ⌘K command palette with card search.
+- **Admin** — user/listing/auction/commission management and manual auction control.
+
+> Real-time and the auction-settlement cron currently assume a **single running
+> instance** — see [ARCHITECTURE.md](ARCHITECTURE.md#scaling) before adding replicas.
+
+## Getting started
 ```bash
 npm install
-# or
-yarn install
+cp .env.example .env          # then fill in — see .env.example for what each var does
+npx prisma generate
+npm run dev                   # http://localhost:3000
+```
+You need a MySQL database; point both `DATABASE_URL` and the `MYSQL_*` vars at it.
+For a fresh database, apply the schema — see **[docs/MIGRATIONS.md](docs/MIGRATIONS.md)**.
+
+## Common scripts
+| Script | What it does |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm run build` / `npm start` | Production build / serve |
+| `npm test` | Vitest suite (pure `lib/` logic) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | `next lint` |
+| `npm run db:migrate:deploy` | Apply pending Prisma migrations (see docs/MIGRATIONS.md) |
+
+## Project layout
+```
+src/app/
+  api/            REST route handlers (Prisma; a few legacy mysql2 routes)
+  components/     feature components + the shared ui/ kit
+  lib/            domain logic (wallet-settlement, bid-resolution, reviews, events, format, …) + tests
+  <route>/        App Router pages (marketplace, collection, wallet, card/[id], seller/[id], admin/…)
+  instrumentation.ts   in-app cron that drives auction settlement
+prisma/schema.prisma   data model (source of truth)
+docs/                  ARCHITECTURE.md, MIGRATIONS.md
 ```
 
-3. Set up environment variables:
-Create a `.env` file in the root directory with the following variables:
-```
-DATABASE_URL="mysql://user:password@localhost:3306/foilalpha"
-NEXTAUTH_SECRET="your-secret-key"
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-```
-
-### Development Server
-
-Run the development server with Turbopack:
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-The development server will start at `http://localhost:3000`
-
-### Production Build
-
-1. Build the application:
-```bash
-npm run build
-# or
-yarn build
-```
-
-2. Start the production server:
-```bash
-npm run start
-# or
-yarn start
-```
-
-The production server will run on `http://localhost:3000` by default
-
-## Project Structure
-
-```
-foil-alpha/
-├── src/
-│   └── app/          # Next.js app directory
-├── prisma/           # Database schema and migrations
-├── public/           # Static assets
-└── scrape_target.py  # Market data scraping script
-```
-
-## Security
-
-- Uses bcrypt for password hashing
-- Implements NextAuth.js for secure authentication
-- Includes rate limiting and input validation
-- Uses HTTPS proxy agent for secure API calls
-
-## Monitoring
-
-- Google Analytics integration for user tracking
-- Activity logging system
-- Regular cron jobs for maintenance tasks
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+## Documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — the money/escrow model, the single-instance real-time + cron design, and the dual data layer.
+- **[docs/MIGRATIONS.md](docs/MIGRATIONS.md)** — how schema changes are made and applied.
+- **[.env.example](.env.example)** — every environment variable, grouped and annotated.
 
 ## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT.
