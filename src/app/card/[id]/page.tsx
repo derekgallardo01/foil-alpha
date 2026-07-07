@@ -35,6 +35,7 @@ interface Listing {
   reserve_price: number | null;
   auction_end: string | null;
   seller: string;
+  seller_rating: { average: number; count: number } | null;
   current_bid: number | null;
   bid_count: number;
 }
@@ -195,6 +196,12 @@ export default function CardDetailPage() {
                             <TableRow key={l.user_card_id} hover>
                               <TableCell>
                                 {l.seller}
+                                {l.seller_rating && l.seller_rating.count > 0 ? (
+                                  <Box component="span" sx={{ ml: 1, color: "warning.main", fontSize: 12, whiteSpace: "nowrap" }}>
+                                    ★ {l.seller_rating.average}
+                                    <Box component="span" sx={{ color: "text.secondary" }}> ({l.seller_rating.count})</Box>
+                                  </Box>
+                                ) : null}
                                 {l.condition ? (
                                   <Box component="span" sx={{ color: "text.secondary", ml: 1, fontSize: 12 }}>
                                     {l.condition}

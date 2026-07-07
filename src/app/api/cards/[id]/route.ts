@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
+import { getSellerRatings } from "../../../lib/reviews";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest) {
       : [];
     const userById = new Map(users.map((u) => [u.id, u]));
     const nameOf = (uid: number) => userById.get(uid)?.name ?? "Unknown";
+    const sellerRatings = await getSellerRatings(listings.map((l) => l.owner_id));
 
     const highest = new Map<number, number>();
     const counts = new Map<number, number>();
@@ -94,6 +96,7 @@ export async function GET(request: NextRequest) {
         reserve_price: l.reserve_price != null ? Number(l.reserve_price) : null,
         auction_end: l.auction_end,
         seller: nameOf(l.owner_id),
+        seller_rating: sellerRatings.get(l.owner_id) ?? null,
         current_bid: highest.get(l.id) ?? null,
         bid_count: counts.get(l.id) ?? 0,
       })),
