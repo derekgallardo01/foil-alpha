@@ -27,6 +27,7 @@ import { useRouter } from 'next/navigation';
 import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
+import { getConditionColor } from "../../lib/rarity";
 
 interface LiveAuction {
     id: number;
@@ -93,18 +94,6 @@ export default function LiveAuctionTable({
     const formatPrice = (price: number | null) => {
         if (!price) return 'N/A';
         return `$${price.toFixed(2)}`;
-    };
-
-    const getConditionColor = (condition: string | null) => {
-        const colors: Record<string, string> = {
-            'Mint': '#4CAF50',
-            'Near Mint': '#8BC34A',
-            'Excellent': '#FFC107',
-            'Good': '#FF9800',
-            'Fair': '#FF5722',
-            'Poor': '#F44336'
-        };
-        return colors[condition || ''] || '#757575';
     };
 
     const getTimeColor = (timeRemaining: number) => {

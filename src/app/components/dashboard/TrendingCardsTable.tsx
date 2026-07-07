@@ -41,6 +41,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@mui/material/styles';
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
+import { getRarityHex } from "../../lib/rarity";
 
 // Register ChartJS components
 ChartJS.register(
@@ -127,21 +128,6 @@ export default function TrendingCardsTable({
         if (value === null || value === undefined) return '0%';
         const formatted = Math.abs(value).toFixed(2);
         return value > 0 ? `+${formatted}%` : `-${formatted}%`;
-    };
-
-    const getRarityColor = (rarity: string) => {
-        const colors: Record<string, string> = {
-            'Common': '#757575',
-            'Uncommon': '#66BB6A',
-            'Rare': '#42A5F5',
-            'Rare Holo': '#AB47BC',
-            'Ultra Rare': '#FF7043',
-            'Secret Rare': '#EF5350',
-            'VMAX': '#9B5Cff',
-            'VSTAR': '#FFD54F',
-            'Promo': '#9C27B0'
-        };
-        return colors[rarity] || '#757575';
     };
 
     const getSparklineData = (sparkline: TrendingCard['sparkline']) => {
@@ -381,7 +367,7 @@ export default function TrendingCardsTable({
                                             label={card.rarity}
                                             size="small"
                                             sx={{
-                                                bgcolor: getRarityColor(card.rarity),
+                                                bgcolor: getRarityHex(card.rarity),
                                                 color: 'white',
                                                 fontWeight: 500
                                             }}

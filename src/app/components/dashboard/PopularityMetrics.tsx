@@ -29,6 +29,7 @@ import {
     LocalOffer
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import { getRarityHex } from '../../lib/rarity';
 
 interface PopularCard {
     id: number;
@@ -99,21 +100,6 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
         if (score > 500) return theme.palette.signal.main;
         if (score > 100) return theme.palette.warning.main;
         return theme.palette.success.main;
-    };
-
-    const getRarityColor = (rarity: string) => {
-        const colors: Record<string, string> = {
-            'Common': '#757575',
-            'Uncommon': '#66BB6A',
-            'Rare': '#42A5F5',
-            'Rare Holo': '#AB47BC',
-            'Ultra Rare': '#FF7043',
-            'Secret Rare': '#EF5350',
-            'VMAX': '#9B5Cff',
-            'VSTAR': '#FFD54F',
-            'Promo': '#9C27B0'
-        };
-        return colors[rarity] || '#757575';
     };
 
     const getPlaceholderImage = () => "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='56' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' fill='%23333' rx='4'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='%23666' font-size='10'%3E?%3C/text%3E%3C/svg%3E";
@@ -238,7 +224,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                         label={topCard.rarity}
                                                         size="small"
                                                         sx={{
-                                                            bgcolor: getRarityColor(topCard.rarity),
+                                                            bgcolor: getRarityHex(topCard.rarity),
                                                             color: 'white',
                                                             fontSize: '0.75rem'
                                                         }}
@@ -341,7 +327,7 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
                                                 size="small"
                                                 sx={{
                                                     height: 20,
-                                                    bgcolor: getRarityColor(card.rarity),
+                                                    bgcolor: getRarityHex(card.rarity),
                                                     color: 'white',
                                                     fontSize: '0.7rem'
                                                 }}
