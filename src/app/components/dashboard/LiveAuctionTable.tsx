@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Paper,
@@ -27,6 +27,7 @@ import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
 import { useEventStream } from "../../lib/useEventStream";
 import { formatPriceNA as formatPrice } from "../../lib/format";
+import { useDashboardResource } from "../../lib/useDashboardResource";
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
 import { getConditionColor } from "../../lib/rarity";
 import WidgetHeader from "../ui/WidgetHeader";
@@ -62,40 +63,16 @@ export default function LiveAuctionTable({
     autoRefresh = true
 }: LiveAuctionTableProps) {
     const router = useRouter();
-    const [auctions, setAuctions] = useState<LiveAuction[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
     const [sortBy, setSortBy] = useState<'ending_soon' | 'most_bids' | 'highest_price'>('ending_soon');
 
-    const fetchAuctions = async () => {
-        setError(false);
-        try {
-            const response = await fetch(`/api/dashboard/live-auctions?limit=${limit}&sortBy=${sortBy}`);
-            const data = await response.json();
-
-            if (!response.ok || !data.success) throw new Error(data.error || 'Failed to load auctions');
-            setAuctions(data.data);
-        } catch (error) {
-            console.error('Error fetching live auctions:', error);
-            setError(true);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchAuctions();
-
-        if (autoRefresh) {
-            // Real-time push is primary (see below); this is a slow safety net.
-            const interval = setInterval(fetchAuctions, 60000);
-            return () => clearInterval(interval);
-        }
-    }, [sortBy, autoRefresh]);
+    const { data: auctions, loading, error, refetch } = useDashboardResource<LiveAuction>(
+        `/api/dashboard/live-auctions?limit=${limit}&sortBy=${sortBy}`,
+        { deps: [sortBy], refreshMs: autoRefresh ? 60000 : undefined, loadingMode: "initial" }
+    );
 
     // Live updates: refetch when a bid lands or an auction ends.
     useEventStream((e) => {
-        if (e.type === 'bid' || e.type === 'auction_ended') fetchAuctions();
+        if (e.type === 'bid' || e.type === 'auction_ended') refetch();
     });
 
 
@@ -171,7 +148,7 @@ export default function LiveAuctionTable({
                         >
                             Highest Price
                         </Button>
-                        <IconButton size="small" onClick={fetchAuctions} sx={{ color: 'primary.main' }}>
+                        <IconButton size="small" onClick={refetch} sx={{ color: 'primary.main' }}>
                             <Refresh />
                         </IconButton>
                     </>
@@ -197,7 +174,7 @@ export default function LiveAuctionTable({
                         ) : error ? (
                             <TableRow>
                                 <TableCell colSpan={7}>
-                                    <ErrorState variant="inline" message="Couldn't load live auctions." onRetry={fetchAuctions} />
+                                    <ErrorState variant="inline" message="Couldn't load live auctions." onRetry={refetch} />
                                 </TableCell>
                             </TableRow>
                         ) : auctions.length === 0 ? (
