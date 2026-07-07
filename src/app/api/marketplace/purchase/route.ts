@@ -151,6 +151,18 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
       throw new Error(`Insufficient funds. Required: $${cardPrice.toFixed(2)}, Available: $${available.toFixed(2)}`);
     }
 
+    // Atomically CLAIM the card before any money moves. Only one concurrent
+    // buy-now can flip is_sold false->true (the WHERE re-checks under a row lock),
+    // so a card can never be sold twice / a buyer double-charged. The ownership
+    // transfer below finalizes it.
+    const claim = await tx.userCard.updateMany({
+      where: { id: userCardId, is_for_sale: true, is_sold: false },
+      data: { is_sold: true },
+    });
+    if (claim.count !== 1) {
+      throw new Error('This card was just purchased by someone else');
+    }
+
     // Get seller's wallet
     let sellerWallet = await tx.userWallet.findUnique({
       where: { user_id: userCard.owner_id }
