@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { getRarityHex } from '../../lib/rarity';
+import WidgetHeader from '../ui/WidgetHeader';
 
 interface PopularCard {
     id: number;
@@ -149,24 +150,23 @@ export default function PopularityMetrics({ limit = 5 }: PopularityMetricsProps)
 
     return (
         <Paper variant="outlined" sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Whatshot sx={{ color: 'primary.main' }} />
-                    Most Popular Cards
-                </Typography>
-
-                <ToggleButtonGroup
-                    value={period}
-                    exclusive
-                    onChange={(e, value) => value && setPeriod(value)}
-                    size="small"
-                    sx={toggleSx}
-                >
-                    <ToggleButton value="24h">24H</ToggleButton>
-                    <ToggleButton value="7d">7D</ToggleButton>
-                    <ToggleButton value="30d">30D</ToggleButton>
-                </ToggleButtonGroup>
-            </Box>
+            <WidgetHeader
+                icon={<Whatshot sx={{ color: 'primary.main' }} />}
+                title="Most Popular Cards"
+                actions={
+                    <ToggleButtonGroup
+                        value={period}
+                        exclusive
+                        onChange={(e, value) => value && setPeriod(value)}
+                        size="small"
+                        sx={toggleSx}
+                    >
+                        <ToggleButton value="24h">24H</ToggleButton>
+                        <ToggleButton value="7d">7D</ToggleButton>
+                        <ToggleButton value="30d">30D</ToggleButton>
+                    </ToggleButtonGroup>
+                }
+            />
 
             {popularCards.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>

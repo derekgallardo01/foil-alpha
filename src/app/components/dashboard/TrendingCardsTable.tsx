@@ -42,6 +42,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@mui/material/styles';
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
 import { getRarityHex } from "../../lib/rarity";
+import WidgetHeader from "../ui/WidgetHeader";
 
 // Register ChartJS components
 ChartJS.register(
@@ -185,90 +186,89 @@ export default function TrendingCardsTable({
             border: 1,
             borderColor: 'divider'
         }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TrendingUp sx={{ color: 'primary.main' }} />
-                    Trending Cards
-                </Typography>
-
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <ToggleButtonGroup
-                        value={trendType}
-                        exclusive
-                        onChange={(e, value) => value && setTrendType(value)}
-                        size="small"
-                        sx={{
-                            '& .MuiToggleButton-root': {
-                                color: 'text.secondary',
-                                borderColor: 'divider',
-                                '&.Mui-selected': {
-                                    color: 'primary.contrastText',
-                                    bgcolor: 'primary.main',
-                                    borderColor: 'primary.main',
+            <WidgetHeader
+                icon={<TrendingUp sx={{ color: 'primary.main' }} />}
+                title="Trending Cards"
+                actions={
+                    <>
+                        <ToggleButtonGroup
+                            value={trendType}
+                            exclusive
+                            onChange={(e, value) => value && setTrendType(value)}
+                            size="small"
+                            sx={{
+                                '& .MuiToggleButton-root': {
+                                    color: 'text.secondary',
+                                    borderColor: 'divider',
+                                    '&.Mui-selected': {
+                                        color: 'primary.contrastText',
+                                        bgcolor: 'primary.main',
+                                        borderColor: 'primary.main',
+                                        '&:hover': {
+                                            bgcolor: 'primary.main'
+                                        }
+                                    },
                                     '&:hover': {
-                                        bgcolor: 'primary.main'
+                                        bgcolor: 'action.hover'
                                     }
-                                },
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
                                 }
-                            }
-                        }}
-                    >
-                        <ToggleButton value="price">
-                            <Tooltip title="Price Change">
-                                <MonetizationOn />
-                            </Tooltip>
-                        </ToggleButton>
-                        <ToggleButton value="volume">
-                            <Tooltip title="Trading Volume">
-                                <ShowChart />
-                            </Tooltip>
-                        </ToggleButton>
-                        <ToggleButton value="popularity">
-                            <Tooltip title="Popularity">
-                                <Visibility />
-                            </Tooltip>
-                        </ToggleButton>
-                    </ToggleButtonGroup>
+                            }}
+                        >
+                            <ToggleButton value="price">
+                                <Tooltip title="Price Change">
+                                    <MonetizationOn />
+                                </Tooltip>
+                            </ToggleButton>
+                            <ToggleButton value="volume">
+                                <Tooltip title="Trading Volume">
+                                    <ShowChart />
+                                </Tooltip>
+                            </ToggleButton>
+                            <ToggleButton value="popularity">
+                                <Tooltip title="Popularity">
+                                    <Visibility />
+                                </Tooltip>
+                            </ToggleButton>
+                        </ToggleButtonGroup>
 
-                    <ToggleButtonGroup
-                        value={period}
-                        exclusive
-                        onChange={(e, value) => value && setPeriod(value)}
-                        size="small"
-                        sx={{
-                            '& .MuiToggleButton-root': {
-                                color: 'text.secondary',
-                                borderColor: 'divider',
-                                '&.Mui-selected': {
-                                    color: 'primary.contrastText',
-                                    bgcolor: 'primary.main',
-                                    borderColor: 'primary.main',
+                        <ToggleButtonGroup
+                            value={period}
+                            exclusive
+                            onChange={(e, value) => value && setPeriod(value)}
+                            size="small"
+                            sx={{
+                                '& .MuiToggleButton-root': {
+                                    color: 'text.secondary',
+                                    borderColor: 'divider',
+                                    '&.Mui-selected': {
+                                        color: 'primary.contrastText',
+                                        bgcolor: 'primary.main',
+                                        borderColor: 'primary.main',
+                                        '&:hover': {
+                                            bgcolor: 'primary.main'
+                                        }
+                                    },
                                     '&:hover': {
-                                        bgcolor: 'primary.main'
+                                        bgcolor: 'action.hover'
                                     }
-                                },
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
                                 }
-                            }
-                        }}
-                    >
-                        <ToggleButton value="24h">24H</ToggleButton>
-                        <ToggleButton value="7d">7D</ToggleButton>
-                        <ToggleButton value="30d">30D</ToggleButton>
-                    </ToggleButtonGroup>
+                            }}
+                        >
+                            <ToggleButton value="24h">24H</ToggleButton>
+                            <ToggleButton value="7d">7D</ToggleButton>
+                            <ToggleButton value="30d">30D</ToggleButton>
+                        </ToggleButtonGroup>
 
-                    <IconButton
-                        size="small"
-                        onClick={fetchTrendingCards}
-                        sx={{ color: 'primary.main' }}
-                    >
-                        <Refresh />
-                    </IconButton>
-                </Box>
-            </Box>
+                        <IconButton
+                            size="small"
+                            onClick={fetchTrendingCards}
+                            sx={{ color: 'primary.main' }}
+                        >
+                            <Refresh />
+                        </IconButton>
+                    </>
+                }
+            />
 
             <TableContainer sx={{
                 maxHeight: height - 120,

@@ -26,6 +26,7 @@ import {
     Refresh
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import WidgetHeader from '../ui/WidgetHeader';
 
 interface SetRelease {
     id: string;
@@ -155,34 +156,33 @@ export default function NewReleasesCarousel({ limit = 10 }: NewReleasesCarouselP
 
     return (
         <Paper variant="outlined" sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <NewReleases sx={{ color: 'primary.main' }} />
-                    New Releases & Pre-orders
-                </Typography>
+            <WidgetHeader
+                icon={<NewReleases sx={{ color: 'primary.main' }} />}
+                title="New Releases & Pre-orders"
+                actions={
+                    <>
+                        <ToggleButtonGroup
+                            value={releaseType}
+                            exclusive
+                            onChange={(e, value) => value && setReleaseType(value)}
+                            size="small"
+                            sx={toggleSx}
+                        >
+                            <ToggleButton value="recent">Recent</ToggleButton>
+                            <ToggleButton value="upcoming">Upcoming</ToggleButton>
+                            <ToggleButton value="popular">Popular</ToggleButton>
+                        </ToggleButtonGroup>
 
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <ToggleButtonGroup
-                        value={releaseType}
-                        exclusive
-                        onChange={(e, value) => value && setReleaseType(value)}
-                        size="small"
-                        sx={toggleSx}
-                    >
-                        <ToggleButton value="recent">Recent</ToggleButton>
-                        <ToggleButton value="upcoming">Upcoming</ToggleButton>
-                        <ToggleButton value="popular">Popular</ToggleButton>
-                    </ToggleButtonGroup>
-
-                    <IconButton
-                        size="small"
-                        onClick={fetchReleases}
-                        sx={{ color: 'primary.main' }}
-                    >
-                        <Refresh />
-                    </IconButton>
-                </Box>
-            </Box>
+                        <IconButton
+                            size="small"
+                            onClick={fetchReleases}
+                            sx={{ color: 'primary.main' }}
+                        >
+                            <Refresh />
+                        </IconButton>
+                    </>
+                }
+            />
 
             {error ? (
                 <Typography color="error" align="center" sx={{ py: 2 }}>

@@ -28,6 +28,7 @@ import ErrorState from '../ui/ErrorState';
 import { TableRowsSkeleton } from '../ui/Skeletons';
 import { hideBelowMd, hideBelowSm } from "../../lib/responsive";
 import { getConditionColor } from "../../lib/rarity";
+import WidgetHeader from "../ui/WidgetHeader";
 
 interface LiveAuction {
     id: number;
@@ -126,50 +127,53 @@ export default function LiveAuctionTable({
 
     return (
         <Paper variant="outlined" sx={{ p: 3, height, border: 1, borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Gavel sx={{ color: 'primary.main' }} />
-                    Live Auctions
-                    <Chip
-                        label="LIVE"
-                        size="small"
-                        color="error"
-                        sx={{
-                            animation: 'pulse 2s infinite'
-                        }}
-                    />
-                </Typography>
-
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <Button
-                        size="small"
-                        color="primary"
-                        variant={sortBy === 'ending_soon' ? 'contained' : 'outlined'}
-                        onClick={() => setSortBy('ending_soon')}
-                    >
-                        Ending Soon
-                    </Button>
-                    <Button
-                        size="small"
-                        color="primary"
-                        variant={sortBy === 'most_bids' ? 'contained' : 'outlined'}
-                        onClick={() => setSortBy('most_bids')}
-                    >
-                        Most Bids
-                    </Button>
-                    <Button
-                        size="small"
-                        color="primary"
-                        variant={sortBy === 'highest_price' ? 'contained' : 'outlined'}
-                        onClick={() => setSortBy('highest_price')}
-                    >
-                        Highest Price
-                    </Button>
-                    <IconButton size="small" onClick={fetchAuctions} sx={{ color: 'primary.main' }}>
-                        <Refresh />
-                    </IconButton>
-                </Box>
-            </Box>
+            <WidgetHeader
+                icon={<Gavel sx={{ color: 'primary.main' }} />}
+                title={
+                    <>
+                        Live Auctions
+                        <Chip
+                            label="LIVE"
+                            size="small"
+                            color="error"
+                            sx={{
+                                animation: 'pulse 2s infinite'
+                            }}
+                        />
+                    </>
+                }
+                actions={
+                    <>
+                        <Button
+                            size="small"
+                            color="primary"
+                            variant={sortBy === 'ending_soon' ? 'contained' : 'outlined'}
+                            onClick={() => setSortBy('ending_soon')}
+                        >
+                            Ending Soon
+                        </Button>
+                        <Button
+                            size="small"
+                            color="primary"
+                            variant={sortBy === 'most_bids' ? 'contained' : 'outlined'}
+                            onClick={() => setSortBy('most_bids')}
+                        >
+                            Most Bids
+                        </Button>
+                        <Button
+                            size="small"
+                            color="primary"
+                            variant={sortBy === 'highest_price' ? 'contained' : 'outlined'}
+                            onClick={() => setSortBy('highest_price')}
+                        >
+                            Highest Price
+                        </Button>
+                        <IconButton size="small" onClick={fetchAuctions} sx={{ color: 'primary.main' }}>
+                            <Refresh />
+                        </IconButton>
+                    </>
+                }
+            />
 
             <TableContainer sx={{ maxHeight: height - 120 }}>
                 <Table stickyHeader size="small">
