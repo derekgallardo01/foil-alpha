@@ -95,6 +95,7 @@ export async function GET(request: NextRequest) {
         fixed_price: l.fixed_price != null ? Number(l.fixed_price) : null,
         reserve_price: l.reserve_price != null ? Number(l.reserve_price) : null,
         auction_end: l.auction_end,
+        seller_id: l.owner_id,
         seller: nameOf(l.owner_id),
         seller_rating: sellerRatings.get(l.owner_id) ?? null,
         current_bid: highest.get(l.id) ?? null,
