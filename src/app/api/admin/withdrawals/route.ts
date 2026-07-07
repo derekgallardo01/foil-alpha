@@ -67,6 +67,21 @@ async function runPayout(
 
   const note = (extra: string) => [priorNote, extra].filter(Boolean).join(" · ").slice(0, 255);
   try {
+    // Guard against a duplicate transfer beyond the ~24h idempotency-key window
+    // (a retry days after a lost-response success): if a transfer for this
+    // withdrawal already exists on the account, reuse it instead of re-sending.
+    const existing = await stripe.transfers.list({ destination: acctId, limit: 100 });
+    const already = existing.data.find((t) => t.metadata?.withdrawalId === String(withdrawalId));
+    if (already) {
+      payout.method = "stripe";
+      payout.transfer_id = already.id;
+      await prisma.walletWithdrawal.update({
+        where: { id: withdrawalId },
+        data: { admin_note: note(`Stripe transfer ${already.id}`) },
+      });
+      return payout;
+    }
+
     const transfer = await stripe.transfers.create(
       {
         amount: Math.round(amount * 100),
@@ -219,7 +234,9 @@ export async function POST(req: NextRequest) {
     // if the transfer failed, tell them it's approved and processing, not paid.
     try {
       const paid = result.status === "PAID";
-      const payoutSent = payout.method !== "stripe" || !!payout.transfer_id;
+      // "Sent" = manual payout (admin handles it) OR the Stripe transfer went
+      // through. A transfer_error means it did NOT send.
+      const payoutSent = !payout.transfer_error;
       if (paid && payoutSent) {
         await createNotification({
           user_id: result.user_id,
