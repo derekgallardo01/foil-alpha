@@ -70,6 +70,18 @@ export async function POST(req: NextRequest) {
       if (w.status !== "PENDING") throw new Error(`Request is already ${w.status.toLowerCase()}.`);
 
       const amount = Number(w.amount);
+      const newStatus = action === "pay" ? "PAID" : "REJECTED";
+
+      // Conditional transition is the concurrency gate: only ONE caller wins the
+      // PENDING→(PAID|REJECTED) flip, so a request can't be paid twice, or paid
+      // AND rejected, or paid while the user cancels — the wallet mutation below
+      // runs at most once.
+      const transitioned = await tx.walletWithdrawal.updateMany({
+        where: { id, status: "PENDING" },
+        data: { status: newStatus, admin_id: admin.id, admin_note: note, processed_at: new Date() },
+      });
+      if (transitioned.count !== 1) throw new Error("Request is no longer pending.");
+
       const wallet = await tx.userWallet.findUnique({ where: { user_id: w.user_id } });
       if (!wallet) throw new Error("User wallet not found.");
 
@@ -96,21 +108,15 @@ export async function POST(req: NextRequest) {
             admin_id: admin.id,
           },
         });
-        return tx.walletWithdrawal.update({
-          where: { id },
-          data: { status: "PAID", admin_id: admin.id, admin_note: note, processed_at: new Date() },
+      } else {
+        // reject: release the hold, balance unchanged.
+        await tx.userWallet.update({
+          where: { user_id: w.user_id },
+          data: { frozen_balance: { decrement: amount } },
         });
       }
 
-      // reject: release the hold, balance unchanged.
-      await tx.userWallet.update({
-        where: { user_id: w.user_id },
-        data: { frozen_balance: { decrement: amount } },
-      });
-      return tx.walletWithdrawal.update({
-        where: { id },
-        data: { status: "REJECTED", admin_id: admin.id, admin_note: note, processed_at: new Date() },
-      });
+      return { ...w, status: newStatus };
     });
 
     // Notify the requester (best-effort).

@@ -55,21 +55,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const withdrawal = await prisma.$transaction(async (tx) => {
-      const wallet = await tx.userWallet.findUnique({ where: { user_id: userId } });
-      if (!wallet) throw new Error("Wallet not found.");
-
-      const available = Number(wallet.balance) - Number(wallet.frozen_balance);
-      if (available < amount) {
-        throw new Error(
-          `Insufficient available balance. Available: $${available.toFixed(2)}, requested: $${amount.toFixed(2)}.`
-        );
+      // Atomic check-and-freeze: the WHERE clause re-evaluates availability at
+      // write time under a row lock, so concurrent requests (or a request racing
+      // a bid) can't oversubscribe the balance. A blind read-then-increment would.
+      const affected = await tx.$executeRaw`
+        UPDATE user_wallets
+        SET frozen_balance = frozen_balance + ${amount}
+        WHERE user_id = ${userId} AND (balance - frozen_balance) >= ${amount}`;
+      if (affected !== 1) {
+        throw new Error("Insufficient available balance for this withdrawal.");
       }
-
-      // Hold the requested amount in escrow so it can't be spent while pending.
-      await tx.userWallet.update({
-        where: { user_id: userId },
-        data: { frozen_balance: { increment: amount } },
-      });
 
       return tx.walletWithdrawal.create({
         data: { user_id: userId, amount, method, status: "PENDING" },
@@ -103,15 +98,19 @@ export async function DELETE(req: NextRequest) {
     await prisma.$transaction(async (tx) => {
       const w = await tx.walletWithdrawal.findUnique({ where: { id } });
       if (!w || w.user_id !== userId) throw new Error("Withdrawal not found.");
-      if (w.status !== "PENDING") throw new Error("Only pending requests can be cancelled.");
+
+      // Conditional transition is the concurrency gate: only ONE caller can flip
+      // PENDING→CANCELLED, so the escrow hold is released exactly once even if two
+      // cancels (or a cancel and an admin pay) race.
+      const transitioned = await tx.walletWithdrawal.updateMany({
+        where: { id, user_id: userId, status: "PENDING" },
+        data: { status: "CANCELLED", processed_at: new Date() },
+      });
+      if (transitioned.count !== 1) throw new Error("Only pending requests can be cancelled.");
 
       await tx.userWallet.update({
         where: { user_id: userId },
         data: { frozen_balance: { decrement: Number(w.amount) } },
-      });
-      await tx.walletWithdrawal.update({
-        where: { id },
-        data: { status: "CANCELLED", processed_at: new Date() },
       });
     });
     return NextResponse.json({ success: true });
