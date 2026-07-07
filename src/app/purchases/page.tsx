@@ -22,8 +22,11 @@ import {
   DialogActions,
   Divider,
   Typography,
+  Rating,
+  TextField,
 } from "@mui/material";
-import { ReceiptLong as ReceiptIcon, Print as PrintIcon } from "@mui/icons-material";
+import { ReceiptLong as ReceiptIcon, Print as PrintIcon, StarRate as StarIcon } from "@mui/icons-material";
+import { toast } from "react-toastify";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import EmptyState from "../components/ui/EmptyState";
@@ -45,6 +48,7 @@ interface Purchase {
   purchased_at: string;
   created_at: string;
   notes: string | null;
+  reviewed: boolean;
 }
 
 const STATUS: Record<string, { label: string; color: "success" | "warning" | "error" | "default" }> = {
@@ -61,10 +65,44 @@ export default function PurchasesPage() {
   useRequireAuth();
   const router = useRouter();
   const [receipt, setReceipt] = useState<Purchase | null>(null);
+  const [rateTarget, setRateTarget] = useState<Purchase | null>(null);
+  const [stars, setStars] = useState<number | null>(5);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const { data: purchases, loading, error, refetch } = useDashboardResource<Purchase>("/api/purchases", { deps: [] });
 
   const completed = purchases.filter((p) => p.status === "COMPLETED").length;
+
+  const openRate = (p: Purchase) => {
+    setRateTarget(p);
+    setStars(5);
+    setComment("");
+  };
+
+  const submitReview = async () => {
+    if (!rateTarget || !stars) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction_id: rateTarget.id, rating: stars, comment }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Couldn't submit review.");
+        return;
+      }
+      toast.success("Thanks for rating your seller!");
+      setRateTarget(null);
+      refetch();
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -144,14 +182,24 @@ export default function PurchasesPage() {
                           </TableCell>
                           <TableCell sx={hideBelowSm}>{formatDateTime(p.created_at)}</TableCell>
                           <TableCell align="right">
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              disabled={p.status !== "COMPLETED"}
-                              onClick={() => setReceipt(p)}
-                            >
-                              Receipt
-                            </Button>
+                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", alignItems: "center" }}>
+                              {p.status === "COMPLETED" &&
+                                (p.reviewed ? (
+                                  <Chip size="small" icon={<StarIcon sx={{ fontSize: 15 }} />} label="Rated" variant="outlined" />
+                                ) : (
+                                  <Button size="small" variant="text" startIcon={<StarIcon />} onClick={() => openRate(p)}>
+                                    Rate
+                                  </Button>
+                                ))}
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                disabled={p.status !== "COMPLETED"}
+                                onClick={() => setReceipt(p)}
+                              >
+                                Receipt
+                              </Button>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       );
@@ -209,6 +257,33 @@ export default function PurchasesPage() {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      <Dialog open={!!rateTarget} onClose={() => setRateTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Rate {rateTarget?.seller}</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            How was your purchase of {rateTarget?.card?.name ?? "this card"}?
+          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+            <Rating value={stars} onChange={(_e, v) => setStars(v)} size="large" />
+          </Box>
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="Add a comment (optional)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value.slice(0, 500))}
+            inputProps={{ maxLength: 500 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRateTarget(null)}>Cancel</Button>
+          <Button variant="contained" onClick={submitReview} disabled={submitting || !stars}>
+            {submitting ? "Submitting…" : "Submit rating"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </AppShell>
   );

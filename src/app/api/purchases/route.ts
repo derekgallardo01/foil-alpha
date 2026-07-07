@@ -42,6 +42,16 @@ export async function GET() {
     const cardById = new Map(cards.map((c) => [c.id, c]));
     const sellerById = new Map(sellers.map((s) => [s.id, s]));
 
+    // Which of these purchases the buyer has already reviewed.
+    const reviewed = new Set(
+      (
+        await prisma.review.findMany({
+          where: { transaction_id: { in: transactions.map((t) => t.id) } },
+          select: { transaction_id: true },
+        })
+      ).map((r) => r.transaction_id)
+    );
+
     const data = transactions.map((t) => {
       const uc = ucById.get(t.user_card_id);
       const card = uc ? cardById.get(uc.card_id) ?? null : null;
@@ -58,6 +68,7 @@ export async function GET() {
         purchased_at: t.updated_at,
         created_at: t.created_at,
         notes: t.notes,
+        reviewed: reviewed.has(t.id),
       };
     });
 
