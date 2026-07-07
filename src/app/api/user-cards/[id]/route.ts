@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { releaseBidHolds } from '../../../lib/wallet-settlement';
+
+/**
+ * Deactivate every active bid on an auction AND release each bidder's escrow
+ * hold, atomically and under the same per-auction lock the bid endpoint uses.
+ * Without the release, changing/unlisting a card with live bids would strand
+ * those bidders' frozen funds forever.
+ */
+async function cancelBidsAndReleaseHolds(userCardId: number) {
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM user_cards WHERE id = ${userCardId} FOR UPDATE`;
+    await releaseBidHolds(tx, { auctionId: userCardId });
+    await tx.bid.updateMany({
+      where: { userCardId, is_active: true },
+      data: { is_active: false },
+    });
+  });
+}
 
 // Interface for update data
 interface UpdateCardData {
@@ -224,16 +242,8 @@ export async function PUT(
         updateData.fixed_price = null;
         updateData.auction_end = auctionEnd;
 
-        // Cancel any existing bids if re-listing
-        await prisma.bid.updateMany({
-          where: {
-            userCardId: userCardId,
-            is_active: true,
-          },
-          data: {
-            is_active: false,
-          },
-        });
+        // Re-listing clears the old auction's bids — release their escrow first.
+        await cancelBidsAndReleaseHolds(userCardId);
       }
     } else {
       // Not for sale - clear sale data
@@ -242,16 +252,8 @@ export async function PUT(
       updateData.reserve_price = null;
       updateData.auction_end = null;
 
-      // Cancel any active bids
-      await prisma.bid.updateMany({
-        where: {
-          userCardId: userCardId,
-          is_active: true,
-        },
-        data: {
-          is_active: false,
-        },
-      });
+      // Unlisting cancels active bids — release their escrow first.
+      await cancelBidsAndReleaseHolds(userCardId);
     }
 
     // Update the card without problematic include
