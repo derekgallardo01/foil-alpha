@@ -288,8 +288,8 @@ export async function POST(request: NextRequest) {
 
                 const settled = await prisma.$transaction(async (tx) => {
                     // Atomically CLAIM the transaction (PENDING->EXPIRED). Gates a
-                    // race with force-complete or the separate expired-transactions
-                    // cron (same expired-PENDING population), so it settles once.
+                    // race with force-complete (same expired-PENDING population),
+                    // so it settles exactly once.
                     const claimed = await tx.transaction.updateMany({
                         where: { id: expiredTransaction.id, status: 'PENDING_BUYER_CONFIRMATION' },
                         data: {
