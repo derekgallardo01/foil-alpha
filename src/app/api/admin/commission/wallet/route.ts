@@ -77,7 +77,6 @@ export async function GET() {
     ` as any[];
 
         // Calculate daily average for this month
-        const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
         const currentDay = currentMonth.getDate();
         const monthlyTotal = Number(monthlyCommissions[0].total) + Number(monthlyMarketplaceSales[0].total);
         const dailyAverage = currentDay > 0 ? monthlyTotal / currentDay : 0;

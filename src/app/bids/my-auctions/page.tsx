@@ -73,7 +73,7 @@ interface MyAuction {
 }
 
 export default function MyAuctionsPage() {
-    const { session, status } = useRequireAuth();
+    const { status } = useRequireAuth();
     const router = useRouter();
     const [auctions, setAuctions] = useState<MyAuction[]>([]);
     const [loading, setLoading] = useState(true);

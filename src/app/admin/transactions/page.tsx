@@ -263,11 +263,6 @@ const AdminTransactionsPage = () => {
         page * rowsPerPage + rowsPerPage
     );
 
-    // Calculate total volume from completed transactions
-    const totalVolume = transactions
-        .filter(t => t.status.toLowerCase() === 'completed')
-        .reduce((sum, t) => sum + parseFloat(String(t.amount)), 0);
-
     if (status === 'loading' || loading) {
         return (
             <Container maxWidth="xl" sx={{ py: 3 }}>

@@ -35,7 +35,6 @@ export async function GET() {
   try {
     const auth = await requireAdmin();
     if ("response" in auth) return auth.response;
-    const user = auth.user;
 
     console.log("Fetching users from database...");
 

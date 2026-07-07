@@ -35,7 +35,6 @@ import LockOpenIcon from "@mui/icons-material/LockOpen";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { GoogleAnalytics } from "nextjs-google-analytics";
-import { debounce } from "lodash";
 import AppShell from "../../components/AppShell";
 import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/StatCard";
@@ -329,7 +328,6 @@ export default function AdminUsersClient() {
   }, [users]);
 
   // Debounced Search
-  const debouncedSetSearchQuery = debounce((value: string) => setSearchQuery(value), 300);
 
   const filteredUsers = useMemo(() => {
     let result = [...users];

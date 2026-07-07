@@ -3,9 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI, type PokemonPriceTrackerCardV2 } from '../../../../lib/pokemon-price-tracker-api';
 
-const BATCH_SIZE = 50; // Respect 60 per minute API limit
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000;
 
 export async function POST(request: NextRequest) {
     try {

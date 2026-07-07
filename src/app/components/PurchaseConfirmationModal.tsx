@@ -222,7 +222,6 @@ export default function PurchaseConfirmationModal({
                 setSuccess(true);
 
                 const cardName = data.purchase_details?.card_name || listingData.card.name;
-                const totalPaid = data.purchase_details?.total_paid || data.purchase_details?.total_cost;
 
                 toast.success(`Successfully purchased ${cardName}!`);
 

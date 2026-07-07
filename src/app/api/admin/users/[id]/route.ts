@@ -16,7 +16,6 @@ interface UserRow extends RowDataPacket {
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
   if ("response" in auth) return auth.response;
-  const user = auth.user;
 
   const { id: userId } = await context.params;
   const dbConnection = await getDbConnection();

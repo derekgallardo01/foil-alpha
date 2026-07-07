@@ -60,7 +60,7 @@ interface PendingPurchase {
 }
 
 export default function NotificationsPage() {
-    const { session, status } = useRequireAuth();
+    const { status } = useRequireAuth();
     const router = useRouter();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);

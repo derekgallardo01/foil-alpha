@@ -116,7 +116,7 @@ interface SalesStats {
 }
 
 export default function SellingDashboard() {
-    const { session, status } = useRequireAuth();
+    const { status } = useRequireAuth();
     const router = useRouter();
     const [salesData, setSalesData] = useState<SalesData>({ activeSales: [], soldItems: [] });
     const [loading, setLoading] = useState(true);

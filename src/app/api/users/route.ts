@@ -6,7 +6,6 @@ export async function GET() {
   try {
     const auth = await requireAdmin();
     if ("response" in auth) return auth.response;
-    const user = auth.user;
 
     // Use your existing DB connection
     const dbConnection = await getDbConnection();

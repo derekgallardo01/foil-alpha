@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
     const user = auth.user;
 
     const userId = user.id;
-    const userName = user.name || 'Unknown User';
 
     // Parse request body
     let body;

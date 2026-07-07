@@ -18,7 +18,6 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAdmin();
     if ("response" in auth) return auth.response;
-    const user = auth.user;
 
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
@@ -74,7 +73,6 @@ export async function DELETE(request: Request) {
   try {
     const auth = await requireAdmin();
     if ("response" in auth) return auth.response;
-    const user = auth.user;
 
     const body = await request.json();
     const { id } = body;
@@ -113,7 +111,6 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAdmin();
     if ("response" in auth) return auth.response;
-    const user = auth.user;
 
     const body = await request.json();
     const { id, status } = body;
