@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 import { forecastPrices, PricePoint } from "../../lib/forecast";
+import { mlForecast } from "../../lib/forecast-client";
 
 // Reads request params at runtime; never statically generate.
 export const dynamic = "force-dynamic";
@@ -34,12 +35,16 @@ export async function GET(req: NextRequest) {
       price: Number(r.price),
     }));
 
-    const result = forecastPrices(history, horizon);
+    // Prefer the ML service when configured; fall back to the in-app baseline
+    // whenever it's unset/unreachable/slow or returns nothing usable.
+    const ml = await mlForecast(cardId, horizon);
+    const result = ml ?? forecastPrices(history, horizon);
 
     return NextResponse.json({
       card_id: cardId,
       horizon_days: horizon,
       points: history.length,
+      source: ml ? "ml-service" : "baseline",
       history: history.map((h) => ({ date: h.date.slice(0, 10), price: h.price })),
       ...result,
     });

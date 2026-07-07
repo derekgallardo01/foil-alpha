@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { requireAdmin } from "../../../lib/auth";
+import { ingestCardPriceHistory } from "../../../lib/price-history-ingest";
 
 // Long-running batch job; never statically generate, allow a generous budget.
 export const dynamic = "force-dynamic";
@@ -104,72 +105,18 @@ export async function POST(req: NextRequest) {
 
       const payload = await res.json();
       const apiCard = Array.isArray(payload?.data) ? payload.data[0] : payload?.data;
-      const ph = apiCard?.priceHistory;
 
-      rec.totalDataPoints = ph?.totalDataPoints ?? null;
-      rec.earliestDate = ph?.earliestDate ?? null;
-      rec.latestDate = ph?.latestDate ?? null;
+      const ingest = await ingestCardPriceHistory(card.id, apiCard?.priceHistory, { dryRun });
+      rec.totalDataPoints = ingest.totalDataPoints;
+      rec.earliestDate = ingest.earliestDate;
+      rec.latestDate = ingest.latestDate;
+      rec.pointsFound = ingest.pointsFound;
+      rec.inserted = ingest.inserted;
+      rec.skippedExisting = ingest.skippedExisting;
 
-      // Flatten every condition's history into (date, market, volume, condition).
-      const conditions: Record<string, any> = ph?.conditions ?? {};
-      const flat: Array<{ date: Date; market: number; volume: number | null; condition: string }> = [];
-      for (const [condName, cond] of Object.entries(conditions)) {
-        for (const pt of (cond as any)?.history ?? []) {
-          const market = Number(pt?.market);
-          const date = new Date(pt?.date);
-          if (!Number.isFinite(market) || market <= 0 || Number.isNaN(date.getTime())) continue;
-          const vol = pt?.volume;
-          flat.push({
-            date,
-            market: Math.round(market * 100) / 100,
-            volume: Number.isFinite(Number(vol)) ? Math.round(Number(vol)) : null,
-            condition: condName,
-          });
-        }
-      }
-
-      // De-dupe within the payload by day+condition (keep the first seen).
-      const dayKey = (d: Date, c: string) => `${d.toISOString().slice(0, 10)}|${c}`;
-      const seenInPayload = new Set<string>();
-      const deduped = flat.filter((p) => {
-        const k = dayKey(p.date, p.condition);
-        if (seenInPayload.has(k)) return false;
-        seenInPayload.add(k);
-        return true;
-      });
-      rec.pointsFound = deduped.length;
-      if (deduped.length > 0) summary.cardsWithHistory++;
-
-      // Skip points we already have (idempotent re-runs) — match on day+condition
-      // among rows this backfill wrote for the card.
-      const existing = await prisma.price_history.findMany({
-        where: { card_id: card.id, data_source: "backfill_v2_history" },
-        select: { recorded_at: true, condition: true },
-      });
-      const existingKeys = new Set(
-        existing.map((e) => dayKey(e.recorded_at, e.condition ?? ""))
-      );
-      const toInsert = deduped.filter((p) => !existingKeys.has(dayKey(p.date, p.condition)));
-      rec.skippedExisting = deduped.length - toInsert.length;
-      summary.pointsSkippedExisting += rec.skippedExisting;
-
-      if (!dryRun && toInsert.length > 0) {
-        await prisma.price_history.createMany({
-          data: toInsert.map((p) => ({
-            card_id: card.id,
-            price: p.market,
-            volume: p.volume,
-            recorded_at: p.date,
-            condition: p.condition,
-            source: "pokemon_price_tracker",
-            price_type: "market",
-            data_source: "backfill_v2_history",
-            metadata: { backfilled: true },
-          })),
-        });
-        rec.inserted = toInsert.length;
-      }
-      summary.pointsInserted += rec.inserted;
+      if (ingest.pointsFound > 0) summary.cardsWithHistory++;
+      summary.pointsSkippedExisting += ingest.skippedExisting;
+      summary.pointsInserted += ingest.inserted;
     } catch (err) {
       rec.error = err instanceof Error ? err.message : "Unknown error";
       summary.cardsFailed++;

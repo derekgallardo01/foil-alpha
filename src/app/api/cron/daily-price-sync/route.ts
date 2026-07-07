@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 import { requireAdmin } from '../../../lib/auth';
 import { pokemonPriceTrackerAPI, PokemonPriceTrackerAPI, type PokemonPriceTrackerCardV2 } from '../../../lib/pokemon-price-tracker-api';
+import { ingestCardPriceHistory } from '../../../lib/price-history-ingest';
 import { Prisma } from '@prisma/client';
 
 interface SyncStats {
@@ -232,6 +233,15 @@ export async function POST(request: NextRequest) {
                         } as Prisma.InputJsonValue
                     }
                 });
+
+                // Also persist the full V2 price *time series* (idempotent), so
+                // the forecasting dataset deepens with every sync — not just the
+                // single latest point written above.
+                try {
+                    await ingestCardPriceHistory(card.id, cardData.priceHistory as any);
+                } catch (ingestErr) {
+                    console.warn(`⚠️ History ingest failed for ${card.name}:`, ingestErr);
+                }
 
                 stats.cards_updated++;
                 stats.cards_processed++;
