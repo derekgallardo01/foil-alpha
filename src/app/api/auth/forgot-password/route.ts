@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbConnection } from "../../../lib/db";
 import crypto from "crypto";
+import { prisma } from "../../../lib/prisma";
 import { sendEmail } from "../../../lib/email";
-import { RowDataPacket } from "mysql2/promise"; // Import RowDataPacket for correct typing
-
-// Define the User interface
-interface User extends RowDataPacket {
-  id: number;
-  email: string;
-  password: string;
-  // Add other fields as needed
-}
 
 export async function POST(req: NextRequest) {
-  const connection = await getDbConnection();
-
   try {
     const { email } = await req.json();
     if (!email || typeof email !== "string" || email.trim() === "") {
@@ -22,43 +11,29 @@ export async function POST(req: NextRequest) {
     }
 
     const sanitizedEmail = email.trim().toLowerCase();
-    // Use User[] as the type for the first element, since RowDataPacket extends the row type
-    const [users]: [User[], unknown] = await connection.execute("SELECT * FROM users WHERE email = ?", [sanitizedEmail]);
-    if (users.length === 0) {
-      return NextResponse.json(
-        { message: "If an account exists, a password reset link has been sent to your email." },
-        { status: 200 }
-      );
-    }
+    // Generic response either way, so this can't be used to probe which emails exist.
+    const generic = { message: "If an account exists, a password reset link has been sent to your email." };
+
+    const user = await prisma.user.findUnique({ where: { email: sanitizedEmail }, select: { id: true } });
+    if (!user) return NextResponse.json(generic, { status: 200 });
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${resetToken}`;
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    await connection.execute(
-      "INSERT INTO reset_tokens (email, token, expires) VALUES (?, ?, ?)",
-      [sanitizedEmail, resetToken, expires]
-    );
+    await prisma.resetToken.create({ data: { email: sanitizedEmail, token: resetToken, expires } });
 
     const htmlContent = `
       <h2>Password Reset Request</h2>
       <p>You requested a password reset for your Foil Alpha account.</p>
       <p><a href="${resetLink}" style="color: #9B5Cff;">Click here to reset your password</a></p>
-      <p>If you didn’t request this, please ignore this email.</p>
+      <p>If you didn't request this, please ignore this email.</p>
     `;
     await sendEmail(sanitizedEmail, "Password Reset Request", htmlContent);
 
-    return NextResponse.json(
-      { message: "If an account exists, a password reset link has been sent to your email." },
-      { status: 200 }
-    );
+    return NextResponse.json(generic, { status: 200 });
   } catch (error) {
     console.error("Error sending reset email:", error);
-    return NextResponse.json(
-      { message: "Something went wrong. Please try again later." },
-      { status: 500 }
-    );
-  } finally {
-    await connection.end();
+    return NextResponse.json({ message: "Something went wrong. Please try again later." }, { status: 500 });
   }
 }
