@@ -149,6 +149,9 @@ model UserCard {
   sale_type     String?   @map("sale_type") @db.VarChar(50)
   fixed_price   Decimal?  @map("fixed_price") @db.Decimal(10, 2)
   reserve_price Decimal?  @map("reserve_price") @db.Decimal(10, 2)
+  // Optional instant-buy price on an AUCTION listing: a buyer can end the auction
+  // early by paying this. NULL = no buy-now on this auction.
+  buy_now_price Decimal?  @map("buy_now_price") @db.Decimal(10, 2)
   auction_end   DateTime? @map("auction_end") @db.DateTime(0)
   is_sold       Boolean   @default(false) @map("is_sold")
   notes         String?   @db.VarChar(255)

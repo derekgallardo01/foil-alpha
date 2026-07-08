@@ -5,6 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { calculateCommission, recordCommissionTransaction } from '../../../lib/commission-utils';
+import { releaseBidHolds } from '../../../lib/wallet-settlement';
+import { createAuctionLostNotifications } from '../../../lib/notification';
+import { emitAppEvent } from '../../../lib/events';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { user_card_id, catalog_card_id, quantity = 1 } = body;
+    const { user_card_id, catalog_card_id, quantity = 1, buy_now = false } = body;
 
     // Validate request
     if (!user_card_id && !catalog_card_id) {
@@ -46,7 +49,9 @@ export async function POST(request: NextRequest) {
 
     // Handle different purchase types
     if (user_card_id) {
-      return await purchaseUserCard(userId, user_card_id);
+      return buy_now
+        ? await buyNowUserCard(userId, user_card_id)
+        : await purchaseUserCard(userId, user_card_id);
     } else if (catalog_card_id) {
       return await purchaseCatalogCard(userId, catalog_card_id, quantity);
     }
@@ -180,17 +185,19 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
 
     const sellerBalanceBefore = Number(sellerWallet.balance);
 
-    // Update wallets
-    await Promise.all([
-      tx.userWallet.update({
-        where: { user_id: buyerId },
-        data: { balance: { decrement: cardPrice } }
-      }),
-      tx.userWallet.update({
-        where: { user_id: userCard.owner_id },
-        data: { balance: { increment: commission.seller_receives } }
-      })
-    ]);
+    // Charge the buyer with an ATOMIC GUARDED decrement so concurrent spends on
+    // the same wallet (a bid or another purchase on a different card) can't drive
+    // the balance negative — the per-card claim above doesn't lock the wallet.
+    const charged = await tx.$executeRaw`
+      UPDATE user_wallets SET balance = balance - ${cardPrice}
+      WHERE user_id = ${buyerId} AND (balance - frozen_balance) >= ${cardPrice}`;
+    if (charged !== 1) {
+      throw new Error(`Insufficient funds. Required: $${cardPrice.toFixed(2)}`);
+    }
+    await tx.userWallet.update({
+      where: { user_id: userCard.owner_id },
+      data: { balance: { increment: commission.seller_receives } }
+    });
 
     // *** CRITICAL FIX: TRANSFER OWNERSHIP AND REMOVE FROM MARKETPLACE ***
     const updatedCard = await tx.userCard.update({
@@ -330,6 +337,151 @@ async function purchaseUserCard(buyerId: number, userCardId: number) {
         }
       }
     });
+  });
+}
+
+// Buy It Now on an AUCTION: end the auction early by paying the buy_now_price.
+// Charges the buyer, pays the seller (minus commission), transfers ownership, and
+// RELEASES every active bidder's escrow hold (incl. the buyer's own) — the auction
+// is over. Serialized with concurrent bids by a per-auction row lock.
+async function buyNowUserCard(buyerId: number, userCardId: number) {
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM user_cards WHERE id = ${userCardId} FOR UPDATE`;
+
+    const userCard = await tx.userCard.findFirst({
+      where: { id: userCardId, is_for_sale: true, is_sold: false },
+    });
+    if (!userCard) throw new Error('Card not found or no longer available');
+    if (userCard.sale_type !== 'AUCTION') throw new Error('Buy It Now is only available on auction listings');
+    if (userCard.owner_id === buyerId) throw new Error('You cannot buy your own card');
+    if (userCard.auction_end && new Date() > userCard.auction_end) throw new Error('This auction has already ended');
+
+    const price = Number(userCard.buy_now_price || 0);
+    if (!(price > 0)) throw new Error('This auction does not have a Buy It Now price');
+
+    const [card, owner] = await Promise.all([
+      tx.card.findUnique({ where: { id: userCard.card_id }, select: { id: true, name: true, rarity: true } }),
+      tx.user.findUnique({ where: { id: userCard.owner_id }, select: { id: true, name: true } }),
+    ]);
+    if (!card || !owner) throw new Error('Card or owner not found');
+
+    const commission = await calculateCommission(price, card.rarity);
+
+    let buyerWallet = await tx.userWallet.findUnique({ where: { user_id: buyerId } });
+    if (!buyerWallet) buyerWallet = await tx.userWallet.create({ data: { user_id: buyerId, balance: 0, frozen_balance: 0 } });
+    // Atomically claim the card before any money moves (one winner only).
+    const claim = await tx.userCard.updateMany({
+      where: { id: userCardId, is_for_sale: true, is_sold: false },
+      data: { is_sold: true },
+    });
+    if (claim.count !== 1) throw new Error('This auction was just settled by someone else');
+
+    // Losing bidders (for notifications), then release EVERY active bidder's
+    // escrow hold (incl. the buyer's own, if any) and deactivate the bids.
+    const activeBids = await tx.bid.findMany({ where: { userCardId, is_active: true }, select: { bidderId: true } });
+    const losingBidders = [...new Set(activeBids.map((b) => b.bidderId))].filter((id) => id !== buyerId);
+    await releaseBidHolds(tx, { auctionId: userCardId });
+    await tx.bid.updateMany({ where: { userCardId, is_active: true }, data: { is_active: false } });
+
+    let sellerWallet = await tx.userWallet.findUnique({ where: { user_id: userCard.owner_id } });
+    if (!sellerWallet) sellerWallet = await tx.userWallet.create({ data: { user_id: userCard.owner_id, balance: 0, frozen_balance: 0 } });
+    const sellerBalanceBefore = Number(sellerWallet.balance);
+
+    // Charge the buyer with an ATOMIC GUARDED decrement. This runs AFTER the hold
+    // release above (so the buyer's own bid on this auction no longer counts
+    // against them) and its WHERE clause prevents oversubscription — the per-card
+    // row lock does NOT serialize spends on the same wallet across different cards,
+    // so an unguarded decrement could drive the balance negative.
+    const charged = await tx.$executeRaw`
+      UPDATE user_wallets SET balance = balance - ${price}
+      WHERE user_id = ${buyerId} AND (balance - frozen_balance) >= ${price}`;
+    if (charged !== 1) {
+      throw new Error(`Insufficient funds to Buy It Now at $${price.toFixed(2)}`);
+    }
+    await tx.userWallet.update({
+      where: { user_id: userCard.owner_id },
+      data: { balance: { increment: commission.seller_receives } },
+    });
+    const buyerAfter = await tx.userWallet.findUnique({ where: { user_id: buyerId }, select: { balance: true } });
+    const buyerBalanceAfter = Number(buyerAfter!.balance);
+
+    await tx.userCard.update({
+      where: { id: userCardId },
+      data: {
+        owner_id: buyerId,
+        is_for_sale: false,
+        is_sold: true,
+        sale_type: null,
+        fixed_price: null,
+        reserve_price: null,
+        buy_now_price: null,
+        auction_end: null,
+        notes: `Bought now from ${owner.name} for $${price.toFixed(2)} on ${new Date().toLocaleDateString()}`,
+      },
+    });
+
+    await recordCommissionTransaction({
+      transaction_type: 'COMMISSION',
+      amount: commission.commission_amount,
+      description: `Commission from ${card.name} Buy It Now sale`,
+      reference_type: 'USER_CARD',
+      reference_id: userCardId,
+      user_card_id: userCardId,
+      buyer_id: buyerId,
+      seller_id: userCard.owner_id,
+      card_id: card.id,
+      commission_rate: commission.commission_rate,
+    }, tx);
+
+    await Promise.all([
+      tx.walletTransaction.create({ data: {
+        user_id: buyerId, wallet_id: buyerWallet.id, transaction_type: 'PURCHASE', amount: -price,
+        balance_before: buyerBalanceAfter + price, balance_after: buyerBalanceAfter,
+        description: `Bought now: ${card.name} from ${owner.name}`, reference_type: 'USER_CARD', reference_id: userCardId,
+      } }),
+      tx.walletTransaction.create({ data: {
+        user_id: userCard.owner_id, wallet_id: sellerWallet.id, transaction_type: 'SALE', amount: commission.seller_receives,
+        balance_before: sellerBalanceBefore, balance_after: sellerBalanceBefore + commission.seller_receives,
+        description: `Sold ${card.name} via Buy It Now (after commission)`, reference_type: 'USER_CARD', reference_id: userCardId,
+      } }),
+    ]);
+
+    await tx.cardTransactionHistory.create({ data: {
+      userCardId, fromUserId: userCard.owner_id, toUserId: buyerId, action: 'PURCHASE',
+      notes: `Buy It Now for $${price.toFixed(2)} — auction ended, ownership transferred`,
+    } });
+
+    await Promise.all([
+      tx.notification.create({ data: {
+        user_id: buyerId, type: 'PURCHASE_SUCCESS', title: 'Card purchased',
+        message: `You bought ${card.name} for $${price.toFixed(2)}. It's now in your collection.`,
+        data: { card_name: card.name, amount_paid: price, seller_name: owner.name, card_id: card.id, user_card_id: userCardId },
+      } }),
+      tx.notification.create({ data: {
+        user_id: userCard.owner_id, type: 'SALE_SUCCESS', title: 'Card sold',
+        message: `Your ${card.name} sold via Buy It Now for $${price.toFixed(2)}. You received $${commission.seller_receives.toFixed(2)} after commission.`,
+        data: { card_name: card.name, sale_price: price, amount_received: commission.seller_receives, commission_rate: commission.commission_rate, card_id: card.id },
+      } }),
+    ]);
+
+    return { losingBidders, cardName: card.name, price, sellerReceives: commission.seller_receives };
+  });
+
+  // Post-commit (best-effort): notify losing bidders + push the auction-ended event.
+  if (result.losingBidders.length > 0) {
+    try { await createAuctionLostNotifications(result.losingBidders, result.cardName, result.price, userCardId); }
+    catch (e) { console.error('Buy-now loser notify failed:', e); }
+  }
+  emitAppEvent({ type: 'auction_ended', auctionId: userCardId });
+
+  return NextResponse.json({
+    success: true,
+    message: 'Purchased via Buy It Now!',
+    purchase_details: {
+      card_name: result.cardName,
+      total_paid: result.price.toFixed(2),
+      seller_receives: result.sellerReceives.toFixed(2),
+    },
   });
 }
 
