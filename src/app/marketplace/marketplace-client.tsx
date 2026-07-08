@@ -45,6 +45,7 @@ import {
 import { toast } from 'react-toastify';
 import AppShell from '../components/AppShell';
 import BiddingModal from '../components/BiddingModal';
+import WatchButton from '../components/WatchButton';
 import PriceHistoryModal from '../components/PriceHistoryModal';
 import PriceDisplay from '../components/PriceDisplay';
 import CurrencySelector from '../components/CurrencySelector';
@@ -191,6 +192,7 @@ export default function MarketplacePage() {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]); // FIXED: Added price range
     const [sortBy, setSortBy] = useState('newest');
     const [savedSearches, setSavedSearches] = useState<Array<{ id: number; name: string; query: SavedQuery }>>([]);
+    const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set());
 
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [availableSets, setAvailableSets] = useState<{ name: string; count: number }[]>([]);
@@ -382,6 +384,19 @@ export default function MarketplacePage() {
     }, []);
 
     useEffect(() => { fetchSavedSearches(); }, [fetchSavedSearches]);
+
+    // Which listings the user is already watching (for the grid hearts).
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch('/api/watch');
+                if (res.ok) {
+                    const d = await res.json();
+                    setWatchedIds(new Set((d.data ?? []).map((w: { user_card_id: number }) => w.user_card_id)));
+                }
+            } catch { /* ignore */ }
+        })();
+    }, []);
 
     const saveCurrentSearch = useCallback(async () => {
         const query: Record<string, unknown> = {};
@@ -987,6 +1002,13 @@ export default function MarketplacePage() {
                                                     size="small"
                                                     variant="filled"
                                                 />
+                                            </Box>
+                                        )}
+
+                                        {/* Watch heart — user listings only */}
+                                        {listing.type === 'USER_CARD' && listing.user_card_id && !isOwnCard && (
+                                            <Box sx={{ position: 'absolute', bottom: 8, left: 8, bgcolor: 'rgba(0,0,0,0.45)', borderRadius: '50%' }}>
+                                                <WatchButton userCardId={listing.user_card_id} initialWatching={watchedIds.has(listing.user_card_id)} />
                                             </Box>
                                         )}
 
