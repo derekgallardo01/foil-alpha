@@ -151,6 +151,7 @@ export async function GET(
       sale_type: userCard.sale_type,
       fixed_price: userCard.fixed_price ? Number(userCard.fixed_price) : null,
       reserve_price: userCard.reserve_price ? Number(userCard.reserve_price) : null,
+      buy_now_price: userCard.buy_now_price ? Number(userCard.buy_now_price) : null,
       auction_end: userCard.auction_end,
       is_for_sale: userCard.is_for_sale,
       is_sold: userCard.is_sold,

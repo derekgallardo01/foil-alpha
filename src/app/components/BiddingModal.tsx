@@ -51,6 +51,7 @@ interface UserCard {
     condition: string;
     sale_type: 'FIXED' | 'AUCTION';
     reserve_price: number | null;
+    buy_now_price: number | null;
     auction_end: string | null;
     current_price: number;
     current_highest_bid: number | null;
@@ -76,6 +77,7 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
     const [bidAmount, setBidAmount] = useState('');
     const [maxBid, setMaxBid] = useState('');
     const [loading, setLoading] = useState(false);
+    const [buying, setBuying] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -154,6 +156,30 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
         }
 
         return true;
+    };
+
+    const handleBuyNow = async () => {
+        if (!userCard || userCard.buy_now_price == null) return;
+        if (!window.confirm(`Buy this card now for ${formatPrice(userCard.buy_now_price)}?`)) return;
+        setBuying(true);
+        setError(null);
+        setSuccess(null);
+        try {
+            const response = await fetch('/api/marketplace/purchase', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_card_id: userCard.id, buy_now: true }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || data.details || 'Purchase failed');
+            setSuccess(`Purchased ${userCard.card.name} for ${formatPrice(userCard.buy_now_price)}!`);
+            if (onBidPlaced) onBidPlaced();
+            setTimeout(() => onClose(), 1500);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Something went wrong');
+        } finally {
+            setBuying(false);
+        }
     };
 
     const handlePlaceBid = async () => {
@@ -380,6 +406,19 @@ export default function BiddingModal({ open, onClose, userCard, onBidPlaced }: B
                                     >
                                         {loading ? 'Placing Bid...' : `Place Bid - ${formatPrice(parseFloat(bidAmount) || 0)}`}
                                     </Button>
+
+                                    {userCard.buy_now_price != null && !isAuctionEnded && (
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            fullWidth
+                                            onClick={handleBuyNow}
+                                            disabled={buying || loading}
+                                            sx={{ mt: 1 }}
+                                        >
+                                            {buying ? 'Buying…' : `Buy It Now - ${formatPrice(userCard.buy_now_price)}`}
+                                        </Button>
+                                    )}
 
                                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
                                         By placing a bid, you agree to purchase if you win or if the seller accepts your bid

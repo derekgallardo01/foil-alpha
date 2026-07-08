@@ -134,6 +134,7 @@ interface BiddingUserCard {
     condition: string;
     sale_type: 'FIXED' | 'AUCTION';
     reserve_price: number | null;
+    buy_now_price: number | null;
     auction_end: string | null;
     current_price: number;
     current_highest_bid: number | null;
@@ -457,6 +458,7 @@ export default function MarketplacePage() {
                 condition: cardData.condition,
                 sale_type: cardData.sale_type,
                 reserve_price: cardData.reserve_price,
+                buy_now_price: cardData.buy_now_price ?? null,
                 auction_end: cardData.auction_end,
                 current_price: cardData.current_price || cardData.reserve_price || 0,
                 current_highest_bid: bidsData.length > 0 ? Math.max(...bidsData.map((b: any) => Number(b.amount))) : null,
