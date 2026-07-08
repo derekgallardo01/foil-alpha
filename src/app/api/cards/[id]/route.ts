@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
         condition: l.condition,
         fixed_price: l.fixed_price != null ? Number(l.fixed_price) : null,
         reserve_price: l.reserve_price != null ? Number(l.reserve_price) : null,
+        buy_now_price: l.buy_now_price != null ? Number(l.buy_now_price) : null,
         auction_end: l.auction_end,
         seller_id: l.owner_id,
         seller: nameOf(l.owner_id),

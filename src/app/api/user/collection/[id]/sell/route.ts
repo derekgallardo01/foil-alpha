@@ -25,7 +25,7 @@ export async function POST(
 
         const { id: userCardId } = await context.params;
         const body = await request.json();
-        const { sale_type, fixed_price, reserve_price, auction_duration_hours } = body;
+        const { sale_type, fixed_price, reserve_price, auction_duration_hours, buy_now_price } = body;
 
         console.log('Sell request:', {
             sale_type,
@@ -170,10 +170,17 @@ export async function POST(
         if (sale_type === 'FIXED') {
             updateData.fixed_price = Number(fixed_price);
             updateData.reserve_price = null;
+            updateData.buy_now_price = null;
             updateData.auction_end = null;
         } else if (sale_type === 'AUCTION') {
             updateData.fixed_price = null;
             updateData.reserve_price = Number(reserve_price);
+            // Optional instant-buy price; must be above the reserve to make sense.
+            const bn = buy_now_price != null && buy_now_price !== '' ? Number(buy_now_price) : null;
+            if (bn != null && !(bn > Number(reserve_price))) {
+                return NextResponse.json({ error: 'Buy It Now price must be higher than the reserve price.' }, { status: 400 });
+            }
+            updateData.buy_now_price = bn;
             // Calculate auction end time from duration
             updateData.auction_end = new Date(Date.now() + Number(auction_duration_hours) * 60 * 60 * 1000);
         }

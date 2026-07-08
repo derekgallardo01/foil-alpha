@@ -27,6 +27,7 @@ import PriceChart from "../../components/PriceChart";
 import WatchButton from "../../components/WatchButton";
 import { formatPrice, formatTimeLeft, formatDateTime } from "../../lib/format";
 import { getRarityHex } from "../../lib/rarity";
+import { toast } from "react-toastify";
 
 interface Listing {
   user_card_id: number;
@@ -34,6 +35,7 @@ interface Listing {
   condition: string | null;
   fixed_price: number | null;
   reserve_price: number | null;
+  buy_now_price: number | null;
   auction_end: string | null;
   seller_id: number;
   seller: string;
@@ -75,6 +77,7 @@ export default function CardDetailPage() {
   const [data, setData] = useState<{ card: CardDetail; listings: Listing[]; sales: Sale[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [buyingId, setBuyingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,6 +97,29 @@ export default function CardDetailPage() {
   useEffect(() => {
     if (!isNaN(id)) load();
   }, [id, load]);
+
+  const buyNow = async (userCardId: number, price: number) => {
+    if (!window.confirm(`Buy this card now for ${formatPrice(price)}?`)) return;
+    setBuyingId(userCardId);
+    try {
+      const res = await fetch("/api/marketplace/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_card_id: userCardId, buy_now: true }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        toast.error(d.error || d.details || "Purchase failed.");
+        return;
+      }
+      toast.success("Purchased! The card is now in your collection.");
+      load();
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setBuyingId(null);
+    }
+  };
 
   return (
     <AppShell>
@@ -235,9 +261,20 @@ export default function CardDetailPage() {
                               <TableCell align="right">
                                 <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", alignItems: "center" }}>
                                   <WatchButton userCardId={l.user_card_id} initialWatching={l.watching} />
+                                  {isAuction && l.buy_now_price != null && (
+                                    <Button
+                                      size="small"
+                                      variant="contained"
+                                      color="secondary"
+                                      disabled={buyingId === l.user_card_id}
+                                      onClick={() => buyNow(l.user_card_id, l.buy_now_price as number)}
+                                    >
+                                      {buyingId === l.user_card_id ? "…" : `Buy ${formatPrice(l.buy_now_price)}`}
+                                    </Button>
+                                  )}
                                   <Button
                                     size="small"
-                                    variant="contained"
+                                    variant="outlined"
                                     onClick={() =>
                                       router.push(
                                         isAuction

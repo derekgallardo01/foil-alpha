@@ -109,6 +109,7 @@ interface SellDialogData {
     fixedPrice: string;
     reservePrice: string;
     auctionDays: string;
+    buyNowPrice: string;
 }
 
 interface PendingPurchase {
@@ -147,7 +148,8 @@ export default function CollectionPage() {
         saleType: 'FIXED',
         fixedPrice: '',
         reservePrice: '',
-        auctionDays: '7'
+        auctionDays: '7',
+        buyNowPrice: ''
     });
     const [actionLoading, setActionLoading] = useState(false);
 
@@ -243,7 +245,8 @@ export default function CollectionPage() {
             saleType: 'FIXED',
             fixedPrice: '',
             reservePrice: '',
-            auctionDays: '7'
+            auctionDays: '7',
+            buyNowPrice: ''
         });
         setSellDialogOpen(true);
     };
@@ -261,6 +264,9 @@ export default function CollectionPage() {
             } else {
                 requestBody.reserve_price = parseFloat(sellData.reservePrice);
                 requestBody.auction_duration_hours = parseInt(sellData.auctionDays) * 24;
+                if (sellData.buyNowPrice) {
+                    requestBody.buy_now_price = parseFloat(sellData.buyNowPrice);
+                }
             }
 
             const response = await fetch(`/api/user/collection/${sellData.userCardId}/sell`, {
@@ -763,6 +769,16 @@ export default function CollectionPage() {
                                     inputProps={{ min: 0, step: 0.01 }}
                                     sx={{ mb: 2 }}
                                     helperText="Minimum price for the auction"
+                                />
+                                <TextField
+                                    label="Buy It Now Price ($) — optional"
+                                    type="number"
+                                    fullWidth
+                                    value={sellData.buyNowPrice}
+                                    onChange={(e) => setSellData(prev => ({ ...prev, buyNowPrice: e.target.value }))}
+                                    inputProps={{ min: 0, step: 0.01 }}
+                                    sx={{ mb: 2 }}
+                                    helperText="Let buyers end the auction early at this price (must exceed the reserve)"
                                 />
                                 <FormControl fullWidth>
                                     <InputLabel>Auction Duration</InputLabel>
