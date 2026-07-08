@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireUser } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
+import { ok, fail } from "../../lib/api-response";
 import type { SavedSearchQuery } from "../../lib/saved-search";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +17,7 @@ export async function GET() {
     where: { user_id: auth.user.id },
     orderBy: { created_at: "desc" },
   });
-  return NextResponse.json({
-    success: true,
-    data: searches.map((s) => ({ id: s.id, name: s.name, query: s.query, created_at: s.created_at })),
-  });
+  return ok({ data: searches.map((s) => ({ id: s.id, name: s.name, query: s.query, created_at: s.created_at })) });
 }
 
 /** POST /api/saved-searches { name, query } — save a marketplace filter. */
@@ -31,7 +29,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
   const raw = (body.query ?? {}) as Record<string, unknown>;
-  if (!name) return NextResponse.json({ error: "A name is required." }, { status: 400 });
+  if (!name) return fail("A name is required.");
 
   // Whitelist + coerce the query fields; drop empties so a wildcard stays wildcard.
   const query: SavedSearchQuery = {};
@@ -43,13 +41,13 @@ export async function POST(request: NextRequest) {
 
   const count = await prisma.savedSearch.count({ where: { user_id: user.id } });
   if (count >= MAX_PER_USER) {
-    return NextResponse.json({ error: `You can save up to ${MAX_PER_USER} searches.` }, { status: 400 });
+    return fail(`You can save up to ${MAX_PER_USER} searches.`);
   }
 
   const created = await prisma.savedSearch.create({
     data: { user_id: user.id, name, query: query as object },
   });
-  return NextResponse.json({ success: true, data: { id: created.id, name: created.name, query } }, { status: 201 });
+  return ok({ data: { id: created.id, name: created.name, query } }, 201);
 }
 
 /** DELETE /api/saved-searches?id=X */
@@ -58,8 +56,8 @@ export async function DELETE(request: NextRequest) {
   if ("response" in auth) return auth.response;
 
   const id = Number(new URL(request.url).searchParams.get("id"));
-  if (!Number.isInteger(id)) return NextResponse.json({ error: "id is required." }, { status: 400 });
+  if (!Number.isInteger(id)) return fail("id is required.");
 
   await prisma.savedSearch.deleteMany({ where: { id, user_id: auth.user.id } });
-  return NextResponse.json({ success: true });
+  return ok();
 }

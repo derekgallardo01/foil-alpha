@@ -125,6 +125,14 @@ the cron duplicates. To scale horizontally you must:
 
 Until that traffic arrives, single-instance is a reasonable, documented trade-off.
 
+## API conventions
+New route handlers should return the standard envelope via `lib/api-response`:
+`ok(payload)` → `{ success: true, ...payload }` and `fail(error, status)` →
+`{ success: false, error }`. Clients branch on `res.ok` and/or `json.success`.
+(Older routes still hand-build `NextResponse.json(...)` with a mix of shapes;
+they migrate to `ok`/`fail` opportunistically — don't retrofit blindly, since a
+few clients read specific keys.)
+
 ## Migrations
 Schema changes go through tracked Prisma migrations — see
 [docs/MIGRATIONS.md](docs/MIGRATIONS.md). (Historically they were applied by
